@@ -125,6 +125,7 @@ function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function log(msg) { S.log.unshift("Hari " + S.hari + " " + String(S.jam).padStart(2, "0") + ":00: " + msg); S.log = S.log.slice(0, 30); }
 function kapasitasOlah() { return 10 + (S.kilangLevel - 1) * 10; }
 function spawnPartikel(x, y, teks, warna, n) {
+  if (window.SPRITE_WORLD && typeof window.tambahPartikel25 === "function") { window.tambahPartikel25(x, y, teks, warna, n); return; }
   for (let i = 0; i < (n || 8); i++) {
     partikel.push({ x: x + (Math.random() - 0.5) * 20, y: y + (Math.random() - 0.5) * 10, vx: (Math.random() - 0.5) * 2, vy: -1 - Math.random() * 1.5, life: 40, teks: teks || null, warna: warna || "#ffeb3b" });
   }
@@ -556,6 +557,7 @@ function buatBangunan(b, warna, atapWarna) {
   return g;
 }
 function init3D() {
+  if (window.SPRITE_WORLD) return false; // dunia sprite 2.5D aktif, Three.js tidak dipakai
   const wadah = (typeof document !== "undefined") ? document.getElementById("dunia3d") : null;
   if (!wadah) return false;
   if (typeof THREE === "undefined") {
@@ -891,6 +893,11 @@ function updateDunia3D() {
 function animate3D() {
   frame++;
   gerakPemain();
+  if (window.SPRITE_WORLD) { // dunia sprite 2.5D: gambar lewat canvas, bukan Three.js
+    if (typeof window.gambarDunia25 === "function") window.gambarDunia25();
+    if (typeof requestAnimationFrame === "function") requestAnimationFrame(animate3D);
+    return;
+  }
   if (!scene3) { if (typeof requestAnimationFrame === "function") requestAnimationFrame(animate3D); return; }
   // NPC berjalan
   NPC.forEach((n, idx) => {

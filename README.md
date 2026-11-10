@@ -9,6 +9,43 @@ memproduksi Mie Sagu dan Kue Bangkit Sagu, mengekspor tepung sagu ke pasar
 internasional, dan mengembangkan Kedai Kopi Liberika Meranti sebagai
 bisnis sampingan.
 
+## Yang baru di v9 — Dunia 2.5D Isometric dengan Aset Sprite Asli
+
+Dunia Three.js diganti dengan dunia **2.5D isometric yang dirender dari
+68 aset sprite PNG/WebP asli** di folder `assets/` — bukan screenshot
+sebagai background, bukan model 3D. Setiap bangunan, karakter,
+kendaraan, dan elemen lingkungan adalah objek terpisah yang bisa
+dianimasikan dan diinteraksikan:
+
+- **Bangunan (7):** kebun, kilang sagu, pasar, kedai Liberika,
+  pelabuhan, gudang, rumah pekerja.
+- **Karakter (32):** player, petani, pekerja kilang, barista, pedagang,
+  pelanggan, sopir, pekerja pelabuhan — masing-masing pose idle, walk,
+  work, interact.
+- **Lingkungan (12), kendaraan (6), objek (9), animasi (2 sprite
+  sheet):** pohon rumbia & kelapa, bunga, jembatan, dermaga, laut,
+  ombak, truk, forklift, kapal kargo, crane, perahu, mesin kilang,
+  conveyor, karung sagu, kontainer, meja-kursi, mesin kopi, gerobak
+  pasar, lampu jalan, asap cerobong & ombak (4 frame).
+
+Dunia digambar di canvas (`js/world25.js`) dengan painter's algorithm
+(berdasarkan posisi tanah), proyeksi isometric, dan animasi: asap
+cerobong berputar dari sprite sheet, ombak bergerak, pohon bergoyang,
+forklift & truk bergerak, kapal & perahu bergoyang, hujan turun saat
+Hujan, lampu jalan menyala saat malam, siang-malam berubah, dan teks
+mengambang (+Rp, +tual) saat transaksi. Semua aset memakai path
+relatif (`assets/...`) agar kompatibel dengan GitHub Pages. Daftar
+lengkap ada di `assets/manifest.json`, pratinjau semua aset di
+`assets/preview.html`, dan panduan gaya di `assets/STYLE_GUIDE.md`.
+
+Catatan teknis: file binary (PNG/WebP) tidak bisa di-push lewat jalur
+push teks — aset diunggah ke repo lewat antarmuka web GitHub. Kalau
+sebuah aset belum ada di repo, dunia tetap jalan dengan bentuk
+pengganti berwarna sampai asetnya terunggah. Dunia Three.js lama tetap
+ada sebagai cadangan: bila `js/world25.js` gagal dimuat, game kembali
+ke dunia 3D. Semua mekanisme bisnis v1–v8 tetap sama; save lama
+bermigrasi ke v9.
+
 ## Yang baru di v8 — Sesuai Gambar Referensi
 
 Pada 2026-11-10 pengguna akhirnya mengirim gambar referensi yang
@@ -160,6 +197,8 @@ Progres tersimpan otomatis di `localStorage` browser.
 - `index.html` — tampilan game
 - `css/style.css` — gaya tampilan
 - `js/game.js` — logika game (tanam, tebang, olah, produksi, jual, ekspor, upgrade, hari)
+- `js/world25.js` — renderer dunia 2.5D isometric dari sprite `assets/`
+- `assets/` — 68 aset sprite (bangunan, karakter, lingkungan, kendaraan, objek, animasi) + `manifest.json`, `preview.html`, `STYLE_GUIDE.md`
 
 ## GitHub Pages
 
