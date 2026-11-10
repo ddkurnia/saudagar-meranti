@@ -196,9 +196,38 @@ window.SPRITE_WORLD = true;
   };
 
   // ---------- Kontrol: klik, geser (pan), zoom ----------
+  // Rect klik visual: sprite bangunan LEBIH TINGGI dari rect logika di
+  // BANGUNAN (mis. kedai 240x211 vs rect 200x110), jadi klik atap/label
+  // akan meleset bila memakai rect logika. Rect ini menutupi seluruh
+  // sprite; klik di dalamnya diteruskan ke klikDunia di titik tengah
+  // bangunan (yang pasti di dalam rect logika, sehingga panel terbuka).
+  var HIT_BANGUNAN = {
+    kilang: { x: 445, y: -30, w: 200, h: 160, tengah: { x: 545, y: 80 } },
+    kedai: { x: 680, y: -30, w: 240, h: 200, tengah: { x: 800, y: 165 } },
+    pasar: { x: 500, y: 197, w: 210, h: 143, tengah: { x: 605, y: 300 } },
+    pelabuhan: { x: 675, y: 282, w: 250, h: 158, tengah: { x: 800, y: 400 } }
+  };
+  var _klik25Terakhir = 0;
+  window.klikDunia25 = function (wx, wy) {
+    for (var k in HIT_BANGUNAN) {
+      var r = HIT_BANGUNAN[k];
+      if (wx >= r.x && wx <= r.x + r.w && wy >= r.y && wy <= r.y + r.h) {
+        if (typeof klikDunia === "function") klikDunia(r.tengah.x, r.tengah.y);
+        return k;
+      }
+    }
+    if (typeof klikDunia === "function") klikDunia(wx, wy);
+    return null;
+  };
   function pasangKontrol25() {
     if (!kanvas) return;
     var turun = null, geser = false;
+    function tanganiKlik(e) {
+      var r = kanvas.getBoundingClientRect();
+      var w = duniaDariLayar(e.clientX - r.left, e.clientY - r.top);
+      _klik25Terakhir = Date.now();
+      window.klikDunia25(w.x, w.y);
+    }
     kanvas.addEventListener("pointerdown", function (e) {
       turun = { x: e.clientX, y: e.clientY }; geser = false;
       kanvas.setPointerCapture(e.pointerId);
@@ -214,12 +243,15 @@ window.SPRITE_WORLD = true;
       }
     });
     kanvas.addEventListener("pointerup", function (e) {
-      if (turun && !geser) {
-        var r = kanvas.getBoundingClientRect();
-        var w = duniaDariLayar(e.clientX - r.left, e.clientY - r.top);
-        if (typeof klikDunia === "function") klikDunia(w.x, w.y);
-      }
+      if (turun && !geser) tanganiKlik(e);
       turun = null;
+    });
+    // Cadangan: sebagian alat klik otomatis hanya memicu event 'click'
+    // tanpa pointerdown/pointerup. Tangani juga, tapi abaikan bila
+    // pointerup baru saja menangani klik yang sama (<300 ms).
+    kanvas.addEventListener("click", function (e) {
+      if (Date.now() - _klik25Terakhir < 300) return;
+      tanganiKlik(e);
     });
     kanvas.addEventListener("wheel", function (e) {
       e.preventDefault();
@@ -348,12 +380,10 @@ window.SPRITE_WORLD = true;
     // Kebun (pagar + papan tanda)
     tambah(45, function () {
       gambar(imgAset("bangunan", "kebun"), 250, 45, 300);
-      papanTeks("Kebun Rumbia " + S.lahan.length + " / 12 Petak", 250, 30, 1);
     });
     // Kilang + objeknya
     tambah(BANGUNAN.kilang.y + BANGUNAN.kilang.h, function () {
       gambar(imgAset("bangunan", "kilang"), 545, 130, 200);
-      papanTeks("Kilang Sagu Lv. " + S.kilangLevel, 545, -8, 1);
     });
     tambah(150, function () {
       gambar(imgAset("objek", "mesinKilang"), 490, 155, 95);
@@ -364,7 +394,6 @@ window.SPRITE_WORLD = true;
     // Kedai + objeknya
     tambah(BANGUNAN.kedai.y + BANGUNAN.kedai.h, function () {
       gambar(imgAset("bangunan", "kedai"), 800, 170, 240);
-      papanTeks("Kedai Kopi Liberika Lv. " + S.kedaiLevel, 800, -8, 1);
     });
     tambah(195, function () {
       gambar(imgAset("objek", "mejaKursi"), 755, 195, 95);
@@ -373,13 +402,11 @@ window.SPRITE_WORLD = true;
     // Pasar + gerobak
     tambah(BANGUNAN.pasar.y + BANGUNAN.pasar.h, function () {
       gambar(imgAset("bangunan", "pasar"), 605, 340, 210);
-      papanTeks("Pasar Selatpanjang", 605, 215, 1);
     });
     tambah(360, function () { gambar(imgAset("objek", "gerobak"), 545, 360, 95); });
     // Pelabuhan + kendaraan & kontainer
     tambah(BANGUNAN.pelabuhan.y + BANGUNAN.pelabuhan.h, function () {
       gambar(imgAset("bangunan", "pelabuhan"), 800, 440, 250);
-      papanTeks("Pelabuhan Ekspor", 800, 300, 1);
     });
     tambah(410, function () {
       gambar(imgAset("objek", "kontainer"), 735, 410, 85);
@@ -491,6 +518,12 @@ window.SPRITE_WORLD = true;
     }
     lapis.sort(function (a, b) { return a.y - b.y; });
     lapis.forEach(function (L) { L.fn(); });
+    // Label bangunan digambar TERAKHIR agar selalu di atas karakter
+    papanTeks("Kebun Rumbia " + S.lahan.length + " / 12 Petak", 250, -15, 1);
+    papanTeks("Kilang Sagu Lv. " + S.kilangLevel, 545, -8, 1);
+    papanTeks("Kedai Kopi Liberika Lv. " + S.kedaiLevel, 800, -8, 1);
+    papanTeks("Pasar Selatpanjang", 605, 215, 1);
+    papanTeks("Pelabuhan Ekspor", 800, 300, 1);
     // ---- Partikel mengambang (teks +Rp, +tual, dll) ----
     partikel = partikel.filter(function (pt) { return pt.life > 0; });
     partikel.forEach(function (pt) {
