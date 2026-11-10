@@ -3,22 +3,22 @@
   "version": 10,
   "note": "Aset 2.5D isometric terpisah (bukan screenshot). Strip animasi 4 frame 256x256: walk-strip.png & work-strip.png per karakter. Kanvas pose seragam per karakter (bottom-aligned).",
   "total_files": 89,
-  "total_bytes": 20921560,
+  "total_bytes": 20924448,
   "assets": [
     {
       "path": "assets/STYLE_GUIDE.md",
       "category": "STYLE_GUIDE.md",
-      "size_bytes": 3062
+      "size_bytes": 3487
     },
     {
       "path": "assets/manifest.json",
       "category": "manifest.json",
-      "size_bytes": 14731
+      "size_bytes": 19808
     },
     {
       "path": "assets/preview.html",
       "category": "preview.html",
-      "size_bytes": 16211
+      "size_bytes": 13597
     },
     {
       "path": "assets/referensi-konsep.png",
