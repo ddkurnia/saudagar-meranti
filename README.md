@@ -9,6 +9,25 @@ memproduksi Mie Sagu dan Kue Bangkit Sagu, mengekspor tepung sagu ke pasar
 internasional, dan mengembangkan Kedai Kopi Liberika Meranti sebagai
 bisnis sampingan.
 
+## Yang baru di v5 — Game utuh animasi 2D ala Harvest Moon
+
+Seluruh game sekarang hidup di satu dunia 2D di canvas, yang tampil
+paling atas di halaman — bukan di bawah tabel. Pemain berjalan dengan
+animasi kaki, arah hadap, dan ayunan cangkul/parang saat menanam dan
+menebang. Menanam memunculkan debu dan kecambah yang tumbuh, menebang
+memunculkan daun dan angka hasil panen. Pohon rumbia bergoyang, air
+berombak, awan bergerak, matahari berjalan, malam tiba, NPC berjalan
+bolak-balik di jalan, pelanggan datang dan pergi di kedai kopi, dan
+asap naik dari cerobong kilang. Jam dalam game berjalan 06:00–20:00,
+lalu hari berganti otomatis. Klik petak atau bangunan: kamu berjalan
+ke sana dan langsung beraksi saat sampai.
+
+Kenapa v4 tidak terlihat di GitHub Pages: situsnya sebenarnya sudah
+menayangkan v4 (diperiksa langsung, status 200 dan ada canvas), tapi
+dunianya berada di bawah kartu-kartu lain dan cache Pages bisa
+menahan versi lama sampai 10 menit. Di v5 dunia dipindah ke paling
+atas halaman supaya langsung terlihat saat dibuka.
+
 ## Yang baru di v4 — Visual 2D
 
 Game sekarang **visual 2D di canvas, bukan tabel**. Ada dunia Selatpanjang

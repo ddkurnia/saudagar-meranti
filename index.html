@@ -12,6 +12,16 @@
   <p>Simulasi bisnis sagu dari Selatpanjang, Kepulauan Meranti — dari petani rumbia kecil jadi saudagar besar.</p>
 </header>
 <main>
+  <div class="kartu" style="padding:8px">
+    <canvas id="dunia" width="960" height="560"></canvas>
+    <div class="bar" style="margin-top:10px">
+      <button class="kuning" id="aksiUtama" onclick="aksiTerpilih()">Klik petak / bangunan di dunia 2D</button>
+      <button onclick="hariBerikutnya()">➡️ Hari Berikutnya</button>
+    </div>
+    <p style="font-size:13px;color:#666;margin:8px 0 0">Klik petak atau bangunan — kamu akan berjalan ke sana dan langsung beraksi, seperti Harvest Moon. Jalan dengan WASD / panah, tekan E untuk beraksi. Jam berjalan 06:00–20:00, lalu hari berganti.</p>
+    <p id="petaInfo" style="font-size:13px;color:#666"></p>
+  </div>
+
   <div class="kartu tujuan">
     <b>🎯 Tujuan:</b> <span id="target"></span>
     <p id="menang" style="display:none"><b>🏆 Kamu sudah menjadi Saudagar Sagu Meranti!</b> Terus kembangkan usahamu.</p>
@@ -21,6 +31,7 @@
     <div class="hud">
       <div class="pil"><b id="uang">Rp0</b><span>Uang</span></div>
       <div class="pil"><b id="hari">1</b><span>Hari</span></div>
+      <div class="pil"><b id="jam">06:00</b><span>Jam</span></div>
       <div class="pil"><b id="ekspor">0 kg</b><span>Tepung diekspor</span></div>
       <div class="pil"><b id="reputasi">0</b><span>Reputasi</span></div>
       <div class="pil"><b id="cuaca">☀️ Cerah</b><span>Cuaca hari ini</span></div>
@@ -28,21 +39,9 @@
     </div>
     <p style="font-size:13px;color:#666;margin:10px 0 0" id="cuacaBesok"></p>
     <div class="bar" style="margin-top:12px">
-      <button class="kuning" onclick="hariBerikutnya()">➡️ Hari Berikutnya</button>
       <button class="merah" onclick="resetGame()">Mulai Ulang</button>
       <span style="font-size:13px;color:#666">Progres tersimpan otomatis di browser kamu.</span>
     </div>
-  </div>
-
-  <div class="kartu">
-    <h2>🎮 Dunia 2D — Selatpanjang</h2>
-    <p style="font-size:14px">Ini duniamu, bukan tabel. Kamu adalah orang bertopi kuning di tengah. <b>Klik</b> petak kebun, kilang, kedai, pasar, atau pelabuhan untuk berjalan ke sana, lalu tekan tombol aksi di bawah. Bisa juga jalan dengan <b>WASD / panah</b> dan tekan <b>E</b> untuk beraksi.</p>
-    <canvas id="dunia" width="960" height="560"></canvas>
-    <div class="bar" style="margin-top:10px">
-      <button class="kuning" id="aksiUtama" onclick="aksiTerpilih()">Klik petak / bangunan di dunia 2D</button>
-      <button onclick="hariBerikutnya()">➡️ Hari Berikutnya</button>
-    </div>
-    <p id="petaInfo" style="font-size:13px;color:#666"></p>
   </div>
 
   <div class="kartu">
@@ -134,7 +133,7 @@
     </ol>
   </div>
 </main>
-<footer>Saudagar Sagu Meranti • Selatpanjang, Kepulauan Meranti • Game simulasi bisnis sagu — v4 visual 2D</footer>
+<footer>Saudagar Sagu Meranti • Selatpanjang, Kepulauan Meranti • Game simulasi bisnis sagu — v5 animasi 2D ala Harvest Moon</footer>
 <script src="js/game.js"></script>
 </body>
 </html>
