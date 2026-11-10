@@ -9,6 +9,29 @@ memproduksi Mie Sagu dan Kue Bangkit Sagu, mengekspor tepung sagu ke pasar
 internasional, dan mengembangkan Kedai Kopi Liberika Meranti sebagai
 bisnis sampingan.
 
+## Yang baru di v8 — Sesuai Gambar Referensi
+
+Pada 2026-11-10 pengguna akhirnya mengirim gambar referensi yang
+dimaksud (disimpan di `assets/referensi-konsep.png` di workspace, tidak
+ikut ter-push karena push GitHub hanya menerima file teks UTF-8).
+Visual dirombak mengikuti gambar itu: splash/layar mulai dengan tombol
+MULAI BERMAIN, HUD kaca gelap mengambang (logo Saudagar Sagu Meranti
+dengan pohon kelapa, avatar + Lv & EXP "x / 500", pil Hari + nama hari,
+Cuaca + suhu, Jam + label Pagi/Siang/Sore/Malam, uang & permata dengan
+tombol +, lonceng dengan badge jumlah kontrak, tombol suara & gear),
+panel Target Bisnis di kanan atas (dua progress bar uang dan ekspor),
+sidebar kiri Misi Harian / Kontrak Ekspor / Pekerja / Upgrade /
+Catatan (Catatan = kabar + inventaris), navigasi bawah kaca, tombol
+Hari Berikutnya bundar hijau di kanan bawah, chip lokasi Selatpanjang
+di kiri bawah. Dunia 3D: papan tanda kayu (label bangunan kini gaya
+kayu, papan Kebun Rumbia "n / 12 Petak" dinamis), kilang dengan 2 silo
+perak dan forklift kuning yang bergerak, pasar dengan awning garis
+merah-putih dan peti buah, kedai dengan payung putih, kapal kargo besar
+dengan kontainer warna-warni, jembatan kayu dan batu karang di tepi
+laut, pemain berbaju putih + rompi hijau + topi hijau dengan cincin
+hijau bercahaya di bawahnya. Semua mekanisme bisnis v1–v7 tetap sama;
+save lama bermigrasi ke v8.
+
 ## Yang baru di v7 — Redesign Total: Satu Layar Game Isometrik
 
 Redesign menyeluruh, bukan sekadar ganti warna. Seluruh game kini dalam

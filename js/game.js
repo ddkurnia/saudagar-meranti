@@ -29,7 +29,7 @@ for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++)
   PETAK_POS.push({ x: 60 + c * 100, y: 70 + r * 80, w: 88, h: 68 });
 const BANGUNAN = {
   kilang: { x: 480, y: 60, w: 170, h: 110, label: "Kilang Sagu Lv. 1" },
-  kedai: { x: 700, y: 60, w: 200, h: 110, label: "Kedai Kopi Liberika Meranti Lv. 1" },
+  kedai: { x: 700, y: 60, w: 200, h: 110, label: "Kedai Kopi Liberika Lv. 1" },
   pasar: { x: 480, y: 220, w: 170, h: 100, label: "Pasar Selatpanjang" },
   pelabuhan: { x: 700, y: 330, w: 200, h: 110, label: "Pelabuhan Ekspor" },
 };
@@ -466,7 +466,7 @@ let scene3 = null, camera3 = null, renderer3 = null, sunLight = null, hemiLight 
 let plotMeshes = [], buildingMeshes = {}, player3 = null, npc3 = [], pelanggan3 = [], pekerja3 = [];
 let clouds3 = [], water3 = null, boat3 = null, sunMesh = null, moonMesh = null;
 let partikel3D = [], rain3 = [], smoke3 = [], conveyor3 = [];
-let camPan = { x: 0, z: 0 }, camJarak = 1;
+let camPan = { x: 0, z: 0 }, camJarak = 1.7;
 let signKebun = null, forklift3 = null, cincinPemain = null;
 function mat(warna) { return new THREE.MeshLambertMaterial({ color: warna }); }
 function kotak(w, h, d, warna, x, y, z) {
@@ -944,8 +944,8 @@ function animate3D() {
   if (camera3 && player3) {
     const px = player3.position.x + camPan.x, pz = player3.position.z + camPan.z;
     camera3.position.x += ((px + 0) - camera3.position.x) * 0.05;
-    camera3.position.y += ((11 * camJarak) - camera3.position.y) * 0.05;
-    camera3.position.z += ((pz + 16 * camJarak) - camera3.position.z) * 0.05;
+    camera3.position.y += ((12 * camJarak) - camera3.position.y) * 0.05;
+    camera3.position.z += ((pz + 17 * camJarak) - camera3.position.z) * 0.05;
     camera3.lookAt(px, 0.5, pz - 2);
   }
   updateDunia3D();
