@@ -26,8 +26,14 @@ Semua aset mengikuti gaya ini, BUKAN screenshot game.
   celana gelap, sepatu cokelat, tas punggung cokelat.
 - Empat pose per karakter, masing-masing satu file PNG transparan:
   idle.png, walk.png, work.png, interact.png.
+- Kanvas pose SERAGAM per karakter (v10): keempat pose dipadatkan ke
+  kanvas yang sama (lebar & tinggi maksimum keempat pose, bottom-aligned
+  agar titik tanah tidak bergeser) supaya karakter tidak berubah ukuran
+  saat berganti pose.
 - Sprite sheet animasi: 4 frame seragam per animasi
-  (walk-sheet.png, work-sheet.png), frame 256×256, grid 4×1.
+  (walk-strip.png, work-strip.png), frame 256×256, strip 1024×256.
+  Frame jalan harus menunjukkan kaki bergantian yang JELAS (kiri-kanan),
+  bukan 4 frame yang nyaris identik.
 
 ## Lingkungan (assets/environment/)
 - Pohon rumbia, pohon kelapa, tanaman hias, bunga, rumput, batu, jalan,
@@ -41,7 +47,8 @@ Semua aset mengikuti gaya ini, BUKAN screenshot game.
 
 ## Objek (assets/objects/)
 - Mesin kilang, conveyor, karung sagu, tumpukan tepung, kontainer,
-  meja dan kursi, mesin kopi, gerobak pasar, lampu jalan.
+  meja dan kursi, mesin kopi, gerobak pasar, lampu jalan, payung kedai
+  (payung-kedai.png, parasol putih untuk teras kedai kopi).
 
 ## Animasi & Efek (assets/animations/, assets/effects/)
 - Sprite sheet 4 frame seragam (grid 4×1, frame 256×256):
