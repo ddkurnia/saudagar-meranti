@@ -21,14 +21,14 @@ window.SPRITE_WORLD = true;
       rumah: "assets/buildings/building-rumah-pekerja.png"
     },
     karakter: {
-      player: { idle: "assets/characters/player/idle.png", walk: "assets/characters/player/walk.png", work: "assets/characters/player/work.png", interact: "assets/characters/player/interact.png" },
-      petani: { idle: "assets/characters/petani/idle.png", walk: "assets/characters/petani/walk.png", work: "assets/characters/petani/work.png" },
-      "pekerja-kilang": { idle: "assets/characters/pekerja-kilang/idle.png", work: "assets/characters/pekerja-kilang/work.png" },
-      barista: { idle: "assets/characters/barista/idle.png", work: "assets/characters/barista/work.png" },
-      pedagang: { idle: "assets/characters/pedagang/idle.png", work: "assets/characters/pedagang/work.png" },
-      pelanggan: { idle: "assets/characters/pelanggan/idle.png", work: "assets/characters/pelanggan/work.png" },
-      sopir: { idle: "assets/characters/sopir/idle.png", walk: "assets/characters/sopir/walk.png" },
-      "pekerja-pelabuhan": { idle: "assets/characters/pekerja-pelabuhan/idle.png", work: "assets/characters/pekerja-pelabuhan/work.png" }
+      player: { idle: "assets/characters/player/idle.png", walk: "assets/characters/player/walk.png", work: "assets/characters/player/work.png", interact: "assets/characters/player/interact.png", walkStrip: "assets/characters/player/walk-strip.png", workStrip: "assets/characters/player/work-strip.png" },
+      petani: { idle: "assets/characters/petani/idle.png", walk: "assets/characters/petani/walk.png", work: "assets/characters/petani/work.png", walkStrip: "assets/characters/petani/walk-strip.png", workStrip: "assets/characters/petani/work-strip.png" },
+      "pekerja-kilang": { idle: "assets/characters/pekerja-kilang/idle.png", work: "assets/characters/pekerja-kilang/work.png", walkStrip: "assets/characters/pekerja-kilang/walk-strip.png", workStrip: "assets/characters/pekerja-kilang/work-strip.png" },
+      barista: { idle: "assets/characters/barista/idle.png", work: "assets/characters/barista/work.png", walkStrip: "assets/characters/barista/walk-strip.png", workStrip: "assets/characters/barista/work-strip.png" },
+      pedagang: { idle: "assets/characters/pedagang/idle.png", work: "assets/characters/pedagang/work.png", walkStrip: "assets/characters/pedagang/walk-strip.png", workStrip: "assets/characters/pedagang/work-strip.png" },
+      pelanggan: { idle: "assets/characters/pelanggan/idle.png", work: "assets/characters/pelanggan/work.png", walkStrip: "assets/characters/pelanggan/walk-strip.png", workStrip: "assets/characters/pelanggan/work-strip.png" },
+      sopir: { idle: "assets/characters/sopir/idle.png", walk: "assets/characters/sopir/walk.png", walkStrip: "assets/characters/sopir/walk-strip.png", workStrip: "assets/characters/sopir/work-strip.png" },
+      "pekerja-pelabuhan": { idle: "assets/characters/pekerja-pelabuhan/idle.png", work: "assets/characters/pekerja-pelabuhan/work.png", walkStrip: "assets/characters/pekerja-pelabuhan/walk-strip.png", workStrip: "assets/characters/pekerja-pelabuhan/work-strip.png" }
     },
     lingkungan: {
       rumbia: "assets/environment/pohon-rumbia.png",
@@ -61,7 +61,8 @@ window.SPRITE_WORLD = true;
       mejaKursi: "assets/objects/meja-kursi.png",
       mesinKopi: "assets/objects/mesin-kopi.png",
       gerobak: "assets/objects/gerobak-pasar.png",
-      lampu: "assets/objects/lampu-jalan.png"
+      lampu: "assets/objects/lampu-jalan.png",
+      payung: "assets/objects/payung-kedai.png"
     },
     animasi: {
       asap: "assets/animations/asap-cerobong-sheet.png",
@@ -300,6 +301,29 @@ window.SPRITE_WORLD = true;
     else ctx.drawImage(im, p.x - w / 2, p.y - h - dy, w, h);
     ctx.restore();
   }
+  // ---------- Lebar gambar karakter (v10) ----------
+  // Kanvas pose kini seragam per karakter (bottom-aligned, v10), jadi
+  // lebar gambar disesuaikan agar tinggi badan sama seperti sebelumnya.
+  var LEBAR_POSE = { player: 85, petani: 84, "pekerja-kilang": 82, barista: 70, pedagang: 79, pelanggan: 87, sopir: 75, "pekerja-pelabuhan": 67 };
+  // Strip 256x256 (karakter ~248 px): lebar agar tinggi badan sama dgn pose.
+  var LEBAR_STRIP = { player: 113, petani: 96, "pekerja-kilang": 102, barista: 89, pedagang: 104, pelanggan: 99, sopir: 98, "pekerja-pelabuhan": 87 };
+  function gambarStripKarakter(namaSprite, jenis, wx, wy, lebar, frameIdx, balik) {
+    // Gambar satu frame (256x256) dari walk/work-strip; false bila strip
+    // belum termuat (pemanggil memakai pose tunggal sebagai cadangan).
+    if (!ctx) return false;
+    var k = ASET.karakter[namaSprite]; if (!k) return false;
+    var src = k[jenis === "work" ? "workStrip" : "walkStrip"];
+    var im = src ? IMG[src] : null;
+    if (!im) return false;
+    var p = proyeksi(wx, wy);
+    var fw = im.naturalWidth / 4, fh = im.naturalHeight;
+    var w = lebar * p.s, h = w * fh / fw;
+    ctx.save();
+    if (balik) { ctx.translate(p.x, 0); ctx.scale(-1, 1); ctx.drawImage(im, frameIdx * fw, 0, fw, fh, -w / 2, p.y - h, w, h); }
+    else ctx.drawImage(im, frameIdx * fw, 0, fw, fh, p.x - w / 2, p.y - h, w, h);
+    ctx.restore();
+    return true;
+  }
   function gambarSheet(src, wx, wy, lebar, frameIdx, totalFrame) {
     if (!ctx) return;
     var im = IMG[src]; if (!im) return;
@@ -398,6 +422,7 @@ window.SPRITE_WORLD = true;
     tambah(195, function () {
       gambar(imgAset("objek", "mejaKursi"), 755, 195, 95);
       gambar(imgAset("objek", "mesinKopi"), 865, 195, 50);
+      gambar(imgAset("objek", "payung"), 800, 205, 95);
     });
     // Pasar + gerobak
     tambah(BANGUNAN.pasar.y + BANGUNAN.pasar.h, function () {
@@ -475,37 +500,47 @@ window.SPRITE_WORLD = true;
     NPC.forEach(function (n) {
       var tx = n.wx[n.i], ty = n.wy[n.i];
       var dx = tx - n.x, dy = ty - n.y, j = Math.hypot(dx, dy);
-      if (j < 4) n.i = (n.i + 1) % n.wx.length;
+      var bergerak = j >= 4;
+      if (!bergerak) n.i = (n.i + 1) % n.wx.length;
       else { n.x += dx / j * n.cepat; n.y += dy / j * n.cepat; n._kiri = dx < 0; }
       var spr = NPC_SPRITE[n.nama] || "petani";
-      tambah(n.y, (function (nn, ss) {
+      tambah(n.y, (function (nn, ss, jalan) {
         return function () {
-          gambarKarakter(ss, "walk", nn.x, nn.y, 52, !!nn._kiri, f / 6);
+          if (jalan) {
+            if (!gambarStripKarakter(ss, "walk", nn.x, nn.y, LEBAR_STRIP[ss] || 96, Math.floor(f / 8 + nn.i) % 4, !!nn._kiri))
+              gambarKarakter(ss, "walk", nn.x, nn.y, LEBAR_POSE[ss] || 52, !!nn._kiri, f / 6);
+          } else gambarKarakter(ss, "idle", nn.x, nn.y, LEBAR_POSE[ss] || 52, !!nn._kiri, 0);
           var p = proyeksi(nn.x, nn.y - 62);
           ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.font = "bold " + Math.round(11 * s0) + "px sans-serif";
           ctx.textAlign = "center"; ctx.fillText(nn.nama, p.x, p.y);
         };
-      })(n, spr));
+      })(n, spr, bergerak));
     });
-    // Pekerja
+    // Pekerja (animasi kerja dari strip)
     for (var pk2 = 0; pk2 < S.pekerja.kebun; pk2++)
-      tambah(320, (function (k) { return function () { gambarKarakter("petani", "work", 120 + k * 40, 320, 50, false, f / 6); }; })(pk2));
+      tambah(320, (function (k) { return function () { if (!gambarStripKarakter("petani", "work", 120 + k * 40, 320, LEBAR_STRIP.petani, Math.floor(f / 10 + k) % 4, false)) gambarKarakter("petani", "work", 120 + k * 40, 320, LEBAR_POSE.petani, false, f / 6); }; })(pk2));
     for (var pl2 = 0; pl2 < S.pekerja.kilang; pl2++)
-      tambah(200, (function (k) { return function () { gambarKarakter("pekerja-kilang", "work", 520 + k * 36, 200, 50, false, f / 6); }; })(pl2));
+      tambah(200, (function (k) { return function () { if (!gambarStripKarakter("pekerja-kilang", "work", 520 + k * 36, 200, LEBAR_STRIP["pekerja-kilang"], Math.floor(f / 10 + k) % 4, false)) gambarKarakter("pekerja-kilang", "work", 520 + k * 36, 200, LEBAR_POSE["pekerja-kilang"], false, f / 6); }; })(pl2));
     for (var br2 = 0; br2 < S.pekerja.barista; br2++)
-      tambah(200, (function (k) { return function () { gambarKarakter("barista", "work", 730 + k * 36, 200, 50, false, f / 6); }; })(br2));
+      tambah(200, (function (k) { return function () { if (!gambarStripKarakter("barista", "work", 730 + k * 36, 200, LEBAR_STRIP.barista, Math.floor(f / 10 + k) % 4, false)) gambarKarakter("barista", "work", 730 + k * 36, 200, LEBAR_POSE.barista, false, f / 6); }; })(br2));
     // Pelanggan kedai
     var jmlPel = Math.min(S.pelanggan, 6);
     for (var cp = 0; cp < jmlPel; cp++)
-      tambah(200, (function (k) { return function () { gambarKarakter("pelanggan", "idle", 740 + k * 28, 200, 48, false, 0); }; })(cp));
-    // Pemain (cincin hijau + pose sesuai keadaan)
+      tambah(200, (function (k) { return function () { gambarKarakter("pelanggan", "idle", 740 + k * 28, 200, LEBAR_POSE.pelanggan, false, 0); }; })(cp));
+    // Pemain (cincin hijau + animasi strip saat jalan/bekerja)
     tambah(S.pemain.y, function () {
       elipsTanah(S.pemain.x, S.pemain.y, 22, "rgba(76,175,80,0.55)");
       ctx.strokeStyle = "#2e7d32"; ctx.lineWidth = 2;
       var pr = proyeksi(S.pemain.x, S.pemain.y);
       ctx.beginPath(); ctx.ellipse(pr.x, pr.y, 22 * s0, 22 * 0.32 * s0, 0, 0, Math.PI * 2); ctx.stroke();
-      var pose = S.pemain.ayun > 0 ? "work" : S.pemain.jalan ? "walk" : "idle";
-      gambarKarakter("player", pose, S.pemain.x, S.pemain.y, 56, S.pemain.arah === "kiri", S.pemain.jalan ? S.pemain.langkah * 2 : 0);
+      var kiri = S.pemain.arah === "kiri";
+      if (S.pemain.ayun > 0) {
+        if (!gambarStripKarakter("player", "work", S.pemain.x, S.pemain.y, LEBAR_STRIP.player, Math.floor(f / 6) % 4, kiri))
+          gambarKarakter("player", "work", S.pemain.x, S.pemain.y, LEBAR_POSE.player, kiri, 0);
+      } else if (S.pemain.jalan) {
+        if (!gambarStripKarakter("player", "walk", S.pemain.x, S.pemain.y, LEBAR_STRIP.player, Math.floor(f / 8) % 4, kiri))
+          gambarKarakter("player", "walk", S.pemain.x, S.pemain.y, LEBAR_POSE.player, kiri, S.pemain.langkah * 2);
+      } else gambarKarakter("player", "idle", S.pemain.x, S.pemain.y, LEBAR_POSE.player, kiri, 0);
     });
     // Bangunan terpilih: sorot kuning
     if (terpilih && terpilih.kind !== "plot" && BANGUNAN[terpilih.kind]) {

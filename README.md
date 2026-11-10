@@ -9,6 +9,22 @@ memproduksi Mie Sagu dan Kue Bangkit Sagu, mengekspor tepung sagu ke pasar
 internasional, dan mengembangkan Kedai Kopi Liberika Meranti sebagai
 bisnis sampingan.
 
+## Yang baru di v10 — Animasi Karakter dari Strip, Payung Kedai & Perbaikan Aset
+
+- **Strip animasi 4-frame (16 file baru):** tiap karakter kini punya
+  `walk-strip.png` dan `work-strip.png` (1024×256, frame 256×256).
+  Pemain, NPC, dan pekerja kini benar-benar melangkah dan bekerja
+  dengan gerakan kaki/tangan yang bergantian, bukan lagi pose diam.
+- **Kanvas pose seragam:** keempat pose tiap karakter dipadatkan ke
+  kanvas yang sama (bottom-aligned), jadi karakter tidak lagi berubah
+  ukuran saat berganti pose. Lebar gambar di dunia disesuaikan per
+  karakter (`LEBAR_POSE` / `LEBAR_STRIP` di `js/world25.js`).
+- **Payung kedai:** parasol putih (`assets/objects/payung-kedai.png`)
+  kini berdiri di teras Kedai Kopi Liberika, seperti di gambar referensi.
+- **Perbaikan aset:** roda gerobak `pelanggan/work.png` yang dulu
+  terpotong kini utuh; `laut.webp` diganti dari blok wajik menjadi ubin
+  air persegi 512×512 yang bisa diulang (tileable).
+
 ## Yang baru di v9 — Dunia 2.5D Isometric dengan Aset Sprite Asli
 
 Dunia Three.js diganti dengan dunia **2.5D isometric yang dirender dari
