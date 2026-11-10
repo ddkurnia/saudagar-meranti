@@ -33,5 +33,9 @@ button.kecil{padding:7px 10px;font-size:13px}
 #log{max-height:180px;overflow:auto;background:#fafafa;border:1px solid #ddd;border-radius:10px;padding:10px;font-size:14px}
 #log p{margin:4px 0}
 .tujuan{background:#e3f2fd;border:2px solid var(--biru);border-radius:12px;padding:12px}
+.peta{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.zona{background:#e8f5e9;border:2px solid #1b6b3a33;border-radius:12px;padding:10px;text-align:center;font-size:22px}
+.zona b{display:block;font-size:14px;margin-top:4px}
+.zona span{display:block;font-size:12px;color:var(--abu)}
 footer{text-align:center;color:var(--abu);font-size:13px;padding:10px 20px 30px}
 @media(max-width:600px){header h1{font-size:22px}.pil b{font-size:17px}}

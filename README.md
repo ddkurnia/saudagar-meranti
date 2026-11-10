@@ -9,6 +9,19 @@ memproduksi Mie Sagu dan Kue Bangkit Sagu, mengekspor tepung sagu ke pasar
 internasional, dan mengembangkan Kedai Kopi Liberika Meranti sebagai
 bisnis sampingan.
 
+## Yang baru di v2
+
+- **Peta kebun lebih besar:** mulai dengan 4 petak, bisa diperluas sampai
+  12 petak. Ada peta Selatpanjang: Kebun Rumbia, Kilang Sagu, Pasar,
+  Pelabuhan Ekspor, dan Kedai Kopi Liberika.
+- **Cuaca harian:** Cerah, Berawan, Hujan, dan Panas Terik, lengkap dengan
+  prakiraan besok. Hujan membuat rumbia tumbuh lebih cepat tapi kapal
+  tidak bisa ekspor dan kedai sepi. Panas Terik menambah panen.
+  Cerah membuat kedai kopi ramai.
+- **Pelanggan kedai kopi:** pelanggan datang setiap hari sesuai level
+  kedai, reputasi, dan cuaca. Layani mereka satu per satu untuk
+  penghasilan tambahan dan kepuasan pelanggan.
+
 ## Cara main
 
 1. Tanam rumbia di lahan kosong, tunggu 2 hari sampai matang.

@@ -23,7 +23,9 @@
       <div class="pil"><b id="hari">1</b><span>Hari</span></div>
       <div class="pil"><b id="ekspor">0 kg</b><span>Tepung diekspor</span></div>
       <div class="pil"><b id="reputasi">0</b><span>Reputasi</span></div>
+      <div class="pil"><b id="cuaca">☀️ Cerah</b><span>Cuaca hari ini</span></div>
     </div>
+    <p style="font-size:13px;color:#666;margin:10px 0 0" id="cuacaBesok"></p>
     <div class="bar" style="margin-top:12px">
       <button class="kuning" onclick="hariBerikutnya()">➡️ Hari Berikutnya</button>
       <button class="merah" onclick="resetGame()">Mulai Ulang</button>
@@ -32,7 +34,20 @@
   </div>
 
   <div class="kartu">
+    <h2>🗺️ Peta Selatpanjang</h2>
+    <p id="petaInfo"></p>
+    <div class="peta">
+      <div class="zona">🌴<b>Kebun Rumbia</b><span>Tanam &amp; tebang</span></div>
+      <div class="zona">🏭<b>Kilang Sagu</b><span>Olah tual jadi tepung</span></div>
+      <div class="zona">🛒<b>Pasar Selatpanjang</b><span>Jual lokal</span></div>
+      <div class="zona">🚢<b>Pelabuhan Ekspor</b><span>Ekspor internasional</span></div>
+      <div class="zona">☕<b>Kedai Kopi Liberika</b><span>Pelanggan &amp; penghasilan</span></div>
+    </div>
+  </div>
+
+  <div class="kartu">
     <h2>🌱 Kebun Rumbia</h2>
+    <p style="font-size:13px;color:#666">Peta kebun kini bisa diperluas sampai 12 petak.</p>
     <div class="grid" id="lahan"></div>
   </div>
 
@@ -68,7 +83,11 @@
   <div class="kartu">
     <h2>☕ Kedai Kopi Liberika Meranti</h2>
     <p id="kedaiInfo">Belum punya kedai</p>
-    <p style="font-size:14px">Bisnis sampingan: kedai kopi menghasilkan uang pasif setiap hari. Kopi Liberika khas Meranti jadi daya tarik wisatawan dan pedagang.</p>
+    <p id="pelangganInfo"></p>
+    <div class="bar">
+      <button class="kuning" onclick="layaniPelanggan()">Layani Pelanggan — Rp15.000+</button>
+    </div>
+    <p style="font-size:14px">Bisnis sampingan: kedai kopi menghasilkan uang pasif setiap hari, ditambah penghasilan tiap pelanggan yang kamu layani. Kopi Liberika khas Meranti jadi daya tarik wisatawan dan pedagang. Cuaca memengaruhi jumlah pelanggan: cerah ramai, hujan sepi.</p>
   </div>
 
   <div class="kartu">
@@ -95,12 +114,13 @@
       <li>Olah tual di kilang menjadi tepung sagu.</li>
       <li>Buat Mie Sagu dan Kue Bangkit Sagu dari tepung, lalu jual.</li>
       <li>Ekspor tepung sagu ke pasar internasional setelah punya angkutan.</li>
-      <li>Buka Kedai Kopi Liberika Meranti untuk penghasilan harian.</li>
-      <li>Pakai keuntungan untuk upgrade lahan, kilang, alat, dan angkutan.</li>
+      <li>Perhatikan cuaca: hujan membuat rumbia tumbuh lebih cepat tapi kapal tidak bisa ekspor, panas terik menambah panen, cerah membuat kedai kopi ramai.</li>
+      <li>Buka Kedai Kopi Liberika Meranti, layani pelanggannya setiap hari untuk penghasilan tambahan.</li>
+      <li>Pakai keuntungan untuk upgrade lahan (sampai 12 petak), kilang, alat, dan angkutan.</li>
     </ol>
   </div>
 </main>
-<footer>Saudagar Sagu Meranti • Selatpanjang, Kepulauan Meranti • Game simulasi bisnis sagu — v1</footer>
+<footer>Saudagar Sagu Meranti • Selatpanjang, Kepulauan Meranti • Game simulasi bisnis sagu — v2</footer>
 <script src="js/game.js"></script>
 </body>
 </html>
