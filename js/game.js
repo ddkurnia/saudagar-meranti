@@ -28,9 +28,9 @@ const PETAK_POS = [];
 for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++)
   PETAK_POS.push({ x: 60 + c * 100, y: 70 + r * 80, w: 88, h: 68 });
 const BANGUNAN = {
-  kilang: { x: 480, y: 60, w: 170, h: 110, label: "Kilang Sagu Lv. 1" },
+  kilang: { x: 470, y: 20, w: 150, h: 110, label: "Kilang Sagu Lv. 1" },
   kedai: { x: 700, y: 60, w: 200, h: 110, label: "Kedai Kopi Liberika Lv. 1" },
-  pasar: { x: 480, y: 220, w: 170, h: 100, label: "Pasar Selatpanjang" },
+  pasar: { x: 520, y: 240, w: 170, h: 100, label: "Pasar Selatpanjang" },
   pelabuhan: { x: 700, y: 330, w: 200, h: 110, label: "Pelabuhan Ekspor" },
 };
 const HARI_NAMA = ["Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu", "Senin"];
