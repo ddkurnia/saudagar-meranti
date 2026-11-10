@@ -9,6 +9,19 @@ memproduksi Mie Sagu dan Kue Bangkit Sagu, mengekspor tepung sagu ke pasar
 internasional, dan mengembangkan Kedai Kopi Liberika Meranti sebagai
 bisnis sampingan.
 
+## Yang baru di v4 — Visual 2D
+
+Game sekarang **visual 2D di canvas, bukan tabel**. Ada dunia Selatpanjang
+yang bisa dilihat dan diklik: rumput, jalan tanah, laut, kapal, kebun
+rumbia dengan pohon yang tumbuh, kilang, kedai kopi, pasar, dan pelabuhan.
+Kamu adalah orang bertopi kuning yang berjalan di dunia itu — klik
+tujuan untuk berjalan ke sana, atau jalan dengan WASD / tombol panah
+dan tekan E untuk beraksi. Pekerja dan pelanggan juga muncul sebagai
+orang di dunia: pekerja kebun di kebun, pekerja kilang di kilang,
+barista di kedai, dan pelanggan menunggu di depan kedai kopi.
+Cuaca terlihat di dunia: hujan turun saat Hujan, matahari bersinar
+saat Cerah / Panas Terik.
+
 ## Yang baru di v3
 
 - **Pekerja:** rekrut Pekerja Kebun (tanam otomatis), Pekerja Kilang

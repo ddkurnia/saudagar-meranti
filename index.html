@@ -35,15 +35,14 @@
   </div>
 
   <div class="kartu">
-    <h2>🗺️ Peta Selatpanjang</h2>
-    <p id="petaInfo"></p>
-    <div class="peta">
-      <div class="zona">🌴<b>Kebun Rumbia</b><span>Tanam &amp; tebang</span></div>
-      <div class="zona">🏭<b>Kilang Sagu</b><span>Olah tual jadi tepung</span></div>
-      <div class="zona">🛒<b>Pasar Selatpanjang</b><span>Jual lokal</span></div>
-      <div class="zona">🚢<b>Pelabuhan Ekspor</b><span>Ekspor internasional</span></div>
-      <div class="zona">☕<b>Kedai Kopi Liberika</b><span>Pelanggan &amp; penghasilan</span></div>
+    <h2>🎮 Dunia 2D — Selatpanjang</h2>
+    <p style="font-size:14px">Ini duniamu, bukan tabel. Kamu adalah orang bertopi kuning di tengah. <b>Klik</b> petak kebun, kilang, kedai, pasar, atau pelabuhan untuk berjalan ke sana, lalu tekan tombol aksi di bawah. Bisa juga jalan dengan <b>WASD / panah</b> dan tekan <b>E</b> untuk beraksi.</p>
+    <canvas id="dunia" width="960" height="560"></canvas>
+    <div class="bar" style="margin-top:10px">
+      <button class="kuning" id="aksiUtama" onclick="aksiTerpilih()">Klik petak / bangunan di dunia 2D</button>
+      <button onclick="hariBerikutnya()">➡️ Hari Berikutnya</button>
     </div>
+    <p id="petaInfo" style="font-size:13px;color:#666"></p>
   </div>
 
   <div class="kartu">
@@ -66,12 +65,6 @@
     <h2>📜 Kontrak Ekspor</h2>
     <p style="font-size:14px">Kontrak dari Malaysia, Singapura, Jepang, Tiongkok, dan Brunei. Kirim tepat waktu sebelum tenggat untuk harga premium dan reputasi +10.</p>
     <div id="kontrak"></div>
-  </div>
-
-  <div class="kartu">
-    <h2>🌱 Kebun Rumbia</h2>
-    <p style="font-size:13px;color:#666">Peta kebun kini bisa diperluas sampai 12 petak.</p>
-    <div class="grid" id="lahan"></div>
   </div>
 
   <div class="kartu">
@@ -132,18 +125,16 @@
   <div class="kartu">
     <h2>📖 Cara Main</h2>
     <ol>
-      <li>Tanam rumbia di lahan kosong, tunggu 2 hari sampai matang.</li>
-      <li>Tebang rumbia untuk mendapat tual sagu.</li>
-      <li>Olah tual di kilang menjadi tepung sagu.</li>
-      <li>Buat Mie Sagu dan Kue Bangkit Sagu dari tepung, lalu jual.</li>
-      <li>Ekspor tepung sagu ke pasar internasional setelah punya angkutan.</li>
-      <li>Rekrut pekerja untuk mengotomatiskan kebun, kilang, dan kedai kopi, tapi ingat gaji harian mereka.</li>
-      <li>Ambil kontrak ekspor dari berbagai negara dan kirim sebelum tenggat.</li>
-      <li>Perhatikan musim: Musim Panen menambah panen, Musim Hujan banyak hujan, Musim Kemarau cerah dan panas. Tiap 10 hari ada Festival Sagu Selatpanjang.</li>
+      <li><b>Klik dunia 2D di atas.</b> Klik petak kebun untuk berjalan ke sana, lalu tanam rumbia. Tunggu 2 hari sampai matang, klik lagi untuk menebang.</li>
+      <li>Klik kilang untuk mengolah tual jadi tepung sagu.</li>
+      <li>Buat Mie Sagu dan Kue Bangkit Sagu dari tepung, lalu jual di pasar.</li>
+      <li>Klik pelabuhan untuk ekspor, dan kirim kontrak ke berbagai negara.</li>
+      <li>Klik kedai kopi untuk melayani pelanggan Liberika Meranti.</li>
+      <li>Rekrut pekerja — mereka muncul sebagai orang di dunia dan bekerja otomatis.</li>
     </ol>
   </div>
 </main>
-<footer>Saudagar Sagu Meranti • Selatpanjang, Kepulauan Meranti • Game simulasi bisnis sagu — v3</footer>
+<footer>Saudagar Sagu Meranti • Selatpanjang, Kepulauan Meranti • Game simulasi bisnis sagu — v4 visual 2D</footer>
 <script src="js/game.js"></script>
 </body>
 </html>
