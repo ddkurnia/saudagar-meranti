@@ -2,139 +2,77 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Saudagar Sagu Meranti</title>
-<link rel="stylesheet" href="css/style.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Saudagar Sagu Meranti — Game Simulasi Bisnis</title>
+<link rel="stylesheet" href="css/style.css?v=7">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
 </head>
 <body>
-<header>
-  <h1>🌴 Saudagar Sagu Meranti</h1>
-  <p>Simulasi bisnis sagu dari Selatpanjang, Kepulauan Meranti — dari petani rumbia kecil jadi saudagar besar.</p>
-</header>
-<main>
-  <div class="kartu" style="padding:8px">
+<div id="game">
+  <!-- HEADER HUD -->
+  <header id="hud">
+    <div class="profil">
+      <div class="avatar">🧑‍🌾</div>
+      <div class="profil-info">
+        <b>Saudagar Sagu</b>
+        <span>Lv <b id="level">1</b> • <span id="expPersen">0%</span></span>
+        <div class="expbar"><div id="expBar"></div></div>
+      </div>
+    </div>
+    <div class="hud-tengah">
+      <div class="hud-chip">📅 Hari <b id="hari">1</b> <span id="tanggal"></span></div>
+      <div class="hud-chip">🕐 <b id="jam">06:00</b></div>
+      <div class="hud-chip"><b id="cuaca">☀️ Cerah</b> • <span id="musim">Musim Panen</span></div>
+      <div class="hud-chip target-chip" title="Target bisnis"><span id="target"></span><div class="targetbar"><div id="targetBar"></div></div></div>
+    </div>
+    <div class="hud-kanan">
+      <div class="hud-chip uang">💰 <b id="uang">Rp0</b></div>
+      <div class="hud-chip">💎 <b id="permata">0</b></div>
+      <div class="hud-chip">⭐ <b id="reputasi">0</b></div>
+      <button class="hud-btn" id="tombolSuara" onclick="toggleSuara()" title="Suara">🔊</button>
+      <button class="hud-btn" onclick="bukaPanel('misi')" title="Notifikasi &amp; kabar">🔔</button>
+      <button class="hud-btn" onclick="resetGame()" title="Mulai ulang">⚙️</button>
+    </div>
+  </header>
+
+  <!-- AREA UTAMA -->
+  <main id="panggung">
     <div id="dunia3d"></div>
-    <div class="bar" style="margin-top:10px">
-      <button class="kuning" id="aksiUtama" onclick="aksiTerpilih()">Klik petak / bangunan di dunia 3D</button>
-      <button onclick="hariBerikutnya()">➡️ Hari Berikutnya</button>
-    </div>
-    <p style="font-size:13px;color:#666;margin:8px 0 0">Dunia 3D: klik petak atau bangunan — kamu akan berjalan ke sana dan langsung beraksi, seperti Harvest Moon. Jalan dengan WASD / panah, tekan E untuk beraksi. Kamera mengikuti kamu. Jam berjalan 06:00–20:00, lalu hari berganti.</p>
-    <p id="petaInfo" style="font-size:13px;color:#666"></p>
-  </div>
+    <div id="toast"></div>
 
-  <div class="kartu tujuan">
-    <b>🎯 Tujuan:</b> <span id="target"></span>
-    <p id="menang" style="display:none"><b>🏆 Kamu sudah menjadi Saudagar Sagu Meranti!</b> Terus kembangkan usahamu.</p>
-  </div>
+    <!-- SIDEBAR KIRI -->
+    <nav id="sidebar">
+      <button onclick="bukaPanel('misi')" title="Misi &amp; Kabar">🎯<span>Misi</span></button>
+      <button onclick="bukaPanel('kontrak')" title="Kontrak Ekspor">📜<span>Kontrak</span></button>
+      <button onclick="bukaPanel('pekerja')" title="Pekerja">👷<span>Pekerja</span></button>
+      <button onclick="bukaPanel('upgrade')" title="Upgrade">⬆️<span>Upgrade</span></button>
+      <button onclick="bukaPanel('inventaris')" title="Inventaris">📦<span>Inventaris</span></button>
+    </nav>
 
-  <div class="kartu">
-    <div class="hud">
-      <div class="pil"><b id="uang">Rp0</b><span>Uang</span></div>
-      <div class="pil"><b id="hari">1</b><span>Hari</span></div>
-      <div class="pil"><b id="jam">06:00</b><span>Jam</span></div>
-      <div class="pil"><b id="ekspor">0 kg</b><span>Tepung diekspor</span></div>
-      <div class="pil"><b id="reputasi">0</b><span>Reputasi</span></div>
-      <div class="pil"><b id="cuaca">☀️ Cerah</b><span>Cuaca hari ini</span></div>
-      <div class="pil"><b id="musim">Musim Panen</b><span>Musim</span></div>
+    <!-- PANEL MENGAMBANG -->
+    <div id="panel" class="tersembunyi">
+      <div class="panel-kepala">
+        <b id="panelJudul">Panel</b>
+        <button onclick="tutupPanel()" title="Tutup">✕</button>
+      </div>
+      <div id="panelIsi"></div>
     </div>
-    <p style="font-size:13px;color:#666;margin:10px 0 0" id="cuacaBesok"></p>
-    <div class="bar" style="margin-top:12px">
-      <button class="merah" onclick="resetGame()">Mulai Ulang</button>
-      <span style="font-size:13px;color:#666">Progres tersimpan otomatis di browser kamu.</span>
-    </div>
-  </div>
 
-  <div class="kartu">
-    <h2>👷 Pekerja</h2>
-    <p id="pekerjaInfo"></p>
-    <div class="bar">
-      <button onclick="hirePekerja('kebun')">Rekrut Pekerja Kebun — Rp50.000</button>
-      <button onclick="hirePekerja('kilang')">Rekrut Pekerja Kilang — Rp80.000</button>
-      <button onclick="hirePekerja('barista')">Rekrut Barista — Rp60.000</button>
-    </div>
-    <div class="bar">
-      <button class="kecil merah" onclick="berhentikanPekerja('kebun')">Berhentikan Kebun</button>
-      <button class="kecil merah" onclick="berhentikanPekerja('kilang')">Berhentikan Kilang</button>
-      <button class="kecil merah" onclick="berhentikanPekerja('barista')">Berhentikan Barista</button>
-    </div>
-    <p style="font-size:13px;color:#666">Pekerja kebun menanam otomatis, pekerja kilang mengolah otomatis, barista melayani pelanggan otomatis. Gaji dibayar tiap hari.</p>
-  </div>
+    <!-- TOMBOL HARI BERIKUTNYA -->
+    <button id="tombolHari" onclick="hariBerikutnya()">➡️ Hari Berikutnya</button>
+    <div id="menang" style="display:none">🏆 Kamu sudah menjadi Saudagar Sagu Meranti!</div>
+  </main>
 
-  <div class="kartu">
-    <h2>📜 Kontrak Ekspor</h2>
-    <p style="font-size:14px">Kontrak dari Malaysia, Singapura, Jepang, Tiongkok, dan Brunei. Kirim tepat waktu sebelum tenggat untuk harga premium dan reputasi +10.</p>
-    <div id="kontrak"></div>
-  </div>
-
-  <div class="kartu">
-    <h2>🏭 Kilang &amp; Produksi</h2>
-    <p>Kapasitas kilang: <b id="kapasitas"></b></p>
-    <div class="bar">
-      <button onclick="olah()">Olah 4 Tual → 10 kg Tepung</button>
-      <button class="biru" onclick="produksi('mie')">Buat Mie Sagu (2 kg → 5 bungkus)</button>
-      <button class="biru" onclick="produksi('kue')">Buat Kue Bangkit (1 kg → 4 kotak)</button>
-    </div>
-    <h3>📦 Persediaan</h3>
-    <div class="inv">
-      <div><b id="tual">0</b>Tual Sagu</div>
-      <div><b id="tepung">0 kg</b>Tepung Sagu</div>
-      <div><b id="mie">0 bungkus</b>Mie Sagu</div>
-      <div><b id="kue">0 kotak</b>Kue Bangkit Sagu</div>
-    </div>
-  </div>
-
-  <div class="kartu">
-    <h2>🛒 Pasar &amp; Ekspor</h2>
-    <p>Harga hari ini — Tepung: <b id="hargaTepung"></b> • Mie: <b id="hargaMie"></b> • Kue: <b id="hargaKue"></b> • Ekspor: <b id="hargaEkspor"></b></p>
-    <div class="bar">
-      <button class="kuning" onclick="jual('tepung')">Jual 10 kg Tepung Lokal</button>
-      <button class="kuning" onclick="jual('ekspor')">Ekspor 20 kg Tepung</button>
-      <button onclick="jual('mie')">Jual Semua Mie Sagu</button>
-      <button onclick="jual('kue')">Jual Semua Kue Bangkit</button>
-    </div>
-    <p style="font-size:13px;color:#666">Ekspor butuh angkutan (Perahu/Kapal) dari menu Upgrade.</p>
-  </div>
-
-  <div class="kartu">
-    <h2>☕ Kedai Kopi Liberika Meranti</h2>
-    <p id="kedaiInfo">Belum punya kedai</p>
-    <p id="pelangganInfo"></p>
-    <div class="bar">
-      <button class="kuning" onclick="layaniPelanggan()">Layani Pelanggan — Rp15.000+</button>
-    </div>
-    <p style="font-size:14px">Bisnis sampingan: kedai kopi menghasilkan uang pasif setiap hari, ditambah penghasilan tiap pelanggan yang kamu layani. Kopi Liberika khas Meranti jadi daya tarik wisatawan dan pedagang. Cuaca memengaruhi jumlah pelanggan: cerah ramai, hujan sepi.</p>
-  </div>
-
-  <div class="kartu">
-    <h2>⬆️ Upgrade</h2>
-    <div class="bar">
-      <button onclick="beliUpgrade('lahan')">Lahan Baru — Rp150.000</button>
-      <button onclick="beliUpgrade('kilang')">Kilang — Rp200.000</button>
-      <button onclick="beliUpgrade('alat')">Alat — Rp180.000</button>
-      <button onclick="beliUpgrade('angkutan')">Angkutan — Rp250.000</button>
-      <button onclick="beliUpgrade('kedai')">Kedai Kopi — Rp300.000 / Upgrade Rp250.000</button>
-    </div>
-  </div>
-
-  <div class="kartu">
-    <h2>📰 Kabar &amp; Catatan</h2>
-    <div id="log"></div>
-  </div>
-
-  <div class="kartu">
-    <h2>📖 Cara Main</h2>
-    <ol>
-      <li><b>Klik dunia 3D di atas.</b> Klik petak kebun untuk berjalan ke sana, lalu tanam rumbia. Tunggu 2 hari sampai matang, klik lagi untuk menebang.</li>
-      <li>Klik kilang untuk mengolah tual jadi tepung sagu.</li>
-      <li>Buat Mie Sagu dan Kue Bangkit Sagu dari tepung, lalu jual di pasar.</li>
-      <li>Klik pelabuhan untuk ekspor, dan kirim kontrak ke berbagai negara.</li>
-      <li>Klik kedai kopi untuk melayani pelanggan Liberika Meranti.</li>
-      <li>Rekrut pekerja — mereka muncul sebagai orang di dunia dan bekerja otomatis.</li>
-    </ol>
-  </div>
-</main>
-<footer>Saudagar Sagu Meranti • Selatpanjang, Kepulauan Meranti • Game simulasi bisnis sagu — v6 3D modern</footer>
-<script src="js/game.js?v=6"></script>
+  <!-- NAV BAWAH -->
+  <nav id="navbawah">
+    <button onclick="fokusBangunan('kebun')">🌴<span>Kebun</span></button>
+    <button onclick="fokusBangunan('kilang')">🏭<span>Kilang</span></button>
+    <button onclick="fokusBangunan('pasar')">🛒<span>Pasar</span></button>
+    <button onclick="fokusBangunan('pelabuhan')">🚢<span>Ekspor</span></button>
+    <button onclick="fokusBangunan('kedai')">☕<span>Kedai Kopi</span></button>
+    <button onclick="bukaPanel('produksi')">🍜<span>Produksi</span></button>
+  </nav>
+</div>
+<script src="js/game.js?v=7"></script>
 </body>
 </html>

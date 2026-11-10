@@ -9,6 +9,32 @@ memproduksi Mie Sagu dan Kue Bangkit Sagu, mengekspor tepung sagu ke pasar
 internasional, dan mengembangkan Kedai Kopi Liberika Meranti sebagai
 bisnis sampingan.
 
+## Yang baru di v7 — Redesign Total: Satu Layar Game Isometrik
+
+Redesign menyeluruh, bukan sekadar ganti warna. Seluruh game kini dalam
+satu layar: HUD atas (avatar, level & EXP, hari/tanggal, jam, cuaca,
+musim, uang, permata, reputasi, target bisnis dengan progress bar,
+tombol suara & notifikasi), dunia 3D isometrik yang memenuhi layar,
+sidebar kiri (Misi, Kontrak, Pekerja, Upgrade, Inventaris), navigasi
+bawah (Kebun, Kilang, Pasar, Ekspor, Kedai Kopi, Produksi), dan tombol
+besar Hari Berikutnya di kanan bawah. Semua card/tabel lama dihapus;
+semua aksi bisnis kini lewat panel mengambang saat bangunan diklik.
+Kamera bisa digeser (seret) dan di-zoom (roda mouse). Karakter utama
+baru: pria Indonesia berjaket hijau, topi petani, dan tas kecil.
+Dunia diperluas: conveyor kilang, kios pasar dengan karung tepung,
+meja-kursi dan lampu hangat kedai kopi, kontainer, crane dan truk
+pelabuhan, pohon kelapa, lampu jalan, bunga taman, Sopir Truk dan
+Pekerja Pelabuhan sebagai NPC baru. Semua mekanisme bisnis v1–v6
+tetap sama (harga, gaji, kontrak, cuaca, musim, save LocalStorage
+dengan kunci yang sama) — hanya tampilannya yang berubah. Audio
+berupa nada klik/sukses sintetis WebAudio dengan tombol mute, tanpa
+file musik eksternal supaya loading tetap cepat.
+
+Catatan: gambar referensi yang disebut di instruksi redesign tidak
+terlampir di pesan, jadi arah visual mengikuti brief tertulis
+(isometrik tropis ala Stardew Valley / Harvest Moon / tycoon modern).
+Kirimkan gambar referensinya dan tampilannya bisa disesuaikan lagi.
+
 ## Yang baru di v6 — 3D Modern
 
 Seluruh dunia game sekarang **3D dengan Three.js**: tanah, jalan, laut

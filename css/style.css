@@ -1,44 +1,79 @@
-:root{
-  --hijau:#1b6b3a; --hijau-muda:#e8f5e9; --krem:#fff8e7; --coklat:#6d4c41;
-  --kuning:#ffc400; --biru:#1565c0; --merah:#c62828; --tinta:#1a1a1a; --abu:#666;
-}
+/* Saudagar Sagu Meranti — v7 Redesign: satu layar game isometrik */
 *{box-sizing:border-box}
-body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:linear-gradient(180deg,#bfe8c9,#fff8e7 55%,#ffe0b2);color:var(--tinta)}
-header{background:var(--hijau);color:#fff;padding:18px 16px;text-align:center}
-header h1{margin:0;font-size:28px;letter-spacing:.5px}
-header p{margin:6px 0 0;opacity:.92}
-main{max-width:980px;margin:0 auto;padding:16px}
-.kartu{background:#fff;border:2px solid #1b6b3a22;border-radius:16px;padding:16px;margin-bottom:16px;box-shadow:0 4px 14px #0001}
-.hud{display:flex;flex-wrap:wrap;gap:10px}
-.pil{flex:1 1 140px;background:var(--krem);border:2px solid var(--kuning);border-radius:12px;padding:10px;text-align:center}
-.pil b{display:block;font-size:20px}
-.pil span{font-size:12px;color:var(--abu)}
-h2{margin:0 0 10px;font-size:20px;color:var(--hijau)}
-h3{margin:14px 0 8px;color:var(--coklat)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-.petak{border:2px dashed #8d6e63;border-radius:12px;min-height:120px;padding:10px;text-align:center;background:#f1f8e9}
-.petak.matang{background:#c8e6c9;border-style:solid}
-.petak.tumbuh{background:#fffde7}
-.petak .ikon{font-size:42px;line-height:1}
-button{cursor:pointer;border:0;border-radius:10px;padding:10px 14px;font-weight:700;background:var(--hijau);color:#fff;margin:4px 4px 4px 0}
-button:disabled{opacity:.45;cursor:not-allowed}
-button.kuning{background:var(--kuning);color:#1a1a1a}
-button.biru{background:var(--biru)}
-button.merah{background:var(--merah)}
-button.kecil{padding:7px 10px;font-size:13px}
-.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.inv{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
-.inv div{background:var(--hijau-muda);border-radius:10px;padding:10px;text-align:center}
-.inv b{display:block;font-size:18px}
-#log{max-height:180px;overflow:auto;background:#fafafa;border:1px solid #ddd;border-radius:10px;padding:10px;font-size:14px}
-#log p{margin:4px 0}
-.tujuan{background:#e3f2fd;border:2px solid var(--biru);border-radius:12px;padding:12px}
-.peta{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
-.zona{background:#e8f5e9;border:2px solid #1b6b3a33;border-radius:12px;padding:10px;text-align:center;font-size:22px}
-.zona b{display:block;font-size:14px;margin-top:4px}
-.zona span{display:block;font-size:12px;color:var(--abu)}
-#dunia3d{width:100%;border:3px solid #1b6b3a;border-radius:14px;background:#87ceeb;overflow:hidden;min-height:300px}
-#dunia3d canvas{width:100%;height:auto;display:block;cursor:pointer;touch-action:manipulation}
-.kontrak{background:#fff3e0;border:2px solid #ffcc80;border-radius:10px;padding:10px;margin:8px 0}
-footer{text-align:center;color:var(--abu);font-size:13px;padding:10px 20px 30px}
-@media(max-width:600px){header h1{font-size:22px}.pil b{font-size:17px}}
+html,body{height:100%}
+body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#0f2a1d;color:#222;overflow:hidden}
+#game{display:flex;flex-direction:column;height:100vh;height:100dvh}
+/* HEADER HUD */
+#hud{display:flex;align-items:center;gap:10px;padding:8px 12px;background:linear-gradient(135deg,#14532d,#166534 55%,#0e7490);color:#fff;z-index:20;box-shadow:0 4px 16px rgba(0,0,0,.35)}
+.profil{display:flex;align-items:center;gap:8px;min-width:0}
+.avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#fde68a,#f59e0b);display:flex;align-items:center;justify-content:center;font-size:26px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);flex-shrink:0}
+.profil-info{display:flex;flex-direction:column;line-height:1.15;min-width:90px}
+.profil-info b{font-size:14px}
+.profil-info span{font-size:11px;opacity:.9}
+.expbar{height:6px;background:rgba(255,255,255,.3);border-radius:99px;overflow:hidden;margin-top:3px}
+#expBar{height:100%;width:0%;background:linear-gradient(90deg,#fde047,#f59e0b);border-radius:99px;transition:width .4s}
+.hud-tengah{display:flex;align-items:center;gap:8px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
+.hud-tengah::-webkit-scrollbar{display:none}
+.hud-chip{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:6px 12px;font-size:13px;white-space:nowrap;backdrop-filter:blur(4px)}
+.hud-chip b{font-size:13px}
+.target-chip{display:flex;flex-direction:column;gap:3px;min-width:180px;border-radius:14px}
+.target-chip span{font-size:11px}
+.targetbar{height:6px;background:rgba(255,255,255,.3);border-radius:99px;overflow:hidden}
+#targetBar{height:100%;width:0%;background:linear-gradient(90deg,#fde047,#22c55e);border-radius:99px;transition:width .4s}
+.hud-kanan{display:flex;align-items:center;gap:8px}
+.hud-kanan .uang{background:linear-gradient(135deg,#f59e0b,#d97706);border-color:#fde68a;font-size:14px}
+.hud-btn{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:12px;width:38px;height:38px;font-size:17px;cursor:pointer}
+.hud-btn:hover{background:rgba(255,255,255,.3)}
+/* PANGGUNG */
+#panggung{position:relative;flex:1;min-height:0;background:#87ceeb}
+#dunia3d{position:absolute;inset:0}
+#dunia3d canvas{width:100%!important;height:100%!important;display:block;cursor:pointer;touch-action:none}
+#toast{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(20,83,45,.92);color:#fff;padding:8px 16px;border-radius:99px;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:opacity .3s;z-index:15;max-width:90%;text-align:center}
+#toast.tampil{opacity:1}
+/* SIDEBAR */
+#sidebar{position:absolute;left:10px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;z-index:12}
+#sidebar button{display:flex;flex-direction:column;align-items:center;gap:2px;width:62px;padding:9px 4px;border-radius:16px;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.88);backdrop-filter:blur(6px);font-size:20px;cursor:pointer;color:#14532d;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+#sidebar button span{font-size:10px;font-weight:700}
+#sidebar button:hover{background:#fef3c7;transform:scale(1.05)}
+#sidebar button:active{transform:scale(.96)}
+/* PANEL */
+#panel{position:absolute;right:12px;top:12px;width:min(360px,calc(100vw - 90px));max-height:calc(100% - 90px);overflow-y:auto;background:rgba(255,251,235,.97);border:2px solid #d97706;border-radius:18px;box-shadow:0 12px 32px rgba(0,0,0,.35);z-index:14}
+#panel.tersembunyi{display:none}
+.panel-kepala{position:sticky;top:0;display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:linear-gradient(135deg,#b45309,#d97706);color:#fff;border-radius:16px 16px 0 0}
+.panel-kepala b{font-size:16px}
+.panel-kepala button{background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:15px;cursor:pointer}
+#panelIsi{padding:12px 14px;font-size:14px;line-height:1.5}
+#panelIsi p{margin:8px 0}
+#panelIsi .bar{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+#panelIsi button{cursor:pointer}
+.kontrak{background:#fff3e0;border:2px solid #ffcc80;border-radius:12px;padding:10px;margin:8px 0}
+.progres{height:10px;background:#e5e7eb;border-radius:99px;overflow:hidden;margin:4px 0 10px}
+.progres div{height:100%;background:linear-gradient(90deg,#22c55e,#f59e0b);border-radius:99px}
+button{font-family:inherit}
+#panelIsi button,.btn-aksi{background:#16a34a;color:#fff;border:none;border-radius:12px;padding:10px 14px;font-size:14px;font-weight:700;box-shadow:0 3px 0 #166534}
+#panelIsi button:hover,.btn-aksi:hover{background:#22c55e}
+#panelIsi button.kuning,.kuning{background:#f59e0b;box-shadow:0 3px 0 #b45309}
+#panelIsi button.biru,.biru{background:#0284c7;box-shadow:0 3px 0 #075985}
+#panelIsi button.merah,.merah{background:#dc2626;box-shadow:0 3px 0 #991b1b}
+#panelIsi button.kecil{padding:6px 10px;font-size:13px}
+/* TOMBOL HARI */
+#tombolHari{position:absolute;right:12px;bottom:12px;z-index:12;background:linear-gradient(135deg,#f59e0b,#ea580c);color:#fff;border:2px solid #fff;border-radius:99px;padding:14px 22px;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+#tombolHari:hover{transform:scale(1.04)}
+#tombolHari:active{transform:scale(.97)}
+#menang{position:absolute;left:50%;bottom:70px;transform:translateX(-50%);background:#fef3c7;border:2px solid #f59e0b;color:#92400e;padding:10px 16px;border-radius:14px;font-weight:700;z-index:13;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+/* NAV BAWAH */
+#navbawah{display:flex;justify-content:center;gap:6px;padding:8px;background:linear-gradient(135deg,#14532d,#0e7490);z-index:20}
+#navbawah button{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:64px;padding:7px 10px;border-radius:14px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);color:#fff;font-size:19px;cursor:pointer}
+#navbawah button span{font-size:11px;font-weight:700}
+#navbawah button:hover{background:rgba(255,255,255,.3)}
+/* RESPONSIF */
+@media (max-width:760px){
+  .profil-info{display:none}
+  .target-chip{min-width:130px}
+  .hud-chip{font-size:11px;padding:5px 8px}
+  #sidebar button{width:52px;font-size:17px}
+  #sidebar button span{font-size:9px}
+  #tombolHari{padding:11px 16px;font-size:14px}
+  #navbawah button{min-width:52px;font-size:16px}
+  #panel{top:8px;right:8px}
+}

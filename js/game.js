@@ -36,6 +36,8 @@ const NPC = [
   { nama: "Pak Tani", x: 120, y: 340, wx: [120, 380], wy: [340, 340], i: 0, baju: "#2e7d32", topi: "#ffeb3b", cepat: 0.7 },
   { nama: "Bu Sari", x: 560, y: 380, wx: [560, 820], wy: [380, 380], i: 0, baju: "#e53935", topi: "#333", cepat: 0.5 },
   { nama: "Pedagang", x: 700, y: 460, wx: [700, 500], wy: [460, 460], i: 0, baju: "#1565c0", topi: "#6d4c41", cepat: 0.6 },
+  { nama: "Sopir Truk", x: 620, y: 380, wx: [620, 780], wy: [380, 380], i: 0, baju: "#f57c00", topi: "#37474f", cepat: 0.55 },
+  { nama: "Pekerja Pelabuhan", x: 820, y: 380, wx: [820, 700], wy: [380, 380], i: 0, baju: "#00897b", topi: "#ffeb3b", cepat: 0.5 },
 ];
 function w2x(wx) { return (wx - 480) * SKALA; }
 function w2z(wy) { return (wy - 280) * SKALA; }
@@ -58,7 +60,7 @@ function buatKontrak(id, hari) {
 }
 function awal() {
   const s = {
-    versi: 6, uang: 500000, hari: 1, jam: 6, tual: 0, tepung: 0, mie: 0, kue: 0,
+    versi: 7, uang: 500000, hari: 1, jam: 6, tual: 0, tepung: 0, mie: 0, kue: 0,
     eksporTotal: 0, reputasi: 0,
     lahan: [
       { status: "tumbuh", sisa: 1, anim: 0 },
@@ -92,10 +94,10 @@ function load() {
     if (raw) {
       const d = JSON.parse(raw);
       if (d && typeof d.uang === "number") {
-        if (d.versi !== 6) {
-          d.versi = 6; d.jam = d.jam || 6;
+        if (d.versi !== 7) {
+          d.versi = 7; d.jam = d.jam || 6;
           d.cuaca = d.cuaca || "Cerah"; d.cuacaBesok = d.cuacaBesok || "Berawan";
-          d.pelanggan = 0; d.pelangganDilayani = d.pelangganDilayani || 0; d.kepuasan = d.kepuasan || 0;
+          d.pelanggan = d.pelanggan || 0; d.pelangganDilayani = d.pelangganDilayani || 0; d.kepuasan = d.kepuasan || 0;
           d.pekerja = d.pekerja || { kebun: 0, kilang: 0, barista: 0 };
           d.kontrakId = d.kontrakId || 1;
           if (!Array.isArray(d.kontrak) || d.kontrak.length === 0) d.kontrak = [buatKontrak(d.kontrakId++, d.hari || 1), buatKontrak(d.kontrakId++, d.hari || 1)];
@@ -103,7 +105,7 @@ function load() {
           if (Array.isArray(d.lahan) && d.lahan.length < 4) d.lahan.push({ status: "kosong", sisa: 0, anim: 0 });
           d.pemain = { x: 480, y: 420, arah: "bawah", jalan: false, langkah: 0, ayun: 0 };
           d.log = d.log || [];
-          d.log.unshift("Update v6: game sekarang 3D modern — dunia Three.js, karakter 3D, siang-malam, bayangan.");
+          d.log.unshift("Update v7: redesign total — satu layar game isometrik, HUD menyatu, panel bangunan, kamera geser/zoom.");
         }
         if (!d.pemain) d.pemain = { x: 480, y: 420, arah: "bawah", jalan: false, langkah: 0, ayun: 0 };
         if (typeof d.jam !== "number") d.jam = 6;
@@ -377,11 +379,83 @@ function gerakPemain() {
   }
 }
 
+// ---------- PANEL, TOAST, AUDIO, LEVEL (v7) ----------
+let panelTerbuka = null;
+let suaraAktif = true;
+let audioCtx = null;
+function levelPemain() { return 1 + Math.floor(S.reputasi / 10) + Math.floor(S.eksporTotal / 20); }
+function expPersen() { const p = (S.reputasi % 10) / 10 * 60 + (S.eksporTotal % 20) / 20 * 40; return Math.round(Math.min(100, p)); }
+function bunyiKlik() {
+  if (!suaraAktif) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = "sine"; o.frequency.value = 660; g.gain.value = 0.08;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12); o.stop(audioCtx.currentTime + 0.13);
+  } catch (e) {}
+}
+function toggleSuara() {
+  suaraAktif = !suaraAktif;
+  const b = document.getElementById("tombolSuara"); if (b) b.textContent = suaraAktif ? "🔊" : "🔇";
+  toast(suaraAktif ? "Suara diaktifkan" : "Suara dimatikan");
+}
+function toast(msg) {
+  const t = document.getElementById("toast"); if (!t) return;
+  t.textContent = msg; t.classList.add("tampil");
+  clearTimeout(t._tm); t._tm = setTimeout(() => t.classList.remove("tampil"), 2600);
+}
+function bukaPanel(nama) {
+  bunyiKlik();
+  panelTerbuka = nama;
+  const p = document.getElementById("panel"); if (p) p.classList.remove("tersembunyi");
+  renderPanel();
+}
+function tutupPanel() { panelTerbuka = null; const p = document.getElementById("panel"); if (p) p.classList.add("tersembunyi"); }
+function fokusBangunan(kind) {
+  bunyiKlik();
+  if (kind === "kebun") { terpilih = { kind: "plot", index: S.lahan.findIndex(p => p.status === "kosong") >= 0 ? S.lahan.findIndex(p => p.status === "kosong") : 0 }; targetJalan = { x: PETAK_POS[terpilih.index].x + 44, y: PETAK_POS[terpilih.index].y + 86 }; bukaPanel("kebun"); return; }
+  if (kind === "produksi") { bukaPanel("produksi"); return; }
+  const b = BANGUNAN[kind]; if (!b) return;
+  terpilih = { kind: kind }; aksiTertunda = null;
+  targetJalan = { x: b.x + b.w / 2, y: b.y + b.h + 18 };
+  bukaPanel(kind);
+}
+function isiPanel(nama) {
+  if (nama === "misi") return "<h3>🎯 Misi Saudagar Besar</h3><p>" + rp(S.uang) + " dari " + rp(TARGET_UANG) + "</p><div class='progres'><div style='width:" + Math.min(100, S.uang / TARGET_UANG * 100) + "%'></div></div><p>" + S.eksporTotal + " kg dari " + TARGET_EKSPOR + " kg tepung diekspor</p><div class='progres'><div style='width:" + Math.min(100, S.eksporTotal / TARGET_EKSPOR * 100) + "%'></div></div><p>Reputasi: <b>" + S.reputasi + "</b> • Level: <b>" + levelPemain() + "</b></p><p style='font-size:13px;color:#666'>" + CUACA[S.cuaca].efek + " • " + musimHariIni(S.hari) + "</p><h3>📰 Kabar &amp; Catatan</h3><div>" + S.log.map(m => "<p>" + m + "</p>").join("") + "</div>";
+  if (nama === "kontrak") return "<h3>📜 Kontrak Ekspor</h3><p>Malaysia, Singapura, Jepang, Tiongkok, Brunei. Kirim tepat waktu untuk harga premium dan reputasi +10.</p>" + (S.kontrak.length === 0 ? "<p>Belum ada kontrak. Kontrak baru masuk tiap hari.</p>" : S.kontrak.map(k => '<div class="kontrak"><b>' + k.negara + '</b> — ' + k.jumlah + ' kg @ ' + rp(k.harga) + ' = ' + rp(k.jumlah * k.harga) + '<br>Tenggat hari ke-' + k.tenggat + ' <button class="kecil kuning" onclick="kirimKontrak(' + k.id + ')">Kirim Kontrak</button></div>').join(""));
+  if (nama === "pekerja") return "<h3>👷 Pekerja</h3><p>Kebun: " + S.pekerja.kebun + " • Kilang: " + S.pekerja.kilang + " • Barista: " + S.pekerja.barista + "<br>Gaji/hari: " + rp(S.pekerja.kebun * GAJI.kebun + S.pekerja.kilang * GAJI.kilang + S.pekerja.barista * GAJI.barista) + "</p><div class='bar'><button onclick=\"hirePekerja('kebun')\">Rekrut Kebun — Rp50.000</button><button onclick=\"hirePekerja('kilang')\">Rekrut Kilang — Rp80.000</button><button onclick=\"hirePekerja('barista')\">Rekrut Barista — Rp60.000</button></div><div class='bar'><button class='kecil merah' onclick=\"berhentikanPekerja('kebun')\">Berhentikan Kebun</button><button class='kecil merah' onclick=\"berhentikanPekerja('kilang')\">Berhentikan Kilang</button><button class='kecil merah' onclick=\"berhentikanPekerja('barista')\">Berhentikan Barista</button></div><p style='font-size:13px;color:#666'>Pekerja kebun menanam otomatis, pekerja kilang mengolah otomatis, barista melayani pelanggan otomatis. Gaji dibayar tiap hari.</p>";
+  if (nama === "upgrade") return "<h3>⬆️ Upgrade</h3><div class='bar'><button onclick=\"beliUpgrade('lahan')\">Lahan Baru — Rp150.000</button><button onclick=\"beliUpgrade('kilang')\">Kilang — Rp200.000</button><button onclick=\"beliUpgrade('alat')\">Alat — Rp180.000</button><button onclick=\"beliUpgrade('angkutan')\">Angkutan — Rp250.000</button><button onclick=\"beliUpgrade('kedai')\">Kedai Kopi — Rp300.000 / Rp250.000</button></div><p>Kebun: " + S.lahan.length + "/12 petak • Kilang Lv" + S.kilangLevel + " • Alat Lv" + S.alatLevel + " • Angkutan Lv" + S.angkutanLevel + " • Kedai Lv" + S.kedaiLevel + "</p>";
+  if (nama === "inventaris") return "<h3>📦 Inventaris &amp; Harga Hari Ini</h3><p>🌰 Tual: <b>" + S.tual + "</b><br>🌾 Tepung: <b>" + S.tepung + " kg</b> (" + rp(S.harga.tepung) + "/kg)<br>🍜 Mie Sagu: <b>" + S.mie + " bungkus</b> (" + rp(S.harga.mie) + ")<br>🍪 Kue Bangkit: <b>" + S.kue + " kotak</b> (" + rp(S.harga.kue) + ")<br>🚢 Harga ekspor: <b>" + rp(S.harga.ekspor + (S.angkutanLevel === 2 ? 2000 : 0)) + "/kg</b></p><p>Kapasitas kilang: <b>" + S.olahHariIni + " / " + kapasitasOlah() + " tual hari ini</b></p>";
+  if (nama === "kebun") return "<h3>🌴 Kebun Rumbia</h3><p>" + labelAksi() + "</p><div class='bar'><button class='kuning' onclick='aksiTerpilih()'>" + labelAksi() + "</button></div><p>Kebun: " + S.lahan.length + "/12 petak • Kilang Lv" + S.kilangLevel + " • Pasar Selatpanjang • Pelabuhan: " + (S.angkutanLevel === 0 ? "belum ada angkutan" : S.angkutanLevel === 1 ? "Perahu" : "Kapal") + " • Kedai Kopi Lv" + S.kedaiLevel + "</p>";
+  if (nama === "kilang" || nama === "produksi") return "<h3>🏭 Kilang &amp; Produksi</h3><p>Kapasitas kilang: <b>" + S.olahHariIni + " / " + kapasitasOlah() + " tual hari ini</b><br>Tual: " + S.tual + " • Tepung: " + S.tepung + " kg</p><div class='bar'><button onclick='olah()'>Olah 4 Tual → 10 kg Tepung</button><button class='biru' onclick=\"produksi('mie')\">Buat Mie Sagu (2 kg → 5)</button><button class='biru' onclick=\"produksi('kue')\">Buat Kue Bangkit (1 kg → 4)</button></div>";
+  if (nama === "pasar") return "<h3>🛒 Pasar Selatpanjang</h3><p>Tepung: " + rp(S.harga.tepung) + "/kg • Mie: " + rp(S.harga.mie) + " • Kue: " + rp(S.harga.kue) + "</p><div class='bar'><button class='kuning' onclick=\"jual('tepung')\">Jual 10 kg Tepung</button><button onclick=\"jual('mie')\">Jual Semua Mie</button><button onclick=\"jual('kue')\">Jual Semua Kue</button></div>";
+  if (nama === "pelabuhan") return "<h3>🚢 Pelabuhan Ekspor</h3><p>Harga ekspor: " + rp(S.harga.ekspor + (S.angkutanLevel === 2 ? 2000 : 0)) + "/kg • Tepung: " + S.tepung + " kg • Diekspor: " + S.eksporTotal + " kg</p><div class='bar'><button class='kuning' onclick=\"jual('ekspor')\">Ekspor 20 kg Tepung</button></div>" + isiPanel("kontrak");
+  if (nama === "kedai") return "<h3>☕ Kedai Kopi Liberika Meranti</h3><p>" + (S.kedaiLevel === 0 ? "Belum punya kedai — buka lewat Upgrade." : "Level " + S.kedaiLevel + " — +" + rp(10000 * S.kedaiLevel) + "/hari pasif") + "</p><p>" + (S.kedaiLevel === 0 ? "Buka kedai dulu untuk menerima pelanggan." : S.pelanggan + " pelanggan menunggu • " + S.pelangganDilayani + " sudah dilayani • Kepuasan " + S.kepuasan) + "</p><div class='bar'><button class='kuning' onclick='layaniPelanggan()'>Layani Pelanggan — Rp15.000+</button></div><p style='font-size:13px;color:#666'>Kopi Liberika khas Meranti. Cuaca memengaruhi pelanggan: cerah ramai, hujan sepi.</p>";
+  return "";
+}
+function renderPanel() {
+  if (!panelTerbuka) return;
+  const judul = { misi: "🎯 Misi & Kabar", kontrak: "📜 Kontrak Ekspor", pekerja: "👷 Pekerja", upgrade: "⬆️ Upgrade", inventaris: "📦 Inventaris", kebun: "🌴 Kebun Rumbia", kilang: "🏭 Kilang Sagu", produksi: "🍜 Produksi", pasar: "🛒 Pasar Selatpanjang", pelabuhan: "🚢 Pelabuhan Ekspor", kedai: "☕ Kedai Kopi Liberika" }[panelTerbuka] || "Panel";
+  const j = document.getElementById("panelJudul"); if (j) j.textContent = judul;
+  const isi = document.getElementById("panelIsi"); if (isi) isi.innerHTML = isiPanel(panelTerbuka);
+}
+// Saat bangunan diklik di dunia, buka panelnya
+const _klikDuniaAsli = klikDunia;
+klikDunia = function (wx, wy) {
+  _klikDuniaAsli(wx, wy);
+  bunyiKlik();
+  if (terpilih) {
+    if (terpilih.kind === "plot") bukaPanel("kebun");
+    else bukaPanel(terpilih.kind);
+  }
+};
 // ---------- DUNIA 3D (Three.js) ----------
 let scene3 = null, camera3 = null, renderer3 = null, sunLight = null, hemiLight = null;
 let plotMeshes = [], buildingMeshes = {}, player3 = null, npc3 = [], pelanggan3 = [], pekerja3 = [];
 let clouds3 = [], water3 = null, boat3 = null, sunMesh = null, moonMesh = null;
-let partikel3D = [], rain3 = [], smoke3 = [];
+let partikel3D = [], rain3 = [], smoke3 = [], conveyor3 = [];
+let camPan = { x: 0, z: 0 }, camJarak = 1;
 function mat(warna) { return new THREE.MeshLambertMaterial({ color: warna }); }
 function kotak(w, h, d, warna, x, y, z) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(warna));
@@ -543,12 +617,72 @@ function init3D() {
     boat3.add(kotak(3.5, 0.4, 2.1, 0xe53935, 0.5, 2.7, 0));
     boat3.position.set(w2x(800), 0.1, w2z(500));
     scene3.add(boat3);
-    // Pohon hias di tepi
+    // Pohon kelapa & hias di tepi
     for (const [px, pz] of [[-26, -12], [26, -12], [-26, 8], [26, 2]]) {
       const ph = buatPohonRumbia(); ph.position.set(px, 0, pz); ph.scale.setScalar(1.2); scene3.add(ph);
+      const kelapa = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 8), mat(0x6d4c41));
+      kelapa.position.set(px + 0.6, 3.1, pz); scene3.add(kelapa);
     }
-    // Pemain 3D
-    player3 = buatOrang3D(0x1565c0, 0xffeb3b);
+    // Lampu jalan di sepanjang jalan aspal
+    for (const [lx, lz] of [[-2, -8], [2, -2], [-2, 4], [2, 8]]) {
+      const tiang = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 3.2, 8), mat(0x37474f));
+      tiang.position.set(lx, 1.6, lz); scene3.add(tiang);
+      const lampu = new THREE.Mesh(new THREE.SphereGeometry(0.28, 10, 8), new THREE.MeshBasicMaterial({ color: 0xfff176 }));
+      lampu.position.set(lx, 3.3, lz); scene3.add(lampu);
+    }
+    // Bunga taman
+    for (let i = 0; i < 12; i++) {
+      const bunga = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), mat([0xe53935, 0xfdd835, 0xec407a, 0xab47bc][i % 4]));
+      bunga.position.set(-24 + (i % 6) * 9.5, 0.25, -14 + Math.floor(i / 6) * 2);
+      scene3.add(bunga);
+    }
+    // Conveyor belt kilang + kotak berjalan
+    const belt = kotak(7, 0.3, 1.2, 0x37474f, w2x(BANGUNAN.kilang.x + 85), 0.5, w2z(BANGUNAN.kilang.y + BANGUNAN.kilang.h + 24));
+    scene3.add(belt);
+    for (let i = 0; i < 3; i++) {
+      const kb = kotak(0.9, 0.7, 0.9, 0xd7ccc8, 0, 1.05, w2z(BANGUNAN.kilang.y + BANGUNAN.kilang.h + 24));
+      scene3.add(kb); conveyor3.push(kb);
+    }
+    // Kios pasar + karung tepung
+    for (let i = 0; i < 3; i++) {
+      const sx = w2x(BANGUNAN.pasar.x + 20 + i * 55), sz = w2z(BANGUNAN.pasar.y + BANGUNAN.pasar.h + 22);
+      scene3.add(kotak(2.6, 1.1, 1.6, 0x8d6e63, sx, 0.55, sz));
+      const atapKios = kotak(3, 0.15, 2, i % 2 ? 0xe53935 : 0x1e88e5, sx, 2.1, sz);
+      scene3.add(atapKios);
+      const karung = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.5, 0.9, 10), mat(0xd7ccc8));
+      karung.position.set(sx + 1.8, 0.45, sz); karung.castShadow = true; scene3.add(karung);
+    }
+    // Meja & kursi kedai kopi semi-outdoor + lampu hangat
+    for (let i = 0; i < 3; i++) {
+      const tx = w2x(BANGUNAN.kedai.x + 30 + i * 60), tz = w2z(BANGUNAN.kedai.y + BANGUNAN.kedai.h + 22);
+      const meja = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.12, 12), mat(0x6d4c41));
+      meja.position.set(tx, 0.9, tz); meja.castShadow = true; scene3.add(meja);
+      scene3.add(kotak(0.5, 0.9, 0.5, 0x8d6e63, tx + 1.2, 0.45, tz));
+      scene3.add(kotak(0.5, 0.9, 0.5, 0x8d6e63, tx - 1.2, 0.45, tz));
+      const lampKedai = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffd54f }));
+      lampKedai.position.set(tx, 2.2, tz); scene3.add(lampKedai);
+    }
+    // Kontainer, crane, dan truk pelabuhan
+    const warnaKontainer = [0xe53935, 0x1e88e5, 0x43a047];
+    warnaKontainer.forEach((w, i) => {
+      scene3.add(kotak(3.2, 1.4, 1.6, w, w2x(760 + i * 40), 0.7 + (i === 2 ? 1.4 : 0), w2z(430)));
+    });
+    const craneMenara = kotak(0.8, 7, 0.8, 0xffb300, w2x(880), 3.5, w2z(360));
+    scene3.add(craneMenara);
+    scene3.add(kotak(6, 0.6, 0.6, 0xffb300, w2x(860), 7, w2z(360)));
+    const truk = new THREE.Group();
+    truk.add(kotak(4.5, 1.8, 2, 0x43a047, 0, 1.2, 0));
+    truk.add(kotak(1.6, 1.6, 1.9, 0x1565c0, 3, 1.1, 0));
+    for (const [wx2, wz2] of [[-1.6, 1.05], [1.6, 1.05], [-1.6, -1.05], [1.6, -1.05]]) {
+      const roda = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.3, 12), mat(0x212121));
+      roda.rotation.x = Math.PI / 2; roda.position.set(wx2, 0.45, wz2); truk.add(roda);
+    }
+    truk.position.set(w2x(620), 0, w2z(460));
+    scene3.add(truk);
+    // Pemain 3D — pria Indonesia, jaket hijau, topi petani, tas kecil
+    player3 = buatOrang3D(0x2e7d32, 0xe8c96a);
+    const tas = kotak(0.5, 0.6, 0.22, 0x8d6e63, 0, 1.2, -0.36);
+    player3.add(tas);
     player3.userData.alat.visible = true;
     scene3.add(player3);
     // NPC 3D
@@ -562,11 +696,20 @@ function init3D() {
       const t = kotak(0.05, 0.7, 0.05, 0xffffff, (Math.random() - 0.5) * 60, Math.random() * 15, (Math.random() - 0.5) * 34);
       t.visible = false; scene3.add(t); rain3.push(t);
     }
-    // Klik di dunia 3D -> raycast ke tanah
+    // Klik di dunia 3D -> raycast ke tanah; seret untuk geser kamera, roda mouse untuk zoom
     const ray = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
     const bidang = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-    renderer3.domElement.addEventListener("click", (e) => {
+    let tekanX = 0, tekanY = 0, menggeser = false;
+    renderer3.domElement.addEventListener("pointerdown", (e) => { tekanX = e.clientX; tekanY = e.clientY; menggeser = false; });
+    renderer3.domElement.addEventListener("pointermove", (e) => {
+      if (e.buttons === 0) return;
+      const dx = e.clientX - tekanX, dy = e.clientY - tekanY;
+      if (Math.abs(dx) + Math.abs(dy) > 6) menggeser = true;
+      if (menggeser) { camPan.x -= dx * 0.03; camPan.z -= dy * 0.03; tekanX = e.clientX; tekanY = e.clientY; }
+    });
+    renderer3.domElement.addEventListener("pointerup", (e) => {
+      if (menggeser) return;
       const r = renderer3.domElement.getBoundingClientRect();
       mouse.x = ((e.clientX - r.left) / r.width) * 2 - 1;
       mouse.y = -((e.clientY - r.top) / r.height) * 2 + 1;
@@ -576,6 +719,10 @@ function init3D() {
         klikDunia(titik.x / SKALA + 480, titik.z / SKALA + 280);
       }
     });
+    renderer3.domElement.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      camJarak = Math.max(0.7, Math.min(1.7, camJarak + (e.deltaY > 0 ? 0.1 : -0.1)));
+    }, { passive: false });
     return true;
   } catch (err) {
     wadah.innerHTML = "<p style='padding:20px'>Dunia 3D tidak bisa dibuka di perangkat ini (" + err.message + "). Coba browser lain yang mendukung WebGL.</p>";
@@ -695,12 +842,16 @@ function animate3D() {
   if (sunMesh) { sunMesh.position.set(Math.cos(sudut) * 24, Math.sin(sudut) * 16 + 3, -14); sunMesh.visible = S.jam < 18; }
   if (moonMesh) moonMesh.visible = S.jam >= 18;
   if (scene3) scene3.background.setHex(S.jam >= 18 ? 0x1a237e : S.jam >= 17 ? 0xff8a65 : 0x87ceeb);
-  // Kamera mengikuti pemain
+  // Conveyor kilang berjalan
+  conveyor3.forEach((kb, i) => {
+    kb.position.x = 1.6 + ((frame / 2 + i * 25) % 70) * 0.1;
+  });
+  // Kamera mengikuti pemain + geseran & zoom
   if (camera3 && player3) {
-    const px = player3.position.x, pz = player3.position.z;
+    const px = player3.position.x + camPan.x, pz = player3.position.z + camPan.z;
     camera3.position.x += ((px + 0) - camera3.position.x) * 0.05;
-    camera3.position.y += (11 - camera3.position.y) * 0.05;
-    camera3.position.z += ((pz + 16) - camera3.position.z) * 0.05;
+    camera3.position.y += ((11 * camJarak) - camera3.position.y) * 0.05;
+    camera3.position.z += ((pz + 16 * camJarak) - camera3.position.z) * 0.05;
     camera3.lookAt(px, 0.5, pz - 2);
   }
   updateDunia3D();
@@ -727,36 +878,27 @@ function pasangKontrolDunia() {
 }
 
 function el(id) { return document.getElementById(id); }
+function setT(id, v) { const e = el(id); if (e) e.textContent = v; }
+function setH(id, v) { const e = el(id); if (e) e.innerHTML = v; }
+function setW(id, v) { const e = el(id); if (e) e.style.width = v; }
 function render() {
-  el("uang").textContent = rp(S.uang);
-  el("hari").textContent = S.hari;
-  el("jam").textContent = String(S.jam).padStart(2, "0") + ":00";
-  el("ekspor").textContent = S.eksporTotal + " kg";
-  el("reputasi").textContent = S.reputasi;
-  el("cuaca").textContent = CUACA[S.cuaca].ikon + " " + S.cuaca;
-  el("musim").textContent = musimHariIni(S.hari);
-  el("cuacaBesok").textContent = "Besok: " + S.cuacaBesok + " — " + CUACA[S.cuaca].efek + " • " + musimHariIni(S.hari) + " (berganti tiap 5 hari)";
-  el("tual").textContent = S.tual;
-  el("tepung").textContent = S.tepung + " kg";
-  el("mie").textContent = S.mie + " bungkus";
-  el("kue").textContent = S.kue + " kotak";
-  el("kapasitas").textContent = S.olahHariIni + " / " + kapasitasOlah() + " tual hari ini";
-  el("kedaiInfo").textContent = S.kedaiLevel === 0 ? "Belum punya kedai" : "Level " + S.kedaiLevel + " — +" + rp(10000 * S.kedaiLevel) + "/hari pasif, layani pelanggan untuk tambahan";
-  el("pelangganInfo").textContent = S.kedaiLevel === 0 ? "Buka kedai dulu untuk menerima pelanggan." : S.pelanggan + " pelanggan menunggu • " + S.pelangganDilayani + " sudah dilayani • Kepuasan " + S.kepuasan;
-  el("pekerjaInfo").textContent = "Kebun: " + S.pekerja.kebun + " • Kilang: " + S.pekerja.kilang + " • Barista: " + S.pekerja.barista + " • Gaji/hari: " + rp(S.pekerja.kebun * GAJI.kebun + S.pekerja.kilang * GAJI.kilang + S.pekerja.barista * GAJI.barista);
-  el("petaInfo").textContent = "Kebun Rumbia: " + S.lahan.length + "/12 petak • Kilang Lv" + S.kilangLevel + " • Pasar Selatpanjang • Pelabuhan: " + (S.angkutanLevel === 0 ? "belum ada angkutan" : S.angkutanLevel === 1 ? "Perahu" : "Kapal") + " • Kedai Kopi Lv" + S.kedaiLevel;
-  el("hargaTepung").textContent = rp(S.harga.tepung) + "/kg";
-  el("hargaMie").textContent = rp(S.harga.mie) + "/bungkus";
-  el("hargaKue").textContent = rp(S.harga.kue) + "/kotak";
-  el("hargaEkspor").textContent = rp(S.harga.ekspor + (S.angkutanLevel === 2 ? 2000 : 0)) + "/kg";
-  el("target").textContent = "Target jadi Saudagar Besar: uang " + rp(TARGET_UANG) + " dan ekspor " + TARGET_EKSPOR + " kg tepung. Progres: " + rp(S.uang) + " / " + S.eksporTotal + " kg.";
-  el("menang").style.display = S.menang ? "block" : "none";
+  setT("uang", rp(S.uang));
+  setT("hari", S.hari);
+  setT("tanggal", "• " + musimHariIni(S.hari));
+  setT("jam", String(S.jam).padStart(2, "0") + ":00");
+  setT("ekspor", S.eksporTotal + " kg");
+  setT("reputasi", S.reputasi);
+  setT("permata", Math.floor(S.eksporTotal / 25));
+  setT("level", levelPemain());
+  setT("expPersen", expPersen() + "%");
+  setW("expBar", expPersen() + "%");
+  setT("cuaca", CUACA[S.cuaca].ikon + " " + S.cuaca);
+  setT("musim", musimHariIni(S.hari));
+  setT("target", "Target: " + rp(S.uang) + " / " + rp(TARGET_UANG) + " • Ekspor " + S.eksporTotal + "/" + TARGET_EKSPOR + " kg");
+  setW("targetBar", Math.min(100, (S.uang / TARGET_UANG * 50 + S.eksporTotal / TARGET_EKSPOR * 50)) + "%");
   const aksi = el("aksiUtama"); if (aksi) aksi.textContent = labelAksi();
-  const kk = el("kontrak");
-  kk.innerHTML = S.kontrak.length === 0 ? "<p>Belum ada kontrak. Kontrak baru masuk tiap hari.</p>" : S.kontrak.map(k =>
-    '<div class="kontrak"><b>' + k.negara + '</b> — ' + k.jumlah + ' kg tepung @ ' + rp(k.harga) + ' = ' + rp(k.jumlah * k.harga) + '<br>Tenggat hari ke-' + k.tenggat + ' <button class="kecil kuning" onclick="kirimKontrak(' + k.id + ')">Kirim Kontrak</button></div>'
-  ).join("");
-  el("log").innerHTML = S.log.map(m => "<p>" + m + "</p>").join("");
+  const mn = el("menang"); if (mn) mn.style.display = S.menang ? "block" : "none";
+  renderPanel();
   updateDunia3D();
 }
 if (typeof document !== "undefined" && document.addEventListener) {
