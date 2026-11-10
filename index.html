@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Saudagar Sagu Meranti</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header>
+  <h1>🌴 Saudagar Sagu Meranti</h1>
+  <p>Simulasi bisnis sagu dari Selatpanjang, Kepulauan Meranti — dari petani rumbia kecil jadi saudagar besar.</p>
+</header>
+<main>
+  <div class="kartu tujuan">
+    <b>🎯 Tujuan:</b> <span id="target"></span>
+    <p id="menang" style="display:none"><b>🏆 Kamu sudah menjadi Saudagar Sagu Meranti!</b> Terus kembangkan usahamu.</p>
+  </div>
+
+  <div class="kartu">
+    <div class="hud">
+      <div class="pil"><b id="uang">Rp0</b><span>Uang</span></div>
+      <div class="pil"><b id="hari">1</b><span>Hari</span></div>
+      <div class="pil"><b id="ekspor">0 kg</b><span>Tepung diekspor</span></div>
+      <div class="pil"><b id="reputasi">0</b><span>Reputasi</span></div>
+    </div>
+    <div class="bar" style="margin-top:12px">
+      <button class="kuning" onclick="hariBerikutnya()">➡️ Hari Berikutnya</button>
+      <button class="merah" onclick="resetGame()">Mulai Ulang</button>
+      <span style="font-size:13px;color:#666">Progres tersimpan otomatis di browser kamu.</span>
+    </div>
+  </div>
+
+  <div class="kartu">
+    <h2>🌱 Kebun Rumbia</h2>
+    <div class="grid" id="lahan"></div>
+  </div>
+
+  <div class="kartu">
+    <h2>🏭 Kilang &amp; Produksi</h2>
+    <p>Kapasitas kilang: <b id="kapasitas"></b></p>
+    <div class="bar">
+      <button onclick="olah()">Olah 4 Tual → 10 kg Tepung</button>
+      <button class="biru" onclick="produksi('mie')">Buat Mie Sagu (2 kg → 5 bungkus)</button>
+      <button class="biru" onclick="produksi('kue')">Buat Kue Bangkit (1 kg → 4 kotak)</button>
+    </div>
+    <h3>📦 Persediaan</h3>
+    <div class="inv">
+      <div><b id="tual">0</b>Tual Sagu</div>
+      <div><b id="tepung">0 kg</b>Tepung Sagu</div>
+      <div><b id="mie">0 bungkus</b>Mie Sagu</div>
+      <div><b id="kue">0 kotak</b>Kue Bangkit Sagu</div>
+    </div>
+  </div>
+
+  <div class="kartu">
+    <h2>🛒 Pasar &amp; Ekspor</h2>
+    <p>Harga hari ini — Tepung: <b id="hargaTepung"></b> • Mie: <b id="hargaMie"></b> • Kue: <b id="hargaKue"></b> • Ekspor: <b id="hargaEkspor"></b></p>
+    <div class="bar">
+      <button class="kuning" onclick="jual('tepung')">Jual 10 kg Tepung Lokal</button>
+      <button class="kuning" onclick="jual('ekspor')">Ekspor 20 kg Tepung</button>
+      <button onclick="jual('mie')">Jual Semua Mie Sagu</button>
+      <button onclick="jual('kue')">Jual Semua Kue Bangkit</button>
+    </div>
+    <p style="font-size:13px;color:#666">Ekspor butuh angkutan (Perahu/Kapal) dari menu Upgrade.</p>
+  </div>
+
+  <div class="kartu">
+    <h2>☕ Kedai Kopi Liberika Meranti</h2>
+    <p id="kedaiInfo">Belum punya kedai</p>
+    <p style="font-size:14px">Bisnis sampingan: kedai kopi menghasilkan uang pasif setiap hari. Kopi Liberika khas Meranti jadi daya tarik wisatawan dan pedagang.</p>
+  </div>
+
+  <div class="kartu">
+    <h2>⬆️ Upgrade</h2>
+    <div class="bar">
+      <button onclick="beliUpgrade('lahan')">Lahan Baru — Rp150.000</button>
+      <button onclick="beliUpgrade('kilang')">Kilang — Rp200.000</button>
+      <button onclick="beliUpgrade('alat')">Alat — Rp180.000</button>
+      <button onclick="beliUpgrade('angkutan')">Angkutan — Rp250.000</button>
+      <button onclick="beliUpgrade('kedai')">Kedai Kopi — Rp300.000 / Upgrade Rp250.000</button>
+    </div>
+  </div>
+
+  <div class="kartu">
+    <h2>📰 Kabar &amp; Catatan</h2>
+    <div id="log"></div>
+  </div>
+
+  <div class="kartu">
+    <h2>📖 Cara Main</h2>
+    <ol>
+      <li>Tanam rumbia di lahan kosong, tunggu 2 hari sampai matang.</li>
+      <li>Tebang rumbia untuk mendapat tual sagu.</li>
+      <li>Olah tual di kilang menjadi tepung sagu.</li>
+      <li>Buat Mie Sagu dan Kue Bangkit Sagu dari tepung, lalu jual.</li>
+      <li>Ekspor tepung sagu ke pasar internasional setelah punya angkutan.</li>
+      <li>Buka Kedai Kopi Liberika Meranti untuk penghasilan harian.</li>
+      <li>Pakai keuntungan untuk upgrade lahan, kilang, alat, dan angkutan.</li>
+    </ol>
+  </div>
+</main>
+<footer>Saudagar Sagu Meranti • Selatpanjang, Kepulauan Meranti • Game simulasi bisnis sagu — v1</footer>
+<script src="js/game.js"></script>
+</body>
+</html>
