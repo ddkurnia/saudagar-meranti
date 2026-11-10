@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Saudagar Sagu Meranti</title>
 <link rel="stylesheet" href="css/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
 </head>
 <body>
 <header>
@@ -13,12 +14,12 @@
 </header>
 <main>
   <div class="kartu" style="padding:8px">
-    <canvas id="dunia" width="960" height="560"></canvas>
+    <div id="dunia3d"></div>
     <div class="bar" style="margin-top:10px">
-      <button class="kuning" id="aksiUtama" onclick="aksiTerpilih()">Klik petak / bangunan di dunia 2D</button>
+      <button class="kuning" id="aksiUtama" onclick="aksiTerpilih()">Klik petak / bangunan di dunia 3D</button>
       <button onclick="hariBerikutnya()">➡️ Hari Berikutnya</button>
     </div>
-    <p style="font-size:13px;color:#666;margin:8px 0 0">Klik petak atau bangunan — kamu akan berjalan ke sana dan langsung beraksi, seperti Harvest Moon. Jalan dengan WASD / panah, tekan E untuk beraksi. Jam berjalan 06:00–20:00, lalu hari berganti.</p>
+    <p style="font-size:13px;color:#666;margin:8px 0 0">Dunia 3D: klik petak atau bangunan — kamu akan berjalan ke sana dan langsung beraksi, seperti Harvest Moon. Jalan dengan WASD / panah, tekan E untuk beraksi. Kamera mengikuti kamu. Jam berjalan 06:00–20:00, lalu hari berganti.</p>
     <p id="petaInfo" style="font-size:13px;color:#666"></p>
   </div>
 
@@ -133,7 +134,7 @@
     </ol>
   </div>
 </main>
-<footer>Saudagar Sagu Meranti • Selatpanjang, Kepulauan Meranti • Game simulasi bisnis sagu — v5 animasi 2D ala Harvest Moon</footer>
+<footer>Saudagar Sagu Meranti • Selatpanjang, Kepulauan Meranti • Game simulasi bisnis sagu — v6 3D modern</footer>
 <script src="js/game.js"></script>
 </body>
 </html>

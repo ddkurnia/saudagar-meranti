@@ -9,6 +9,19 @@ memproduksi Mie Sagu dan Kue Bangkit Sagu, mengekspor tepung sagu ke pasar
 internasional, dan mengembangkan Kedai Kopi Liberika Meranti sebagai
 bisnis sampingan.
 
+## Yang baru di v6 — 3D Modern
+
+Seluruh dunia game sekarang **3D dengan Three.js**: tanah, jalan, laut
+berombak, kapal yang bergoyang, pohon rumbia 3D yang bergoyang, bangunan
+3D dengan atap dan papan nama, karakter 3D yang berjalan dengan animasi
+kaki dan ayunan alat, NPC yang berjalan, awan bergerak, asap kilang,
+hujan 3D, serta siang ke malam dengan matahari yang bergerak, langit
+yang berubah warna, dan bayangan. Kamera mengikuti pemain. Klik di
+dunia 3D memakai raycast ke tanah, lalu pemain berjalan ke sana dan
+langsung beraksi saat sampai. Butuh internet untuk memuat pustaka
+Three.js dari CDN; kalau gagal dimuat, halaman memberi tahu dan tombol
+di bawah dunia tetap bisa dipakai.
+
 ## Yang baru di v5 — Game utuh animasi 2D ala Harvest Moon
 
 Seluruh game sekarang hidup di satu dunia 2D di canvas, yang tampil

@@ -1,12 +1,13 @@
-// Saudagar Sagu Meranti — v5 HARVEST MOON-LIKE 2D
-// Game utuh di canvas: dunia animasi 2D Selatpanjang. Pemain berjalan dengan
-// animasi kaki dan arah hadap, menanam dengan animasi cangkul, menebang dengan
-// animasi parang, pohon bergoyang, air berombak, awan bergerak, NPC berjalan,
-// pelanggan datang-pergi, siang ke malam, partikel debu/daun/koin/hati.
+// Saudagar Sagu Meranti — v6 3D MODERN
+// Game utuh 3D dengan Three.js: dunia Selatpanjang dalam 3D — tanah, laut
+// berombak, pohon rumbia 3D yang bergoyang, bangunan 3D, kapal, awan, karakter
+// 3D yang berjalan dengan animasi kaki dan ayunan alat, NPC berjalan, siang
+// ke malam dengan matahari dan bayangan. Ekonomi v1-v5 tetap sama.
 const SAVE_KEY = "saudagarSaguMerantiV1";
 const TARGET_UANG = 5000000;
 const TARGET_EKSPOR = 100;
 const W = 960, H = 560;
+const SKALA = 0.06; // 2D (960x560) -> dunia 3D
 const CUACA = {
   Cerah: { ikon: "☀️", efek: "Pelanggan kopi +2" },
   Berawan: { ikon: "☁️", efek: "Tidak ada efek khusus" },
@@ -31,12 +32,13 @@ const BANGUNAN = {
   pasar: { x: 480, y: 220, w: 170, h: 100, label: "Pasar Selatpanjang" },
   pelabuhan: { x: 700, y: 330, w: 200, h: 110, label: "Pelabuhan Ekspor" },
 };
-// NPC yang berjalan di dunia (waypoint bolak-balik)
 const NPC = [
   { nama: "Pak Tani", x: 120, y: 340, wx: [120, 380], wy: [340, 340], i: 0, baju: "#2e7d32", topi: "#ffeb3b", cepat: 0.7 },
   { nama: "Bu Sari", x: 560, y: 380, wx: [560, 820], wy: [380, 380], i: 0, baju: "#e53935", topi: "#333", cepat: 0.5 },
   { nama: "Pedagang", x: 700, y: 460, wx: [700, 500], wy: [460, 460], i: 0, baju: "#1565c0", topi: "#6d4c41", cepat: 0.6 },
 ];
+function w2x(wx) { return (wx - 480) * SKALA; }
+function w2z(wy) { return (wy - 280) * SKALA; }
 
 function musimHariIni(hari) {
   const d = (hari - 1) % 15;
@@ -56,7 +58,7 @@ function buatKontrak(id, hari) {
 }
 function awal() {
   const s = {
-    versi: 5, uang: 500000, hari: 1, jam: 6, tual: 0, tepung: 0, mie: 0, kue: 0,
+    versi: 6, uang: 500000, hari: 1, jam: 6, tual: 0, tepung: 0, mie: 0, kue: 0,
     eksporTotal: 0, reputasi: 0,
     lahan: [
       { status: "tumbuh", sisa: 1, anim: 0 },
@@ -69,7 +71,7 @@ function awal() {
     kontrak: [], kontrakId: 1,
     pemain: { x: 480, y: 420, arah: "bawah", jalan: false, langkah: 0, ayun: 0 },
     harga: { tepung: 8000, mie: 15000, kue: 12000, ekspor: 15000 },
-    log: ["Selamat datang di Selatpanjang! Klik petak kebun — kamu akan berjalan ke sana dan menanam."],
+    log: ["Selamat datang di Selatpanjang 3D! Klik petak kebun — kamu akan berjalan ke sana dan menanam."],
     menang: false,
   };
   s.kontrak = [buatKontrak(1, 1), buatKontrak(2, 1)]; s.kontrakId = 3;
@@ -90,8 +92,8 @@ function load() {
     if (raw) {
       const d = JSON.parse(raw);
       if (d && typeof d.uang === "number") {
-        if (d.versi !== 5) {
-          d.versi = 5; d.jam = 6;
+        if (d.versi !== 6) {
+          d.versi = 6; d.jam = d.jam || 6;
           d.cuaca = d.cuaca || "Cerah"; d.cuacaBesok = d.cuacaBesok || "Berawan";
           d.pelanggan = 0; d.pelangganDilayani = d.pelangganDilayani || 0; d.kepuasan = d.kepuasan || 0;
           d.pekerja = d.pekerja || { kebun: 0, kilang: 0, barista: 0 };
@@ -101,7 +103,7 @@ function load() {
           if (Array.isArray(d.lahan) && d.lahan.length < 4) d.lahan.push({ status: "kosong", sisa: 0, anim: 0 });
           d.pemain = { x: 480, y: 420, arah: "bawah", jalan: false, langkah: 0, ayun: 0 };
           d.log = d.log || [];
-          d.log.unshift("Update v5: game utuh animasi 2D ala Harvest Moon — berjalan, menanam, menebang, NPC, siang-malam.");
+          d.log.unshift("Update v6: game sekarang 3D modern — dunia Three.js, karakter 3D, siang-malam, bayangan.");
         }
         if (!d.pemain) d.pemain = { x: 480, y: 420, arah: "bawah", jalan: false, langkah: 0, ayun: 0 };
         if (typeof d.jam !== "number") d.jam = 6;
@@ -120,6 +122,7 @@ function spawnPartikel(x, y, teks, warna, n) {
     partikel.push({ x: x + (Math.random() - 0.5) * 20, y: y + (Math.random() - 0.5) * 10, vx: (Math.random() - 0.5) * 2, vy: -1 - Math.random() * 1.5, life: 40, teks: teks || null, warna: warna || "#ffeb3b" });
   }
   if (teks) partikel.push({ x: x, y: y - 20, vx: 0, vy: -0.8, life: 50, teks: teks, warna: warna || "#fff" });
+  if (typeof spawnPartikel3D === "function") spawnPartikel3D(x, y, teks, warna, n);
 }
 function hitungPelanggan() {
   if (S.kedaiLevel === 0) return 0;
@@ -297,10 +300,8 @@ function resetGame() {
   if (!confirm("Mulai ulang game dari awal? Semua progres akan hilang.")) return;
   S = awal(); terpilih = null; aksiTertunda = null; partikel = []; save(); render();
 }
-
-// ---------- AKSI DARI DUNIA 2D ----------
 function aksiTerpilih() {
-  if (!terpilih) return alert("Klik dulu petak kebun atau bangunan di dunia 2D.");
+  if (!terpilih) return alert("Klik dulu petak kebun atau bangunan di dunia 3D.");
   if (terpilih.kind === "plot") {
     const p = S.lahan[terpilih.index];
     if (p.status === "kosong") tanam(terpilih.index);
@@ -312,7 +313,7 @@ function aksiTerpilih() {
   else if (terpilih.kind === "pelabuhan") jual("ekspor");
 }
 function labelAksi() {
-  if (!terpilih) return "Klik petak / bangunan di dunia 2D";
+  if (!terpilih) return "Klik petak / bangunan di dunia 3D";
   if (terpilih.kind === "plot") {
     const p = S.lahan[terpilih.index];
     if (p.status === "kosong") return "🌱 Tanam Rumbia di Petak " + (terpilih.index + 1) + " — Rp20.000";
@@ -346,164 +347,6 @@ function klikDunia(wx, wy) {
   targetJalan = { x: Math.max(20, Math.min(W - 20, wx)), y: Math.max(20, Math.min(H - 20, wy)) };
   render();
 }
-
-// ---------- GAMBAR & ANIMASI DUNIA 2D ----------
-function gambarOrang(ctx, x, y, baju, topi, langkah, ayun) {
-  const bob = langkah ? Math.sin(langkah) * 2 : 0;
-  const kaki = langkah ? Math.sin(langkah) * 4 : 0;
-  // kaki bergerak saat berjalan
-  ctx.fillStyle = "#333";
-  ctx.fillRect(x - 8, y + 11 - Math.max(0, kaki), 6, 12);
-  ctx.fillRect(x + 2, y + 11 - Math.max(0, -kaki), 6, 12);
-  // badan
-  ctx.fillStyle = baju; ctx.fillRect(x - 9, y - 9 + bob, 18, 20);
-  // kepala
-  ctx.fillStyle = "#f1c27d"; ctx.beginPath(); ctx.arc(x, y - 18 + bob, 9, 0, Math.PI * 2); ctx.fill();
-  // topi
-  ctx.fillStyle = topi || "#8d6e63"; ctx.beginPath(); ctx.arc(x, y - 22 + bob, 9, Math.PI, 0); ctx.fill();
-  ctx.fillRect(x - 11, y - 22 + bob, 22, 4);
-  // ayunan alat (cangkul/parang) saat beraksi
-  if (ayun > 0) {
-    const a = Math.sin((ayun / 22) * Math.PI) * 1.2;
-    ctx.strokeStyle = "#5d4037"; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(x + 9, y - 2 + bob);
-    ctx.lineTo(x + 9 + Math.cos(a) * 22, y - 2 + bob - Math.sin(a) * 22); ctx.stroke();
-    ctx.fillStyle = "#90a4ae"; ctx.fillRect(x + 9 + Math.cos(a) * 22 - 4, y - 2 + bob - Math.sin(a) * 22 - 4, 10, 6);
-  }
-}
-function gambarRumbia(ctx, x, y, status, sisa, anim, goyang) {
-  ctx.fillStyle = "#8d6e63"; ctx.fillRect(x - 22, y - 6, 44, 10);
-  if (status === "kosong") { ctx.fillStyle = "#5d4037"; ctx.font = "12px sans-serif"; ctx.textAlign = "center"; ctx.fillText("kosong", x, y + 22); return; }
-  const skala = anim > 0 ? 1 - anim / 30 : 1;
-  if (status === "tumbuh") {
-    ctx.save(); ctx.translate(x, y - 6); ctx.scale(skala, skala);
-    ctx.strokeStyle = "#2e7d32"; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -20); ctx.stroke();
-    ctx.fillStyle = "#66bb6a"; ctx.beginPath(); ctx.arc(0, -24, 8, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
-    ctx.fillStyle = "#333"; ctx.font = "11px sans-serif"; ctx.textAlign = "center"; ctx.fillText(sisa + " hari", x, y + 22);
-    return;
-  }
-  // matang: pohon bergoyang pelan
-  ctx.save(); ctx.translate(x, y - 6); ctx.rotate(goyang * 0.05);
-  ctx.fillStyle = "#6d4c41"; ctx.fillRect(-4, -36, 8, 36);
-  ctx.strokeStyle = "#1b5e20"; ctx.lineWidth = 4;
-  for (const a of [-0.9, -0.45, 0, 0.45, 0.9]) {
-    ctx.beginPath(); ctx.moveTo(0, -36);
-    ctx.quadraticCurveTo(Math.sin(a) * 28, -52, Math.sin(a) * 38, -42 + Math.abs(a) * 10);
-    ctx.stroke();
-  }
-  ctx.fillStyle = "#c62828"; ctx.beginPath(); ctx.arc(14, -28, 5, 0, Math.PI * 2); ctx.fill();
-  ctx.restore();
-}
-function gambarBangunan(ctx, b, warna, atap) {
-  ctx.fillStyle = warna; ctx.fillRect(b.x, b.y + 30, b.w, b.h - 30);
-  ctx.fillStyle = atap; ctx.beginPath(); ctx.moveTo(b.x - 8, b.y + 32); ctx.lineTo(b.x + b.w / 2, b.y); ctx.lineTo(b.x + b.w + 8, b.y + 32); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = "#fff"; ctx.font = "bold 13px sans-serif"; ctx.textAlign = "center";
-  ctx.fillText(b.label, b.x + b.w / 2, b.y + 62);
-  ctx.fillStyle = "#5d4037"; ctx.fillRect(b.x + b.w / 2 - 14, b.y + b.h - 28, 28, 28);
-}
-function gambarDunia() {
-  const canvas = (typeof document !== "undefined") ? document.getElementById("dunia") : null;
-  if (!canvas || !canvas.getContext) return;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-  // Langit / siang-malam: jam 6 pagi terang, makin malam makin gelap
-  const gelap = S.jam >= 18 ? 0.35 : S.jam >= 17 ? 0.18 : 0;
-  ctx.fillStyle = "#7ec850"; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = "#8fd35a";
-  for (let i = 0; i < 40; i++) { const gx = (i * 173) % W, gy = (i * 97) % H; ctx.fillRect(gx, gy, 18, 6); }
-  // Awan bergerak
-  ctx.fillStyle = "rgba(255,255,255,.85)";
-  for (let i = 0; i < 3; i++) {
-    const ax = ((i * 320 + frame * 0.4) % (W + 200)) - 100;
-    ctx.beginPath(); ctx.ellipse(ax, 28 + i * 18, 42, 14, 0, 0, Math.PI * 2); ctx.fill();
-  }
-  // Matahari bergerak sesuai jam, bulan setelah jam 18
-  if (S.jam < 18) {
-    const mx = 60 + ((S.jam - 6) / 12) * 840;
-    ctx.fillStyle = "#ffeb3b"; ctx.beginPath(); ctx.arc(mx, 46, 22, 0, Math.PI * 2); ctx.fill();
-  } else {
-    ctx.fillStyle = "#eceff1"; ctx.beginPath(); ctx.arc(880, 46, 18, 0, Math.PI * 2); ctx.fill();
-  }
-  // Jalan tanah
-  ctx.fillStyle = "#d7b98a"; ctx.fillRect(450, 0, 40, H); ctx.fillRect(0, 350, W, 40);
-  // Air berombak
-  ctx.fillStyle = "#29b6f6"; ctx.fillRect(0, 470, W, 90);
-  ctx.strokeStyle = "rgba(255,255,255,.7)"; ctx.lineWidth = 2;
-  for (let i = 0; i < 6; i++) {
-    ctx.beginPath();
-    for (let x = 0; x <= W; x += 20) ctx.lineTo(x, 490 + i * 12 + Math.sin(frame / 20 + x / 60 + i) * 3);
-    ctx.stroke();
-  }
-  ctx.fillStyle = "#fff"; ctx.font = "13px sans-serif"; ctx.textAlign = "left"; ctx.fillText("🌊 Selat / Laut Meranti", 20, 500);
-  // Kapal bergoyang di pelabuhan
-  const goyangKapal = Math.sin(frame / 30) * 3;
-  ctx.fillStyle = "#6d4c41"; ctx.fillRect(740, 480 + goyangKapal, 140, 28);
-  ctx.fillStyle = "#fff"; ctx.fillRect(780, 452 + goyangKapal, 60, 28);
-  ctx.fillStyle = "#e53935"; ctx.fillRect(780, 452 + goyangKapal, 60, 8);
-  // Kebun
-  ctx.fillStyle = "#333"; ctx.font = "bold 14px sans-serif"; ctx.fillText("🌴 Kebun Rumbia", 60, 55);
-  for (let i = 0; i < PETAK_POS.length && i < S.lahan.length; i++) {
-    const p = PETAK_POS[i];
-    ctx.fillStyle = "#a1887f"; ctx.fillRect(p.x, p.y, p.w, p.h);
-    ctx.strokeStyle = terpilih && terpilih.kind === "plot" && terpilih.index === i ? "#ffeb3b" : "#5d4037";
-    ctx.lineWidth = terpilih && terpilih.kind === "plot" && terpilih.index === i ? 4 : 2;
-    ctx.strokeRect(p.x, p.y, p.w, p.h);
-    gambarRumbia(ctx, p.x + p.w / 2, p.y + p.h / 2 + 8, S.lahan[i].status, S.lahan[i].sisa, S.lahan[i].anim || 0, Math.sin(frame / 40 + i));
-    ctx.fillStyle = "#333"; ctx.font = "11px sans-serif"; ctx.textAlign = "center"; ctx.fillText("Petak " + (i + 1), p.x + p.w / 2, p.y + 14);
-  }
-  // Bangunan (sorot yang terpilih)
-  for (const k of Object.keys(BANGUNAN)) {
-    const b = BANGUNAN[k];
-    gambarBangunan(ctx, b, k === "kilang" ? "#90a4ae" : k === "kedai" ? "#a1887f" : k === "pasar" ? "#ffb74d" : "#4db6ac", k === "kilang" ? "#37474f" : k === "kedai" ? "#6d4c41" : k === "pasar" ? "#e65100" : "#00695c");
-    if (terpilih && terpilih.kind === k) { ctx.strokeStyle = "#ffeb3b"; ctx.lineWidth = 4; ctx.strokeRect(b.x - 4, b.y - 4, b.w + 8, b.h + 8); }
-  }
-  ctx.fillStyle = "#666"; ctx.fillRect(BANGUNAN.kilang.x + 130, BANGUNAN.kilang.y - 18, 16, 40);
-  // Asap kilang naik
-  ctx.fillStyle = "rgba(255,255,255,.7)";
-  for (let i = 0; i < 3; i++) ctx.beginPath(), ctx.arc(BANGUNAN.kilang.x + 138, BANGUNAN.kilang.y - 26 - ((frame / 2 + i * 20) % 60), 6 + i * 2, 0, Math.PI * 2), ctx.fill();
-  // Pelanggan di kedai
-  for (let i = 0; i < Math.min(S.pelanggan, 6); i++) {
-    gambarOrang(ctx, BANGUNAN.kedai.x + 25 + i * 28, BANGUNAN.kedai.y + BANGUNAN.kedai.h + 32 + Math.sin(frame / 20 + i) * 2, ["#e53935", "#1565c0", "#fdd835"][i % 3], "#333", 0, 0);
-  }
-  // NPC berjalan bolak-balik
-  for (const n of NPC) {
-    const tx = n.wx[n.i], ty = n.wy[n.i];
-    const dx = tx - n.x, dy = ty - n.y, j = Math.hypot(dx, dy);
-    if (j < 4) n.i = (n.i + 1) % n.wx.length;
-    else { n.x += dx / j * n.cepat; n.y += dy / j * n.cepat; }
-    gambarOrang(ctx, n.x, n.y, n.baju, n.topi, frame / 8 + n.x, 0);
-    ctx.fillStyle = "#000"; ctx.font = "10px sans-serif"; ctx.textAlign = "center"; ctx.fillText(n.nama, n.x, n.y + 38);
-  }
-  // Pekerja di dunia
-  for (let i = 0; i < S.pekerja.kebun; i++) gambarOrang(ctx, 120 + i * 40 + Math.sin(frame / 40 + i) * 8, 320, "#2e7d32", "#ffeb3b", frame / 10, 0);
-  for (let i = 0; i < S.pekerja.kilang; i++) gambarOrang(ctx, 520 + i * 36, 200 + Math.cos(frame / 50 + i) * 6, "#616161", "#37474f", 0, 0);
-  for (let i = 0; i < S.pekerja.barista; i++) gambarOrang(ctx, 730 + i * 36, 200, "#6d4c41", "#fff", 0, 0);
-  // Pemain
-  const pm = S.pemain;
-  ctx.strokeStyle = "#ffeb3b"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(pm.x, pm.y, 20, 0, Math.PI * 2); ctx.stroke();
-  gambarOrang(ctx, pm.x, pm.y, "#1565c0", "#ffeb3b", pm.jalan ? pm.langkah : 0, pm.ayun);
-  ctx.fillStyle = "#000"; ctx.font = "bold 11px sans-serif"; ctx.textAlign = "center"; ctx.fillText("KAMU", pm.x, pm.y + 38);
-  // Partikel
-  partikel = partikel.filter(pt => pt.life > 0);
-  for (const pt of partikel) {
-    pt.x += pt.vx; pt.y += pt.vy; pt.life--;
-    if (pt.teks && pt.teks.length > 3) { ctx.fillStyle = pt.warna; ctx.font = "bold 13px sans-serif"; ctx.textAlign = "center"; ctx.fillText(pt.teks, pt.x, pt.y); }
-    else { ctx.fillStyle = pt.warna; ctx.beginPath(); ctx.arc(pt.x, pt.y, 3, 0, Math.PI * 2); ctx.fill(); }
-  }
-  // Hujan
-  if (S.cuaca === "Hujan") {
-    ctx.strokeStyle = "rgba(255,255,255,.8)"; ctx.lineWidth = 2;
-    for (let i = 0; i < 30; i++) { const rx = (i * 97 + frame * 6) % W, ry = (i * 53 + frame * 12) % H; ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx - 4, ry + 12); ctx.stroke(); }
-  }
-  // HUD di dalam dunia: jam, uang, hari
-  ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.fillRect(8, H - 34, 380, 26);
-  ctx.fillStyle = "#fff"; ctx.font = "bold 13px sans-serif"; ctx.textAlign = "left";
-  ctx.fillText("🕐 " + String(S.jam).padStart(2, "0") + ":00  •  Hari " + S.hari + "  •  " + rp(S.uang) + "  •  " + S.cuaca, 16, H - 16);
-  // Gelap malam
-  if (gelap > 0) { ctx.fillStyle = "rgba(10,10,60," + gelap + ")"; ctx.fillRect(0, 0, W, H); }
-}
 function gerakPemain() {
   const p = S.pemain;
   let bergerak = false;
@@ -526,28 +369,346 @@ function gerakPemain() {
   if (p.ayun > 0) p.ayun--;
   S.lahan.forEach(pl => { if (pl.anim > 0) pl.anim--; });
   p.x = Math.max(16, Math.min(W - 16, p.x)); p.y = Math.max(16, Math.min(H - 16, p.y));
-  // Jam berjalan: ~15 detik = 1 jam dalam game
   jamTimer++;
   if (jamTimer >= 900) {
     jamTimer = 0; S.jam++;
     if (S.jam >= 20) { hariBerikutnya(); }
-    else { const jm = document.getElementById("jam"); if (jm) jm.textContent = String(S.jam).padStart(2, "0") + ":00"; }
+    else if (typeof document !== "undefined") { const jm = document.getElementById("jam"); if (jm) jm.textContent = String(S.jam).padStart(2, "0") + ":00"; }
   }
 }
-function loopDunia() {
+
+// ---------- DUNIA 3D (Three.js) ----------
+let scene3 = null, camera3 = null, renderer3 = null, sunLight = null, hemiLight = null;
+let plotMeshes = [], buildingMeshes = {}, player3 = null, npc3 = [], pelanggan3 = [], pekerja3 = [];
+let clouds3 = [], water3 = null, boat3 = null, sunMesh = null, moonMesh = null;
+let partikel3D = [], rain3 = [], smoke3 = [];
+function mat(warna) { return new THREE.MeshLambertMaterial({ color: warna }); }
+function kotak(w, h, d, warna, x, y, z) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(warna));
+  m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; return m;
+}
+function buatLabel(teks) {
+  const c = document.createElement("canvas"); c.width = 512; c.height = 96;
+  const g = c.getContext("2d");
+  g.fillStyle = "rgba(0,0,0,.65)";
+  if (typeof g.roundRect === "function") { g.beginPath(); g.roundRect(6, 10, 500, 76, 18); g.fill(); }
+  else g.fillRect(6, 10, 500, 76);
+  g.fillStyle = "#fff"; g.font = "bold 44px sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+  g.fillText(teks, 256, 50);
+  const tex = new THREE.CanvasTexture(c);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+  sp.scale.set(6, 1.1, 1); return sp;
+}
+function buatOrang3D(baju, topi) {
+  const g = new THREE.Group();
+  const kakiK = kotak(0.28, 0.7, 0.28, 0x333333, -0.18, 0.35, 0);
+  const kakiN = kotak(0.28, 0.7, 0.28, 0x333333, 0.18, 0.35, 0);
+  const badan = kotak(0.85, 0.9, 0.5, baju, 0, 1.15, 0);
+  const kepala = new THREE.Mesh(new THREE.SphereGeometry(0.34, 16, 12), mat(0xf1c27d));
+  kepala.position.set(0, 1.95, 0); kepala.castShadow = true;
+  const topiM = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.4, 0.18, 12), mat(topi));
+  topiM.position.set(0, 2.22, 0); topiM.castShadow = true;
+  const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.06, 12), mat(topi));
+  brim.position.set(0, 2.14, 0);
+  const lenganK = kotak(0.2, 0.7, 0.2, baju, -0.55, 1.15, 0);
+  const lenganN = kotak(0.2, 0.7, 0.2, baju, 0.55, 1.15, 0);
+  const alat = new THREE.Group();
+  const gagang = kotak(0.08, 1.1, 0.08, 0x5d4037, 0, 0.4, 0);
+  const kepalaAlat = kotak(0.5, 0.12, 0.12, 0x90a4ae, 0.2, 0.95, 0);
+  alat.add(gagang); alat.add(kepalaAlat);
+  alat.position.set(0.6, 1.0, 0.2); alat.visible = false;
+  g.add(kakiK, kakiN, badan, kepala, topiM, brim, lenganK, lenganN, alat);
+  g.userData = { kakiK: kakiK, kakiN: kakiN, lenganK: lenganK, lenganN: lenganN, alat: alat };
+  return g;
+}
+function buatPohonRumbia() {
+  const g = new THREE.Group();
+  const batang = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 2.4, 8), mat(0x6d4c41));
+  batang.position.y = 1.2; batang.castShadow = true; g.add(batang);
+  const daun = new THREE.Group();
+  for (let i = 0; i < 6; i++) {
+    const f = new THREE.Mesh(new THREE.ConeGeometry(0.55, 2.4, 4), mat(0x1b5e20));
+    f.position.set(Math.cos(i * Math.PI / 3) * 0.9, 2.6, Math.sin(i * Math.PI / 3) * 0.9);
+    f.rotation.z = Math.cos(i * Math.PI / 3) * 0.9;
+    f.rotation.x = -Math.sin(i * Math.PI / 3) * 0.9;
+    f.castShadow = true; daun.add(f);
+  }
+  daun.position.y = 0; g.add(daun);
+  const buah = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), mat(0xc62828));
+  buah.position.set(0.7, 2.2, 0.3); g.add(buah);
+  g.userData.daun = daun;
+  return g;
+}
+function buatBangunan(b, warna, atapWarna) {
+  const g = new THREE.Group();
+  const cx = w2x(b.x + b.w / 2), cz = w2z(b.y + b.h / 2);
+  const badan = kotak(b.w * SKALA, 2.6, b.h * SKALA, warna, 0, 1.3, 0);
+  const atap = new THREE.Mesh(new THREE.ConeGeometry(b.w * SKALA * 0.72, 1.8, 4), mat(atapWarna));
+  atap.position.y = 3.5; atap.rotation.y = Math.PI / 4; atap.castShadow = true;
+  const pintu = kotak(1.2, 1.8, 0.15, 0x5d4037, 0, 0.9, b.h * SKALA / 2 + 0.05);
+  g.add(badan, atap, pintu);
+  const label = buatLabel(b.label); label.position.y = 5.2; g.add(label);
+  g.position.set(cx, 0, cz);
+  return g;
+}
+function init3D() {
+  const wadah = (typeof document !== "undefined") ? document.getElementById("dunia3d") : null;
+  if (!wadah) return false;
+  if (typeof THREE === "undefined") {
+    wadah.innerHTML = "<p style='padding:20px'>Dunia 3D butuh internet untuk memuat pustaka Three.js. Periksa koneksi lalu muat ulang halaman.</p>";
+    return false;
+  }
+  try {
+    scene3 = new THREE.Scene();
+    scene3.background = new THREE.Color(0x87ceeb);
+    scene3.fog = new THREE.Fog(0x87ceeb, 40, 90);
+    camera3 = new THREE.PerspectiveCamera(50, 960 / 560, 0.1, 200);
+    renderer3 = new THREE.WebGLRenderer({ antialias: true });
+    renderer3.setSize(960, 560);
+    renderer3.shadowMap.enabled = true;
+    renderer3.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer3.domElement.style.width = "100%";
+    renderer3.domElement.style.height = "auto";
+    renderer3.domElement.style.display = "block";
+    wadah.appendChild(renderer3.domElement);
+    hemiLight = new THREE.HemisphereLight(0xbfe3ff, 0x3e7a3e, 0.9);
+    scene3.add(hemiLight);
+    sunLight = new THREE.DirectionalLight(0xfff2cc, 1.4);
+    sunLight.position.set(20, 25, 10);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.set(2048, 2048);
+    sunLight.shadow.camera.left = -35; sunLight.shadow.camera.right = 35;
+    sunLight.shadow.camera.top = 35; sunLight.shadow.camera.bottom = -35;
+    scene3.add(sunLight);
+    // Tanah
+    const tanah = new THREE.Mesh(new THREE.PlaneGeometry(70, 38), mat(0x7ec850));
+    tanah.rotation.x = -Math.PI / 2; tanah.receiveShadow = true; scene3.add(tanah);
+    // Jalan tanah
+    const jalan1 = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 38), mat(0xd7b98a));
+    jalan1.rotation.x = -Math.PI / 2; jalan1.position.set(0, 0.02, 0); scene3.add(jalan1);
+    const jalan2 = new THREE.Mesh(new THREE.PlaneGeometry(70, 2.4), mat(0xd7b98a));
+    jalan2.rotation.x = -Math.PI / 2; jalan2.position.set(0, 0.02, 4.2); scene3.add(jalan2);
+    // Pasir + laut
+    const pasir = new THREE.Mesh(new THREE.PlaneGeometry(70, 2.5), mat(0xf0d9a0));
+    pasir.rotation.x = -Math.PI / 2; pasir.position.set(0, 0.03, 11.5); scene3.add(pasir);
+    water3 = new THREE.Mesh(new THREE.PlaneGeometry(70, 7), new THREE.MeshLambertMaterial({ color: 0x29b6f6, transparent: true, opacity: 0.92 }));
+    water3.rotation.x = -Math.PI / 2; water3.position.set(0, 0.05, 16); scene3.add(water3);
+    // Matahari & bulan 3D
+    sunMesh = new THREE.Mesh(new THREE.SphereGeometry(1.6, 16, 12), new THREE.MeshBasicMaterial({ color: 0xffeb3b }));
+    sunMesh.position.set(24, 18, -14); scene3.add(sunMesh);
+    moonMesh = new THREE.Mesh(new THREE.SphereGeometry(1.2, 16, 12), new THREE.MeshBasicMaterial({ color: 0xeceff1 }));
+    moonMesh.position.set(-24, 18, -14); moonMesh.visible = false; scene3.add(moonMesh);
+    // Awan
+    for (let i = 0; i < 4; i++) {
+      const awan = new THREE.Group();
+      for (let j = 0; j < 3; j++) {
+        const s = new THREE.Mesh(new THREE.SphereGeometry(1.4 - j * 0.2, 12, 10), new THREE.MeshLambertMaterial({ color: 0xffffff }));
+        s.position.set(j * 1.6 - 1.6, j * 0.3, 0); awan.add(s);
+      }
+      awan.position.set(-25 + i * 16, 13 + (i % 2), -10 + i * 3);
+      scene3.add(awan); clouds3.push(awan);
+    }
+    // Kebun: petak tanah + pohon rumbia
+    for (let i = 0; i < PETAK_POS.length; i++) {
+      const p = PETAK_POS[i];
+      const tanahPetak = kotak(p.w * SKALA, 0.25, p.h * SKALA, 0xa1887f, w2x(p.x + p.w / 2), 0.12, w2z(p.y + p.h / 2));
+      scene3.add(tanahPetak);
+      const pohon = buatPohonRumbia();
+      pohon.position.set(w2x(p.x + p.w / 2), 0.25, w2z(p.y + p.h / 2));
+      scene3.add(pohon);
+      const kecambah = new THREE.Mesh(new THREE.SphereGeometry(0.35, 10, 8), mat(0x66bb6a));
+      kecambah.position.set(w2x(p.x + p.w / 2), 0.6, w2z(p.y + p.h / 2));
+      scene3.add(kecambah);
+      plotMeshes.push({ tanah: tanahPetak, pohon: pohon, kecambah: kecambah });
+    }
+    // Bangunan 3D
+    buildingMeshes.kilang = buatBangunan(BANGUNAN.kilang, 0x90a4ae, 0x37474f);
+    buildingMeshes.kedai = buatBangunan(BANGUNAN.kedai, 0xa1887f, 0x6d4c41);
+    buildingMeshes.pasar = buatBangunan(BANGUNAN.pasar, 0xffb74d, 0xe65100);
+    buildingMeshes.pelabuhan = buatBangunan(BANGUNAN.pelabuhan, 0x4db6ac, 0x00695c);
+    for (const k of Object.keys(buildingMeshes)) scene3.add(buildingMeshes[k]);
+    // Cerobong + asap kilang
+    const cerobong = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 3, 10), mat(0x666666));
+    cerobong.position.set(w2x(BANGUNAN.kilang.x + 150), 4.5, w2z(BANGUNAN.kilang.y + 30));
+    scene3.add(cerobong);
+    for (let i = 0; i < 4; i++) {
+      const asap = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 8), new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 }));
+      asap.position.set(cerobong.position.x, 6.5 + i, cerobong.position.z);
+      scene3.add(asap); smoke3.push(asap);
+    }
+    // Kapal di pelabuhan
+    boat3 = new THREE.Group();
+    boat3.add(kotak(8, 1.2, 2.6, 0x6d4c41, 0, 0.6, 0));
+    boat3.add(kotak(3.5, 1.6, 2, 0xffffff, 0.5, 1.9, 0));
+    boat3.add(kotak(3.5, 0.4, 2.1, 0xe53935, 0.5, 2.7, 0));
+    boat3.position.set(w2x(800), 0.1, w2z(500));
+    scene3.add(boat3);
+    // Pohon hias di tepi
+    for (const [px, pz] of [[-26, -12], [26, -12], [-26, 8], [26, 2]]) {
+      const ph = buatPohonRumbia(); ph.position.set(px, 0, pz); ph.scale.setScalar(1.2); scene3.add(ph);
+    }
+    // Pemain 3D
+    player3 = buatOrang3D(0x1565c0, 0xffeb3b);
+    player3.userData.alat.visible = true;
+    scene3.add(player3);
+    // NPC 3D
+    for (const n of NPC) {
+      const g = buatOrang3D(parseInt(n.baju.slice(1), 16), parseInt(n.topi.slice(1), 16));
+      const label = buatLabel(n.nama); label.position.y = 3.4; label.scale.set(3.4, 0.65, 1); g.add(label);
+      scene3.add(g); npc3.push(g);
+    }
+    // Hujan (titisan tipis)
+    for (let i = 0; i < 80; i++) {
+      const t = kotak(0.05, 0.7, 0.05, 0xffffff, (Math.random() - 0.5) * 60, Math.random() * 15, (Math.random() - 0.5) * 34);
+      t.visible = false; scene3.add(t); rain3.push(t);
+    }
+    // Klik di dunia 3D -> raycast ke tanah
+    const ray = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    const bidang = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    renderer3.domElement.addEventListener("click", (e) => {
+      const r = renderer3.domElement.getBoundingClientRect();
+      mouse.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+      mouse.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+      ray.setFromCamera(mouse, camera3);
+      const titik = new THREE.Vector3();
+      if (ray.ray.intersectPlane(bidang, titik)) {
+        klikDunia(titik.x / SKALA + 480, titik.z / SKALA + 280);
+      }
+    });
+    return true;
+  } catch (err) {
+    wadah.innerHTML = "<p style='padding:20px'>Dunia 3D tidak bisa dibuka di perangkat ini (" + err.message + "). Coba browser lain yang mendukung WebGL.</p>";
+    return false;
+  }
+}
+function spawnPartikel3D(x, y, teks, warna, n) {
+  if (!scene3 || typeof THREE === "undefined") return;
+  const wx = w2x(x), wz = w2z(y);
+  for (let i = 0; i < (n || 6); i++) {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffd54f }));
+    m.position.set(wx + (Math.random() - 0.5), 1 + Math.random(), wz + (Math.random() - 0.5));
+    scene3.add(m);
+    partikel3D.push({ mesh: m, vx: (Math.random() - 0.5) * 0.04, vy: 0.05 + Math.random() * 0.04, vz: (Math.random() - 0.5) * 0.04, life: 40 });
+  }
+  if (teks && teks.length > 3) {
+    const sp = buatLabel(teks); sp.position.set(wx, 3.2, wz);
+    scene3.add(sp);
+    partikel3D.push({ mesh: sp, vx: 0, vy: 0.03, vz: 0, life: 60 });
+  }
+}
+function updateDunia3D() {
+  if (!scene3) return;
+  // Petak: pohon sesuai status
+  for (let i = 0; i < plotMeshes.length && i < S.lahan.length; i++) {
+    const pm = plotMeshes[i], st = S.lahan[i];
+    const skala = st.anim > 0 ? 1 - st.anim / 30 : 1;
+    if (st.status === "kosong") { pm.pohon.visible = false; pm.kecambah.visible = false; }
+    else if (st.status === "tumbuh") { pm.pohon.visible = false; pm.kecambah.visible = true; pm.kecambah.scale.setScalar(Math.max(0.2, skala)); }
+    else { pm.pohon.visible = true; pm.kecambah.visible = false; pm.pohon.scale.setScalar(Math.max(0.4, skala)); }
+    const pilih = terpilih && terpilih.kind === "plot" && terpilih.index === i;
+    pm.tanah.material.color.setHex(pilih ? 0xffeb3b : 0xa1887f);
+  }
+  // Pelanggan di kedai (orang 3D)
+  while (pelanggan3.length < Math.min(S.pelanggan, 6)) {
+    const g = buatOrang3D(0xe53935, 0x333333);
+    g.position.set(w2x(BANGUNAN.kedai.x + 25 + pelanggan3.length * 28), 0, w2z(BANGUNAN.kedai.y + BANGUNAN.kedai.h + 32));
+    scene3.add(g); pelanggan3.push(g);
+  }
+  while (pelanggan3.length > Math.min(S.pelanggan, 6)) {
+    const g = pelanggan3.pop(); scene3.remove(g);
+  }
+  // Pekerja di dunia
+  while (pekerja3.length < S.pekerja.kebun + S.pekerja.kilang + S.pekerja.barista) {
+    const g = buatOrang3D(0x2e7d32, 0xffeb3b);
+    scene3.add(g); pekerja3.push(g);
+  }
+  while (pekerja3.length > S.pekerja.kebun + S.pekerja.kilang + S.pekerja.barista) {
+    const g = pekerja3.pop(); scene3.remove(g);
+  }
+  pekerja3.forEach((g, i) => {
+    if (i < S.pekerja.kebun) g.position.set(w2x(120 + i * 40), 0, w2z(320));
+    else if (i < S.pekerja.kebun + S.pekerja.kilang) g.position.set(w2x(520 + (i - S.pekerja.kebun) * 36), 0, w2z(200));
+    else g.position.set(w2x(730 + (i - S.pekerja.kebun - S.pekerja.kilang) * 36), 0, w2z(200));
+  });
+  // Pemain 3D mengikuti posisi logika
+  if (player3) {
+    player3.position.set(w2x(S.pemain.x), 0, w2z(S.pemain.y));
+    const rot = { bawah: 0, atas: Math.PI, kanan: Math.PI / 2, kiri: -Math.PI / 2 }[S.pemain.arah] || 0;
+    player3.rotation.y = rot;
+    const u = player3.userData;
+    const ayun = S.pemain.ayun > 0 ? Math.sin((S.pemain.ayun / 22) * Math.PI) * 1.4 : 0;
+    u.alat.rotation.x = -ayun;
+    u.alat.visible = true;
+    const k = S.pemain.jalan ? Math.sin(S.pemain.langkah * 2) * 0.6 : 0;
+    u.kakiK.rotation.x = k; u.kakiN.rotation.x = -k;
+    u.lenganK.rotation.x = -k; u.lenganN.rotation.x = k;
+    player3.position.y = S.pemain.jalan ? Math.abs(Math.sin(S.pemain.langkah * 2)) * 0.08 : 0;
+  }
+}
+function animate3D() {
   frame++;
-  gerakPemain(); gambarDunia();
-  if (typeof requestAnimationFrame === "function") requestAnimationFrame(loopDunia);
+  gerakPemain();
+  if (!scene3) { if (typeof requestAnimationFrame === "function") requestAnimationFrame(animate3D); return; }
+  // NPC berjalan
+  NPC.forEach((n, idx) => {
+    const tx = n.wx[n.i], ty = n.wy[n.i];
+    const dx = tx - n.x, dy = ty - n.y, j = Math.hypot(dx, dy);
+    if (j < 4) n.i = (n.i + 1) % n.wx.length;
+    else { n.x += dx / j * n.cepat; n.y += dy / j * n.cepat; }
+    const g = npc3[idx];
+    if (g) {
+      g.position.set(w2x(n.x), 0, w2z(n.y));
+      g.rotation.y = dx > 0 ? Math.PI / 2 : dx < 0 ? -Math.PI / 2 : 0;
+      const k = Math.sin(frame / 8 + idx) * 0.5;
+      g.userData.kakiK.rotation.x = k; g.userData.kakiN.rotation.x = -k;
+    }
+  });
+  // Pohon bergoyang, air berombak, kapal bergoyang, awan bergerak
+  plotMeshes.forEach((pm, i) => { if (pm.pohon.visible) pm.pohon.userData.daun.rotation.z = Math.sin(frame / 40 + i) * 0.08; });
+  if (water3) water3.position.y = 0.05 + Math.sin(frame / 30) * 0.05;
+  if (boat3) { boat3.position.y = 0.1 + Math.sin(frame / 30) * 0.12; boat3.rotation.z = Math.sin(frame / 30) * 0.03; }
+  clouds3.forEach((c, i) => { c.position.x += 0.02; if (c.position.x > 32) c.position.x = -32; });
+  smoke3.forEach((s, i) => { s.position.y += 0.02; if (s.position.y > 9) s.position.y = 6.5; });
+  // Partikel 3D
+  partikel3D = partikel3D.filter(pt => pt.life > 0);
+  for (const pt of partikel3D) {
+    pt.mesh.position.x += pt.vx; pt.mesh.position.y += pt.vy; pt.mesh.position.z += pt.vz; pt.life--;
+    if (pt.mesh.material) pt.mesh.material.opacity = Math.max(0, pt.life / 60);
+    if (pt.life <= 0) scene3.remove(pt.mesh);
+  }
+  // Hujan
+  const hujan = S.cuaca === "Hujan";
+  rain3.forEach(t => {
+    t.visible = hujan;
+    if (hujan) { t.position.y -= 0.35; if (t.position.y < 0) t.position.y = 15; }
+  });
+  // Siang-malam: matahari, langit, cahaya
+  const tJam = Math.max(0, Math.min(1, (S.jam - 6) / 14));
+  const sudut = tJam * Math.PI;
+  if (sunLight) {
+    sunLight.position.set(Math.cos(sudut) * 25, Math.sin(sudut) * 22 + 4, 12);
+    sunLight.intensity = S.jam >= 18 ? 0.25 : 1.4;
+    sunLight.color.setHex(S.jam >= 17 ? 0xffb74d : 0xfff2cc);
+  }
+  if (hemiLight) hemiLight.intensity = S.jam >= 18 ? 0.25 : 0.9;
+  if (sunMesh) { sunMesh.position.set(Math.cos(sudut) * 24, Math.sin(sudut) * 16 + 3, -14); sunMesh.visible = S.jam < 18; }
+  if (moonMesh) moonMesh.visible = S.jam >= 18;
+  if (scene3) scene3.background.setHex(S.jam >= 18 ? 0x1a237e : S.jam >= 17 ? 0xff8a65 : 0x87ceeb);
+  // Kamera mengikuti pemain
+  if (camera3 && player3) {
+    const px = player3.position.x, pz = player3.position.z;
+    camera3.position.x += ((px + 0) - camera3.position.x) * 0.05;
+    camera3.position.y += (15 - camera3.position.y) * 0.05;
+    camera3.position.z += ((pz + 13) - camera3.position.z) * 0.05;
+    camera3.lookAt(px, 0.5, pz);
+  }
+  updateDunia3D();
+  if (renderer3) renderer3.render(scene3, camera3);
+  if (typeof requestAnimationFrame === "function") requestAnimationFrame(animate3D);
 }
 function pasangKontrolDunia() {
-  const canvas = document.getElementById("dunia");
-  if (!canvas || !canvas.addEventListener) return;
-  canvas.addEventListener("click", (e) => {
-    const r = canvas.getBoundingClientRect();
-    const wx = (e.clientX - r.left) * (W / r.width);
-    const wy = (e.clientY - r.top) * (H / r.height);
-    klikDunia(wx, wy);
-  });
+  if (typeof document === "undefined" || !document.addEventListener) return;
   document.addEventListener("keydown", (e) => {
     const k = e.key.toLowerCase();
     if (k === "w" || k === "arrowup") tombol.w = true;
@@ -596,8 +757,8 @@ function render() {
     '<div class="kontrak"><b>' + k.negara + '</b> — ' + k.jumlah + ' kg tepung @ ' + rp(k.harga) + ' = ' + rp(k.jumlah * k.harga) + '<br>Tenggat hari ke-' + k.tenggat + ' <button class="kecil kuning" onclick="kirimKontrak(' + k.id + ')">Kirim Kontrak</button></div>'
   ).join("");
   el("log").innerHTML = S.log.map(m => "<p>" + m + "</p>").join("");
-  gambarDunia();
+  updateDunia3D();
 }
 if (typeof document !== "undefined" && document.addEventListener) {
-  document.addEventListener("DOMContentLoaded", () => { render(); pasangKontrolDunia(); loopDunia(); });
+  document.addEventListener("DOMContentLoaded", () => { render(); init3D(); pasangKontrolDunia(); animate3D(); });
 }
