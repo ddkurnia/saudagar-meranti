@@ -466,7 +466,7 @@ let scene3 = null, camera3 = null, renderer3 = null, sunLight = null, hemiLight 
 let plotMeshes = [], buildingMeshes = {}, player3 = null, npc3 = [], pelanggan3 = [], pekerja3 = [];
 let clouds3 = [], water3 = null, boat3 = null, sunMesh = null, moonMesh = null;
 let partikel3D = [], rain3 = [], smoke3 = [], conveyor3 = [];
-let camPan = { x: 0, z: 0 }, camJarak = 1.7;
+let camPan = { x: 0, z: 0 }, camJarak = 2.0;
 let signKebun = null, forklift3 = null, cincinPemain = null;
 function mat(warna) { return new THREE.MeshLambertMaterial({ color: warna }); }
 function kotak(w, h, d, warna, x, y, z) {
@@ -566,7 +566,10 @@ function init3D() {
     scene3 = new THREE.Scene();
     scene3.background = new THREE.Color(0x87ceeb);
     scene3.fog = new THREE.Fog(0x87ceeb, 40, 90);
-    camera3 = new THREE.PerspectiveCamera(50, 960 / 560, 0.1, 200);
+    camera3 = new THREE.PerspectiveCamera(60, 960 / 560, 0.1, 200);
+    // Posisi awal langsung di framing pulau penuh (tanpa animasi zoom masuk)
+    camera3.position.set(0, 12 * camJarak, 17 * camJarak);
+    camera3.lookAt(0, 0.5, -2);
     renderer3 = new THREE.WebGLRenderer({ antialias: true });
     renderer3.setSize(960, 560);
     renderer3.shadowMap.enabled = true;
@@ -810,7 +813,7 @@ function init3D() {
     });
     renderer3.domElement.addEventListener("wheel", (e) => {
       e.preventDefault();
-      camJarak = Math.max(0.7, Math.min(1.7, camJarak + (e.deltaY > 0 ? 0.1 : -0.1)));
+      camJarak = Math.max(0.7, Math.min(2.4, camJarak + (e.deltaY > 0 ? 0.1 : -0.1)));
     }, { passive: false });
     return true;
   } catch (err) {
@@ -940,9 +943,12 @@ function animate3D() {
   conveyor3.forEach((kb, i) => {
     kb.position.x = 1.6 + ((frame / 2 + i * 25) % 70) * 0.1;
   });
-  // Kamera mengikuti pemain + geseran & zoom
+  // Kamera: fokus ke tengah pulau (bukan tepat ke pemain) agar seluruh
+  // pulau — kebun, kilang, kedai, pasar, pelabuhan, kapal, jembatan —
+  // muat dalam satu bingkai seperti gambar referensi. Kamera mengikuti
+  // pemain hanya sebagian (35%) supaya tetap bisa melihat area kerja.
   if (camera3 && player3) {
-    const px = player3.position.x + camPan.x, pz = player3.position.z + camPan.z;
+    const px = player3.position.x * 0.35 + camPan.x, pz = player3.position.z * 0.35 + camPan.z;
     camera3.position.x += ((px + 0) - camera3.position.x) * 0.05;
     camera3.position.y += ((12 * camJarak) - camera3.position.y) * 0.05;
     camera3.position.z += ((pz + 17 * camJarak) - camera3.position.z) * 0.05;
