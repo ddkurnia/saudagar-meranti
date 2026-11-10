@@ -4,34 +4,46 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Saudagar Sagu Meranti — Game Simulasi Bisnis</title>
-<link rel="stylesheet" href="css/style.css?v=7">
+<link rel="stylesheet" href="css/style.css?v=8">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
 </head>
 <body>
 <div id="game">
-  <!-- HEADER HUD -->
+  <!-- SPLASH / LAYAR MULAI (gambar referensi) -->
+  <div id="splash">
+    <div class="splash-kartu">
+      <h1>🌴 Saudagar Sagu Meranti</h1>
+      <p>Simulasi Bisnis Sagu dari Kepulauan Meranti</p>
+      <button id="tombolMulai" onclick="mulaiGame()">▶ MULAI BERMAIN</button>
+      <p class="splash-kecil">Klik petak kebun untuk menanam • Klik bangunan untuk beraksi • Seret untuk menggeser kamera</p>
+    </div>
+  </div>
+
+  <!-- HEADER HUD ala referensi -->
   <header id="hud">
     <div class="profil">
       <div class="avatar">🧑‍🌾</div>
       <div class="profil-info">
-        <b>Saudagar Sagu</b>
-        <span>Lv <b id="level">1</b> • <span id="expPersen">0%</span></span>
+        <b>Lv. <span id="level">1</span> Saudagar Pemula</b>
         <div class="expbar"><div id="expBar"></div></div>
+        <span id="expTeks">0 / 500</span>
       </div>
     </div>
+    <div class="logo">
+      <div class="logo-pohon">🌴</div>
+      <div><b>Saudagar<br>Sagu Meranti</b><span>Simulasi Bisnis Sagu dari Kepulauan Meranti</span></div>
+    </div>
     <div class="hud-tengah">
-      <div class="hud-chip">📅 Hari <b id="hari">1</b> <span id="tanggal"></span></div>
-      <div class="hud-chip">🕐 <b id="jam">06:00</b></div>
-      <div class="hud-chip"><b id="cuaca">☀️ Cerah</b> • <span id="musim">Musim Panen</span></div>
-      <div class="hud-chip target-chip" title="Target bisnis"><span id="target"></span><div class="targetbar"><div id="targetBar"></div></div></div>
+      <div class="hud-chip">📅 <div><b>Hari <span id="hari">1</span></b><span id="namaHari">Selasa</span></div></div>
+      <div class="hud-chip">☀️ <div><b id="cuaca">Cerah</b><span id="suhu">32°C</span></div></div>
+      <div class="hud-chip">🕐 <div><b id="jam">06:00</b><span id="labelWaktu">Pagi</span></div></div>
     </div>
     <div class="hud-kanan">
-      <div class="hud-chip uang">💰 <b id="uang">Rp0</b></div>
-      <div class="hud-chip">💎 <b id="permata">0</b></div>
-      <div class="hud-chip">⭐ <b id="reputasi">0</b></div>
+      <div class="hud-chip uang">💵 <b id="uang">Rp0</b><button class="plus" onclick="bukaPanel('pasar')" title="Jual hasil">+</button></div>
+      <div class="hud-chip permata">💎 <b id="permata">0</b><button class="plus" onclick="bukaPanel('misi')" title="Misi">+</button></div>
+      <button class="hud-btn lonceng" onclick="bukaPanel('misi')" title="Notifikasi">🔔<i id="badgeLonceng">1</i></button>
       <button class="hud-btn" id="tombolSuara" onclick="toggleSuara()" title="Suara">🔊</button>
-      <button class="hud-btn" onclick="bukaPanel('misi')" title="Notifikasi &amp; kabar">🔔</button>
-      <button class="hud-btn" onclick="resetGame()" title="Mulai ulang">⚙️</button>
+      <button class="hud-btn" onclick="resetGame()" title="Pengaturan / mulai ulang">⚙️</button>
     </div>
   </header>
 
@@ -40,13 +52,25 @@
     <div id="dunia3d"></div>
     <div id="toast"></div>
 
+    <!-- PANEL TARGET BISNIS (kanan, ala referensi) -->
+    <aside id="targetPanel">
+      <h3>🎯 Target Bisnis</h3>
+      <p>💵 Kumpulkan Rp5.000.000</p>
+      <div class="targetbar"><div id="targetUangBar"></div></div>
+      <span id="targetUangTeks">Rp0 / 5.000.000</span>
+      <p>🌾 Ekspor 100 kg tepung</p>
+      <div class="targetbar"><div id="targetEksporBar"></div></div>
+      <span id="targetEksporTeks">0 / 100 kg</span>
+      <p class="target-musim">⭐ Reputasi <b id="reputasi">0</b> • <span id="musim">Musim Panen</span></p>
+    </aside>
+
     <!-- SIDEBAR KIRI -->
     <nav id="sidebar">
-      <button onclick="bukaPanel('misi')" title="Misi &amp; Kabar">🎯<span>Misi</span></button>
-      <button onclick="bukaPanel('kontrak')" title="Kontrak Ekspor">📜<span>Kontrak</span></button>
-      <button onclick="bukaPanel('pekerja')" title="Pekerja">👷<span>Pekerja</span></button>
-      <button onclick="bukaPanel('upgrade')" title="Upgrade">⬆️<span>Upgrade</span></button>
-      <button onclick="bukaPanel('inventaris')" title="Inventaris">📦<span>Inventaris</span></button>
+      <button onclick="bukaPanel('misi')" title="Misi Harian">📋<span>Misi Harian</span><i class="badge" id="badgeMisi"></i></button>
+      <button onclick="bukaPanel('kontrak')" title="Kontrak Ekspor">🚢<span>Kontrak Ekspor</span></button>
+      <button onclick="bukaPanel('pekerja')" title="Pekerja">👷<span>Pekerja</span><i class="badge" id="badgePekerja"></i></button>
+      <button onclick="bukaPanel('upgrade')" title="Upgrade">📈<span>Upgrade</span></button>
+      <button onclick="bukaPanel('catatan')" title="Catatan">📝<span>Catatan</span></button>
     </nav>
 
     <!-- PANEL MENGAMBANG -->
@@ -58,21 +82,23 @@
       <div id="panelIsi"></div>
     </div>
 
-    <!-- TOMBOL HARI BERIKUTNYA -->
-    <button id="tombolHari" onclick="hariBerikutnya()">➡️ Hari Berikutnya</button>
+    <div id="lokasi">📍 Selatpanjang,<br>Kepulauan Meranti</div>
     <div id="menang" style="display:none">🏆 Kamu sudah menjadi Saudagar Sagu Meranti!</div>
   </main>
 
   <!-- NAV BAWAH -->
   <nav id="navbawah">
-    <button onclick="fokusBangunan('kebun')">🌴<span>Kebun</span></button>
+    <button class="aktif" onclick="fokusBangunan('kebun')">🌱<span>Kebun</span></button>
     <button onclick="fokusBangunan('kilang')">🏭<span>Kilang</span></button>
     <button onclick="fokusBangunan('pasar')">🛒<span>Pasar</span></button>
     <button onclick="fokusBangunan('pelabuhan')">🚢<span>Ekspor</span></button>
     <button onclick="fokusBangunan('kedai')">☕<span>Kedai Kopi</span></button>
-    <button onclick="bukaPanel('produksi')">🍜<span>Produksi</span></button>
+    <button onclick="bukaPanel('produksi')">🍚<span>Produksi</span></button>
   </nav>
+
+  <!-- TOMBOL HARI BERIKUTNYA (lingkaran hijau, ala referensi) -->
+  <button id="tombolHari" onclick="hariBerikutnya()" title="Hari Berikutnya">▶<span>Hari Berikutnya</span></button>
 </div>
-<script src="js/game.js?v=7"></script>
+<script src="js/game.js?v=8"></script>
 </body>
 </html>

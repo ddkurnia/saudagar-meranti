@@ -1,8 +1,9 @@
-// Saudagar Sagu Meranti — v6 3D MODERN
-// Game utuh 3D dengan Three.js: dunia Selatpanjang dalam 3D — tanah, laut
-// berombak, pohon rumbia 3D yang bergoyang, bangunan 3D, kapal, awan, karakter
-// 3D yang berjalan dengan animasi kaki dan ayunan alat, NPC berjalan, siang
-// ke malam dengan matahari dan bayangan. Ekonomi v1-v5 tetap sama.
+// Saudagar Sagu Meranti — v8 SESUAI GAMBAR REFERENSI
+// Visual persis konsep referensi: HUD kaca gelap, logo, avatar Lv/EXP,
+// panel Target Bisnis kanan, sidebar kiri, nav bawah kaca, tombol Hari
+// Berikutnya bundar hijau, papan tanda kayu bangunan, kilang dengan silo
+// dan forklift, pasar awning garis merah-putih, kedai payung, kapal kargo
+// besar, crane, jembatan kayu, cincin hijau pemain. Ekonomi v1-v7 tetap.
 const SAVE_KEY = "saudagarSaguMerantiV1";
 const TARGET_UANG = 5000000;
 const TARGET_EKSPOR = 100;
@@ -27,11 +28,15 @@ const PETAK_POS = [];
 for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++)
   PETAK_POS.push({ x: 60 + c * 100, y: 70 + r * 80, w: 88, h: 68 });
 const BANGUNAN = {
-  kilang: { x: 480, y: 60, w: 170, h: 110, label: "Kilang Sagu" },
-  kedai: { x: 700, y: 60, w: 200, h: 110, label: "Kedai Kopi Liberika" },
+  kilang: { x: 480, y: 60, w: 170, h: 110, label: "Kilang Sagu Lv. 1" },
+  kedai: { x: 700, y: 60, w: 200, h: 110, label: "Kedai Kopi Liberika Meranti Lv. 1" },
   pasar: { x: 480, y: 220, w: 170, h: 100, label: "Pasar Selatpanjang" },
   pelabuhan: { x: 700, y: 330, w: 200, h: 110, label: "Pelabuhan Ekspor" },
 };
+const HARI_NAMA = ["Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu", "Senin"];
+function namaHari(h) { return HARI_NAMA[(h - 1) % 7]; }
+function labelWaktu(jam) { if (jam < 11) return "Pagi"; if (jam < 15) return "Siang"; if (jam < 18) return "Sore"; return "Malam"; }
+function suhuCuaca() { return S.cuaca === "Panas Terik" ? "34°C" : S.cuaca === "Cerah" ? "32°C" : S.cuaca === "Berawan" ? "29°C" : "26°C"; }
 const NPC = [
   { nama: "Pak Tani", x: 120, y: 340, wx: [120, 380], wy: [340, 340], i: 0, baju: "#2e7d32", topi: "#ffeb3b", cepat: 0.7 },
   { nama: "Bu Sari", x: 560, y: 380, wx: [560, 820], wy: [380, 380], i: 0, baju: "#e53935", topi: "#333", cepat: 0.5 },
@@ -60,7 +65,7 @@ function buatKontrak(id, hari) {
 }
 function awal() {
   const s = {
-    versi: 7, uang: 500000, hari: 1, jam: 6, tual: 0, tepung: 0, mie: 0, kue: 0,
+    versi: 8, uang: 500000, hari: 1, jam: 6, tual: 0, tepung: 0, mie: 0, kue: 0,
     eksporTotal: 0, reputasi: 0,
     lahan: [
       { status: "tumbuh", sisa: 1, anim: 0 },
@@ -94,8 +99,8 @@ function load() {
     if (raw) {
       const d = JSON.parse(raw);
       if (d && typeof d.uang === "number") {
-        if (d.versi !== 7) {
-          d.versi = 7; d.jam = d.jam || 6;
+        if (d.versi !== 8) {
+          d.versi = 8; d.jam = d.jam || 6;
           d.cuaca = d.cuaca || "Cerah"; d.cuacaBesok = d.cuacaBesok || "Berawan";
           d.pelanggan = d.pelanggan || 0; d.pelangganDilayani = d.pelangganDilayani || 0; d.kepuasan = d.kepuasan || 0;
           d.pekerja = d.pekerja || { kebun: 0, kilang: 0, barista: 0 };
@@ -105,7 +110,7 @@ function load() {
           if (Array.isArray(d.lahan) && d.lahan.length < 4) d.lahan.push({ status: "kosong", sisa: 0, anim: 0 });
           d.pemain = { x: 480, y: 420, arah: "bawah", jalan: false, langkah: 0, ayun: 0 };
           d.log = d.log || [];
-          d.log.unshift("Update v7: redesign total — satu layar game isometrik, HUD menyatu, panel bangunan, kamera geser/zoom.");
+          d.log.unshift("Update v8: visual disesuaikan dengan gambar referensi — HUD, papan tanda, dan dunia tropis.");
         }
         if (!d.pemain) d.pemain = { x: 480, y: 420, arah: "bawah", jalan: false, langkah: 0, ayun: 0 };
         if (typeof d.jam !== "number") d.jam = 6;
@@ -395,6 +400,11 @@ function bunyiKlik() {
     o.start(); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12); o.stop(audioCtx.currentTime + 0.13);
   } catch (e) {}
 }
+function mulaiGame() {
+  bunyiKlik();
+  const s = document.getElementById("splash"); if (s) s.classList.add("tersembunyi");
+  toast("Selamat bermain! Klik petak kebun untuk menanam.");
+}
 function toggleSuara() {
   suaraAktif = !suaraAktif;
   const b = document.getElementById("tombolSuara"); if (b) b.textContent = suaraAktif ? "🔊" : "🔇";
@@ -422,6 +432,7 @@ function fokusBangunan(kind) {
   bukaPanel(kind);
 }
 function isiPanel(nama) {
+  if (nama === "catatan") return "<h3>📝 Catatan &amp; Kabar</h3><div>" + S.log.map(m => "<p>" + m + "</p>").join("") + "</div><h3>📦 Inventaris</h3><p>🌰 Tual: <b>" + S.tual + "</b> • 🌾 Tepung: <b>" + S.tepung + " kg</b><br>🍜 Mie Sagu: <b>" + S.mie + "</b> • 🍪 Kue Bangkit: <b>" + S.kue + "</b></p>";
   if (nama === "misi") return "<h3>🎯 Misi Saudagar Besar</h3><p>" + rp(S.uang) + " dari " + rp(TARGET_UANG) + "</p><div class='progres'><div style='width:" + Math.min(100, S.uang / TARGET_UANG * 100) + "%'></div></div><p>" + S.eksporTotal + " kg dari " + TARGET_EKSPOR + " kg tepung diekspor</p><div class='progres'><div style='width:" + Math.min(100, S.eksporTotal / TARGET_EKSPOR * 100) + "%'></div></div><p>Reputasi: <b>" + S.reputasi + "</b> • Level: <b>" + levelPemain() + "</b></p><p style='font-size:13px;color:#666'>" + CUACA[S.cuaca].efek + " • " + musimHariIni(S.hari) + "</p><h3>📰 Kabar &amp; Catatan</h3><div>" + S.log.map(m => "<p>" + m + "</p>").join("") + "</div>";
   if (nama === "kontrak") return "<h3>📜 Kontrak Ekspor</h3><p>Malaysia, Singapura, Jepang, Tiongkok, Brunei. Kirim tepat waktu untuk harga premium dan reputasi +10.</p>" + (S.kontrak.length === 0 ? "<p>Belum ada kontrak. Kontrak baru masuk tiap hari.</p>" : S.kontrak.map(k => '<div class="kontrak"><b>' + k.negara + '</b> — ' + k.jumlah + ' kg @ ' + rp(k.harga) + ' = ' + rp(k.jumlah * k.harga) + '<br>Tenggat hari ke-' + k.tenggat + ' <button class="kecil kuning" onclick="kirimKontrak(' + k.id + ')">Kirim Kontrak</button></div>').join(""));
   if (nama === "pekerja") return "<h3>👷 Pekerja</h3><p>Kebun: " + S.pekerja.kebun + " • Kilang: " + S.pekerja.kilang + " • Barista: " + S.pekerja.barista + "<br>Gaji/hari: " + rp(S.pekerja.kebun * GAJI.kebun + S.pekerja.kilang * GAJI.kilang + S.pekerja.barista * GAJI.barista) + "</p><div class='bar'><button onclick=\"hirePekerja('kebun')\">Rekrut Kebun — Rp50.000</button><button onclick=\"hirePekerja('kilang')\">Rekrut Kilang — Rp80.000</button><button onclick=\"hirePekerja('barista')\">Rekrut Barista — Rp60.000</button></div><div class='bar'><button class='kecil merah' onclick=\"berhentikanPekerja('kebun')\">Berhentikan Kebun</button><button class='kecil merah' onclick=\"berhentikanPekerja('kilang')\">Berhentikan Kilang</button><button class='kecil merah' onclick=\"berhentikanPekerja('barista')\">Berhentikan Barista</button></div><p style='font-size:13px;color:#666'>Pekerja kebun menanam otomatis, pekerja kilang mengolah otomatis, barista melayani pelanggan otomatis. Gaji dibayar tiap hari.</p>";
@@ -436,7 +447,7 @@ function isiPanel(nama) {
 }
 function renderPanel() {
   if (!panelTerbuka) return;
-  const judul = { misi: "🎯 Misi & Kabar", kontrak: "📜 Kontrak Ekspor", pekerja: "👷 Pekerja", upgrade: "⬆️ Upgrade", inventaris: "📦 Inventaris", kebun: "🌴 Kebun Rumbia", kilang: "🏭 Kilang Sagu", produksi: "🍜 Produksi", pasar: "🛒 Pasar Selatpanjang", pelabuhan: "🚢 Pelabuhan Ekspor", kedai: "☕ Kedai Kopi Liberika" }[panelTerbuka] || "Panel";
+  const judul = { misi: "🎯 Misi & Kabar", kontrak: "📜 Kontrak Ekspor", pekerja: "👷 Pekerja", upgrade: "⬆️ Upgrade", inventaris: "📦 Inventaris", catatan: "📝 Catatan", kebun: "🌴 Kebun Rumbia", kilang: "🏭 Kilang Sagu", produksi: "🍜 Produksi", pasar: "🛒 Pasar Selatpanjang", pelabuhan: "🚢 Pelabuhan Ekspor", kedai: "☕ Kedai Kopi Liberika" }[panelTerbuka] || "Panel";
   const j = document.getElementById("panelJudul"); if (j) j.textContent = judul;
   const isi = document.getElementById("panelIsi"); if (isi) isi.innerHTML = isiPanel(panelTerbuka);
 }
@@ -456,6 +467,7 @@ let plotMeshes = [], buildingMeshes = {}, player3 = null, npc3 = [], pelanggan3 
 let clouds3 = [], water3 = null, boat3 = null, sunMesh = null, moonMesh = null;
 let partikel3D = [], rain3 = [], smoke3 = [], conveyor3 = [];
 let camPan = { x: 0, z: 0 }, camJarak = 1;
+let signKebun = null, forklift3 = null, cincinPemain = null;
 function mat(warna) { return new THREE.MeshLambertMaterial({ color: warna }); }
 function kotak(w, h, d, warna, x, y, z) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(warna));
@@ -464,14 +476,32 @@ function kotak(w, h, d, warna, x, y, z) {
 function buatLabel(teks) {
   const c = document.createElement("canvas"); c.width = 512; c.height = 96;
   const g = c.getContext("2d");
-  g.fillStyle = "rgba(0,0,0,.65)";
+  // Papan kayu ala referensi
+  g.fillStyle = "#6d4c41";
   if (typeof g.roundRect === "function") { g.beginPath(); g.roundRect(6, 10, 500, 76, 18); g.fill(); }
   else g.fillRect(6, 10, 500, 76);
-  g.fillStyle = "#fff"; g.font = "bold 44px sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+  g.strokeStyle = "#d7ccc8"; g.lineWidth = 5;
+  if (typeof g.roundRect === "function") { g.beginPath(); g.roundRect(10, 14, 492, 68, 14); g.stroke(); }
+  g.fillStyle = "#fff"; g.font = "bold 40px sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
   g.fillText(teks, 256, 50);
   const tex = new THREE.CanvasTexture(c);
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
-  sp.scale.set(6, 1.1, 1); return sp;
+  sp.scale.set(6, 1.1, 1);
+  sp.userData = { canvas: c, ctx: g, tex: tex, teks: teks };
+  sp.userData.setTeks = function (t) {
+    if (this.teks === t) return;
+    this.teks = t;
+    this.ctx.clearRect(0, 0, 512, 96);
+    this.ctx.fillStyle = "#6d4c41";
+    if (typeof this.ctx.roundRect === "function") { this.ctx.beginPath(); this.ctx.roundRect(6, 10, 500, 76, 18); this.ctx.fill(); }
+    else this.ctx.fillRect(6, 10, 500, 76);
+    this.ctx.strokeStyle = "#d7ccc8"; this.ctx.lineWidth = 5;
+    if (typeof this.ctx.roundRect === "function") { this.ctx.beginPath(); this.ctx.roundRect(10, 14, 492, 68, 14); this.ctx.stroke(); }
+    this.ctx.fillStyle = "#fff"; this.ctx.font = "bold 40px sans-serif"; this.ctx.textAlign = "center"; this.ctx.textBaseline = "middle";
+    this.ctx.fillText(t, 256, 50);
+    this.tex.needsUpdate = true;
+  };
+  return sp;
 }
 function buatOrang3D(baju, topi) {
   const g = new THREE.Group();
@@ -610,13 +640,65 @@ function init3D() {
       asap.position.set(cerobong.position.x, 6.5 + i, cerobong.position.z);
       scene3.add(asap); smoke3.push(asap);
     }
-    // Kapal di pelabuhan
+    // Kapal kargo besar di pelabuhan (ala referensi)
     boat3 = new THREE.Group();
-    boat3.add(kotak(8, 1.2, 2.6, 0x6d4c41, 0, 0.6, 0));
-    boat3.add(kotak(3.5, 1.6, 2, 0xffffff, 0.5, 1.9, 0));
-    boat3.add(kotak(3.5, 0.4, 2.1, 0xe53935, 0.5, 2.7, 0));
-    boat3.position.set(w2x(800), 0.1, w2z(500));
+    boat3.add(kotak(12, 1.4, 3.2, 0x1e3a5f, 0, 0.7, 0));
+    boat3.add(kotak(12.4, 0.5, 3.4, 0xb91c1c, 0, 1.5, 0));
+    boat3.add(kotak(3.5, 2.2, 2.6, 0xffffff, -3.5, 2.6, 0));
+    boat3.add(kotak(3.5, 0.5, 2.7, 0xe53935, -3.5, 3.8, 0));
+    const warnaKontainerKapal = [0xe53935, 0xf59e0b, 0x1e88e5, 0x43a047];
+    warnaKontainerKapal.forEach((w, i) => {
+      boat3.add(kotak(1.8, 1.3, 2.6, w, 1.5 + i * 2, 2.2, 0));
+    });
+    boat3.position.set(w2x(820), 0.1, w2z(505));
     scene3.add(boat3);
+    // Silo kilang (2 tangki perak) + pipa
+    for (let i = 0; i < 2; i++) {
+      const silo = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 4.5, 14), new THREE.MeshLambertMaterial({ color: 0xcfd8dc }));
+      silo.position.set(w2x(BANGUNAN.kilang.x + 140 + i * 30), 2.25, w2z(BANGUNAN.kilang.y - 10));
+      silo.castShadow = true; scene3.add(silo);
+      const tutupSilo = new THREE.Mesh(new THREE.ConeGeometry(1.15, 0.9, 14), mat(0x90a4ae));
+      tutupSilo.position.set(silo.position.x, 4.9, silo.position.z); scene3.add(tutupSilo);
+    }
+    // Forklift kuning kilang (bergerak maju-mundur)
+    forklift3 = new THREE.Group();
+    forklift3.add(kotak(1.8, 1.1, 1.4, 0xfacc15, 0, 0.8, 0));
+    forklift3.add(kotak(0.9, 0.9, 1.2, 0x37474f, 0.3, 1.7, 0));
+    forklift3.add(kotak(0.12, 1.6, 1.2, 0x37474f, -1, 1.1, 0));
+    forklift3.add(kotak(1, 0.1, 0.3, 0x90a4ae, -1.5, 0.3, 0.4));
+    forklift3.add(kotak(1, 0.1, 0.3, 0x90a4ae, -1.5, 0.3, -0.4));
+    forklift3.position.set(w2x(600), 0, w2z(BANGUNAN.kilang.y + BANGUNAN.kilang.h + 30));
+    scene3.add(forklift3);
+    // Awning garis merah-putih pasar + peti buah
+    for (let i = 0; i < 6; i++) {
+      scene3.add(kotak(1.1, 0.12, 2.2, i % 2 ? 0xe53935 : 0xffffff, w2x(BANGUNAN.pasar.x + 20 + i * 28), 2.6, w2z(BANGUNAN.pasar.y + BANGUNAN.pasar.h + 14)));
+    }
+    const warnaBuah = [0x43a047, 0xf59e0b, 0xe53935, 0x8d6e63];
+    warnaBuah.forEach((w, i) => {
+      scene3.add(kotak(1.2, 0.6, 1, w, w2x(BANGUNAN.pasar.x + 30 + i * 40), 0.35, w2z(BANGUNAN.pasar.y + BANGUNAN.pasar.h + 30)));
+    });
+    // Payung putih kedai kopi
+    const payung = new THREE.Mesh(new THREE.ConeGeometry(2.2, 1, 12), mat(0xffffff));
+    payung.position.set(w2x(BANGUNAN.kedai.x + 100), 3.4, w2z(BANGUNAN.kedai.y + BANGUNAN.kedai.h + 22));
+    payung.castShadow = true; scene3.add(payung);
+    const tiangPayung = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 2.4, 8), mat(0x8d6e63));
+    tiangPayung.position.set(payung.position.x, 2.1, payung.position.z); scene3.add(tiangPayung);
+    // Jembatan kayu di kiri bawah (ala referensi)
+    for (let i = 0; i < 6; i++) {
+      scene3.add(kotak(3.4, 0.18, 0.9, 0x8d6e63, w2x(150), 0.5, w2z(480 + i * 12)));
+    }
+    scene3.add(kotak(0.15, 0.9, 6, 0x6d4c41, w2x(130), 0.9, w2z(505)));
+    scene3.add(kotak(0.15, 0.9, 6, 0x6d4c41, w2x(170), 0.9, w2z(505)));
+    // Batu karang di tepi laut
+    for (const [bx, bz, bs] of [[-26, 13, 1.4], [-23, 14, 1], [-25, 11, 0.8]]) {
+      const batu = new THREE.Mesh(new THREE.DodecahedronGeometry(bs, 0), mat(0x78909c));
+      batu.position.set(bx, 0.4, bz); batu.castShadow = true; scene3.add(batu);
+    }
+    // Papan tanda kayu Kebun Rumbia (dinamis: jumlah petak)
+    signKebun = buatLabel("Kebun Rumbia " + S.lahan.length + " / 12 Petak");
+    signKebun.scale.set(7.5, 1.4, 1);
+    signKebun.position.set(w2x(250), 3.6, w2z(320));
+    scene3.add(signKebun);
     // Pohon kelapa & hias di tepi
     for (const [px, pz] of [[-26, -12], [26, -12], [-26, 8], [26, 2]]) {
       const ph = buatPohonRumbia(); ph.position.set(px, 0, pz); ph.scale.setScalar(1.2); scene3.add(ph);
@@ -679,12 +761,19 @@ function init3D() {
     }
     truk.position.set(w2x(620), 0, w2z(460));
     scene3.add(truk);
-    // Pemain 3D — pria Indonesia, jaket hijau, topi petani, tas kecil
-    player3 = buatOrang3D(0x2e7d32, 0xe8c96a);
+    // Pemain 3D — pria Indonesia, jaket hijau, topi petani hijau, tas kecil, rompi hijau
+    player3 = buatOrang3D(0xffffff, 0x2e7d32);
+    const rompiK = kotak(0.3, 0.85, 0.06, 0x2e7d32, -0.22, 1.15, 0.28);
+    const rompiN = kotak(0.3, 0.85, 0.06, 0x2e7d32, 0.22, 1.15, 0.28);
+    player3.add(rompiK); player3.add(rompiN);
     const tas = kotak(0.5, 0.6, 0.22, 0x8d6e63, 0, 1.2, -0.36);
     player3.add(tas);
     player3.userData.alat.visible = true;
     scene3.add(player3);
+    // Cincin hijau bercahaya di bawah pemain (ala referensi)
+    cincinPemain = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.15, 32), new THREE.MeshBasicMaterial({ color: 0x4ade80, transparent: true, opacity: 0.9, side: THREE.DoubleSide }));
+    cincinPemain.rotation.x = -Math.PI / 2; cincinPemain.position.y = 0.06;
+    scene3.add(cincinPemain);
     // NPC 3D
     for (const n of NPC) {
       const g = buatOrang3D(parseInt(n.baju.slice(1), 16), parseInt(n.topi.slice(1), 16));
@@ -778,6 +867,9 @@ function updateDunia3D() {
     else if (i < S.pekerja.kebun + S.pekerja.kilang) g.position.set(w2x(520 + (i - S.pekerja.kebun) * 36), 0, w2z(200));
     else g.position.set(w2x(730 + (i - S.pekerja.kebun - S.pekerja.kilang) * 36), 0, w2z(200));
   });
+  // Papan tanda kebun dinamis + cincin pemain mengikuti
+  if (signKebun) signKebun.userData.setTeks("Kebun Rumbia " + S.lahan.length + " / 12 Petak");
+  if (cincinPemain && player3) { cincinPemain.position.x = player3.position.x; cincinPemain.position.z = player3.position.z; }
   // Pemain 3D mengikuti posisi logika
   if (player3) {
     player3.position.set(w2x(S.pemain.x), 0, w2z(S.pemain.y));
@@ -842,6 +934,8 @@ function animate3D() {
   if (sunMesh) { sunMesh.position.set(Math.cos(sudut) * 24, Math.sin(sudut) * 16 + 3, -14); sunMesh.visible = S.jam < 18; }
   if (moonMesh) moonMesh.visible = S.jam >= 18;
   if (scene3) scene3.background.setHex(S.jam >= 18 ? 0x1a237e : S.jam >= 17 ? 0xff8a65 : 0x87ceeb);
+  // Forklift kilang maju-mundur
+  if (forklift3) forklift3.position.x = w2x(600) + Math.sin(frame / 60) * 2;
   // Conveyor kilang berjalan
   conveyor3.forEach((kb, i) => {
     kb.position.x = 1.6 + ((frame / 2 + i * 25) % 70) * 0.1;
@@ -884,18 +978,28 @@ function setW(id, v) { const e = el(id); if (e) e.style.width = v; }
 function render() {
   setT("uang", rp(S.uang));
   setT("hari", S.hari);
-  setT("tanggal", "• " + musimHariIni(S.hari));
+  setT("namaHari", namaHari(S.hari));
+  setT("suhu", suhuCuaca());
+  setT("labelWaktu", labelWaktu(S.jam));
   setT("jam", String(S.jam).padStart(2, "0") + ":00");
   setT("ekspor", S.eksporTotal + " kg");
   setT("reputasi", S.reputasi);
   setT("permata", Math.floor(S.eksporTotal / 25));
   setT("level", levelPemain());
   setT("expPersen", expPersen() + "%");
+  setT("expTeks", Math.round(expPersen() * 5) + " / 500");
   setW("expBar", expPersen() + "%");
   setT("cuaca", CUACA[S.cuaca].ikon + " " + S.cuaca);
   setT("musim", musimHariIni(S.hari));
-  setT("target", "Target: " + rp(S.uang) + " / " + rp(TARGET_UANG) + " • Ekspor " + S.eksporTotal + "/" + TARGET_EKSPOR + " kg");
-  setW("targetBar", Math.min(100, (S.uang / TARGET_UANG * 50 + S.eksporTotal / TARGET_EKSPOR * 50)) + "%");
+  setT("targetUangTeks", rp(S.uang) + " / 5.000.000");
+  setW("targetUangBar", Math.min(100, S.uang / TARGET_UANG * 100) + "%");
+  setT("targetEksporTeks", S.eksporTotal + " / 100 kg");
+  setW("targetEksporBar", Math.min(100, S.eksporTotal / TARGET_EKSPOR * 100) + "%");
+  // Badge ala referensi: misi = petak matang + pelanggan menunggu; pekerja = slot kosong; lonceng = kontrak aktif
+  const matang = S.lahan.filter(p => p.status === "matang").length;
+  setT("badgeMisi", (matang + S.pelanggan) > 0 ? String(matang + S.pelanggan) : "");
+  setT("badgePekerja", (S.pekerja.kebun + S.pekerja.kilang + S.pekerja.barista) < 9 ? "!" : "");
+  setT("badgeLonceng", S.kontrak.length > 0 ? String(S.kontrak.length) : "");
   const aksi = el("aksiUtama"); if (aksi) aksi.textContent = labelAksi();
   const mn = el("menang"); if (mn) mn.style.display = S.menang ? "block" : "none";
   renderPanel();
