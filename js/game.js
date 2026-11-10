@@ -699,9 +699,9 @@ function animate3D() {
   if (camera3 && player3) {
     const px = player3.position.x, pz = player3.position.z;
     camera3.position.x += ((px + 0) - camera3.position.x) * 0.05;
-    camera3.position.y += (15 - camera3.position.y) * 0.05;
-    camera3.position.z += ((pz + 13) - camera3.position.z) * 0.05;
-    camera3.lookAt(px, 0.5, pz);
+    camera3.position.y += (11 - camera3.position.y) * 0.05;
+    camera3.position.z += ((pz + 16) - camera3.position.z) * 0.05;
+    camera3.lookAt(px, 0.5, pz - 2);
   }
   updateDunia3D();
   if (renderer3) renderer3.render(scene3, camera3);
