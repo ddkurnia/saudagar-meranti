@@ -24,6 +24,7 @@
       <div class="pil"><b id="ekspor">0 kg</b><span>Tepung diekspor</span></div>
       <div class="pil"><b id="reputasi">0</b><span>Reputasi</span></div>
       <div class="pil"><b id="cuaca">☀️ Cerah</b><span>Cuaca hari ini</span></div>
+      <div class="pil"><b id="musim">Musim Panen</b><span>Musim</span></div>
     </div>
     <p style="font-size:13px;color:#666;margin:10px 0 0" id="cuacaBesok"></p>
     <div class="bar" style="margin-top:12px">
@@ -43,6 +44,28 @@
       <div class="zona">🚢<b>Pelabuhan Ekspor</b><span>Ekspor internasional</span></div>
       <div class="zona">☕<b>Kedai Kopi Liberika</b><span>Pelanggan &amp; penghasilan</span></div>
     </div>
+  </div>
+
+  <div class="kartu">
+    <h2>👷 Pekerja</h2>
+    <p id="pekerjaInfo"></p>
+    <div class="bar">
+      <button onclick="hirePekerja('kebun')">Rekrut Pekerja Kebun — Rp50.000</button>
+      <button onclick="hirePekerja('kilang')">Rekrut Pekerja Kilang — Rp80.000</button>
+      <button onclick="hirePekerja('barista')">Rekrut Barista — Rp60.000</button>
+    </div>
+    <div class="bar">
+      <button class="kecil merah" onclick="berhentikanPekerja('kebun')">Berhentikan Kebun</button>
+      <button class="kecil merah" onclick="berhentikanPekerja('kilang')">Berhentikan Kilang</button>
+      <button class="kecil merah" onclick="berhentikanPekerja('barista')">Berhentikan Barista</button>
+    </div>
+    <p style="font-size:13px;color:#666">Pekerja kebun menanam otomatis, pekerja kilang mengolah otomatis, barista melayani pelanggan otomatis. Gaji dibayar tiap hari.</p>
+  </div>
+
+  <div class="kartu">
+    <h2>📜 Kontrak Ekspor</h2>
+    <p style="font-size:14px">Kontrak dari Malaysia, Singapura, Jepang, Tiongkok, dan Brunei. Kirim tepat waktu sebelum tenggat untuk harga premium dan reputasi +10.</p>
+    <div id="kontrak"></div>
   </div>
 
   <div class="kartu">
@@ -114,13 +137,13 @@
       <li>Olah tual di kilang menjadi tepung sagu.</li>
       <li>Buat Mie Sagu dan Kue Bangkit Sagu dari tepung, lalu jual.</li>
       <li>Ekspor tepung sagu ke pasar internasional setelah punya angkutan.</li>
-      <li>Perhatikan cuaca: hujan membuat rumbia tumbuh lebih cepat tapi kapal tidak bisa ekspor, panas terik menambah panen, cerah membuat kedai kopi ramai.</li>
-      <li>Buka Kedai Kopi Liberika Meranti, layani pelanggannya setiap hari untuk penghasilan tambahan.</li>
-      <li>Pakai keuntungan untuk upgrade lahan (sampai 12 petak), kilang, alat, dan angkutan.</li>
+      <li>Rekrut pekerja untuk mengotomatiskan kebun, kilang, dan kedai kopi, tapi ingat gaji harian mereka.</li>
+      <li>Ambil kontrak ekspor dari berbagai negara dan kirim sebelum tenggat.</li>
+      <li>Perhatikan musim: Musim Panen menambah panen, Musim Hujan banyak hujan, Musim Kemarau cerah dan panas. Tiap 10 hari ada Festival Sagu Selatpanjang.</li>
     </ol>
   </div>
 </main>
-<footer>Saudagar Sagu Meranti • Selatpanjang, Kepulauan Meranti • Game simulasi bisnis sagu — v2</footer>
+<footer>Saudagar Sagu Meranti • Selatpanjang, Kepulauan Meranti • Game simulasi bisnis sagu — v3</footer>
 <script src="js/game.js"></script>
 </body>
 </html>

@@ -37,5 +37,6 @@ button.kecil{padding:7px 10px;font-size:13px}
 .zona{background:#e8f5e9;border:2px solid #1b6b3a33;border-radius:12px;padding:10px;text-align:center;font-size:22px}
 .zona b{display:block;font-size:14px;margin-top:4px}
 .zona span{display:block;font-size:12px;color:var(--abu)}
+.kontrak{background:#fff3e0;border:2px solid #ffcc80;border-radius:10px;padding:10px;margin:8px 0}
 footer{text-align:center;color:var(--abu);font-size:13px;padding:10px 20px 30px}
 @media(max-width:600px){header h1{font-size:22px}.pil b{font-size:17px}}

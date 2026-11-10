@@ -9,6 +9,20 @@ memproduksi Mie Sagu dan Kue Bangkit Sagu, mengekspor tepung sagu ke pasar
 internasional, dan mengembangkan Kedai Kopi Liberika Meranti sebagai
 bisnis sampingan.
 
+## Yang baru di v3
+
+- **Pekerja:** rekrut Pekerja Kebun (tanam otomatis), Pekerja Kilang
+  (olah otomatis), dan Barista (layani pelanggan otomatis). Masing-masing
+  maksimal 3 orang, dengan gaji harian. Kalau uang tidak cukup bayar
+  gaji, pekerja berhenti.
+- **Kontrak ekspor:** kontrak dari Malaysia, Singapura, Jepang, Tiongkok,
+  dan Brunei, masing-masing dengan jumlah, harga premium per kg, dan
+  tenggat hari. Kirim tepat waktu untuk reputasi +10.
+- **Musim & acara pasar:** musim berganti tiap 5 hari — Musim Panen
+  (panen +2 tual), Musim Hujan (lebih sering hujan), Musim Kemarau
+  (cerah/panas). Tiap 10 hari ada Festival Sagu Selatpanjang dengan
+  bonus Rp50.000 dan kedai yang ramai.
+
 ## Yang baru di v2
 
 - **Peta kebun lebih besar:** mulai dengan 4 petak, bisa diperluas sampai
