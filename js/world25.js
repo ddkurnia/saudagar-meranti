@@ -114,6 +114,15 @@ window.SPRITE_WORLD = true;
   }
   function initDunia25() {
     if (typeof document === "undefined") return;
+    // PERBAIKAN v9.1: camJarak bawaan game.js adalah 2.0 (jarak kamera
+    // Three.js). Di dunia sprite, skala layar SUDAH menyesuaikan ukuran
+    // pulau (fit), jadi camJarak harus 1.0 agar seluruh pulau — termasuk
+    // Kedai Kopi di kanan atas dan jembatan di kiri bawah — muat dalam
+    // satu bingkai seperti gambar referensi. Nilai 2.0 membuat dunia
+    // ter-zoom 2x sehingga kedai terpotong di tepi atas dan kapal
+    // terpotong di tepi kanan.
+    if (typeof camJarak !== "undefined") camJarak = 1.0;
+    if (typeof camPan !== "undefined") { camPan.x = 0; camPan.z = 0; }
     var wadah = document.getElementById("dunia3d"); if (!wadah) return;
     kanvas = document.createElement("canvas");
     kanvas.id = "dunia25";
