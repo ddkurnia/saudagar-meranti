@@ -2155,12 +2155,17 @@ function pointerKeTile(e) {
 // memakai dua ketukan (anti salah ketuk): ketukan pertama hanya
 // menampilkan pratinjau di petak itu, ketukan kedua di petak yang sama
 // yang membangun. Mouse tetap sekali klik (ada pratinjau hover).
-function tanganiKetuk(t, tombol, sentuh) {
+// `layar` = titik ketuk dalam koordinat layar (untuk hit-test sprite).
+function tanganiKetuk(t, tombol, sentuh, layar) {
   if (tombol !== 0) return;
   if (mode.jenis === "pilih") {
-    const b = adaBangunanDi(S, t.x, t.y);
+    let b = adaBangunanDi(S, t.x, t.y);
+    // Ketuk pada gambar bangunan (sprite menjorok ke petak tetangga):
+    // bila petak yang diketuk kosong, cek sprite yang menutupi titik layar.
+    if (!b && layar) b = bangunanDiLayar(layar.x, layar.y);
     if (b) terpilih = { jenis: "bangunan", idx: S.bangunan.indexOf(b) };
     else terpilih = { jenis: "tile", x: t.x, y: t.y };
+    konfirmasiHapus = false;
     bunyiKlik(); renderPanelKanan();
   } else if (mode.jenis === "bangun") {
     if (sentuh && !(tilePratinjau && tilePratinjau.x === t.x && tilePratinjau.y === t.y)) {
@@ -2193,6 +2198,42 @@ function tanganiKetuk(t, tombol, sentuh) {
   } else if (mode.jenis === "pindah") {
     pindahBangunanSelesai(t.x, t.y);
   }
+}
+// Kotak layar sprite sebuah bangunan (untuk ketuk tepat pada gambarnya,
+// bukan hanya pada petak alasnya — sprite isometrik menjorok ke petak tetangga)
+function kotakSpriteBangunan(b) {
+  const def = BANGUNAN_MAP[b.id]; if (!def) return null;
+  const k = kakiBangunan(def, b.rot);
+  const cx = b.x + (k.w - 1) / 2, cy = b.y + (k.h - 1) / 2;
+  const tengah = tileTengahDunia(cx, cy);
+  const s = duniaKeLayar(tengah.x, tengah.y, kanvas.clientWidth, kanvas.clientHeight);
+  const z = kamera.zoom;
+  const halfH = (k.w + k.h) * 8 * z;
+  const img = gambarAset[def.gambar];
+  let w, h;
+  if (img && img.complete && img.naturalWidth) {
+    w = (k.w + k.h) * 32 * z * 1.12;
+    h = w * (img.naturalHeight / img.naturalWidth);
+  } else {
+    w = (k.w + k.h) * 32 * z;
+    h = (k.w + k.h) * 16 * z + 20 * z;
+  }
+  // Inset 12% agar sudut transparan sprite tidak ikut terpilih
+  const ix = w * 0.12, iy = h * 0.12;
+  return { x0: s.x - w / 2 + ix, x1: s.x + w / 2 - ix, y0: s.y + halfH - h + iy, y1: s.y + halfH - iy };
+}
+function bangunanDiLayar(px, py) {
+  // Cari bangunan yang sprite-nya menutupi titik layar (px,py).
+  // Bila beberapa bertumpuk, pilih yang paling depan (y bawah terbesar).
+  let terbaik = null, yTerbaik = -Infinity;
+  for (const b of S.bangunan) {
+    const kot = kotakSpriteBangunan(b);
+    if (!kot) continue;
+    if (px >= kot.x0 && px <= kot.x1 && py >= kot.y0 && py <= kot.y1) {
+      if (kot.y1 > yTerbaik) { yTerbaik = kot.y1; terbaik = b; }
+    }
+  }
+  return terbaik;
 }
 function pasangInput() {
   kanvas.addEventListener("contextmenu", e => e.preventDefault());
@@ -2257,7 +2298,8 @@ function pasangInput() {
     const tombol = seretMulai.button;
     seretMulai = null; sedangSeret = false;
     if (!klik || tombol !== 0) return;
-    tanganiKetuk(t, tombol, e.pointerType === "touch");
+    const rect = kanvas.getBoundingClientRect();
+    tanganiKetuk(t, tombol, e.pointerType === "touch", { x: e.clientX - rect.left, y: e.clientY - rect.top });
   };
   kanvas.addEventListener("pointerup", akhiriPointer);
   kanvas.addEventListener("pointercancel", akhiriPointer);
@@ -2286,6 +2328,12 @@ function aturKecepatan(k) {
   kecepatan = k;
   bunyiKlik(); renderHUD();
 }
+// Buka tab panel kiri; ketuk tab yang sama lagi menutup panelnya (pola HP).
+function bukaTabKiri(tab) {
+  const el = $("panelKiri");
+  if (panelKiri === tab && !el.classList.contains("tersembunyi")) { el.classList.add("tersembunyi"); bunyiKlik(); return; }
+  panelKiri = tab; el.classList.remove("tersembunyi"); bunyiKlik(); renderPanelKiri();
+}
 function pasangTombol() {
   $("btnZoomIn").onclick = () => { kameraZoomTombol(1.25, kanvas.clientWidth, kanvas.clientHeight); bunyiKlik(); };
   $("btnZoomOut").onclick = () => { kameraZoomTombol(1 / 1.25, kanvas.clientWidth, kanvas.clientHeight); bunyiKlik(); };
@@ -2302,20 +2350,20 @@ function pasangTombol() {
   $("btnToggleKanan").onclick = () => { $("panelKanan").classList.toggle("tersembunyi"); bunyiKlik(); };
   if (window.innerWidth <= 820) { $("panelKiri").classList.add("tersembunyi"); $("panelKanan").classList.add("tersembunyi"); }
   $("btnLevelTutup").onclick = () => { $("modalLevel").style.display = "none"; renderHUD(); renderMenuBangun(); renderPanelKiri(); };
-  // Rel kiri (Peta / Misi / Riset / Peradaban / Berita) — membuka panelnya
-  // (di HP panel kiri tersembunyi secara default, jadi ketuk rel membukanya)
+  // Rel kiri (Peta / Misi / Riset / Peradaban / Berita) — ketuk ikon
+  // membuka panelnya; ketuk ikon yang sama lagi menutupnya (pola HP).
   document.querySelectorAll("#relKiri button").forEach(b => {
     b.onclick = () => {
       const tab = b.dataset.tab;
       if (tab === "peta") { kameraPusatkan(peta); bunyiKlik(); toast("Peta dipusatkan.", "ok"); return; }
-      panelKiri = tab; $("panelKiri").classList.remove("tersembunyi"); bunyiKlik(); renderPanelKiri();
+      bukaTabKiri(tab);
     };
   });
   // Tombol "›" di kartu statistik membuka tab kiri yang sesuai
   document.querySelectorAll("#kartuStatistik .statBuka").forEach(b => {
-    b.onclick = () => { panelKiri = b.dataset.tab; $("panelKiri").classList.remove("tersembunyi"); bunyiKlik(); renderPanelKiri(); };
+    b.onclick = () => bukaTabKiri(b.dataset.tab);
   });
-  $("btnBerita").onclick = () => { panelKiri = "berita"; $("panelKiri").classList.remove("tersembunyi"); bunyiKlik(); renderPanelKiri(); };
+  $("btnBerita").onclick = () => bukaTabKiri("berita");
   $("btnModeBangun").onclick = () => {
     const mb = $("menuBangun");
     mb.classList.toggle("tersembunyi");

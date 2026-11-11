@@ -1,8 +1,8 @@
 /* =====================================================================
-   SAUDAGAR SAGU MERANTI — CITY BUILDER (v14)
+   SAUDAGAR SAGU MERANTI — CITY BUILDER (v15.1)
    Tampilan mengikuti referensi: pulau memenuhi layar, semua panel
    melayang di atas peta (glassmorphism gelap), aksen hijau.
-   Tablet landscape prioritas, responsif.
+   Tablet landscape prioritas, responsif, ramah layar sentuh.
    ===================================================================== */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overflow: hidden; }

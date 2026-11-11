@@ -28,6 +28,13 @@ Game kini nyaman dimainkan di HP/tablet Android (dan iOS):
   bangunan kini memakai konfirmasi ketuk dua kali di dalam game —
   dialog bawaan browser tidak selalu muncul di HP/browser tertentu,
   sehingga tombol sempat terlihat tidak merespons.
+- **Ketuk tepat pada gambar bangunan:** mengetuk atap/gambar sebuah
+  bangunan kini memilih bangunan itu (sebelumnya ketukan pada bagian
+  sprite yang menjorok ke petak tetangga malah memilih petak rumput
+  di sebelahnya — terasa sekali di layar HP kecil).
+- **Rel kiri bisa menutup panel:** ketuk ikon tab yang sedang aktif
+  (Misi/Riset/dll.) untuk menutup panelnya lagi — sebelumnya panel
+  hanya bisa ditutup lewat tombol di bar atas.
 - Uji headless lolos (`TEST_V13_OK`, 129 cek): alur ketuk dua kali
   (pratinjau → bangun, pindah pratinjau, mouse sekali klik), viewport
   & aturan CSS sentuh.

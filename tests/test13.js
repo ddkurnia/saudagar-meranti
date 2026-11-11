@@ -16,7 +16,7 @@ function buatCtx() {
 function buatEl(id) {
   return {
     id: id, style: {}, innerHTML: "", textContent: "",
-    dataset: {}, classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
+    dataset: {}, classList: (() => { const s = new Set(); return { add(c) { s.add(c); }, remove(c) { s.delete(c); }, toggle(c) { if (s.has(c)) s.delete(c); else s.add(c); }, contains(c) { return s.has(c); } }; })(),
     addEventListener() {}, appendChild(c) { this.lastElementChild = c; }, lastElementChild: null, onclick: null,
     clientWidth: 800, clientHeight: 600,
     getContext: () => buatCtx(),
@@ -532,5 +532,35 @@ if (idxHapus >= 0) {
   cek("ketuk Hapus kedua: bangunan terhapus", C.S.bangunan.length === jmlH - 1);
   vm.runInContext('terpilih = null; konfirmasiHapus = false;', sandbox);
 }
+// Hit-test sprite: ketuk atap rumah (yang menjorok ke petak tetangga) memilih rumahnya
+const bUji = C.S.bangunan.find(b => b.id === "rumah-sederhana" && b.selesai);
+cek("ada rumah sederhana selesai untuk uji hit-test", !!bUji);
+if (bUji) {
+  C.kamera.zoom = 1;
+  const tengah = vm.runInContext(`tileTengahDunia(${bUji.x}, ${bUji.y})`, sandbox);
+  const sLayar = vm.runInContext(`duniaKeLayar(${tengah.x}, ${tengah.y}, 800, 600)`, sandbox);
+  const atap = { x: sLayar.x, y: sLayar.y - 25 };
+  const wAtap = vm.runInContext(`layarKeDunia(${atap.x}, ${atap.y}, 800, 600)`, sandbox);
+  const tAtap = vm.runInContext(`duniaKeTile(${wAtap.x}, ${wAtap.y})`, sandbox);
+  const tileAtap = { x: Math.floor(tAtap.x), y: Math.floor(tAtap.y) };
+  cek("titik atap berada di petak tetangga (bukan petak rumah)", (tileAtap.x !== bUji.x || tileAtap.y !== bUji.y), "atap " + JSON.stringify(tileAtap) + " vs rumah (" + bUji.x + "," + bUji.y + ")");
+  vm.runInContext('mode = { jenis: "pilih", id: null }; terpilih = null;', sandbox);
+  C.tanganiKetuk(tileAtap, 0, false, atap);
+  cek("ketuk atap memilih bangunannya", !!C.terpilih && C.terpilih.jenis === "bangunan" && C.S.bangunan[C.terpilih.idx].id === "rumah-sederhana", JSON.stringify(C.terpilih));
+  // Ketuk petak kosong yang jauh dari sprite tetap memilih petak itu
+  vm.runInContext('terpilih = null;', sandbox);
+  C.tanganiKetuk({ x: 5, y: 5 }, 0, false, { x: 0, y: 0 });
+  cek("ketuk petak kosong jauh tetap memilih petak", !!C.terpilih && C.terpilih.jenis === "tile" && C.terpilih.x === 5 && C.terpilih.y === 5);
+}
+// Rel kiri: ketuk ikon yang sama lagi menutup panel
+vm.runInContext('panelKiri = "misi";', sandbox);
+const elKiri = vm.runInContext('$("panelKiri")', sandbox);
+elKiri.classList.remove("tersembunyi");
+C.bukaTabKiri("misi");
+cek("ketuk ikon tab aktif menutup panel kiri", elKiri.classList.contains("tersembunyi"));
+C.bukaTabKiri("misi");
+cek("ketuk ikon lagi membuka panel kiri", !elKiri.classList.contains("tersembunyi"));
+C.bukaTabKiri("riset");
+cek("ketuk ikon lain mengganti tab", vm.runInContext("panelKiri", sandbox) === "riset" && !elKiri.classList.contains("tersembunyi"));
 
 console.log(gagal === 0 ? "TEST_V13_OK" : "TEST_V13_GAGAL:" + gagal + " dari " + (lulus + gagal));
