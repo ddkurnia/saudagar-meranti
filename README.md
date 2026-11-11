@@ -6,6 +6,30 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v13.3 — Jalan & Jembatan Tersambung, Lalu Lintas Seperti Nyata (2026-11-11)
+
+- **Garis jalan kini benar:** tiap petak jalan membaca tetangganya —
+  lurus, belok, T, dan simpang digambar tersambung (bukan lagi
+  belah ketupat lepas dengan garis datar acak). Tepi jalan (curb)
+  hanya muncul di sisi yang tidak ada lanjutannya; marka tengah
+  putus-putus mengikuti arah sambungan (putih untuk aspal, kuning
+  untuk jalan raya; jalan tanah tanpa marka).
+- **Jembatan digambar benar:** dek kayu/beton per ruas yang
+  tersambung, sedikit terangkat dari air, dengan papan melintang,
+  pagar di kedua sisi, tiang pagar, dan tiang penyangga di air.
+  Ujung jembatan mencapai tepi darat.
+- **Orang & kendaraan mengikuti jalan:** warga dan truk kini berjalan
+  mengikuti jaringan jalan (bukan terbang lurus ke target acak) —
+  belok kiri/kanan di tikungan dan persimpangan dengan kemudi halus
+  (arah berputar bertahap, bukan patah 90°), di lajur kiri seperti
+  lalu lintas Indonesia, dan sprite menghadap sesuai arah jalan.
+  Truk yang sampai di ujung buntu putar balik; bila tak ada jalan,
+  ia parkir.
+- Uji headless lolos (`TEST_V13_OK`, 65 cek): koneksi jalan
+  (L/lurus/T/kosong/jembatan), agen mengikuti jalan L sampai ujung
+  dengan belokan bertahap dan tetap di koridor jalan, truk mengikuti
+  loop jalan 800 tick tanpa keluar jalan, render jalan/jembatan baru.
+
 ## Yang baru di v13.2 — Semua Bangunan Kini Punya Sprite Ilustrasi (2026-11-11)
 
 - **46 sprite ilustrasi isometrik baru** untuk semua bangunan yang

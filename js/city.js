@@ -83,6 +83,92 @@ function adaJalanDi(st, x, y) {
   return st.jalan.some(j => j.x === x && j.y === y) || st.jembatan.some(j => j.x === x && j.y === y);
 }
 
+// ---------------- Jalan: koneksi, lajur & kemudi ----------------
+// Arah tetangga (ortogonal): 0=Timur(+x), 1=Selatan(+y), 2=Barat(-x), 3=Utara(-y)
+const ARAH_TETANGGA = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+// Titik tepi (port) tiap arah, relatif terhadap tengah tile (satuan dunia)
+const PORT_JALAN = [[16, 8], [-16, 8], [-16, -8], [16, -8]];
+// Bitmask koneksi jalan di (x,y): bit d = ada jalan ke arah d.
+// Untuk jembatan, daratan di ujung juga dihitung (dek mencapai tepi darat);
+// untuk jalan biasa hanya jalan/jembatan tetangga yang dihitung.
+function koneksiJalanDi(x, y, jembatan) {
+  let mask = 0;
+  for (let d = 0; d < 4; d++) {
+    const nx = x + ARAH_TETANGGA[d][0], ny = y + ARAH_TETANGGA[d][1];
+    if (nx < 0 || ny < 0 || nx >= peta.W || ny >= peta.H) continue;
+    if (adaJalanDi(S, nx, ny)) { mask |= (1 << d); continue; }
+    if (jembatan) {
+      const t = terrainDi(peta, nx, ny);
+      if (t !== "laut" && t !== "sungai") mask |= (1 << d);
+    }
+  }
+  return mask;
+}
+// Daftar tile jalan/jembatan tetangga (ortogonal) dari (x,y)
+function jalanTetangga(x, y) {
+  const out = [];
+  for (let d = 0; d < 4; d++) {
+    const nx = x + ARAH_TETANGGA[d][0], ny = y + ARAH_TETANGGA[d][1];
+    if (nx < 0 || ny < 0 || nx >= peta.W || ny >= peta.H) continue;
+    if (adaJalanDi(S, nx, ny)) out.push({ x: nx, y: ny, d: d });
+  }
+  return out;
+}
+// Putar sudut a menuju t dengan kecepatan sudut maks (radian)
+function putarKe(a, t, maks) {
+  let d = t - a;
+  while (d > Math.PI) d -= Math.PI * 2;
+  while (d < -Math.PI) d += Math.PI * 2;
+  if (Math.abs(d) <= maks) return t;
+  return a + Math.sign(d) * maks;
+}
+// Titik tujuan di lajur kiri (Indonesia) pada ruas dari tile (x0,y0) ke
+// (x1,y1), dalam koordinat tile (pecahan). Kendaraan & pejalan kaki
+// berjalan di lajur kiri seperti lalu lintas di dunia nyata.
+function titikLajurTile(x0, y0, x1, y1, off) {
+  const a = tileTengahDunia(x0, y0), b = tileTengahDunia(x1, y1);
+  let dx = b.x - a.x, dy = b.y - a.y;
+  const L = Math.hypot(dx, dy) || 1; dx /= L; dy /= L;
+  const o = (off === undefined ? 7 : off);
+  // duniaKeTile membalik tileKeDunia (titik atas tile), sedangkan
+  // tileTengahDunia = titik tengah tile -> kurangi 0,5 di tiap sumbu.
+  const t = duniaKeTile(b.x + dy * o, b.y - dx * o);
+  return { x: t.x - 0.5, y: t.y - 0.5 };
+}
+// Gerakkan agen (posisi tile pecahan a.x/a.y, arah a.arah) menuju target
+// (a.tx/a.ty) dengan kemudi halus: arah berputar bertahap (belok kiri/
+// kanan mengikuti jalan), bukan patah 90°. Mengembalikan true bila
+// sudah sampai (dalam radiusTiba) — pemanggil lalu memilih target berikut.
+function gerakAgen(a, dt, putarMaks, radiusTiba) {
+  const dx = a.tx - a.x, dy = a.ty - a.y;
+  const jarak = Math.hypot(dx, dy);
+  if (jarak < radiusTiba) return true;
+  const target = Math.atan2(dy, dx);
+  a.arah = putarKe(a.arah, target, putarMaks * dt);
+  const langkah = a.cepat * dt * kecepatan;
+  const maju = Math.min(langkah, jarak);
+  a.x += Math.cos(a.arah) * maju;
+  a.y += Math.sin(a.arah) * maju;
+  a.jalan = true;
+  if (a.fase !== undefined) a.fase += dt * 6;
+  return Math.hypot(a.tx - a.x, a.ty - a.y) < radiusTiba;
+}
+// Pilih tile jalan berikut untuk agen yang sedang di (a.tileX,a.tileY):
+// lanjut ke tetangga jalan (tidak kembali ke tile asal kecuali buntu),
+// targetnya titik lajur kiri ruas tersebut. Mengembalikan false bila buntu.
+function pilihJalanBerikut(a) {
+  const tet = jalanTetangga(a.tileX, a.tileY);
+  let pil = tet.filter(t => !(t.x === a.dariX && t.y === a.dariY));
+  if (!pil.length) pil = tet;
+  if (!pil.length) return false;
+  const t = pil[Math.floor(Math.random() * pil.length)];
+  a.dariX = a.tileX; a.dariY = a.tileY;
+  a.tileX = t.x; a.tileY = t.y;
+  const p = titikLajurTile(a.dariX, a.dariY, t.x, t.y);
+  a.tx = p.x; a.ty = p.y;
+  return true;
+}
+
 // ---------------- Simpan / muat ----------------
 function simpan() {
   if (!S) return;
@@ -629,38 +715,45 @@ function sinkronWarga() {
       x: sx + Math.random(), y: sy + Math.random(), tx: sx, ty: sy,
       sprite: KARAKTER_WARGA[Math.floor(Math.random() * KARAKTER_WARGA.length)],
       cepat: 0.5 + Math.random() * 0.4, fase: Math.random() * 10, jalan: false,
+      arah: Math.random() * Math.PI * 2,
+      tileX: Math.round(sx), tileY: Math.round(sy), dariX: Math.round(sx), dariY: Math.round(sy),
     });
+    pilihLangkahWarga(wargaVisual[wargaVisual.length - 1]);
   }
   if (wargaVisual.length > target) wargaVisual.length = target;
+}
+// Pilih langkah berikut untuk warga: tetangga jalan (bobot 3) atau darat
+// (bobot 1), tidak langsung kembali kecuali buntu. Bila langkahnya di
+// jalan, targetnya titik lajur kiri ruas itu; bila di darat, tengah tile.
+function pilihLangkahWarga(w) {
+  const pil = [];
+  for (let d = 0; d < 4; d++) {
+    const nx = w.tileX + ARAH_TETANGGA[d][0], ny = w.tileY + ARAH_TETANGGA[d][1];
+    if (nx < 0 || ny < 0 || nx >= peta.W || ny >= peta.H) continue;
+    if (adaJalanDi(S, nx, ny)) pil.push({ x: nx, y: ny, bobot: 3, jalan: true });
+    else if (TERRAIN[terrainDi(peta, nx, ny)].bangun && !adaBangunanDi(S, nx, ny)) pil.push({ x: nx, y: ny, bobot: 1, jalan: false });
+  }
+  let cand = pil.filter(p => !(p.x === w.dariX && p.y === w.dariY));
+  if (!cand.length) cand = pil;
+  if (!cand.length) return false;
+  let total = 0; for (const p of cand) total += p.bobot;
+  let acak = Math.random() * total, pilih = cand[0];
+  for (const p of cand) { acak -= p.bobot; if (acak <= 0) { pilih = p; break; } }
+  w.dariX = w.tileX; w.dariY = w.tileY;
+  w.tileX = pilih.x; w.tileY = pilih.y;
+  if (pilih.jalan) { const p = titikLajurTile(w.dariX, w.dariY, pilih.x, pilih.y); w.tx = p.x; w.ty = p.y; }
+  else { w.tx = pilih.x; w.ty = pilih.y; }
+  return true;
 }
 function perbaruiWarga(dt) {
   if (kecepatan === 0) return;
   for (const w of wargaVisual) {
-    const dx = w.tx - w.x, dy = w.ty - w.y;
-    const jarak = Math.hypot(dx, dy);
-    if (jarak < 0.1) {
-      // Cari tile jalan di sekitar, kalau tidak ada jalan di sekitar
-      const pilihan = [];
-      for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
-        if (i === 0 && j === 0) continue;
-        const tx = Math.round(w.x) + i, ty = Math.round(w.y) + j;
-        if (tx < 0 || ty < 0 || tx >= peta.W || ty >= peta.H) continue;
-        if (adaJalanDi(S, tx, ty)) pilihan.push([tx, ty, 3]);
-        else if (TERRAIN[terrainDi(peta, tx, ty)].bangun && !adaBangunanDi(S, tx, ty)) pilihan.push([tx, ty, 1]);
-      }
-      if (pilihan.length) {
-        let total = 0; for (const p of pilihan) total += p[2];
-        let acak = Math.random() * total, pilih = pilihan[0];
-        for (const p of pilihan) { acak -= p[2]; if (acak <= 0) { pilih = p; break; } }
-        w.tx = pilih[0]; w.ty = pilih[1];
-      }
-      w.jalan = false;
-    } else {
-      const langkah = w.cepat * dt * kecepatan;
-      w.x += (dx / jarak) * Math.min(langkah, jarak);
-      w.y += (dy / jarak) * Math.min(langkah, jarak);
-      w.jalan = true;
-      w.fase += dt * 6;
+    if (w.arah === undefined) w.arah = Math.random() * Math.PI * 2;
+    if (w.tileX === undefined) { w.tileX = Math.round(w.x); w.tileY = Math.round(w.y); w.dariX = w.tileX; w.dariY = w.tileY; }
+    // Kemudi halus (belok bertahap) mengikuti jalan; sampai di tile
+    // tujuan -> pilih langkah berikut (belok kiri/kanan di persimpangan).
+    if (gerakAgen(w, dt, 5, 0.25)) {
+      if (!pilihLangkahWarga(w)) w.jalan = false;
     }
   }
 }
@@ -903,24 +996,87 @@ function gambarPeta() {
       }
     }
   }
-  // 2. Jalan & jembatan
+  // 2. Jalan & jembatan — garis tersambung mengikuti tetangga
   const gambarJalanTile = (x, y, tipe, jembatan) => {
     const w = tileKeDunia(x, y);
     const s = duniaKeLayar(w.x, w.y, lebar, tinggi);
-    const px = s.x, py = s.y, z = kamera.zoom;
+    const z = kamera.zoom;
+    const cx = s.x, cy = s.y + 16 * z; // tengah tile
     const def = jembatan ? JEMBATAN[tipe] : JALAN[tipe];
-    ctx.fillStyle = def.warna;
-    poly([[px, py + 2 * z], [px + 30 * z, py + 16 * z], [px, py + 30 * z], [px - 30 * z, py + 16 * z]]);
-    ctx.fill();
+    const mask = koneksiJalanDi(x, y, jembatan);
+    const ada = d => (mask & (1 << d)) !== 0;
+    const pt = d => [cx + PORT_JALAN[d][0] * z, cy + PORT_JALAN[d][1] * z];
     if (jembatan) {
-      ctx.strokeStyle = "#5d4037"; ctx.lineWidth = 2 * z;
-      ctx.beginPath(); ctx.moveTo(px - 28 * z, py + 8 * z); ctx.lineTo(px + 28 * z, py + 22 * z); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(px - 28 * z, py + 24 * z); ctx.lineTo(px + 28 * z, py + 10 * z); ctx.stroke();
-    } else if (tipe !== "jalan-tanah") {
-      ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 1.2 * z;
-      ctx.setLineDash([6 * z, 5 * z]);
-      ctx.beginPath(); ctx.moveTo(px - 26 * z, py + 16 * z); ctx.lineTo(px + 26 * z, py + 16 * z); ctx.stroke();
+      // --- Jembatan: dek per ruas yang tersambung, sedikit terangkat ---
+      const cyD = cy - 2 * z;
+      const gelap = naungi(def.warna, -30);
+      const railing = naungi(def.warna, -48);
+      const hw = 11 * z; // setengah lebar dek
+      for (let d = 0; d < 4; d++) {
+        if (!ada(d)) continue;
+        const [px2, py2] = pt(d);
+        let ax = px2 - cx, ay = py2 - cyD;
+        const L = Math.hypot(ax, ay) || 1; ax /= L; ay /= L;
+        const nx = -ay, ny = ax;
+        const U = [cx + ax * L, cyD + ay * L]; // ujung di port
+        // strip dek
+        ctx.fillStyle = def.warna;
+        poly([[cx + nx * hw, cyD + ny * hw], [U[0] + nx * hw, U[1] + ny * hw], [U[0] - nx * hw, U[1] - ny * hw], [cx - nx * hw, cyD - ny * hw]]);
+        ctx.fill();
+        // papan melintang (3 garis tegak lurus ruas)
+        ctx.strokeStyle = gelap; ctx.lineWidth = 1.2 * z;
+        for (const t of [0.3, 0.55, 0.8]) {
+          const mx = cx + ax * L * t, my = cyD + ay * L * t;
+          ctx.beginPath(); ctx.moveTo(mx + nx * hw, my + ny * hw); ctx.lineTo(mx - nx * hw, my - ny * hw); ctx.stroke();
+        }
+        // pagar di kedua sisi dek
+        ctx.strokeStyle = railing; ctx.lineWidth = 1.6 * z;
+        ctx.beginPath(); ctx.moveTo(cx + nx * hw, cyD + ny * hw); ctx.lineTo(U[0] + nx * hw, U[1] + ny * hw); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx - nx * hw, cyD - ny * hw); ctx.lineTo(U[0] - nx * hw, U[1] - ny * hw); ctx.stroke();
+        // tiang pagar di ujung
+        ctx.fillStyle = railing;
+        ctx.beginPath(); ctx.arc(U[0] + nx * hw, U[1] + ny * hw - 2 * z, 1.6 * z, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(U[0] - nx * hw, U[1] - ny * hw - 2 * z, 1.6 * z, 0, Math.PI * 2); ctx.fill();
+      }
+      // sambungan di tengah + tiang penyangga di air
+      ctx.fillStyle = def.warna;
+      ctx.beginPath(); ctx.arc(cx, cyD, hw, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "rgba(30,40,50,0.55)"; ctx.lineWidth = 2 * z;
+      ctx.beginPath(); ctx.moveTo(cx - 6 * z, cyD + hw * 0.7); ctx.lineTo(cx - 6 * z, cyD + hw * 0.7 + 7 * z); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx + 6 * z, cyD + hw * 0.7); ctx.lineTo(cx + 6 * z, cyD + hw * 0.7 + 7 * z); ctx.stroke();
+      return;
+    }
+    // --- Jalan: permukaan penuh tile, tepi (curb) hanya di sisi yang
+    // tidak tersambung, marka tengah mengikuti arah sambungan ---
+    ctx.fillStyle = def.warna;
+    poly([[cx, cy - 16 * z], [cx + 32 * z, cy], [cx, cy + 16 * z], [cx - 32 * z, cy]]);
+    ctx.fill();
+    // Tepi jalan (curb) pada sisi yang tidak ada jalan lanjutannya.
+    // Sisi belah ketupat: TimurLaut<->Utara, Tenggara<->Timur,
+    // BaratDaya<->Selatan, BaratLaut<->Barat.
+    const V = { atas: [cx, cy - 16 * z], kanan: [cx + 32 * z, cy], bawah: [cx, cy + 16 * z], kiri: [cx - 32 * z, cy] };
+    const SISI = [[V.atas, V.kanan, 3], [V.kanan, V.bawah, 0], [V.bawah, V.kiri, 1], [V.kiri, V.atas, 2]];
+    ctx.strokeStyle = (tipe === "jalan-tanah") ? naungi(def.warna, -22) : "#a9a9a9";
+    ctx.lineWidth = 2 * z;
+    for (const [a, b, d] of SISI) {
+      if (ada(d)) continue;
+      ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+    }
+    // Marka tengah (aspal & raya saja): garis putus-putus dari tengah
+    // ke tiap port yang tersambung, disambung titik di tengah.
+    if (tipe !== "jalan-tanah" && mask) {
+      const warnaMarka = (tipe === "jalan-raya") ? "#f1c40f" : "rgba(255,255,255,0.8)";
+      ctx.strokeStyle = warnaMarka;
+      ctx.lineWidth = (tipe === "jalan-raya" ? 2 : 1.5) * z;
+      ctx.setLineDash([7 * z, 6 * z]);
+      for (let d = 0; d < 4; d++) {
+        if (!ada(d)) continue;
+        const [px2, py2] = pt(d);
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(px2, py2); ctx.stroke();
+      }
       ctx.setLineDash([]);
+      ctx.fillStyle = warnaMarka;
+      ctx.beginPath(); ctx.arc(cx, cy, 2.2 * z, 0, Math.PI * 2); ctx.fill();
     }
   };
   for (const j of S.jalan) gambarJalanTile(j.x, j.y, j.tipe, false);
@@ -987,7 +1143,15 @@ function gambarPeta() {
     const bob = w.jalan ? Math.abs(Math.sin(w.fase)) * 2 * z : 0;
     if (img && img.complete && img.naturalWidth) {
       const h = 30 * z, ww = h * (img.naturalWidth / img.naturalHeight);
-      ctx.drawImage(img, s.x - ww / 2, s.y + 8 * z - h - bob, ww, h);
+      // Hadap mengikuti arah jalan: bila bergerak ke kiri layar, balik gambar.
+      const hadapKiri = (Math.cos(w.arah || 0) - Math.sin(w.arah || 0)) < 0;
+      if (hadapKiri) {
+        ctx.save(); ctx.translate(s.x, 0); ctx.scale(-1, 1);
+        ctx.drawImage(img, -ww / 2, s.y + 8 * z - h - bob, ww, h);
+        ctx.restore();
+      } else {
+        ctx.drawImage(img, s.x - ww / 2, s.y + 8 * z - h - bob, ww, h);
+      }
     } else {
       ctx.fillStyle = "#2d3436";
       ctx.beginPath(); ctx.arc(s.x, s.y - 6 * z - bob, 4 * z, 0, Math.PI * 2); ctx.fill();
@@ -1105,7 +1269,14 @@ function gambarKendaraan(lebar, tinggi) {
     const img = gambarAset["assets/vehicles/truk-pengangkut.png"];
     if (img && img.complete && img.naturalWidth) {
       const w = 44 * z, h = w * (img.naturalHeight / img.naturalWidth);
-      ctx.drawImage(img, s.x - w / 2, s.y + 8 * z - h, w, h);
+      const hadapKiri = (Math.cos(truk.arah || 0) - Math.sin(truk.arah || 0)) < 0;
+      if (hadapKiri) {
+        ctx.save(); ctx.translate(s.x, 0); ctx.scale(-1, 1);
+        ctx.drawImage(img, -w / 2, s.y + 8 * z - h, w, h);
+        ctx.restore();
+      } else {
+        ctx.drawImage(img, s.x - w / 2, s.y + 8 * z - h, w, h);
+      }
     }
   }
   // Kapal di dekat dermaga/pelabuhan
@@ -1135,7 +1306,10 @@ function initKendaraan() {
   const jalan = S.jalan;
   if (jalan.length) {
     const j = jalan[Math.floor(Math.random() * jalan.length)];
-    kendaraanVisual.push({ tipe: "truk", x: j.x, y: j.y, tx: j.x, ty: j.y, cepat: 1.2 });
+    const truk = { tipe: "truk", x: j.x, y: j.y, tx: j.x, ty: j.y, cepat: 1.2,
+      arah: 0, tileX: j.x, tileY: j.y, dariX: j.x, dariY: j.y };
+    kendaraanVisual.push(truk);
+    pilihJalanBerikut(truk); // target pertama di jaringan jalan
   }
   const L = peta.landing;
   kendaraanVisual.push({ tipe: "kapal", x: L.x + 1, y: L.y + 2 });
@@ -1145,16 +1319,12 @@ function perbaruiKendaraan(dt) {
   if (kecepatan === 0) return;
   const truk = kendaraanVisual.find(k => k.tipe === "truk");
   if (truk && S.jalan.length) {
-    const dx = truk.tx - truk.x, dy = truk.ty - truk.y;
-    const jarak = Math.hypot(dx, dy);
-    if (jarak < 0.1) {
-      const pilihan = S.jalan.filter(j => Math.abs(j.x - Math.round(truk.x)) + Math.abs(j.y - Math.round(truk.y)) <= 2);
-      const pilih = pilihan.length ? pilihan[Math.floor(Math.random() * pilihan.length)] : S.jalan[Math.floor(Math.random() * S.jalan.length)];
-      truk.tx = pilih.x; truk.ty = pilih.y;
-    } else {
-      const langkah = truk.cepat * dt * kecepatan;
-      truk.x += (dx / jarak) * Math.min(langkah, jarak);
-      truk.y += (dy / jarak) * Math.min(langkah, jarak);
+    if (truk.arah === undefined) truk.arah = 0;
+    if (truk.tileX === undefined) { truk.tileX = Math.round(truk.x); truk.tileY = Math.round(truk.y); truk.dariX = truk.tileX; truk.dariY = truk.tileY; }
+    // Truk mengikuti jaringan jalan (bukan terbang lurus ke target acak):
+    // kemudi halus di tikungan, lajur kiri, belok di persimpangan.
+    if (gerakAgen(truk, dt, 3.5, 0.4)) {
+      pilihJalanBerikut(truk); // buntu -> putar balik; parkir bila tak ada jalan
     }
   }
 }

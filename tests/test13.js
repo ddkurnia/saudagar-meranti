@@ -53,7 +53,7 @@ const src = fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-data
   + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-map.js", "utf8")
   + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city.js", "utf8");
 vm.runInContext(src, sandbox);
-for (const nama of ["S", "peta", "BANGUNAN", "BANGUNAN_MAP", "TEKNOLOGI_MAP", "KATEGORI", "MISI", "LEVEL_PERADABAN", "KOMODITAS", "JALAN", "JEMBATAN", "TERRAIN", "CITY", "mode", "hover", "terpilih", "kecepatan", "kamera", "jamVisual", "akumulasiHari"]) {
+for (const nama of ["S", "peta", "BANGUNAN", "BANGUNAN_MAP", "TEKNOLOGI_MAP", "KATEGORI", "MISI", "LEVEL_PERADABAN", "KOMODITAS", "JALAN", "JEMBATAN", "TERRAIN", "CITY", "mode", "hover", "terpilih", "kecepatan", "kamera", "jamVisual", "akumulasiHari", "wargaVisual", "kendaraanVisual"]) {
   Object.defineProperty(sandbox, nama, { get: () => vm.runInContext(nama, sandbox), configurable: true });
 }
 listeners["DOMContentLoaded"]();
@@ -228,5 +228,84 @@ cek("46 sprite baru ada", ['rumah-sederhana','universitas','rsud','bandara','mas
 // render sprite bangunan (gambar belum termuat di node -> prisma cadangan, tanpa error)
 try { C.gambarSpriteBangunan(C.BANGUNAN_MAP['rumah-sederhana'], 100, 100, 1, null); cek("render sprite bangunan (tanpa error)", true); }
 catch (e) { cek("render sprite bangunan (tanpa error)", false, e.message); }
+
+
+// v13.3: jalan tersambung, jembatan, gerakan mengikuti jalan (belok halus, lajur kiri)
+const jalanLama = C.S.jalan.slice();
+const jembLama = C.S.jembatan.slice();
+C.S.jalan = [
+  { x: 5, y: 5, tipe: "jalan-aspal" }, { x: 6, y: 5, tipe: "jalan-aspal" }, { x: 6, y: 6, tipe: "jalan-aspal" },
+  { x: 10, y: 10, tipe: "jalan-aspal" }, { x: 11, y: 10, tipe: "jalan-aspal" },
+  { x: 15, y: 15, tipe: "jalan-aspal" }, { x: 16, y: 15, tipe: "jalan-aspal" }, { x: 14, y: 15, tipe: "jalan-aspal" }, { x: 15, y: 16, tipe: "jalan-aspal" },
+];
+C.S.jembatan = [];
+cek("koneksi L ujung (5,5) = Timur saja", C.koneksiJalanDi(5, 5, false) === 1, C.koneksiJalanDi(5, 5, false));
+cek("koneksi L belok (6,5) = Barat+Selatan", C.koneksiJalanDi(6, 5, false) === (4 | 2), C.koneksiJalanDi(6, 5, false));
+cek("koneksi L ujung (6,6) = Utara saja", C.koneksiJalanDi(6, 6, false) === 8, C.koneksiJalanDi(6, 6, false));
+cek("koneksi lurus (10,10) = Timur", C.koneksiJalanDi(10, 10, false) === 1);
+cek("koneksi lurus (11,10) = Barat", C.koneksiJalanDi(11, 10, false) === 4);
+cek("koneksi T (15,15) = Timur+Barat+Selatan", C.koneksiJalanDi(15, 15, false) === (1 | 4 | 2), C.koneksiJalanDi(15, 15, false));
+cek("koneksi tile kosong = 0", C.koneksiJalanDi(20, 20, false) === 0);
+// jembatan di tile sungai pertama: mask = tetangga darat/jalan
+const sg = C.peta.sungai[0];
+C.S.jembatan = [{ x: sg[0], y: sg[1], tipe: "jembatan-kecil" }];
+const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+let maskHarap = 0;
+for (let d = 0; d < 4; d++) {
+  const nx = sg[0] + DIRS[d][0], ny = sg[1] + DIRS[d][1];
+  if (C.adaJalanDi(C.S, nx, ny)) maskHarap |= (1 << d);
+  else { const t = C.terrainDi(C.peta, nx, ny); if (t !== "laut" && t !== "sungai") maskHarap |= (1 << d); }
+}
+cek("jembatan tersambung ke darat/jalan", maskHarap !== 0, "mask " + maskHarap);
+cek("koneksi jembatan sesuai terrain tetangga", C.koneksiJalanDi(sg[0], sg[1], true) === maskHarap, C.koneksiJalanDi(sg[0], sg[1], true) + " vs " + maskHarap);
+// gerakan: agen mengikuti jalan L sampai ujung, belok bertahap, tetap di koridor
+cek("kecepatan game = 1 (untuk uji gerak)", C.kecepatan === 1, C.kecepatan);
+const agen = { x: 5, y: 5, tx: 5, ty: 5, arah: 0, cepat: 0.8, jalan: false,
+  tileX: 5, tileY: 5, dariX: 5, dariY: 5 };
+C.pilihJalanBerikut(agen);
+let maksBelok = 0, sampai = false, maksJarakKoridor = 0;
+const koridor = [[5, 5], [6, 5], [6, 6]];
+for (let i = 0; i < 600 && !sampai; i++) {
+  const sblm = agen.arah;
+  const tiba = C.gerakAgen(agen, 0.1, 5, 0.25);
+  let dA = Math.abs(agen.arah - sblm); if (dA > Math.PI) dA = Math.PI * 2 - dA;
+  if (dA > maksBelok) maksBelok = dA;
+  let dj = 1e9;
+  for (let s = 0; s < koridor.length - 1; s++) {
+    const ax = koridor[s][0], ay = koridor[s][1], bx = koridor[s + 1][0], by = koridor[s + 1][1];
+    const tt = Math.max(0, Math.min(1, ((agen.x - ax) * (bx - ax) + (agen.y - ay) * (by - ay)) / ((bx - ax) * (bx - ax) + (by - ay) * (by - ay) || 1)));
+    dj = Math.min(dj, Math.hypot(agen.x - (ax + (bx - ax) * tt), agen.y - (ay + (by - ay) * tt)));
+  }
+  if (dj > maksJarakKoridor) maksJarakKoridor = dj;
+  if (tiba) {
+    if (agen.tileX === 6 && agen.tileY === 6) { sampai = true; }
+    else C.pilihJalanBerikut(agen);
+  }
+}
+cek("agen mengikuti jalan L sampai ujung (6,6)", sampai, agen.tileX + "," + agen.tileY);
+cek("belokan bertahap (<= 0.5 rad/tick)", maksBelok <= 0.5 + 0.001, maksBelok.toFixed(3));
+cek("agen tetap di koridor jalan (<0.6 tile)", maksJarakKoridor < 0.6, maksJarakKoridor.toFixed(3));
+// truk: loop persegi, tetap di jalan
+C.S.jalan = [
+  { x: 20, y: 20, tipe: "jalan-aspal" }, { x: 21, y: 20, tipe: "jalan-aspal" }, { x: 22, y: 20, tipe: "jalan-aspal" },
+  { x: 22, y: 21, tipe: "jalan-aspal" }, { x: 22, y: 22, tipe: "jalan-aspal" },
+  { x: 21, y: 22, tipe: "jalan-aspal" }, { x: 20, y: 22, tipe: "jalan-aspal" }, { x: 20, y: 21, tipe: "jalan-aspal" },
+];
+C.S.jembatan = [];
+C.initKendaraan();
+let trukTetapDiJalan = true, maksJarakTruk = 0;
+for (let i = 0; i < 800; i++) {
+  C.perbaruiKendaraan(0.1);
+  const truk = C.kendaraanVisual.find(k => k.tipe === "truk");
+  let dj = 1e9;
+  for (const j of C.S.jalan) dj = Math.min(dj, Math.hypot(truk.x - j.x, truk.y - j.y));
+  if (dj > maksJarakTruk) maksJarakTruk = dj;
+  if (dj > 0.75) { trukTetapDiJalan = false; break; }
+}
+cek("truk mengikuti loop jalan 800 tick tanpa keluar jalan", trukTetapDiJalan, "jarak maks " + maksJarakTruk.toFixed(3));
+// render jalan & jembatan baru tanpa error
+try { C.gambarPeta(); cek("render peta + jalan/jembatan baru (tanpa error)", true); }
+catch (e) { cek("render peta + jalan/jembatan baru (tanpa error)", false, e.message); }
+C.S.jalan = jalanLama; C.S.jembatan = jembLama;
 
 console.log(gagal === 0 ? "TEST_V13_OK" : "TEST_V13_GAGAL:" + gagal + " dari " + (lulus + gagal));
