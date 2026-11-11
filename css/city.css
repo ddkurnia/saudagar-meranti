@@ -104,6 +104,18 @@ button { font-family: inherit; cursor: pointer; }
 .btnIkon:hover { background: rgba(255,255,255,.25); }
 #btnToggleKiri, #btnToggleKanan { display: none; }
 
+/* v18-D: jam + kalender game di bar atas (selalu terlihat, ikut renderHUD) */
+#jamAtas {
+  display: flex; align-items: center; gap: 8px; flex: none;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1);
+  border-radius: 20px; padding: 5px 12px; white-space: nowrap;
+}
+#jamAtas .ikonFase { font-size: 22px; }
+#jamAtasHari { font-size: 12.5px; color: #dbe7f3; }
+#jamAtasJam { font-size: 16px; color: #fde68a; }
+#jamAtasFase { font-size: 12.5px; font-weight: 700; color: #a5f3c0; }
+#jamAtasCuaca { font-size: 12.5px; color: #dbe7f3; }
+
 /* Kolom kiri */
 #kolomKiri {
   position: absolute; left: 10px; top: 78px; bottom: 190px; z-index: 15;
@@ -112,6 +124,8 @@ button { font-family: inherit; cursor: pointer; }
 }
 #kolomKiri > * { pointer-events: auto; }
 #tglCuaca { display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
+/* v18-B: indikator fase siang/malam — ikon digeser vertikal via transform oleh perbaruiIkonFase() */
+.ikonFase { font-size: 20px; line-height: 1; transition: transform 0.3s linear; }
 .tglIkon { font-size: 22px; }
 .tglTeks { display: flex; flex-direction: column; line-height: 1.25; }
 .tglTeks b { font-size: 13px; }
@@ -229,7 +243,8 @@ button { font-family: inherit; cursor: pointer; }
 }
 #kontrolWaktu button:hover { background: rgba(255,255,255,.15); }
 #kontrolWaktu button.aktif { background: #16a34a; }
-#btnHari { background: linear-gradient(135deg, #e17055, #d63031) !important; }
+/* v18-D: tombol 0.5× dibuat selebar tombol lain supaya mudah diketuk */
+#kontrolWaktu #btnKec05 { min-width: 44px; }
 
 /* Menu bangun bawah */
 #menuBangun {
@@ -318,6 +333,11 @@ button { font-family: inherit; cursor: pointer; }
   #kolomKanan { width: 210px; top: 70px; bottom: 210px; }
   #panelKiri.tersembunyi, #panelKanan.tersembunyi { display: none; }
   .judulGame { display: none; }
+  /* v18-D: di layar kecil, tanggal di bar atas disembunyikan (jam + fase
+     + cuaca tetap terlihat); bar atas membungkus ke baris berikut bila perlu */
+  #jamAtasHari { display: none; }
+  #jamAtas { gap: 6px; padding: 4px 10px; }
+  #jamAtasJam { font-size: 14px; }
   /* Bar sumber daya bisa digeser horizontal (7 pil tidak muat di layar HP) */
   .sumberDaya { gap: 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   .sumberDaya::-webkit-scrollbar { display: none; }

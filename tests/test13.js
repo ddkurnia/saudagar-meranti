@@ -16,7 +16,7 @@ function buatCtx() {
 function buatEl(id) {
   return {
     id: id, style: {}, innerHTML: "", textContent: "",
-    dataset: {}, classList: (() => { const s = new Set(); return { add(c) { s.add(c); }, remove(c) { s.delete(c); }, toggle(c) { if (s.has(c)) s.delete(c); else s.add(c); }, contains(c) { return s.has(c); } }; })(),
+    dataset: {}, classList: (() => { const s = new Set(); return { add(c) { s.add(c); }, remove(c) { s.delete(c); }, toggle(c, f) { if (f === undefined) { if (s.has(c)) s.delete(c); else s.add(c); } else if (f) s.add(c); else s.delete(c); }, contains(c) { return s.has(c); } }; })(),
     addEventListener() {}, appendChild(c) { this.lastElementChild = c; }, lastElementChild: null, onclick: null,
     clientWidth: 800, clientHeight: 600,
     getContext: () => buatCtx(),
@@ -59,7 +59,7 @@ const src = fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-data
   + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-map.js", "utf8")
   + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city.js", "utf8");
 vm.runInContext(src, sandbox);
-for (const nama of ["S", "peta", "BANGUNAN", "BANGUNAN_MAP", "TEKNOLOGI_MAP", "KATEGORI", "MISI", "LEVEL_PERADABAN", "KOMODITAS", "JALAN", "JEMBATAN", "TERRAIN", "CITY", "mode", "hover", "terpilih", "kecepatan", "kamera", "jamVisual", "akumulasiHari", "wargaVisual", "kendaraanVisual", "TAB_BANGUN", "tilePratinjau", "jembatanMulai", "profilPemain", "TUTORIAL", "KECAMATAN_DEFS", "PULAU_DEFS", "VERSI_GAME"]) {
+for (const nama of ["S", "peta", "BANGUNAN", "BANGUNAN_MAP", "TEKNOLOGI_MAP", "KATEGORI", "MISI", "LEVEL_PERADABAN", "KOMODITAS", "JALAN", "JEMBATAN", "TERRAIN", "CITY", "mode", "hover", "terpilih", "kecepatan", "kamera", "jamVisual", "akumulasiHari", "waktuGame", "wargaVisual", "kendaraanVisual", "TAB_BANGUN", "tilePratinjau", "jembatanMulai", "profilPemain", "TUTORIAL", "KECAMATAN_DEFS", "PULAU_DEFS", "VERSI_GAME"]) {
   Object.defineProperty(sandbox, nama, { get: () => vm.runInContext(nama, sandbox), configurable: true });
 }
 listeners["DOMContentLoaded"]();
@@ -70,6 +70,10 @@ function cek(nama, kond, info) {
   else { gagal++; console.log("GAGAL", nama, info !== undefined ? "(" + info + ")" : ""); }
 }
 const C = sandbox;
+
+// v18-D: helper pengganti hariBerikutnya() yang DIHAPUS — majukan tepat
+// 1 hari game (1440 menit) dalam chunk <= 240 (cap majukanWaktu).
+function majuSatuHari() { for (let i = 0; i < 6; i++) C.majukanWaktu(240); }
 
 // v17: TERRAIN memakai `bisaBangun` (fallback ke `.bangun` lama bila ada).
 function bisaBangun(t) {
@@ -146,7 +150,7 @@ cek("uang berkurang Rp25.000, lalu +Rp10.000 hadiah misi rumah pertama", C.S.uan
 cek("misi rumah pertama selesai", !!C.S.misiSelesai["rumah-pertama"]);
 cek("bangunan dalam konstruksi (belum selesai)", C.S.bangunan.some(b => b.id === "rumah-sederhana" && !b.selesai));
 
-C.hariBerikutnya();
+majuSatuHari();
 cek("hari bertambah ke 2", C.S.hari === 2, C.S.hari);
 cek("rumah selesai setelah 1 hari", C.S.bangunan.filter(b => b.id === "rumah-sederhana").every(b => b.selesai));
 cek("penduduk tumbuh (ada rumah kosong)", C.S.penduduk.total > 4, C.S.penduduk.total);
@@ -194,7 +198,7 @@ if (lahanKebun) {
     C.bangunDi(defKilang, lahanKilang.x, lahanKilang.y, 0);
     C.S.penduduk.total = 60;
     C.S.bangunan.forEach(b => { b.selesai = true; b.progres = 1; });
-    C.hariBerikutnya(); C.hariBerikutnya(); C.hariBerikutnya();
+    majuSatuHari(); majuSatuHari(); majuSatuHari();
     cek("kebun menghasilkan tual", (C.S.komoditas.tual || 0) > 0 || (C.S.statistik.produksi.tual || 0) > 0);
     cek("kilang menghasilkan tepung", (C.S.statistik.produksi.tepung || 0) > 0, JSON.stringify(C.S.statistik.produksi));
   }
@@ -203,7 +207,7 @@ if (lahanKebun) {
 C.S.uang = 5000000;
 C.mulaiRiset("olah-sagu");
 cek("riset olah-sagu dimulai", C.S.riset && C.S.riset.id === "olah-sagu");
-C.hariBerikutnya(); C.hariBerikutnya();
+majuSatuHari(); majuSatuHari();
 cek("riset selesai setelah 2 hari", !!C.S.teknologi["olah-sagu"]);
 cek("pabrik mie terbuka setelah riset", C.cekBangun(C.BANGUNAN_MAP["pabrik-tepung"], 1, 1, 0).alasan !== "Butuh penelitian: Teknologi Olah Sagu.");
 
@@ -230,13 +234,16 @@ catch (e) { cek("render peta (smoke test, tanpa error)", false, e.message); }
 try { C.renderHUD(); C.renderMenuBangun(); C.renderPanelKiri(); C.renderPanelKanan(); cek("render UI (tanpa error)", true); }
 catch (e) { cek("render UI (tanpa error)", false, e.message); }
 
-// v13.1: jam dalam hari ikut tersimpan & dipulihkan
-C.S.akumulasi = 8000;
+// v13.1 (diperbarui v18-A): jam dalam hari ikut tersimpan & dipulihkan —
+// kini lewat waktuGame (bukan S.akumulasi langsung); cermin lama
+// S.akumulasi/akumulasiHari tetap disinkronkan dari waktuGame.
+vm.runInContext("waktuGame = hariGame() * 1440 + 22 * 60;", sandbox);
 C.simpan();
 const s2 = C.muat();
-cek("akumulasi jam tersimpan & termuat", s2 && s2.akumulasi === 8000, s2 && s2.akumulasi);
+cek("waktuGame tersimpan & termuat (22:00)", s2 && s2.waktuGame === C.waktuGame, s2 && s2.waktuGame);
+cek("akumulasi jam tersimpan & termuat (cermin 8000)", s2 && s2.akumulasi === 8000, s2 && s2.akumulasi);
 C.mulaiGame(false);
-cek("jam dalam hari dipulihkan setelah load (20:00, bukan 06:00)", Math.abs(C.jamVisual - 22) < 0.01, C.jamVisual);
+cek("jam dalam hari dipulihkan setelah load (22:00, bukan 06:00)", C.jamGame() === 22, C.jamGame());
 cek("akumulasi dipulihkan (8000)", C.akumulasiHari === 8000, C.akumulasiHari);
 
 
@@ -487,11 +494,20 @@ if (pantaiUtama && pantaiRangsang) {
   cek("jalin kerjasama berhasil (Rp100.000)", okK === true && C.S.uang === uangK - 100000);
   cek("kerjasama level 1 -> perdagangan +50%", C.perdaganganRute(C.peta.pulau[idxRangsang]) === 37500, C.perdaganganRute(C.peta.pulau[idxRangsang]));
   const kopraSebelum = C.S.komoditas.kopra || 0;
-  C.hariBerikutnya();
-  cek("perdagangan masuk rincian harian", (C.S.statistik.rincianHari.perdagangan || 0) === 37500, C.S.statistik.rincianHari.perdagangan);
+  // v18-C: uang perdagangan kini diakru per jam (Rp37.500/24 per jam) dan
+  // rincianHari adalah snapshot hari yang baru berakhir di tengah malam.
+  // Rute dibuka pukul 22:00, jadi hanya 2 jam (22:00, 23:00) yang masuk
+  // ke hari yang berakhir tengah malam itu: 2 x 37.500/24 = Rp3.125.
+  // (6 jam sisanya masuk ke rincianBerjalan hari berikutnya.)
+  const jamBukaRute = C.jamGame();
+  majuSatuHari();
+  cek("perdagangan masuk rincian harian (v18-C: akrual per jam, snapshot tengah malam)", (C.S.statistik.rincianHari.perdagangan || 0) === 37500 * (24 - jamBukaRute) / 24, C.S.statistik.rincianHari.perdagangan);
   cek("kiriman kopra dari Rangsang (+6)", (C.S.komoditas.kopra || 0) === kopraSebelum + 6, C.S.komoditas.kopra);
   // Feri bergerak bolak-balik
+  // v18-C: feri kini juga digerakkan majukanWaktu() selama maju 1 hari
+  // di atas, jadi t awal tidak tentu — set eksplisit sebelum menguji.
   vm.runInContext('kecepatan = 1;', sandbox);
+  C.S.ruteFeri[0].t = 0.5; C.S.ruteFeri[0].arah = 1;
   const tAwal = C.S.ruteFeri[0].t;
   C.perbaruiFeri(1);
   cek("feri bergerak (t bertambah)", C.S.ruteFeri[0].t > tAwal, C.S.ruteFeri[0].t);
@@ -591,12 +607,15 @@ if (bUji) {
   C.tanganiKetuk({ x: 5, y: 5 }, 0, false, { x: 0, y: 0 });
   cek("ketuk petak kosong jauh tetap memilih petak", !!C.terpilih && C.terpilih.jenis === "tile" && C.terpilih.x === 5 && C.terpilih.y === 5);
 }
-// v15.1.3: tombol "Hari berikutnya" memulai hari baru pukul 06:00
+// v15.1.3 (diperbarui v18-D): tombol "Hari berikutnya" SUDAH DIHAPUS dan
+// wrapper hariBerikutnya() juga DIHAPUS — tes memakai majuSatuHari()
+// (6x majukanWaktu(240) = 1440 menit). Jam TIDAK direset ke 06:00,
+// melainkan tetap di jam yang sama keesokan harinya.
 const hariAwal = C.S.hari;
-vm.runInContext('akumulasiHari = 8000; jamVisual = 22;', sandbox);
-C.hariBerikutnya();
-cek("hari berikutnya: jam direset ke 06:00", C.jamVisual === 6 && C.akumulasiHari === 0, "jam=" + C.jamVisual + " akumulasi=" + C.akumulasiHari);
-cek("hari berikutnya: hari bertambah 1", C.S.hari === hariAwal + 1);
+vm.runInContext('waktuGame = hariGame() * 1440 + 22 * 60;', sandbox);
+majuSatuHari();
+cek("maju 1 hari (v18-D): jam tetap 22:00 keesokan harinya", C.jamGame() === 22, "jam=" + C.jamGame());
+cek("maju 1 hari: hari bertambah 1", C.S.hari === hariAwal + 1);
 // v15.1.3: penghitung misi langsung diperbarui saat membangun jalan
 vm.runInContext('panelKiri = "misi"; var _panggilPanel = 0; var _asliPanel = renderPanelKiri; renderPanelKiri = function() { _panggilPanel++; return _asliPanel(); };', sandbox);
 const panggilSebelum = vm.runInContext('_panggilPanel', sandbox);
@@ -707,10 +726,10 @@ if (tJalan) {
   const ok = C.bangunJalanDi("jalan-tanah", tJalan.x, tJalan.y);
   cek("tutorial langkah 3 → 4 setelah membangun jalan", ok === true && C.S.tutorial.langkah === 4, "ok=" + ok + " langkah=" + C.S.tutorial.langkah);
 }
-// Langkah 4: majukan satu hari (pekerja direkrut di dermaga)
+// Langkah 4 (v18-D): cukup 120 menit game berlalu + pekerja bekerja (bukan 1 hari penuh)
 const hariSblm = C.S.hari;
-C.hariBerikutnya();
-cek("tutorial langkah 4 → 5 setelah hari berganti & pekerja bekerja", C.S.hari === hariSblm + 1 && C.S.tutorial.langkah === 5, "hari=" + C.S.hari + " langkah=" + C.S.tutorial.langkah);
+majuSatuHari();
+cek("tutorial langkah 4 → 5 setelah 120 menit game & pekerja bekerja", C.S.hari === hariSblm + 1 && C.S.tutorial.langkah === 5, "hari=" + C.S.hari + " langkah=" + C.S.tutorial.langkah);
 // Langkah 5: bangun kebun sagu
 const tKebun = cariTileKebun();
 cek("tutorial: ada lahan 2x2 valid untuk kebun sagu", !!tKebun);
@@ -791,8 +810,8 @@ const kecHarap = ["tebing-tinggi-barat", "tebing-tinggi", "tebing-tinggi-timur",
 // (a) konstanta, ukuran peta & cakupan kecamatan
 cek("CITY 480x320, seed 20261111", C.CITY.GRID_W === 480 && C.CITY.GRID_H === 320 && C.CITY.SEED === 20261111, C.CITY.GRID_W + "x" + C.CITY.GRID_H + " seed " + C.CITY.SEED);
 cek("CITY SAVE_KEY/SAVE_LAMA/PROFIL_KEY v17", C.CITY.SAVE_KEY === "merantiRisingWorldV1" && C.CITY.SAVE_LAMA === "saudagarSaguMerantiCityV1" && C.CITY.PROFIL_KEY === "merantiRisingProfilV1", C.CITY.SAVE_KEY + " / " + C.CITY.SAVE_LAMA + " / " + C.CITY.PROFIL_KEY);
-cek("VERSI_GAME v17", versiGame17 === "v17", versiGame17);
-cek("index.html memakai ?v=8/6/4/17", idxHtml.includes("css/city.css?v=8") && idxHtml.includes("js/city-data.js?v=6") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city.js?v=17"));
+cek("VERSI_GAME v18", versiGame17 === "v18", versiGame17);
+cek("index.html memakai ?v=9/7/4/18", idxHtml.includes("css/city.css?v=9") && idxHtml.includes("js/city-data.js?v=7") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city.js?v=18"));
 cek("PULAU_DEFS 27 pulau", !!pulauDefs17 && pulauDefs17.length === 27, pulauDefs17 ? pulauDefs17.length : "tidak ada");
 cek("KECAMATAN_DEFS 9 kecamatan", kecIds.length === 9, kecIds.length);
 cek("9 id kecamatan sesuai kontrak", kecHarap.every(id => kecIds.includes(id)), kecIds.join(","));
@@ -1017,5 +1036,399 @@ try {
   });
   cek("panel Kecamatan menampilkan 9 kecamatan", kecIds.length === 9 && hilangKec.length === 0, hilangKec.length ? "hilang: " + hilangKec.join(", ") : "html " + htmlKec.length + " karakter");
 } catch (e) { cek("panel Kecamatan menampilkan 9 kecamatan", false, e.message); }
+
+// ---- v18-A: Time Engine + Kalender + Save ----
+// (a) laju waktu: 1 detik nyata = 0,5 menit game pada 1x
+cek("v18-A: laju 1x = 0,5 menit game/detik nyata", C.menitGamePerDetikNyata(1) === 0.5);
+cek("v18-A: 2880 detik nyata pada 1x = 1440 menit game (1 hari)", C.menitGamePerDetikNyata(1) * 2880 === 1440);
+cek("v18-A: laju 0.5x = 0,25 menit/detik", C.menitGamePerDetikNyata(0.5) === 0.25);
+cek("v18-A: laju 2x = 1 menit/detik", C.menitGamePerDetikNyata(2) === 1);
+// majukanWaktu memproses maks 240 langkah/panggilan (anti-freeze); kelebihan dibuang & dikembalikan
+vm.runInContext("waktuGame = 360;", sandbox); // 06:00 hari ke-0
+const wCap0 = C.waktuGame;
+const dibuangCap = C.majukanWaktu(300);
+cek("v18-A: majukanWaktu(300) memproses 240 langkah, sisa 60 dibuang (cap)", C.waktuGame - wCap0 === 240 && dibuangCap === 60, "maju=" + (C.waktuGame - wCap0) + " dibuang=" + dibuangCap);
+// Lanjutkan sampai genap 1 hari game dari 06:00 (chunk <= 240/panggilan)
+let sisaHari = 1440 - 240, guardA = 0;
+while (sisaHari > 0 && guardA++ < 20) { const w0 = C.waktuGame; C.majukanWaktu(Math.min(240, sisaHari)); sisaHari -= (C.waktuGame - w0); }
+cek("v18-A: 1440 menit game = hariGame bertambah 1 (06:00 hari ke-1)", C.hariGame() === 1 && C.jamGame() === 6 && C.menitGame() === 0, "hari=" + C.hariGame() + " jam=" + C.jamGame() + ":" + C.menitGame());
+cek("v18-A: S.hari ikut tersinkron (Hari 2)", C.S.hari === 2, C.S.hari);
+// Turunan waktu
+vm.runInContext("waktuGame = 450;", sandbox);
+cek("v18-A: turunan waktu 07:30 hari ke-0", C.jamGame() === 7 && C.menitGame() === 30 && C.jamDesimal() === 7.5 && C.hariGame() === 0, C.jamGame() + ":" + C.menitGame());
+// (b) pause: kecepatan 0 -> tick tidak memajukan waktu
+C.aturKecepatan(0);
+cek("v18-A: aturKecepatan(0) = pause", C.kecepatan === 0);
+const wPause = C.waktuGame;
+C.tickWaktuGame(10);
+cek("v18-A: pause -> tick 10 detik nyata tidak memajukan waktu", C.waktuGame === wPause);
+C.aturKecepatan(1);
+C.tickWaktuGame(10);
+cek("v18-A: 1x -> tick 10 detik nyata = +5 menit game", C.waktuGame === wPause + 5, C.waktuGame - wPause);
+cek("v18-A: aturKecepatan(3) tidak valid -> kembali ke 1", (() => { C.aturKecepatan(3); return C.kecepatan === 1; })());
+cek("v18-A: aturKecepatan(0.5) valid + tombol btnKec05 aktif", (() => { C.aturKecepatan(0.5); return C.kecepatan === 0.5 && C.document.getElementById("btnKec05").classList.contains("aktif"); })());
+C.aturKecepatan(1);
+// (c) 0.5x/2x mengalikan laju (60 detik nyata -> 15 / 60 menit game)
+C.aturKecepatan(0.5);
+const w05 = C.waktuGame;
+C.tickWaktuGame(60);
+cek("v18-A: 0.5x -> 60 detik nyata = +15 menit game", C.waktuGame === w05 + 15, C.waktuGame - w05);
+C.aturKecepatan(2);
+const w2 = C.waktuGame;
+C.tickWaktuGame(60);
+cek("v18-A: 2x -> 60 detik nyata = +60 menit game", C.waktuGame === w2 + 60, C.waktuGame - w2);
+C.aturKecepatan(1);
+// (d) kalender: hari ke-0 = Rabu 11 Nov 2026; hari ke-30 = Jumat 11 Des 2026
+vm.runInContext("waktuGame = 360;", sandbox);
+const tg0 = C.tanggalGame();
+cek("v18-A: hari ke-0 = Rabu, 11 November 2026", tg0.hariKe === 0 && tg0.tanggal === 11 && tg0.bulan === 10 && tg0.tahun === 2026 && tg0.namaHari === "Rabu" && tg0.namaBulan === "November", JSON.stringify(tg0));
+cek("v18-A: teksTanggalGame hari ke-0", C.teksTanggalGame() === "Rabu, 11 November 2026", C.teksTanggalGame());
+vm.runInContext("waktuGame = 30 * 1440 + 360;", sandbox);
+const tg30 = C.tanggalGame();
+cek("v18-A: hari ke-30 = Jumat, 11 Desember 2026", tg30.hariKe === 30 && tg30.tanggal === 11 && tg30.bulan === 11 && tg30.tahun === 2026 && tg30.namaHari === "Jumat", JSON.stringify(tg30));
+vm.runInContext("waktuGame = 51 * 1440 + 360;", sandbox);
+const tg51 = C.tanggalGame();
+cek("v18-A: rollover tahun: hari ke-51 = 1 Januari 2027", tg51.tanggal === 1 && tg51.bulan === 0 && tg51.tahun === 2027, JSON.stringify(tg51));
+cek("v18-A: peluangHujan Nov=0.45, Jul=0.15, Apr=0.30", C.peluangHujan(10) === 0.45 && C.peluangHujan(6) === 0.15 && C.peluangHujan(3) === 0.30);
+cek("v18-A: suhuGame dalam 27-32°C setahun penuh", (() => { for (let d = 0; d < 365; d += 7) { vm.runInContext("waktuGame = " + (d * 1440 + 360) + ";", sandbox); const s = C.suhuGame(); if (s < 27 || s > 32) return false; } return true; })());
+cek("v18-A: cuacaBaru salah satu dari Cerah/Berawan/Hujan", ["Cerah", "Berawan", "Hujan"].includes(C.cuacaBaru()));
+// (e) save/load: waktuGame 2500 tetap 2500 setelah muat ulang (tidak reset ke 360)
+vm.runInContext("waktuGame = 2500;", sandbox);
+C.simpan();
+const sW = C.muat();
+cek("v18-A: waktuGame tersimpan (2500)", sW && sW.waktuGame === 2500, sW && sW.waktuGame);
+cek("v18-A: petaVersi tersimpan = 4 & kecepatan tersimpan", sW && sW.petaVersi === 4 && sW.kecepatan === 1, sW && (sW.petaVersi + "/" + sW.kecepatan));
+C.mulaiGame(false);
+cek("v18-A: waktuGame tetap 2500 setelah muat ulang", C.waktuGame === 2500, C.waktuGame);
+cek("v18-A: tidak reset ke 06:00 (jam 17:40)", C.jamGame() === 17 && C.menitGame() === 40, C.jamGame() + ":" + C.menitGame());
+// (f) migrasi v17: save petaVersi 3 (hari=5, akumulasi setengah hari) -> waktuGame = 4*1440 + 18*60
+const saveV17 = JSON.parse(store.get(C.CITY.SAVE_KEY));
+saveV17.petaVersi = 3; delete saveV17.waktuGame; saveV17.hari = 5; saveV17.akumulasi = 6000;
+store.set(C.CITY.SAVE_KEY, JSON.stringify(saveV17));
+cek("v18-A: migrasiWaktuV17(5 hari, akumulasi 6000) = 6840", C.migrasiWaktuV17(saveV17) === 6840, C.migrasiWaktuV17(saveV17));
+C.mulaiGame(false);
+cek("v18-A: migrasi v17 -> waktuGame 6840 (jam 18:00, hari ke-4)", C.waktuGame === 6840 && C.jamGame() === 18 && C.hariGame() === 4, C.waktuGame + " jam=" + C.jamGame());
+cek("v18-A: migrasi v17 -> S.hari 5 & petaVersi 4", C.S.hari === 5 && C.S.petaVersi === 4, C.S.hari + "/" + C.S.petaVersi);
+cek("v18-A: migrasi tanpa akumulasi -> default 06:00", C.migrasiWaktuV17({ petaVersi: 3, hari: 2 }) === 1440 + 360, C.migrasiWaktuV17({ petaVersi: 3, hari: 2 }));
+// v17.1 tetap utuh (modul A tidak boleh merusaknya)
+const srcMapA = fs.readFileSync(path.join(ROOT, "js/city-map.js"), "utf8");
+const srcCityA = fs.readFileSync(path.join(ROOT, "js/city.js"), "utf8");
+cek("v17.1: ambang mangrove 0.52 di city-map.js", srcMapA.includes("> 0.52"));
+cek("v17.1: helper cariTileKebunSagu ada", srcCityA.includes("function cariTileKebunSagu"));
+cek("v17.1: panel legenda terrain ada", srcCityA.includes("Peta — Legenda Terrain"));
+cek("v17.1: auto-pan tutorial langkah 6 memakai cariTileKebunSagu", srcCityA.includes("cariTileKebunSagu()"));
+cek("v18-A: kontrol waktu baru di index.html (btnKec05, tanpa btnHari/btnKec3)", idxHtml.includes('id="btnKec05"') && !idxHtml.includes('id="btnHari"') && !idxHtml.includes('id="btnKec3"'));
+cek("v18-D: VERSI_GAME naik ke v18 (modul akhir)", C.VERSI_GAME === "v18", C.VERSI_GAME);
+// Kembalikan ke permainan baru yang bersih setelah semua uji waktu
+C.mulaiGame(true);
+cek("v18-A: permainan baru mulai 06:00 hari ke-0", C.waktuGame === 360 && C.hariGame() === 0 && C.jamGame() === 6, C.waktuGame);
+
+// ---- v18-B: Day/Night + Rutinitas NPC ----
+// (a) fase benar pada jam kunci
+cek("v18-B: fase 06:00 = Sunrise", C.faseSiangMalam(6).nama === "Sunrise", C.faseSiangMalam(6).nama);
+cek("v18-B: fase 09:00 = Morning", C.faseSiangMalam(9).nama === "Morning", C.faseSiangMalam(9).nama);
+cek("v18-B: fase 12:00 = Noon", C.faseSiangMalam(12).nama === "Noon", C.faseSiangMalam(12).nama);
+cek("v18-B: fase 15:00 = Afternoon", C.faseSiangMalam(15).nama === "Afternoon", C.faseSiangMalam(15).nama);
+cek("v18-B: fase 18:00 = Sunset", C.faseSiangMalam(18).nama === "Sunset", C.faseSiangMalam(18).nama);
+cek("v18-B: fase 00:00 = Night", C.faseSiangMalam(0).nama === "Night", C.faseSiangMalam(0).nama);
+cek("v18-B: fase 03:00 = Night", C.faseSiangMalam(3).nama === "Night", C.faseSiangMalam(3).nama);
+cek("v18-B: fase 05:00 = Sunrise (batas)", C.faseSiangMalam(5).nama === "Sunrise", C.faseSiangMalam(5).nama);
+cek("v18-B: fase 19:00 = Night (batas)", C.faseSiangMalam(19).nama === "Night", C.faseSiangMalam(19).nama);
+// (b) kegelapan: 12:00 = 0, 00:00 > 0,7, transisi halus 06:00 -> 06:30 -> 07:00
+cek("v18-B: kegelapan 12:00 = 0", C.faseSiangMalam(12).kegelapan === 0);
+cek("v18-B: kegelapan 00:00 = 0,85 (> 0,7)", C.faseSiangMalam(0).kegelapan > 0.7, C.faseSiangMalam(0).kegelapan);
+cek("v18-B: kegelapan 07:00 = 0 & 17:00 = 0", C.faseSiangMalam(7).kegelapan === 0 && C.faseSiangMalam(17).kegelapan === 0);
+cek("v18-B: kegelapan 18:00 = 0,425 (tengah sunset)", Math.abs(C.faseSiangMalam(18).kegelapan - 0.425) < 1e-9, C.faseSiangMalam(18).kegelapan);
+cek("v18-B: transisi halus — 06:30 di antara 06:00 dan 07:00", (() => { const a = C.faseSiangMalam(6).kegelapan, b = C.faseSiangMalam(6.5).kegelapan, c = C.faseSiangMalam(7).kegelapan; return a > b && b > c; })(), C.faseSiangMalam(6).kegelapan + "/" + C.faseSiangMalam(6.5).kegelapan + "/" + C.faseSiangMalam(7).kegelapan);
+cek("v18-B: kegelapan monoton naik 17->19 & turun 05->07", (() => {
+  let naik = true, turun = true, sblm = C.faseSiangMalam(17).kegelapan;
+  for (let j = 17.25; j <= 19; j += 0.25) { const k = C.faseSiangMalam(j).kegelapan; if (k < sblm - 1e-9) naik = false; sblm = k; }
+  sblm = C.faseSiangMalam(5).kegelapan;
+  for (let j = 5.25; j <= 7; j += 0.25) { const k = C.faseSiangMalam(j).kegelapan; if (k > sblm + 1e-9) turun = false; sblm = k; }
+  return naik && turun;
+})());
+cek("v18-B: kegelapanSaatIni mengikuti waktuGame", (() => {
+  vm.runInContext("waktuGame = 0;", sandbox); const gelapMalam = C.kegelapanSaatIni();
+  vm.runInContext("waktuGame = 12 * 60;", sandbox); const gelapSiang = C.kegelapanSaatIni();
+  return gelapMalam > 0.7 && gelapSiang === 0;
+})());
+// (c) zonaTujuanWarga: bobot tertinggi per jam
+cek("v18-B: zona 08:00 — kerja tertinggi", (() => { const z = C.zonaTujuanWarga(8); return z.kerja > z.rumah && z.kerja > z.sosial; })());
+cek("v18-B: zona 22:00 — rumah tertinggi", (() => { const z = C.zonaTujuanWarga(22); return z.rumah > z.kerja && z.rumah > z.sosial; })());
+cek("v18-B: zona 18:00 — sosial tertinggi", (() => { const z = C.zonaTujuanWarga(18); return z.sosial > z.kerja && z.sosial > z.rumah; })());
+cek("v18-B: zona 06:00 — rumah tertinggi (bangun)", (() => { const z = C.zonaTujuanWarga(6); return z.rumah > z.kerja && z.rumah > z.sosial; })());
+cek("v18-B: bobot zona berjumlah 1 di semua jam", (() => { for (const j of [0, 6, 8, 12, 18, 22]) { const z = C.zonaTujuanWarga(j); if (Math.abs(z.kerja + z.rumah + z.sosial - 1) > 1e-9) return false; } return true; })());
+cek("v18-B: wargaAktifBergerak siang selalu true", C.wargaAktifBergerak(C.wargaVisual[0], 12) === true);
+// pilihZonaWarga: pagi menuju tempat kerja terdekat (dermaga awal, kerja>0)
+vm.runInContext("waktuGame = 8 * 60;", sandbox); // 08:00
+const wUji = C.wargaVisual[0];
+let kerjaHit = 0;
+for (let i = 0; i < 40; i++) { C.pilihZonaWarga(wUji); if (wUji.zona === "kerja") kerjaHit++; }
+cek("v18-B: pilihZonaWarga 08:00 sering memilih zona kerja", kerjaHit >= 20, kerjaHit + "/40");
+const dermagaUji = C.S.bangunan.find(b => b.id === "dermaga");
+cek("v18-B: target zona kerja = dermaga (satu-satunya tempat kerja awal)", (() => {
+  for (let i = 0; i < 40; i++) { C.pilihZonaWarga(wUji); if (wUji.zona === "kerja") return wUji.targetX === dermagaUji.x && wUji.targetY === dermagaUji.y; }
+  return false;
+})());
+// (d) pause: warga/truk diam, jam/fase tidak berubah
+vm.runInContext("waktuGame = 12 * 60;", sandbox); // siang, warga aktif
+C.aturKecepatan(0);
+const posW0 = { x: wUji.x, y: wUji.y };
+C.perbaruiWarga(0.5);
+cek("v18-B: pause — perbaruiWarga tidak menggerakkan warga", wUji.x === posW0.x && wUji.y === posW0.y);
+const trukUji = C.kendaraanVisual.find(k => k.tipe === "truk");
+const posT0 = trukUji ? { x: trukUji.x, y: trukUji.y } : null;
+C.perbaruiKendaraan(0.5);
+cek("v18-B: pause — truk tidak bergerak", !trukUji || (trukUji.x === posT0.x && trukUji.y === posT0.y));
+const wPauseB = C.waktuGame;
+C.tickWaktuGame(10);
+cek("v18-B: pause — jam/fase tidak berubah", C.waktuGame === wPauseB && C.faseSiangMalam(C.jamDesimal()).nama === "Noon");
+C.aturKecepatan(1);
+// malam: warga non-aktif diam, warga aktif tetap bergerak
+vm.runInContext("waktuGame = 22 * 60;", sandbox);
+wUji.aktifMalam = false;
+const posM0 = { x: wUji.x, y: wUji.y };
+for (let i = 0; i < 10; i++) C.perbaruiWarga(0.5);
+cek("v18-B: malam — warga non-aktif diam di tempat", wUji.x === posM0.x && wUji.y === posM0.y);
+wUji.aktifMalam = true;
+let bergerakMalam = false;
+for (let i = 0; i < 10; i++) { const px = wUji.x, py = wUji.y; C.perbaruiWarga(0.5); if (wUji.x !== px || wUji.y !== py) bergerakMalam = true; }
+cek("v18-B: malam — warga aktif tetap bergerak", bergerakMalam);
+// ikon fase di HUD mengikuti jam
+vm.runInContext("waktuGame = 12 * 60;", sandbox);
+C.perbaruiIkonFase();
+cek("v18-B: ikonFase siang = ☀️", C.document.getElementById("ikonFase").textContent === "☀️", C.document.getElementById("ikonFase").textContent);
+vm.runInContext("waktuGame = 0;", sandbox);
+C.perbaruiIkonFase();
+cek("v18-B: ikonFase malam = 🌙", C.document.getElementById("ikonFase").textContent === "🌙", C.document.getElementById("ikonFase").textContent);
+vm.runInContext("waktuGame = 6 * 60;", sandbox);
+C.perbaruiIkonFase();
+cek("v18-B: ikonFase sunrise = 🌅", C.document.getElementById("ikonFase").textContent === "🌅", C.document.getElementById("ikonFase").textContent);
+// (e) render smoke test: gambarPeta tengah malam / tengah hari / senja tanpa error
+try { vm.runInContext("waktuGame = 0;", sandbox); C.gambarPeta(); cek("v18-B: gambarPeta tengah malam (lampu + tint gelap) tanpa error", true); }
+catch (e) { cek("v18-B: gambarPeta tengah malam (lampu + tint gelap) tanpa error", false, e.message); }
+try { vm.runInContext("waktuGame = 12 * 60;", sandbox); C.gambarPeta(); cek("v18-B: gambarPeta tengah hari tanpa error", true); }
+catch (e) { cek("v18-B: gambarPeta tengah hari tanpa error", false, e.message); }
+try { vm.runInContext("waktuGame = 18 * 60;", sandbox); C.gambarPeta(); cek("v18-B: gambarPeta senja (18:00) tanpa error", true); }
+catch (e) { cek("v18-B: gambarPeta senja (18:00) tanpa error", false, e.message); }
+// sumber kode: boolean malam di render sudah diganti kegelapan; lampu & ikon ada
+const srcCityB = fs.readFileSync(path.join(ROOT, "js/city.js"), "utf8");
+cek("v18-B: tidak ada lagi boolean malam di gambarPeta", !srcCityB.includes("const malam = jamDesimal()"));
+cek("v18-B: gambarLampuMalam ada & dipanggil dari gambarPeta", srcCityB.includes("function gambarLampuMalam") && srcCityB.includes("gambarLampuMalam(lebar, tinggi, gelap)"));
+cek("v18-B: ikonFase ada di index.html", idxHtml.includes('id="ikonFase"'));
+// (f) v17.1 tetap jalan
+let mangroveHitung = 0;
+for (const baris of C.peta.terrain) for (const t of baris) if (t === "mangrove") mangroveHitung++;
+cek("v18-B: v17.1 mangrove > 1000 petak", mangroveHitung > 1000, mangroveHitung);
+const tkSagu = C.cariTileKebunSagu();
+cek("v18-B: v17.1 cariTileKebunSagu menemukan petak valid", !!tkSagu && C.cekBangun(C.BANGUNAN_MAP["kebun-sagu"], tkSagu.x, tkSagu.y, 0).ok, JSON.stringify(tkSagu));
+cek("v18-B: v17.1 legenda terrain masih ada", srcCityB.includes("Peta — Legenda Terrain"));
+// ---- v18-C: Ekonomi & Konstruksi Berbasis Jam Game + Feri ----
+// (a) konstruksi rumah selesai dalam 4 jam game (bukan 1 hari)
+C.mulaiGame(true);
+C.aturKecepatan(1);
+vm.runInContext("waktuGame = 360;", sandbox); // 06:00 hari ke-0
+const tRumahC = cariTileRumah();
+cek("v18-C: ada petak valid untuk rumah (uji konstruksi per jam)", !!tRumahC, JSON.stringify(tRumahC));
+if (tRumahC) {
+  const okRumahC = C.bangunDi(C.BANGUNAN_MAP["rumah-sederhana"], tRumahC.x, tRumahC.y, 0);
+  cek("v18-C: rumah mulai dibangun", okRumahC === true);
+  const rumahC = C.S.bangunan.find(b => b.id === "rumah-sederhana" && b.x === tRumahC.x && b.y === tRumahC.y);
+  cek("v18-C: progres awal 0 & belum selesai", !!rumahC && rumahC.progres === 0 && rumahC.selesai === false);
+  const xpSblmSelesai = C.S.xp;
+  C.majukanWaktu(120); // 2 jam game
+  cek("v18-C: progres 0,5 setelah 2 jam game", Math.abs(rumahC.progres - 0.5) < 1e-9, rumahC.progres);
+  cek("v18-C: rumah belum selesai setelah 2 jam", rumahC.selesai === false);
+  C.majukanWaktu(120); // total 4 jam game
+  cek("v18-C: rumah selesai tepat setelah 4 jam game", rumahC.selesai === true && rumahC.progres === 1, rumahC.progres + "/" + rumahC.selesai);
+  cek("v18-C: XP +10 saat konstruksi selesai", C.S.xp === xpSblmSelesai + 10, C.S.xp - xpSblmSelesai);
+}
+// (b) durasi efektif: teknologi beton & ketersediaan pekerja
+cek("v18-C: durasi rumah-susun tanpa riset beton = 24 jam", C.durasiKonstruksiEfektif(C.BANGUNAN_MAP["rumah-susun"], null) === 24, C.durasiKonstruksiEfektif(C.BANGUNAN_MAP["rumah-susun"], null));
+vm.runInContext('S.teknologi["konstruksi-beton"] = true;', sandbox);
+cek("v18-C: durasi rumah-susun dengan riset beton = 19,2 jam (x0,8)", Math.abs(C.durasiKonstruksiEfektif(C.BANGUNAN_MAP["rumah-susun"], null) - 19.2) < 1e-9, C.durasiKonstruksiEfektif(C.BANGUNAN_MAP["rumah-susun"], null));
+cek("v18-C: riset beton tidak memengaruhi bangunan non-beton (rumah-sederhana tetap 4 jam)", C.durasiKonstruksiEfektif(C.BANGUNAN_MAP["rumah-sederhana"], null) === 4);
+vm.runInContext('delete S.teknologi["konstruksi-beton"];', sandbox);
+C.mulaiGame(true);
+C.S.penduduk.total = 4; // angkatan 2, dermaga butuh 2 -> menganggur 0
+cek("v18-C: durasi kilang (butuh 8 pekerja) tanpa pekerja menganggur = 96 jam (x4)", C.durasiKonstruksiEfektif(C.BANGUNAN_MAP["kilang-sagu"], null) === 96, C.durasiKonstruksiEfektif(C.BANGUNAN_MAP["kilang-sagu"], null));
+C.S.penduduk.total = 60; // angkatan 33, menganggur 31 >= 8
+cek("v18-C: durasi kilang dengan pekerja cukup = 24 jam", C.durasiKonstruksiEfektif(C.BANGUNAN_MAP["kilang-sagu"], null) === 24, C.durasiKonstruksiEfektif(C.BANGUNAN_MAP["kilang-sagu"], null));
+// (c) ekonomi per jam = 1/24 tarif harian: 24 jam game = 1 hari lama.
+// Skenario terkendali (tanpa produksi/pasar/pelabuhan/rute): penduduk 4
+// stabil (kapasitas rumah 4, bahagia 57) -> pajak Rp800/hari, upkeep
+// Rp2.500/hari (dermaga+rumah), gaji Rp1.000/hari (2 staf dermaga).
+C.mulaiGame(true);
+C.aturKecepatan(1);
+vm.runInContext("waktuGame = 360;", sandbox);
+cek("v18-C: skenario ekonomi: penduduk awal 4", C.S.penduduk.total === 4);
+const uang0C = C.S.uang;
+for (let i = 0; i < 6; i++) C.majukanWaktu(240); // 6 x 240 menit = 24 jam game
+cek("v18-C: 24 jam game = 1 hari berlalu", C.hariGame() === 1 && C.jamGame() === 6, "hari=" + C.hariGame() + " jam=" + C.jamGame());
+cek("v18-C: delta uang 24 jam = Rp800 - Rp2.500 - Rp1.000 = -Rp2.700 (toleransi Rp1)", Math.abs((C.S.uang - uang0C) - (-2700)) < 1, "delta=" + (C.S.uang - uang0C));
+cek("v18-C: rincianHari snapshot (18 jam sebelum tengah malam): pajak Rp600", Math.abs((C.S.statistik.rincianHari.pajak || 0) - 600) < 1, C.S.statistik.rincianHari.pajak);
+cek("v18-C: rincianHari snapshot: pengeluaran Rp2.625 (18 jam)", Math.abs((C.S.statistik.pengeluaranHari || 0) - 2625) < 1, C.S.statistik.pengeluaranHari);
+cek("v18-C: S.uang boleh float internal, rp() tetap membulatkan", C.rp(C.S.uang) === "Rp" + Math.round(C.S.uang).toLocaleString("id-ID"), C.rp(C.S.uang));
+// Produksi fraksional: kebun sagu 3 tual/hari -> 3 tual setelah 24 jam game.
+// Cuaca dikunci Cerah agar pengali hujan (x1,2) tidak mengacaukan hitungan.
+vm.runInContext("cuacaBaru = function() { return 'Cerah'; };", sandbox);
+C.mulaiGame(true);
+C.aturKecepatan(1);
+vm.runInContext("waktuGame = 360;", sandbox);
+C.S.bangunan.push({ id: "kebun-sagu", x: 200, y: 200, rot: 0, selesai: true, progres: 1 });
+C.S.penduduk.total = 60; // angkatan 33 >= 5 pekerja (dermaga 2 + kebun 3) -> eff 1
+C.majukanWaktu(240);
+cek("v18-C: produksi fraksional: setelah 4 jam, tual 0 + akumulator 0,5", C.S.komoditas.tual === 0 && Math.abs((C.S.akumulasiProduksi.tual || 0) - 0.5) < 1e-9, "tual=" + C.S.komoditas.tual + " akum=" + C.S.akumulasiProduksi.tual);
+for (let i = 0; i < 5; i++) C.majukanWaktu(240); // total 24 jam game
+cek("v18-C: kebun sagu 3 tual/hari -> 3 tual setelah 24 jam game", Math.abs((C.S.komoditas.tual || 0) - 3) < 0.01, C.S.komoditas.tual);
+cek("v18-C: akumulator tual hampir kosong setelah genap 3 unit", Math.abs(C.S.akumulasiProduksi.tual || 0) < 0.01, C.S.akumulasiProduksi.tual);
+cek("v18-C: statistik produksi tual = 3", (C.S.statistik.produksi.tual || 0) === 3, C.S.statistik.produksi.tual);
+cek("v18-C: S.komoditas tetap integer", Number.isInteger(C.S.komoditas.tual));
+// (d) pause menghentikan konstruksi + produksi + feri
+C.mulaiGame(true);
+C.aturKecepatan(1);
+vm.runInContext("waktuGame = 360;", sandbox);
+const tRumahP = cariTileRumah();
+if (tRumahP) {
+  C.bangunDi(C.BANGUNAN_MAP["rumah-sederhana"], tRumahP.x, tRumahP.y, 0);
+  const rumahP = C.S.bangunan.find(b => b.id === "rumah-sederhana" && b.x === tRumahP.x && b.y === tRumahP.y);
+  const uangP = C.S.uang, wP = C.waktuGame;
+  C.aturKecepatan(0);
+  C.tickWaktuGame(10);
+  cek("v18-C: pause -> tick 10 detik tidak memajukan waktu", C.waktuGame === wP);
+  cek("v18-C: pause -> progres konstruksi tidak berubah", rumahP.progres === 0);
+  cek("v18-C: pause -> uang tidak berubah", C.S.uang === uangP);
+  C.aturKecepatan(1);
+}
+// (e) 0.5x/2x mengalikan laju konstruksi
+C.mulaiGame(true);
+C.aturKecepatan(1);
+vm.runInContext("waktuGame = 360;", sandbox);
+const tRumahK = cariTileRumah();
+if (tRumahK) {
+  C.bangunDi(C.BANGUNAN_MAP["rumah-sederhana"], tRumahK.x, tRumahK.y, 0);
+  const rumahK = C.S.bangunan.find(b => b.id === "rumah-sederhana" && b.x === tRumahK.x && b.y === tRumahK.y);
+  C.aturKecepatan(0.5);
+  C.tickWaktuGame(120); // 120 detik nyata x 0,25 = 30 menit game
+  cek("v18-C: 0.5x -> 120 detik nyata = progres 0,125 (30 menit dari 240)", Math.abs(rumahK.progres - 0.125) < 1e-9, rumahK.progres);
+  C.aturKecepatan(2);
+  C.tickWaktuGame(120); // 120 detik nyata x 1 = 120 menit game
+  cek("v18-C: 2x -> 120 detik nyata = progres 0,625 (+120 menit)", Math.abs(rumahK.progres - 0.625) < 1e-9, rumahK.progres);
+  C.aturKecepatan(1);
+}
+// (f) feri berbasis menit game + berhenti saat pause
+C.mulaiGame(true);
+C.aturKecepatan(1);
+vm.runInContext("waktuGame = 360;", sandbox);
+C.S.ruteFeri.push({ id: "rute-uji", pulauId: "rangsang", dari: { x: 0, y: 0 }, ke: { x: 10, y: 10 }, t: 0, arah: 1 });
+C.majukanWaktu(12); // 12 menit game dari 12,5 menit seberang
+cek("v18-C: feri setelah 12 menit game: t = 0,96", Math.abs(C.S.ruteFeri[0].t - 0.96) < 1e-9 && C.S.ruteFeri[0].arah === 1, C.S.ruteFeri[0].t);
+C.majukanWaktu(1); // 13 menit game -> sampai seberang, balik arah
+cek("v18-C: feri sampai seberang setelah 12,5 menit game (t=1, arah=-1)", C.S.ruteFeri[0].t === 1 && C.S.ruteFeri[0].arah === -1, C.S.ruteFeri[0].t + "/" + C.S.ruteFeri[0].arah);
+C.S.ruteFeri[0].t = 0.5; C.S.ruteFeri[0].arah = 1;
+C.aturKecepatan(0);
+C.tickWaktuGame(10);
+cek("v18-C: pause -> feri berhenti (t tetap 0,5)", C.S.ruteFeri[0].t === 0.5);
+C.aturKecepatan(1);
+cek("v18-C: perbaruiFeri lama mendelegasikan (1 detik nyata = 0,5 menit game)", (() => { C.S.ruteFeri[0].t = 0.5; C.S.ruteFeri[0].arah = 1; C.perbaruiFeri(1); return Math.abs(C.S.ruteFeri[0].t - 0.54) < 1e-9; })(), C.S.ruteFeri[0].t);
+// (g) save/load: progres fraksional & akumulator produksi tersimpan
+C.mulaiGame(true);
+C.aturKecepatan(1);
+vm.runInContext("waktuGame = 360;", sandbox);
+const tRumahS = cariTileRumah();
+if (tRumahS) {
+  C.bangunDi(C.BANGUNAN_MAP["rumah-sederhana"], tRumahS.x, tRumahS.y, 0);
+  C.majukanWaktu(120); // progres 0,5
+  C.simpan();
+  const sG = C.muat();
+  const rumahSimpan = sG && sG.bangunan.find(b => b.id === "rumah-sederhana" && b.x === tRumahS.x && b.y === tRumahS.y);
+  cek("v18-C: save/load: progres 0,5 tersimpan", !!rumahSimpan && Math.abs(rumahSimpan.progres - 0.5) < 1e-9, rumahSimpan && rumahSimpan.progres);
+  C.mulaiGame(false);
+  const rumahMuat = C.S.bangunan.find(b => b.id === "rumah-sederhana" && b.x === tRumahS.x && b.y === tRumahS.y);
+  cek("v18-C: save/load: progres 0,5 pulih setelah muat ulang", !!rumahMuat && Math.abs(rumahMuat.progres - 0.5) < 1e-9 && rumahMuat.selesai === false, rumahMuat && rumahMuat.progres);
+}
+C.mulaiGame(true);
+C.aturKecepatan(1);
+vm.runInContext("waktuGame = 360;", sandbox);
+C.S.bangunan.push({ id: "kebun-sagu", x: 200, y: 200, rot: 0, selesai: true, progres: 1 });
+C.S.penduduk.total = 60;
+C.majukanWaktu(60); // 1 jam game -> akumulator tual 0,125
+cek("v18-C: save/load: akumulator tual 0,125 setelah 1 jam", Math.abs((C.S.akumulasiProduksi.tual || 0) - 0.125) < 1e-9, C.S.akumulasiProduksi.tual);
+C.simpan();
+const sA = C.muat();
+cek("v18-C: save/load: akumulator tersimpan", !!sA && Math.abs((sA.akumulasiProduksi.tual || 0) - 0.125) < 1e-9, sA && sA.akumulasiProduksi && sA.akumulasiProduksi.tual);
+C.mulaiGame(false);
+cek("v18-C: save/load: akumulator pulih setelah muat ulang", Math.abs((C.S.akumulasiProduksi.tual || 0) - 0.125) < 1e-9, C.S.akumulasiProduksi.tual);
+// (h) data & tampilan durasi; riset tetap harian; v17.1 tetap jalan
+cek("v18-C: waktu bangunan dalam jam: rumah 4, sd 48, puskesmas 72, universitas 168", C.BANGUNAN_MAP["rumah-sederhana"].waktu === 4 && C.BANGUNAN_MAP["sd"].waktu === 48 && C.BANGUNAN_MAP["puskesmas"].waktu === 72 && C.BANGUNAN_MAP["universitas"].waktu === 168, [C.BANGUNAN_MAP["rumah-sederhana"].waktu, C.BANGUNAN_MAP["sd"].waktu, C.BANGUNAN_MAP["puskesmas"].waktu, C.BANGUNAN_MAP["universitas"].waktu].join(","));
+cek("v18-C: waktu jembatan besar 360 jam, jalan-aspal 8 jam, jembatan-kecil 8 jam", C.JEMBATAN["jembatan-besar"].waktu === 360 && C.JALAN["jalan-aspal"].waktu === 8 && C.JEMBATAN["jembatan-kecil"].waktu === 8, [C.JEMBATAN["jembatan-besar"].waktu, C.JALAN["jalan-aspal"].waktu, C.JEMBATAN["jembatan-kecil"].waktu].join(","));
+cek("v18-C: teksDurasi: 4 jam, 48 jam = 2 hari, 168 jam = 7 hari", C.teksDurasi(4) === "4 jam" && C.teksDurasi(48) === "2 hari" && C.teksDurasi(168) === "7 hari" && C.teksDurasi(36) === "36 jam", [C.teksDurasi(4), C.teksDurasi(48), C.teksDurasi(168), C.teksDurasi(36)].join("/"));
+cek("v18-C: riset tetap harian (olah-sagu 2 hari, konstruksi-beton 3 hari)", C.TEKNOLOGI_MAP["olah-sagu"].waktu === 2 && C.TEKNOLOGI_MAP["konstruksi-beton"].waktu === 3, [C.TEKNOLOGI_MAP["olah-sagu"].waktu, C.TEKNOLOGI_MAP["konstruksi-beton"].waktu].join(","));
+cek("v18-C: prosesPergantianHari tetap memajukan riset per hari", srcCityB.includes("S.riset.sisa--"));
+cek("v18-C: tidak ada lagi progres konstruksi harian (b.progres += 1 / d.waktu)", !srcCityB.includes("b.progres += 1 / d.waktu"));
+cek("v18-C: loop utama tidak lagi memanggil perbaruiFeri(dt)", !srcCityB.includes("perbaruiFeri(dt);"));
+cek("v18-D: VERSI_GAME v18 (modul akhir)", C.VERSI_GAME === "v18", C.VERSI_GAME);
+let mangroveC = 0;
+for (const baris of C.peta.terrain) for (const t of baris) if (t === "mangrove") mangroveC++;
+cek("v18-C: v17.1 mangrove > 1000 petak", mangroveC > 1000, mangroveC);
+const tkSaguC = C.cariTileKebunSagu();
+cek("v18-C: v17.1 cariTileKebunSagu menemukan petak valid", !!tkSaguC && C.cekBangun(C.BANGUNAN_MAP["kebun-sagu"], tkSaguC.x, tkSaguC.y, 0).ok, JSON.stringify(tkSaguC));
+cek("v18-C: v17.1 legenda terrain masih ada", srcCityB.includes("Peta — Legenda Terrain"));
+// ---- v18-D: UI jam/kalender bar atas + tutorial langkah 4 baru + hapus hariBerikutnya ----
+// (a) versi & refs di index.html (dibaca dari disk; harness sudah memakai fs)
+cek("v18-D: VERSI_GAME v18", C.VERSI_GAME === "v18", C.VERSI_GAME);
+cek("v18-D: index.html refs v18 (css v=9, city-data v=7, city-map v=4, city v=18)", idxHtml.includes("css/city.css?v=9") && idxHtml.includes("js/city-data.js?v=7") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city.js?v=18"));
+cek("v18-D: #jamAtas ada di bar atas (jam, hari, fase, cuaca)", idxHtml.includes('id="jamAtas"') && idxHtml.includes('id="jamAtasJam"') && idxHtml.includes('id="jamAtasHari"') && idxHtml.includes('id="jamAtasFase"') && idxHtml.includes('id="jamAtasCuaca"'));
+cek("v18-D: #ikonFase hanya satu (dipindah ke #jamAtas, tidak duplikat)", (idxHtml.match(/id="ikonFase"/g) || []).length === 1);
+cek("v18-D: tidak ada tombol Hari Berikutnya di index.html", !idxHtml.includes('id="btnHari"') && !idxHtml.includes('id="btnKec3"') && !/<button[^>]*>[^<]*Hari Berikutnya/.test(idxHtml) && !idxHtml.includes("⏭ Hari Berikutnya"));
+const srcCityD = fs.readFileSync(path.join(ROOT, "js/city.js"), "utf8");
+cek("v18-D: wrapper hariBerikutnya() dihapus dari city.js", !srcCityD.includes("function hariBerikutnya"));
+cek("v18-D: tidak ada kecepatan 3 di city.js (btnKec3 / aturKecepatan(3))", !srcCityD.includes("btnKec3") && !srcCityD.includes("aturKecepatan(3)"));
+cek("v18-D: aturan mati #btnHari dihapus dari CSS; #jamAtas & #btnKec05 ada", !cssTxt.includes("#btnHari") && cssTxt.includes("#jamAtas") && cssTxt.includes("#btnKec05"));
+// (b) renderHUD mengisi #jamAtas (jam 13:00 hari ke-0 = Rabu, 11 Nov 2026, Siang)
+vm.runInContext("waktuGame = 13 * 60;", sandbox);
+C.renderHUD();
+cek("v18-D: renderHUD mengisi #jamAtasJam (13:00)", C.document.getElementById("jamAtasJam").textContent === "13:00", C.document.getElementById("jamAtasJam").textContent);
+cek("v18-D: renderHUD mengisi #jamAtasHari (Rabu | 11 November)", C.document.getElementById("jamAtasHari").textContent === "Rabu | 11 November", C.document.getElementById("jamAtasHari").textContent);
+cek("v18-D: renderHUD mengisi #jamAtasFase (Siang)", C.document.getElementById("jamAtasFase").textContent === "Siang", C.document.getElementById("jamAtasFase").textContent);
+cek("v18-D: renderHUD mengisi #jamAtasCuaca (cuaca | suhu°C)", /^(Cerah|Berawan|Hujan) \| \d+°C$/.test(C.document.getElementById("jamAtasCuaca").textContent), C.document.getElementById("jamAtasCuaca").textContent);
+cek("v18-D: #ikonFase mengikuti jam (☀️ di siang hari)", C.document.getElementById("ikonFase").textContent === "☀️", C.document.getElementById("ikonFase").textContent);
+cek("v18-D: labelFaseID: Sunrise=Fajar, Noon=Siang, Night=Malam", C.labelFaseID("Sunrise") === "Fajar" && C.labelFaseID("Noon") === "Siang" && C.labelFaseID("Night") === "Malam");
+// (c) kontrol kecepatan: nilai 3 ditolak -> 1 (diulang di D sebagai kontrak modul)
+cek("v18-D: aturKecepatan(3) ditolak -> 1", (() => { C.aturKecepatan(3); return C.kecepatan === 1; })());
+// (d) tutorial langkah 4 baru: aksi percepat 2x; selesai setelah >=120 menit game + pekerja bekerja
+C.S.tutorial = { aktif: true, selesai: false, langkah: 4 };
+C.S.penduduk.total = 30; // angkatan kerja 16 jiwa
+C.S.bangunan.forEach(b => { b.selesai = true; b.progres = 1; }); // semua beroperasi (dermaga butuh 2 pekerja)
+vm.runInContext("waktuGame = 360;", sandbox); // 06:00 hari ke-0 — baseline langkah 4
+C.tampilkanTutorial();
+cek("v18-D: tutorial langkah 4: teks & aksi baru (tanpa Hari Berikutnya)", C.TUTORIAL[4].aksi.label.includes("2×") && !C.TUTORIAL[4].des.includes("Hari Berikutnya") && !C.TUTORIAL[4].aksi.label.includes("Hari Berikutnya"), C.TUTORIAL[4].aksi.label + " / " + C.TUTORIAL[4].des);
+C.TUTORIAL[4].aksi.fn();
+cek("v18-D: aksi langkah 4 mengatur kecepatan 2", C.kecepatan === 2, C.kecepatan);
+cek("v18-D: langkah 4 belum selesai sebelum 120 menit game", C.S.tutorial.langkah === 4, "langkah=" + C.S.tutorial.langkah);
+C.majukanWaktu(60);
+C.cekTutorial();
+cek("v18-D: langkah 4 belum selesai setelah 60 menit game", C.S.tutorial.langkah === 4, "langkah=" + C.S.tutorial.langkah);
+C.majukanWaktu(60); // total 120 menit game sejak langkah 4 tampil
+C.cekTutorial();
+// Catatan: langkah 5 & 6 langsung ikut terlewati di state tes ini karena
+// kondisinya sudah terpenuhi (kebun-sagu sudah ada, penduduk 30 ≥ 10) —
+// itu perilaku tutorial yang benar (langkah terpenuhi langsung dilewati),
+// jadi yang diuji di sini adalah langkah 4 SUDAH lewat (>= 5), bukan tepat 5.
+cek("v18-D: langkah 4 lewat setelah 120 menit game + pekerja bekerja", C.S.tutorial.langkah >= 5, "langkah=" + C.S.tutorial.langkah + " bekerja=" + C.hitungTenagaKerja().bekerja);
+C.aturKecepatan(1);
+C.S.tutorial = { aktif: false, selesai: true, langkah: 7 }; // kembalikan ke keadaan selesai
+// (e) smoke test render dengan sistem waktu baru + v17.1 tetap jalan
+try { C.gambarPeta(); C.renderHUD(); cek("v18-D: render peta + HUD dengan sistem waktu baru (tanpa error)", true); }
+catch (e) { cek("v18-D: render peta + HUD dengan sistem waktu baru (tanpa error)", false, e.message); }
+let mangroveD = 0;
+for (const baris of C.peta.terrain) for (const t of baris) if (t === "mangrove") mangroveD++;
+cek("v18-D: v17.1 mangrove > 1000 petak", mangroveD > 1000, mangroveD);
+const tkSaguD = C.cariTileKebunSagu();
+cek("v18-D: v17.1 cariTileKebunSagu menemukan petak valid", !!tkSaguD && C.cekBangun(C.BANGUNAN_MAP["kebun-sagu"], tkSaguD.x, tkSaguD.y, 0).ok, JSON.stringify(tkSaguD));
+cek("v18-D: v17.1 legenda terrain masih ada", srcCityD.includes("Peta — Legenda Terrain"));
+// Kembalikan ke keadaan bersih
+vm.runInContext("waktuGame = 360;", sandbox);
+C.aturKecepatan(1);
 
 console.log(gagal === 0 ? "TEST_V13_OK" : "TEST_V13_GAGAL:" + gagal + " dari " + (lulus + gagal));

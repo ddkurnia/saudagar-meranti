@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>MERANTI RISING — Ayo Membangun Meranti!</title>
-<link rel="stylesheet" href="css/city.css?v=8">
+<link rel="stylesheet" href="css/city.css?v=9">
 </head>
 <body>
 <!-- Layar mulai: pembuka sinematik MERANTI RISING -->
@@ -34,7 +34,8 @@
       <span>🏠 Pilih bangunan di menu bawah, lalu ketuk lokasi di peta (ketuk 2× untuk membangun — ketukan pertama hanya pratinjau)</span>
       <span>🛣️ Bangunan butuh jalan di sampingnya · jembatan hanya di atas air</span>
       <span>👷 Bangunan butuh pekerja — penduduk tumbuh bila ada rumah & layanan</span>
-      <span>⏭️ Spasi = hari berikutnya · P = jeda · Esc = batal</span>
+      <span>⏱️ 1 hari game = 48 menit nyata · tombol ⏸ / 0.5× / 1× / 2× di kanan bawah untuk jeda & percepat waktu</span>
+      <span>⏸️ Spasi / P = jeda · Esc = batal</span>
     </div>
   </div>
   <!-- Tahap 2: identitas pemain -->
@@ -126,6 +127,15 @@
       <span class="sd" title="Penduduk">👥 <b id="pendudukTeks">0 jiwa</b></span>
       <span class="sd" title="Kebahagiaan">😊 <b id="bahagiaTeks">0%</b></span>
     </div>
+    <!-- Jam + kalender game di bar atas (v18-D): #ikonFase dipindah ke sini
+         dari kartu #tglCuaca agar jam selalu terlihat; #tglCuaca tetap ada -->
+    <div id="jamAtas" class="jamAtas" title="Waktu game">
+      <span id="ikonFase" class="ikonFase" title="Fase siang/malam">☀️</span>
+      <span id="jamAtasHari" class="jamHari">Rabu | 11 November</span>
+      <b id="jamAtasJam" class="jamBesar">06:00</b>
+      <span id="jamAtasFase" class="jamFase">Pagi</span>
+      <span id="jamAtasCuaca" class="jamCuaca">Cerah | 31°C</span>
+    </div>
     <div class="tombolAtas">
       <button id="btnBerita" class="btnIkon" title="Berita Pulau">🔔</button>
       <button id="btnSimpan" class="btnIkon" title="Simpan">💾</button>
@@ -201,13 +211,12 @@
   <!-- Mode Bangun -->
   <button id="btnModeBangun" title="Mode Bangun">🛠️<span>Mode<br>Bangun</span></button>
 
-  <!-- Kontrol kecepatan -->
+  <!-- Kontrol kecepatan (v18-A: pause / 0.5x / 1x / 2x; tombol Hari Berikutnya dihapus) -->
   <div id="kontrolWaktu">
     <button id="btnKec0" title="Jeda">⏸</button>
+    <button id="btnKec05" title="Kecepatan 0.5x">0.5×</button>
     <button id="btnKec1" class="aktif" title="Kecepatan 1x">1×</button>
     <button id="btnKec2" title="Kecepatan 2x">2×</button>
-    <button id="btnKec3" title="Kecepatan 3x">3×</button>
-    <button id="btnHari" title="Hari berikutnya">⏭</button>
   </div>
 
   <!-- Menu bangun bawah -->
@@ -235,8 +244,8 @@
   </div>
 </div>
 
-<script src="js/city-data.js?v=6"></script>
+<script src="js/city-data.js?v=7"></script>
 <script src="js/city-map.js?v=4"></script>
-<script src="js/city.js?v=17"></script>
+<script src="js/city.js?v=18"></script>
 </body>
 </html>

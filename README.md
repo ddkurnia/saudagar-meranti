@@ -6,6 +6,155 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v18 — Real-Time Open World Clock & Simulation System (2026-11-11)
+
+Waktu kini berjalan **nyata dan kontinu**, bukan lompatan per hari:
+satu hari game = 48 menit nyata. Semua sistem — konstruksi, ekonomi,
+feri, NPC, siang/malam — digerakkan oleh satu sumber waktu yang sama.
+
+- **Sistem waktu (satu sumber waktu: `waktuGame`).** Total menit game
+  (float) sejak 11 Nov 2026 00:00; awal 360 = jam 06:00 hari ke-0.
+  Laju 1x: **1 detik nyata = 0,5 menit game = 30 detik game** (1 jam
+  game = 2 menit nyata; 1 menit game = 2 detik nyata; 1 hari game =
+  48 menit nyata). Interval 500 ms memajukan waktu sesuai kecepatan;
+  `majukanWaktu()` bekerja dengan **fixed timestep 1 menit** per
+  langkah (maks 240 langkah/panggilan, anti-freeze; kelebihan dibuang).
+  Cermin lama `jamVisual`/`akumulasiHari` hanya disinkronkan dari
+  `waktuGame`, bukan sumber waktu.
+- **Kontrol waktu: Pause / 0,5x / 1x / 2x.** Empat tombol di kanan
+  bawah (⏸, 0.5×, 1×, 2×; yang aktif hijau) + Spasi/P = jeda.
+  Tombol **"Hari Berikutnya" DIHAPUS** — tombolnya maupun wrapper
+  `hariBerikutnya()` di kode (v18-D); tidak ada lagi jalan pintas
+  memajukan 1 hari sekaligus. Nilai kecepatan di luar {0, 0.5, 1, 2}
+  ditolak kembali ke 1x.
+- **Jam + kalender di bar atas.** `#jamAtas` di bar atas menampilkan
+  hari + tanggal ("Rabu | 11 November"), jam game ("13:00"), fase
+  ("Pagi/Siang/Sore/...") dan cuaca + suhu ("Cerah | 31°C"), diperbarui
+  tiap render HUD dan tiap tick 500 ms. Ikon fase `#ikonFase`
+  (🌅/☀️/🌇/🌙) **dipindah** dari kartu `#tglCuaca` ke `#jamAtas`
+  (satu id, tidak duplikat); kartu `#tglCuaca` di kolom kiri tetap ada
+  dengan tanggal/jam/cuaca yang sama. Di layar ≤820px tanggal di bar
+  atas disembunyikan, jam + fase + cuaca tetap terlihat.
+- **6 fase siang/malam + kegelapan halus.** Sunrise 05–07, Morning
+  07–11, Noon 11–14, Afternoon 14–17, Sunset 17–19, Night 19–05.
+  Kegelapan diinterpolasi **linear tanpa lompatan**: 0 di siang penuh
+  (07–17), naik 17→19 dari 0 ke 0,85, 0,85 di malam (19–05), turun
+  05→07 dari 0,85 ke 0. Bayangan bangunan mengikuti waktu; lampu
+  malam (jendela bangunan, bangunan pantai, persimpangan jalan)
+  menyala saat gelap. Ikon matahari/bulan digeser vertikal mengikuti
+  "ketinggian" matahari — indikator, bukan simulasi astronomi.
+- **Rutinitas NPC berbasis zona.** Warga tidak punya jadwal pribadi;
+  tiap memilih langkah baru, zona tujuan (kerja/rumah/sosial) diundi
+  dari bobot jam itu: 05–07 bangun di rumah, 07–09 berangkat kerja,
+  09–17 bekerja, 17–19 pulang/sosial, 19–05 istirahat di rumah. Di
+  malam hari hanya ~30% warga yang aktif bergerak (diundi sekali per
+  warga); sisanya diam di tempat, seolah sedang di rumah.
+- **Ekonomi per jam.** Semua arus harian dibagi 24 dan diakru tiap jam
+  game (pajak, penjualan, ekspor, wisata, bunga, upkeep, gaji).
+  Produksi memakai **akumulator fraksional** (`S.akumulasiProduksi`,
+  `S.akumulasiJual`, `S.akumulasiEkspor`): hasil < 1 unit/jam
+  ditabung sampai genap 1 unit. `S.uang` float internal; tampilan
+  `rp()` membulatkan. Rincian harian dihitung tengah malam dari akrual
+  hari itu — panel Ekonomi menampilkan rincian hari yang baru berakhir.
+- **Konstruksi berbasis jam game.** `waktu` bangunan kini JAM GAME
+  (dulu hari). Durasi efektif memakai rumus:
+  `durasiEfektif = waktuJam / (faktorTeknologi × faktorPekerja)`,
+  dengan `faktorTeknologi = 1,25` bila riset "konstruksi-beton" sudah
+  diteliti DAN bangunan termasuk beton (`def.tech ===
+  "konstruksi-beton"`, durasi ×0,8), dan `faktorPekerja =
+  clamp(menganggur/dibutuhkan, 0,25, 1)` bila bangunan butuh pekerja
+  (`def.pekerja > 0`; rumah & bangunan tanpa pekerja = 1). Material
+  tidak memengaruhi durasi (biaya sudah lunas saat membangun).
+  Konstruksi maju per menit lewat `majuKonstruksi()`; bangunan selesai
+  tepat waktu, bukan menunggu pergantian hari. Tampilan durasi
+  (`teksDurasi`): <24 jam → "N jam", kelipatan 24 → "N hari".
+
+  Tabel konversi `waktu` (hari lama → jam game baru):
+
+  | Bangunan | Hari lama | Jam game | Bangunan | Hari lama | Jam game |
+  |---|---|---|---|---|---|
+  | rumah-sederhana | 1 | 4 | kebun-kelapa | 1 | 4 |
+  | rumah-permanen | 2 | 8 | kebun-pinang | 1 | 4 |
+  | perumahan | 3 | 12 | kebun-karet | 2 | 8 |
+  | rumah-susun | 4 | 24 | kebun-kopi | 2 | 8 |
+  | apartemen | 5 | 36 | pertanian | 1 | 4 |
+  | rumah-pekerja | 1 | 4 | peternakan | 2 | 8 |
+  | kantor-pemerintah | 4 | 24 | perikanan | 2 | 8 |
+  | dermaga | 2 | 12 | kilang-sagu | 3 | 24 |
+  | pelabuhan | 5 | 96 | pabrik-tepung | 4 | 48 |
+  | bandara | 8 | 240 | pabrik-kelapa | 4 | 48 |
+  | paud | 1 | 4 | pabrik-laut | 4 | 48 |
+  | sd | 2 | 48 | gudang | 2 | 12 |
+  | smp | 3 | 48 | pabrik-makanan | 5 | 72 |
+  | sma | 3 | 48 | industri-ekspor | 6 | 96 |
+  | smk | 4 | 48 | masjid | 3 | 12 |
+  | universitas | 6 | 168 | taman | 1 | 4 |
+  | perpustakaan | 2 | 12 | lapangan | 1 | 4 |
+  | pelatihan | 2 | 12 | stadion | 6 | 72 |
+  | posyandu | 1 | 4 | museum | 4 | 48 |
+  | puskesmas | 2 | 72 | taman-wisata | 3 | 12 |
+  | klinik | 2 | 24 | pasar-budaya | 2 | 12 |
+  | rumah-sakit | 5 | 120 | kebun-sagu | 1 | 4 |
+  | rsud | 6 | 168 | terminal-feri | 3 | 24 |
+  | pasar-tradisional | 2 | 12 | kedai-liberika | 2 | 12 |
+  | pasar-modern | 4 | 24 | kawasan-industri | 5 | 72 |
+  | toko | 1 | 4 | pusat-logistik | 4 | 48 |
+  | supermarket | 4 | 24 | bank | 3 | 12 |
+  | kantor-dagang | 3 | 24 | | | |
+
+  **Jalan & jembatan TETAP instan** — `waktu`-nya hanya data
+  dokumentasi (jam/petak): jalan-tanah 4, jalan-aspal 8, jalan-raya 12;
+  jembatan-kecil 8/petak, jembatan-besar 360 (15 hari), jembatan-gantung
+  12/petak.
+- **Feri 12,5 menit game per seberang** (~25 detik nyata pada 1x),
+  digerakkan `perbaruiFeriMenit()` dari `majukanWaktu()` — satu jalur,
+  tidak lagi dari loop render. Riset tetap harian (mis. olah-sagu
+  2 hari, konstruksi-beton 3 hari); kiriman komoditas feri tetap harian.
+- **Kalender & musim tropis.** Mulai **Rabu, 11 November 2026**
+  (hari ke-0). Peluang hujan per bulan: Nov–Feb 0,45 (musim hujan),
+  Jun–Agu 0,15 (lebih kering), bulan lain 0,30. Suhu 28–32°C (lebih
+  panas Jun–Agu, lebih sejuk Nov–Feb).
+- **Save/migrasi.** `SAVE_KEY` tetap `merantiRisingWorldV1`;
+  `petaVersi` 4. `waktuGame`, kecepatan & progres tersimpan persis dan
+  dipulihkan tanpa reset ke 06:00. Simpanan v17 (petaVersi 3)
+  dimigrasikan (`migrasiWaktuV17()`). **TIDAK ada offline progress**
+  — waktu hanya maju saat game berjalan.
+- **Tutorial langkah 4 baru.** "Rekrut pekerja": teks baru mengajak
+  membiarkan waktu berjalan atau mempercepat ke 2×; tombol aksi
+  **"⏩ Percepat ke 2×"** (`aturKecepatan(2)`). Syarat selesai berbasis
+  waktu game: `waktuGame - tutorialWaktuAwal >= 120` (2 jam game =
+  4 menit nyata pada 1x, 2 menit pada 2x) DAN ada pekerja yang bekerja
+  — bukan lagi menunggu hari berganti (48 menit nyata).
+- **v17.1 dilipat ke v18** (tidak pernah di-push sendiri): legenda
+  terrain di panel Peta (ikon 🗺️), ambang mangrove 0,58 → 0,52
+  (>1000 petak mangrove di peta 480×320), dan auto-pan kamera ke petak
+  valid saat tutorial langkah 6 (`cariTileKebunSagu()`).
+- Uji headless lolos (`TEST_V13_OK`, 380 cek): time engine, kalender,
+  fase/kegelapan, NPC zona, ekonomi & konstruksi per jam, feri,
+  tutorial langkah 4 baru, UI `#jamAtas`, penghapusan "Hari
+  Berikutnya", dan v17.1 tetap jalan.
+
+### Batas jujur v18
+1. **Tidak ada offline progress.** Waktu berhenti saat game ditutup;
+   kembali bermain tidak memajukan hari, konstruksi, atau ekonomi.
+2. **Rutinitas NPC berbasis zona, bukan jadwal per-individu penuh.**
+   Warga tidak punya jadwal harian pribadi; warga non-aktif di malam
+   hari diam di tempat, bukan teleport pulang ke rumah.
+3. **Posisi matahari adalah indikator, bukan simulasi astronomi.**
+   Ikon fase digeser vertikal mengikuti jam, tanpa posisi matahari/
+   bulan yang dihitung dari koordinat & tanggal sebenarnya.
+4. **Durasi konstruksi memakai faktor sederhana** (teknologi +
+   pekerja). Cuaca, jarak material, dan antrean proyek tidak
+   memengaruhi durasi.
+5. **Jalan/jembatan tetap instan** (durasi di data hanya dokumentasi,
+   belum dipakai) — membangun jalan/jembatan tidak butuh waktu
+   konstruksi seperti bangunan.
+6. **Bunga bank per jam dihitung dari saldo berjalan** — bila saldo
+   berubah banyak dalam sehari, totalnya berselisih kecil vs bunga
+   harian lama yang dihitung sekali dari saldo akhir hari.
+7. **Panel Ekonomi menampilkan rincian hari yang baru berakhir
+   ("kemarin")**, bukan proyeksi hari yang sedang berjalan.
+
 ## Yang baru di v17 — WORLD MAP ENGINE: Dunia 120 × 80 km (2026-11-11)
 
 - **Dunia baru 480 × 320 petak (1 petak = 250 m → 120 km × 80 km).**
