@@ -9,6 +9,26 @@ memproduksi Mie Sagu dan Kue Bangkit Sagu, mengekspor tepung sagu ke pasar
 internasional, dan mengembangkan Kedai Kopi Liberika Meranti sebagai
 bisnis sampingan.
 
+## Yang baru di v12.2 — Tampilan HD
+
+- **Render 2x lebih tajam:** dunia 3D kini dirender mengikuti
+  kerapatan piksel layar (pixel ratio, maks 2x) — buffer 1920×1120
+  dari kanvas 960×560 — sehingga di tablet/layar retina gambar tidak
+  lagi terlihat lembut/kabur saat diperbesar. Dibatasi 2x supaya tetap
+  lancar di tablet.
+- **Teks HD:** semua teks di dalam dunia (papan tanda bangunan, nama
+  NPC, teks melayang) digambar di kanvas 2x lebih besar (1024×192,
+  huruf 80px) sehingga hurufnya tajam saat di-zoom.
+- **Tekstur aset lebih tajam:** semua tekstur memakai anisotropi
+  maksimal dari GPU (sampai 8x) supaya gambar tetap tajam saat
+  dilihat dari sudut miring.
+- Catatan jujur: file gambar asetnya sendiri tidak digambar ulang —
+  gambar itu sudah beresolusi tinggi (bangunan ~700px, karakter
+  ~400–500px); yang membuat tampilan terasa kurang tajam sebelumnya
+  adalah buffer render 960×560 yang diperbesar ke layar, dan itu yang
+  kini diperbaiki.
+- Selain itu sama dengan v12.1 (klik bangunan membuka panel).
+
 ## Yang baru di v12.1 — Perbaikan: Klik Bangunan 3D Membuka Panel
 
 - **Perbaikan klik bangunan:** di v12, klik pada gambar bangunan yang

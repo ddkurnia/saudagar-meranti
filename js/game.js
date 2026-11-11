@@ -1,8 +1,11 @@
-// Saudagar Sagu Meranti — v12.1 PERBAIKAN KLIK BANGUNAN 3D
-// v12: semua aset 2D menjadi objek di dunia 3D (billboard) + animasi.
-// v12.1: klik pada gambar bangunan (termasuk atap & papan tanda) kini
-// langsung membuka panelnya — sebelumnya sinar klik jatuh ke tanah di
-// belakang bangunan tinggi sehingga panel tidak terbuka.
+// Saudagar Sagu Meranti — v12.2 TAMPILAN HD
+// v12.1: klik bangunan 3D membuka panel (raycast gambar).
+// v12.2: dunia 3D dirender 2x lebih tajam (pixel ratio perangkat,
+// maks 2x — buffer 1920x1120 dari kanvas 960x560), semua teks di
+// dunia (papan tanda, nama NPC, teks melayang) digambar 2x lebih
+// besar (kanvas 1024x192), dan tekstur aset memakai anisotropi
+// maksimal supaya tetap tajam saat dilihat miring. Ekonomi dan
+// simpanan lama tidak berubah.
 const SAVE_KEY = "saudagarSaguMerantiV1";
 const TARGET_UANG = 5000000;
 const TARGET_EKSPOR = 100;
@@ -536,12 +539,13 @@ let billboard3 = [];   // semua bidang aset yang menghadap kamera
 let ombak3 = [];       // bidang ombak datar di tepi pantai (animasi frame)
 let lampuNyala3 = [];  // bola lampu yang menyala saat malam
 let manajerMuat3D = null, muat3DSelesai = false;
+let anisoMax3D = 4; // anisotropi tekstur — diisi dari kemampuan GPU saat init3D
 let asapTex3D = null, ombakTex3D = null; // tekstur strip bersama (asap & ombak)
 function muatTekstur3D(path) {
   if (tekstur3D[path]) return tekstur3D[path];
   const tex = new THREE.TextureLoader(manajerMuat3D).load(path);
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 4;
+  tex.anisotropy = anisoMax3D;
   tekstur3D[path] = tex;
   return tex;
 }
@@ -550,7 +554,7 @@ function muatTekstur3D(path) {
 function muatStrip3D(path) {
   const tex = new THREE.TextureLoader(manajerMuat3D).load(path);
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 4;
+  tex.anisotropy = anisoMax3D;
   tex.wrapS = THREE.RepeatWrapping;
   tex.repeat.set(0.25, 1);
   return tex;
@@ -612,31 +616,33 @@ function kotak(w, h, d, warna, x, y, z) {
   m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; return m;
 }
 function buatLabel(teks) {
-  const c = document.createElement("canvas"); c.width = 512; c.height = 96;
+  const c = document.createElement("canvas"); c.width = 1024; c.height = 192;
   const g = c.getContext("2d");
-  // Papan kayu ala referensi
+  // Papan kayu ala referensi — kanvas 2x (1024x192) supaya teks tajam (HD)
   g.fillStyle = "#6d4c41";
-  if (typeof g.roundRect === "function") { g.beginPath(); g.roundRect(6, 10, 500, 76, 18); g.fill(); }
-  else g.fillRect(6, 10, 500, 76);
-  g.strokeStyle = "#d7ccc8"; g.lineWidth = 5;
-  if (typeof g.roundRect === "function") { g.beginPath(); g.roundRect(10, 14, 492, 68, 14); g.stroke(); }
-  g.fillStyle = "#fff"; g.font = "bold 40px sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
-  g.fillText(teks, 256, 50);
+  if (typeof g.roundRect === "function") { g.beginPath(); g.roundRect(12, 20, 1000, 152, 36); g.fill(); }
+  else g.fillRect(12, 20, 1000, 152);
+  g.strokeStyle = "#d7ccc8"; g.lineWidth = 10;
+  if (typeof g.roundRect === "function") { g.beginPath(); g.roundRect(20, 28, 984, 136, 28); g.stroke(); }
+  g.fillStyle = "#fff"; g.font = "bold 80px sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+  g.fillText(teks, 512, 100);
   const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = anisoMax3D;
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
   sp.scale.set(6, 1.1, 1);
   sp.userData = { canvas: c, ctx: g, tex: tex, teks: teks };
   sp.userData.setTeks = function (t) {
     if (this.teks === t) return;
     this.teks = t;
-    this.ctx.clearRect(0, 0, 512, 96);
+    this.ctx.clearRect(0, 0, 1024, 192);
     this.ctx.fillStyle = "#6d4c41";
-    if (typeof this.ctx.roundRect === "function") { this.ctx.beginPath(); this.ctx.roundRect(6, 10, 500, 76, 18); this.ctx.fill(); }
-    else this.ctx.fillRect(6, 10, 500, 76);
-    this.ctx.strokeStyle = "#d7ccc8"; this.ctx.lineWidth = 5;
-    if (typeof this.ctx.roundRect === "function") { this.ctx.beginPath(); this.ctx.roundRect(10, 14, 492, 68, 14); this.ctx.stroke(); }
-    this.ctx.fillStyle = "#fff"; this.ctx.font = "bold 40px sans-serif"; this.ctx.textAlign = "center"; this.ctx.textBaseline = "middle";
-    this.ctx.fillText(t, 256, 50);
+    if (typeof this.ctx.roundRect === "function") { this.ctx.beginPath(); this.ctx.roundRect(12, 20, 1000, 152, 36); this.ctx.fill(); }
+    else this.ctx.fillRect(12, 20, 1000, 152);
+    this.ctx.strokeStyle = "#d7ccc8"; this.ctx.lineWidth = 10;
+    if (typeof this.ctx.roundRect === "function") { this.ctx.beginPath(); this.ctx.roundRect(20, 28, 984, 136, 28); this.ctx.stroke(); }
+    this.ctx.fillStyle = "#fff"; this.ctx.font = "bold 80px sans-serif"; this.ctx.textAlign = "center"; this.ctx.textBaseline = "middle";
+    this.ctx.fillText(t, 512, 100);
     this.tex.needsUpdate = true;
   };
   return sp;
@@ -658,6 +664,10 @@ function init3D() {
     camera3.position.set(0, 12 * camJarak, 17 * camJarak);
     camera3.lookAt(0, 0.5, -2);
     renderer3 = new THREE.WebGLRenderer({ antialias: true });
+    // HD: render 2x lebih tajam di layar retina/tablet (buffer
+    // 1920x1120 dari kanvas 960x560); dibatasi 2x demi performa.
+    renderer3.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    anisoMax3D = Math.min(8, renderer3.capabilities.getMaxAnisotropy());
     renderer3.setSize(960, 560);
     renderer3.shadowMap.enabled = true;
     renderer3.shadowMap.type = THREE.PCFSoftShadowMap;
