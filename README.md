@@ -9,6 +9,16 @@ memproduksi Mie Sagu dan Kue Bangkit Sagu, mengekspor tepung sagu ke pasar
 internasional, dan mengembangkan Kedai Kopi Liberika Meranti sebagai
 bisnis sampingan.
 
+## Yang baru di v12.1 — Perbaikan: Klik Bangunan 3D Membuka Panel
+
+- **Perbaikan klik bangunan:** di v12, klik pada gambar bangunan yang
+  tinggi (atap, papan tanda) jatuh ke tanah di belakang bangunan
+  sehingga panel tidak terbuka. Sekarang klik pada gambar bangunan
+  atau papan tandanya langsung diarahkan ke tengah bangunan itu, jadi
+  panel Kilang, Kedai, Pasar, dan Pelabuhan selalu terbuka saat
+  bangunannya diklik — di mana pun pada gambarnya.
+- Selain itu sama dengan v12 (dunia 3D dari aset asli + animasi).
+
 ## Yang baru di v12 — Dunia 3D dari Aset Asli + Animasi
 
 - **Semua aset 2D kini menjadi objek 3D:** 7 bangunan asli (kilang,

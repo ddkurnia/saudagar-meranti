@@ -1,12 +1,8 @@
-// Saudagar Sagu Meranti — v12 DUNIA 3D DARI ASET ASLI + ANIMASI
-// Semua aset 2D yang sudah ada kini menjadi objek di dunia 3D
-// (billboard: berdiri di ruang 3D, menghadap kamera, berbayangan):
-// 7 bangunan, 8 karakter dengan strip jalan/kerja, pohon, kendaraan,
-// dan objek asli — bukan lagi kotak balok prosedural. Animasinya:
-// strip jalan/kerja 4 frame, asap cerobong, ombak pantai, forklift &
-// truk bergerak, perahu hanyut, kapal bergoyang, pohon bergoyang,
-// lampu menyala saat malam. Kamera orbit v11 tetap. Ekonomi v1-v11
-// tetap, simpanan lama tetap bisa dipakai.
+// Saudagar Sagu Meranti — v12.1 PERBAIKAN KLIK BANGUNAN 3D
+// v12: semua aset 2D menjadi objek di dunia 3D (billboard) + animasi.
+// v12.1: klik pada gambar bangunan (termasuk atap & papan tanda) kini
+// langsung membuka panelnya — sebelumnya sinar klik jatuh ke tanah di
+// belakang bangunan tinggi sehingga panel tidak terbuka.
 const SAVE_KEY = "saudagarSaguMerantiV1";
 const TARGET_UANG = 5000000;
 const TARGET_EKSPOR = 100;
@@ -472,7 +468,7 @@ klikDunia = function (wx, wy) {
 let scene3 = null, camera3 = null, renderer3 = null, sunLight = null, hemiLight = null;
 let plotMeshes = [], buildingMeshes = {}, player3 = null, npc3 = [], pelanggan3 = [], pekerja3 = [];
 let clouds3 = [], water3 = null, boat3 = null, sunMesh = null, moonMesh = null;
-let partikel3D = [], rain3 = [], smoke3 = [], conveyor3 = [];
+let partikel3D = [], rain3 = [], smoke3 = [], conveyor3 = [], klikBangunan3 = [];
 let camPan = { x: 0, z: 0 }, camJarak = 2.0;
 let camPanT = { x: 0, z: 0 }, camJarakT = 2.0, camSudut = 0, camSudutT = 0;
 let modePutar = false; // false: seret = geser peta; true: seret = putar kamera
@@ -732,6 +728,9 @@ function init3D() {
       const m = buatBillboard(path, tinggi, { x: w2x(b.x + b.w / 2), z: w2z(b.y + b.h / 2), bayangan: tinggi * 0.65 });
       scene3.add(m);
       const lb = buatLabel(b.label); lb.position.set(m.position.x, tinggi + 1, m.position.z); scene3.add(lb);
+      // Klik pada gambar bangunan (termasuk atap & papan tanda) harus
+      // membuka panel — jangan biarkan klik jatuh ke tanah di belakang.
+      klikBangunan3.push({ mesh: m, kunci: kunci }, { mesh: lb, kunci: kunci });
       buildingMeshes[kunci] = m;
     };
     pasangBangunan("kilang", "assets/buildings/building-kilang-sagu.png", 7);
@@ -912,6 +911,15 @@ function init3D() {
       mouse.x = ((e.clientX - r.left) / r.width) * 2 - 1;
       mouse.y = -((e.clientY - r.top) / r.height) * 2 + 1;
       ray.setFromCamera(mouse, camera3);
+      // Bangunan 3D itu tinggi: sinar klik pada gambar/atapnya jatuh ke
+      // tanah di belakang bangunan, di luar kotak logikanya. Maka klik
+      // pada gambar bangunan (atau papan tandanya) langsung diarahkan
+      // ke tengah bangunan itu, supaya panelnya selalu terbuka.
+      const kena = ray.intersectObjects(klikBangunan3.map(k => k.mesh), false);
+      if (kena.length > 0) {
+        const k = klikBangunan3.find(k => k.mesh === kena[0].object);
+        if (k) { const b = BANGUNAN[k.kunci]; klikDunia(b.x + b.w / 2, b.y + b.h / 2); return; }
+      }
       const titik = new THREE.Vector3();
       if (ray.ray.intersectPlane(bidang, titik)) {
         klikDunia(titik.x / SKALA + 480, titik.z / SKALA + 280);
