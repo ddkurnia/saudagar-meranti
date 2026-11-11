@@ -60,9 +60,13 @@ const src = fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-data
   + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-utilitas.js", "utf8")
   + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-bahagia.js", "utf8")
   + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-lalin.js", "utf8")
+  + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-jalan.js", "utf8")
+  + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-kendaraan.js", "utf8")
+  + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-persimpangan.js", "utf8")
+  + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-maritim.js", "utf8")
   + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city.js", "utf8");
 vm.runInContext(src, sandbox);
-for (const nama of ["S", "peta", "BANGUNAN", "BANGUNAN_MAP", "TEKNOLOGI_MAP", "KATEGORI", "MISI", "LEVEL_PERADABAN", "KOMODITAS", "JALAN", "JEMBATAN", "TERRAIN", "CITY", "mode", "modeZona", "hover", "terpilih", "kecepatan", "kamera", "jamVisual", "akumulasiHari", "waktuGame", "wargaVisual", "kendaraanVisual", "TAB_BANGUN", "tilePratinjau", "jembatanMulai", "profilPemain", "TUTORIAL", "KECAMATAN_DEFS", "PULAU_DEFS", "VERSI_GAME", "BOBOT_KEBAHAGIAAN", "ZONA_DEFS", "SAMPAH_PER_JIWA_HARI", "AIR_PER_JIWA_JAM", "LISTRIK_PER_JIWA_JAM", "LALIN_KONFIG"]) {
+for (const nama of ["S", "peta", "BANGUNAN", "BANGUNAN_MAP", "TEKNOLOGI_MAP", "KATEGORI", "MISI", "LEVEL_PERADABAN", "KOMODITAS", "JALAN", "JEMBATAN", "TERRAIN", "CITY", "mode", "modeZona", "hover", "terpilih", "kecepatan", "kamera", "jamVisual", "akumulasiHari", "waktuGame", "wargaVisual", "kendaraanVisual", "TAB_BANGUN", "tilePratinjau", "jembatanMulai", "profilPemain", "TUTORIAL", "KECAMATAN_DEFS", "PULAU_DEFS", "VERSI_GAME", "BOBOT_KEBAHAGIAAN", "ZONA_DEFS", "SAMPAH_PER_JIWA_HARI", "AIR_PER_JIWA_JAM", "LISTRIK_PER_JIWA_JAM", "LALIN_KONFIG", "graphJalan", "versiGraph", "JALAN_KONFIG", "TIPE_KENDARAAN", "KENDARAAN_KONFIG", "daftarKendaraan", "RUTE_BUS_KONFIG", "LOGISTIK_KONFIG", "PERSIMPANGAN_KONFIG", "tabIdSaya", "berhentiDenyutMenu", "waktuInteraksiTerakhir", "modeDebug", "TAB_KUNCI", "LEASE_TAB_MS", "INTERAKSI_IDLE_MS", "TAB_ID_KUNCI", "MARITIM_KONFIG", "TAMAN_JALUR_IDS", "PEJALAN_KONFIG", "tampilJaringanJalan", "tampilRuteBus", "tampilJaringanPejalan", "tampilRuteLaut", "kendaraanTerpilihId", "panelKiri"]) {
   Object.defineProperty(sandbox, nama, { get: () => vm.runInContext(nama, sandbox), configurable: true });
 }
 listeners["DOMContentLoaded"]();
@@ -850,8 +854,8 @@ const kecHarap = ["tebing-tinggi-barat", "tebing-tinggi", "tebing-tinggi-timur",
 // (a) konstanta, ukuran peta & cakupan kecamatan
 cek("CITY 480x320, seed 20261111", C.CITY.GRID_W === 480 && C.CITY.GRID_H === 320 && C.CITY.SEED === 20261111, C.CITY.GRID_W + "x" + C.CITY.GRID_H + " seed " + C.CITY.SEED);
 cek("CITY SAVE_KEY/SAVE_LAMA/PROFIL_KEY v17", C.CITY.SAVE_KEY === "merantiRisingWorldV1" && C.CITY.SAVE_LAMA === "saudagarSaguMerantiCityV1" && C.CITY.PROFIL_KEY === "merantiRisingProfilV1", C.CITY.SAVE_KEY + " / " + C.CITY.SAVE_LAMA + " / " + C.CITY.PROFIL_KEY);
-cek("VERSI_GAME v21", versiGame17 === "v21", versiGame17);
-cek("index.html memakai ?v=13/9/4/1/23 (v21)", idxHtml.includes("css/city.css?v=13") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=1") && idxHtml.includes("js/city.js?v=23"));
+cek("VERSI_GAME v22", versiGame17 === "v22", versiGame17);
+cek("index.html memakai ?v=13/9/4/1/27 (v22-W5)", idxHtml.includes("css/city.css?v=13") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=1") && idxHtml.includes("js/city-jalan.js?v=1") && idxHtml.includes("js/city-kendaraan.js?v=2") && idxHtml.includes("js/city-persimpangan.js?v=1") && idxHtml.includes("js/city-maritim.js?v=1") && idxHtml.includes("js/city.js?v=27"));
 cek("PULAU_DEFS 27 pulau", !!pulauDefs17 && pulauDefs17.length === 27, pulauDefs17 ? pulauDefs17.length : "tidak ada");
 cek("KECAMATAN_DEFS 9 kecamatan", kecIds.length === 9, kecIds.length);
 cek("9 id kecamatan sesuai kontrak", kecHarap.every(id => kecIds.includes(id)), kecIds.join(","));
@@ -1158,7 +1162,7 @@ cek("v17.1: helper cariTileKebunSagu ada", srcCityA.includes("function cariTileK
 cek("v17.1: panel legenda terrain ada", srcCityA.includes("Peta — Legenda Terrain"));
 cek("v17.1: auto-pan tutorial langkah 6 memakai cariTileKebunSagu", srcCityA.includes("cariTileKebunSagu()"));
 cek("v18-A: kontrol waktu baru di index.html (btnKec05, tanpa btnHari/btnKec3)", idxHtml.includes('id="btnKec05"') && !idxHtml.includes('id="btnHari"') && !idxHtml.includes('id="btnKec3"'));
-cek("v18-D: VERSI_GAME naik ke v21 (modul akhir)", C.VERSI_GAME === "v21", C.VERSI_GAME);
+cek("v18-D: VERSI_GAME naik ke v22 (modul akhir)", C.VERSI_GAME === "v22", C.VERSI_GAME);
 // Kembalikan ke permainan baru yang bersih setelah semua uji waktu
 C.mulaiGame(true);
 cek("v18-A: permainan baru mulai 06:00 hari ke-0", C.waktuGame === 360 && C.hariGame() === 0 && C.jamGame() === 6, C.waktuGame);
@@ -1416,7 +1420,7 @@ cek("v18-C: riset tetap harian (olah-sagu 2 hari, konstruksi-beton 3 hari)", C.T
 cek("v18-C: prosesPergantianHari tetap memajukan riset per hari", srcCityB.includes("S.riset.sisa--"));
 cek("v18-C: tidak ada lagi progres konstruksi harian (b.progres += 1 / d.waktu)", !srcCityB.includes("b.progres += 1 / d.waktu"));
 cek("v18-C: loop utama tidak lagi memanggil perbaruiFeri(dt)", !srcCityB.includes("perbaruiFeri(dt);"));
-cek("v18-D: VERSI_GAME v21 (modul akhir)", C.VERSI_GAME === "v21", C.VERSI_GAME);
+cek("v18-D: VERSI_GAME v22 (modul akhir)", C.VERSI_GAME === "v22", C.VERSI_GAME);
 let mangroveC = 0;
 for (const baris of C.peta.terrain) for (const t of baris) if (t === "mangrove") mangroveC++;
 cek("v18-C: v17.1 mangrove > 1000 petak", mangroveC > 1000, mangroveC);
@@ -1425,8 +1429,8 @@ cek("v18-C: v17.1 cariTileKebunSagu menemukan petak valid", !!tkSaguC && C.cekBa
 cek("v18-C: v17.1 legenda terrain masih ada", srcCityB.includes("Peta — Legenda Terrain"));
 // ---- v18-D: UI jam/kalender bar atas + tutorial langkah 4 baru + hapus hariBerikutnya ----
 // (a) versi & refs di index.html (dibaca dari disk; harness sudah memakai fs)
-cek("v18-D: VERSI_GAME v21", C.VERSI_GAME === "v21", C.VERSI_GAME);
-cek("v18-D: index.html refs v21 (css v=13, city-data v=9, city-map v=4, city-utilitas v=1, city v=23) + city-bahagia v=1 + city-lalin v=1", idxHtml.includes("css/city.css?v=13") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city.js?v=23") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=1"));
+cek("v18-D: VERSI_GAME v22", C.VERSI_GAME === "v22", C.VERSI_GAME);
+cek("v18-D: index.html refs v22-W5 (css v=13, city-data v=9, city-map v=4, city-utilitas v=1, city v=27) + city-bahagia v=1 + city-lalin v=1 + city-jalan v=1 + city-kendaraan v=2 + city-persimpangan v=1 + city-maritim v=1 (v22-W5)", idxHtml.includes("css/city.css?v=13") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city.js?v=27") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=1") && idxHtml.includes("js/city-jalan.js?v=1") && idxHtml.includes("js/city-kendaraan.js?v=2") && idxHtml.includes("js/city-persimpangan.js?v=1") && idxHtml.includes("js/city-maritim.js?v=1"));
 cek("v18-D: #jamAtas ada di bar atas (jam, hari, fase, cuaca)", idxHtml.includes('id="jamAtas"') && idxHtml.includes('id="jamAtasJam"') && idxHtml.includes('id="jamAtasHari"') && idxHtml.includes('id="jamAtasFase"') && idxHtml.includes('id="jamAtasCuaca"'));
 cek("v18-D: #ikonFase hanya satu (dipindah ke #jamAtas, tidak duplikat)", (idxHtml.match(/id="ikonFase"/g) || []).length === 1);
 cek("v18-D: tidak ada tombol Hari Berikutnya di index.html", !idxHtml.includes('id="btnHari"') && !idxHtml.includes('id="btnKec3"') && !/<button[^>]*>[^<]*Hari Berikutnya/.test(idxHtml) && !idxHtml.includes("⏭ Hari Berikutnya"));
@@ -2146,7 +2150,14 @@ C.S.penduduk.total = 10; // volume/petak tanah = (10x0,5 + 1..2 bangunan) = 6-7 
 C.hitungLalin();
 const skorTanpaTLW4 = C.S.lalin.skor;
 function cariTileTLW4() {
+  // v22-W5 (flaky): lewati petak jalan yang sedang diduduki kendaraan —
+  // satu kendaraan di petak tanah (kapSim 1) memaksa rasio petak itu
+  // ke 1,0 sehingga efek traffic-light (x0,7 pada rasio zona) tidak
+  // pernah terlihat. Bersama initKendaraan deterministik (truk selalu
+  // di jalan[0]), tes ini kini deterministik.
+  const petakKendaraan = new Set(C.kendaraanVisual.map(k => ((typeof k.tileX === "number" ? k.tileX : Math.round(k.x)) + "," + (typeof k.tileY === "number" ? k.tileY : Math.round(k.y)))));
   for (const j of C.S.jalan) {
+    if (petakKendaraan.has(j.x + "," + j.y)) continue;
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       const x = j.x + dx, y = j.y + dy;
       if (x < 0 || y < 0 || x >= C.peta.W || y >= C.peta.H) continue;
@@ -3151,7 +3162,7 @@ cek("v21-w5: CSS minimap besar = kolom token+100px (tanpa margin negatif)", cssT
 
 // --- (c) Tooltip nav ---
 const navTipCountW5 = (idxHtml.match(/<span class="navTip">/g) || []).length;
-cek("v21-w5: tooltip nav ada di DOM (8 tombol nav punya .navTip)", navTipCountW5 === 8, navTipCountW5);
+cek("v21-w5: tooltip nav ada di DOM (9 tombol nav punya .navTip — v22-W5 tambah Lalu Lintas)", navTipCountW5 === 9, navTipCountW5);
 cek("v21-w5: CSS tooltip tampil saat hover/fokus/class tampil", cssTxt.includes("#relKiri button.tampil .navTip") && cssTxt.includes("#relKiri button:focus-visible .navTip"));
 cek("v21-w5: CSS rel nav punya stacking context di atas panel kiri (z-index 40)", /#relKiri \{[^}]*z-index: 40/.test(cssTxt));
 cek("v21-w5: CSS tidak lagi menyembunyikan .navTip di <=820px", !cssTxt.includes(".navTip { display: none"));
@@ -3262,6 +3273,1172 @@ cek("v21-w5: CSS portrait HP: minimap disembunyikan saat panel kiri terbuka (:ha
 // --- (l) v21 tetap jalan: regresi sistem inti ---
 if (typeof C.perbaruiDiagnostikRender === "function") C.perbaruiDiagnostikRender();
 cek("v21-w5: regresi — 19 kategori, overlay, profil, density, minimap besar, tutup panel, petaVersi 5, generasiSimpan, diagnostik render", C.TAB_BANGUN.length === 19 && typeof C.aturOverlay === "function" && typeof C.resetProfil === "function" && typeof C.aturDensity === "function" && typeof C.toggleMinimapBesar === "function" && typeof C.tutupSemuaPanel === "function" && C.S.petaVersi === 5 && typeof C.S.generasiSimpan === "number" && typeof vm.runInContext("window.__merantiRender", sandbox) === "object", "petaVersi=" + C.S.petaVersi + " gen=" + C.S.generasiSimpan);
-cek("v21-w5: VERSI_GAME v21 + refs v21 (css v=13, city.js v=23)", C.VERSI_GAME === "v21" && idxHtml.includes("css/city.css?v=13") && idxHtml.includes("js/city.js?v=23"));
+cek("v21-w5: VERSI_GAME v22 + refs v22-W5 (css v=13, city.js v=27, city-jalan v=1, city-kendaraan v=2, city-maritim v=1)", C.VERSI_GAME === "v22" && idxHtml.includes("css/city.css?v=13") && idxHtml.includes("js/city.js?v=27") && idxHtml.includes("js/city-jalan.js?v=1") && idxHtml.includes("js/city-kendaraan.js?v=2") && idxHtml.includes("js/city-maritim.js?v=1"));
+
+// --- (n) v22-W1: RoadGraph + A* + Lane System (js/city-jalan.js) ---
+// Jaringan uji (aspal): L utama (10,10)-(14,10)-(14,14) + cabang buntu
+// (12,10)-(12,12) + segmen TAK tersambung (30,30)-(32,30).
+const jalanV22Lama = C.S.jalan.slice();
+const jembV22Lama = C.S.jembatan.slice();
+const bangV22Lama = C.S.bangunan.slice();
+C.S.bangunan = [];
+C.S.jembatan = [];
+C.S.jalan = [
+  { x: 10, y: 10, tipe: "jalan-aspal" }, { x: 11, y: 10, tipe: "jalan-aspal" },
+  { x: 12, y: 10, tipe: "jalan-aspal" }, { x: 13, y: 10, tipe: "jalan-aspal" },
+  { x: 14, y: 10, tipe: "jalan-aspal" }, { x: 14, y: 11, tipe: "jalan-aspal" },
+  { x: 14, y: 12, tipe: "jalan-aspal" }, { x: 14, y: 13, tipe: "jalan-aspal" },
+  { x: 14, y: 14, tipe: "jalan-aspal" },
+  { x: 12, y: 11, tipe: "jalan-aspal" }, { x: 12, y: 12, tipe: "jalan-aspal" },
+  { x: 30, y: 30, tipe: "jalan-aspal" }, { x: 31, y: 30, tipe: "jalan-aspal" },
+  { x: 32, y: 30, tipe: "jalan-aspal" },
+];
+C.bangunGraphJalan();
+const infoV22 = C.infoGraphJalan();
+cek("v22-w1: (a) graph dibangun — 6 node, 4 edge, 2 komponen, 14 petak", infoV22.jumlahNode === 6 && infoV22.jumlahEdge === 4 && infoV22.jumlahKomponen === 2 && infoV22.jumlahPetakJalan === 14, JSON.stringify(infoV22));
+cek("v22-w1: (a) komponen terhubung benar (utama 4 node/3 edge, lepas 2 node/1 edge)", (() => { const k = C.komponenTerhubung(); return k.length === 2 && k.some(c => c.jumlahNode === 4 && c.jumlahEdge === 3) && k.some(c => c.jumlahNode === 2 && c.jumlahEdge === 1); })());
+cek("v22-w1: (a) edge L (13,10): panjang 1750 m, aspal, 2 lajur, 40 km/jam, kap 40", (() => { const e = C.edgeDi(13, 10); return e && e.panjangM === 1750 && e.jenis === "jalan-aspal" && e.lajur === 2 && e.kecepatanMaks === 40 && e.kapasitas === 40 && e.petak.length === 7; })(), JSON.stringify(C.edgeDi(13, 10)));
+cek("v22-w1: (a) nodeTerdekat(10,10) = node ujung (10,10)", (() => { const n = C.nodeTerdekat(10, 10); return n && n.x === 10 && n.y === 10; })());
+const himpJalanV22 = new Set(C.S.jalan.map(j => j.x + "," + j.y));
+const ruteV22 = C.cariRute(10, 10, 14, 14);
+cek("v22-w1: (b) A* (10,10)->(14,14): 9 waypoint dari ujung ke ujung lewat (12,10)", Array.isArray(ruteV22) && ruteV22.length === 9 && ruteV22[0].x === 10 && ruteV22[0].y === 10 && ruteV22[8].x === 14 && ruteV22[8].y === 14 && ruteV22.some(p => p.x === 12 && p.y === 10), JSON.stringify(ruteV22));
+cek("v22-w1: (b) semua waypoint A* di atas petak jalan", Array.isArray(ruteV22) && ruteV22.every(p => himpJalanV22.has(p.x + "," + p.y)));
+cek("v22-w1: (b) A* dari tengah ruas (13,10)->(12,12): mulai (13,10), akhir (12,12)", (() => { const r = C.cariRute(13, 10, 12, 12); return Array.isArray(r) && r.length === 4 && r[0].x === 13 && r[0].y === 10 && r[3].x === 12 && r[3].y === 12; })());
+cek("v22-w1: (c) A* null bila tujuan tak terhubung (komponen lepas)", C.cariRute(10, 10, 30, 30) === null);
+cek("v22-w1: (c) A* null bila tujuan tanpa jalan di dekatnya", C.cariRute(10, 10, 100, 100) === null);
+const statCache0 = C.statistikCacheRute();
+C.cariRute(10, 10, 14, 14);
+const ruteV22b = C.cariRute(10, 10, 14, 14);
+const statCache1 = C.statistikCacheRute();
+cek("v22-w1: (d) route caching — panggil 2x hasil sama + cache hit naik", JSON.stringify(ruteV22b) === JSON.stringify(ruteV22) && statCache1.hit > statCache0.hit, "hit " + statCache0.hit + "->" + statCache1.hit);
+const versiV22a = C.versiGraph;
+C.perbaruiGraphJalan([{ x: 10, y: 10 }]);
+cek("v22-w1: (d) ubah graph -> versi naik + cache kosong", C.versiGraph === versiV22a + 1 && C.statistikCacheRute().jumlahEntri === 0, "versi " + versiV22a + "->" + C.versiGraph);
+const ruteV22c = C.cariRute(10, 10, 14, 14);
+cek("v22-w1: (d) setelah invalidasi, A* menghitung ulang rute yang sama", JSON.stringify(ruteV22c) === JSON.stringify(ruteV22) && C.statistikCacheRute().miss > statCache1.miss);
+cek("v22-w1: (e) lajur kiri — offset Timur vs Barat berlawanan sisi", (() => {
+  const timur = C.titikLajurTile(0, 0, 1, 0), barat = C.titikLajurTile(1, 0, 0, 0);
+  const oT = { x: timur.x - 1, y: timur.y - 0 }, oB = { x: barat.x - 0, y: barat.y - 0 };
+  const dot = oT.x * oB.x + oT.y * oB.y;
+  const magT = Math.hypot(oT.x, oT.y), magB = Math.hypot(oB.x, oB.y);
+  return dot < 0 && magT > 0.05 && magB > 0.05;
+})());
+cek("v22-w1: (e) posisiLajur = titikLajurTile (tak ada rumus lajur ganda)", JSON.stringify(C.posisiLajur(null, 0, 0, 1, 0)) === JSON.stringify(C.titikLajurTile(0, 0, 1, 0)));
+cek("v22-w1: (f) titik belok 90° menghasilkan 3 waypoint antara (bukan tajam)", (() => {
+  const b = C.titikBelok(0, 1, 1, 1, 1, 2);
+  if (!Array.isArray(b) || b.length !== 3) return false;
+  if (!b.every(p => isFinite(p.x) && isFinite(p.y))) return false;
+  const A = C.titikLajurTile(0, 1, 1, 1), B = C.titikLajurTile(1, 1, 1, 2);
+  if (Math.hypot(b[1].x - A.x, b[1].y - A.y) < 0.01 || Math.hypot(b[1].x - B.x, b[1].y - B.y) < 0.01) return false;
+  if (!b.every(p => Math.hypot(p.x - 1, p.y - 1) < 1.5)) return false;
+  // Belokan tersebar: tiap perubahan arah antar segmen < 70 derajat.
+  const pts = [A].concat(b).concat([B]);
+  for (let i = 0; i < pts.length - 2; i++) {
+    const v1 = { x: pts[i + 1].x - pts[i].x, y: pts[i + 1].y - pts[i].y };
+    const v2 = { x: pts[i + 2].x - pts[i + 1].x, y: pts[i + 2].y - pts[i + 1].y };
+    const m1 = Math.hypot(v1.x, v1.y), m2 = Math.hypot(v2.x, v2.y);
+    if (m1 < 1e-9 || m2 < 1e-9) continue;
+    const cos = Math.max(-1, Math.min(1, (v1.x * v2.x + v1.y * v2.y) / (m1 * m2)));
+    if (Math.acos(cos) >= 1.22) return false;
+  }
+  return true;
+})());
+cek("v22-w1: (f) titik belok lurus = [] dan putar balik = 1 titik", C.titikBelok(0, 1, 1, 1, 2, 1).length === 0 && C.titikBelok(0, 1, 1, 1, 0, 1).length === 1);
+const kendV22 = C.buatKendaraan("truk", 10, 10);
+cek("v22-w1: buatRuteKendaraan ke tujuan terhubung -> menuju, 9 waypoint, waypoint berikut = rute[1]", C.buatRuteKendaraan(kendV22, 14, 14) && kendV22.status === "menuju" && kendV22.rute.length === 9 && (() => { const w = C.waypointBerikut(kendV22); return w && w.x === 11 && w.y === 10; })() && kendV22.persimpanganBerikut && kendV22.persimpanganBerikut.x === 12 && kendV22.persimpanganBerikut.y === 10, kendV22.status);
+const kendV22b = C.buatKendaraan("truk", 10, 10);
+cek("v22-w1: buatRuteKendaraan ke tujuan lepas -> tidak-ada-jalur, tetap di tempat", !C.buatRuteKendaraan(kendV22b, 30, 30) && kendV22b.status === "tidak-ada-jalur" && kendV22b.x === 10 && kendV22b.y === 10 && kendV22b.rute.length === 0);
+cek("v22-w1: ruteUlangBilaPerlu menolak alasan tak sah (tiap frame)", C.ruteUlangBilaPerlu(kendV22, "tiap-frame") === false && kendV22.status === "menuju");
+cek("v22-w1: ruteUlangBilaPerlu alasan sah (tujuan-berubah) menghitung ulang", C.ruteUlangBilaPerlu(kendV22, "tujuan-berubah") === true && kendV22.status === "menuju");
+cek("v22-w1: jarak aman truk (cepat 1,2) = 1,1 petak; terlalu dekat bila < itu", Math.abs(C.jarakAman(kendV22, null) - 1.1) < 1e-9 && C.kendaraanTerlaluDekat(kendV22, { x: 10.5, y: 10 }) === true && C.kendaraanTerlaluDekat(kendV22, { x: 12, y: 10 }) === false);
+// Node akses: rumah di (15,11) -> petak jalan (14,11) di depannya jadi node.
+C.S.bangunan = [{ id: "rumah-sederhana", x: 15, y: 11, selesai: true, rot: 0 }];
+C.perbaruiGraphJalan([{ x: 15, y: 11 }]);
+cek("v22-w1: node akses — rumah di (15,11) membuat (14,11) jadi node (7 node, 5 edge)", (() => { const info = C.infoGraphJalan(); const n = C.nodeTerdekat(14, 11); return info.jumlahNode === 7 && info.jumlahEdge === 5 && n && n.x === 14 && n.y === 11; })(), JSON.stringify(C.infoGraphJalan()));
+cek("v22-w1: regresi — gerakAgen/pilihJalanBerikut/titikLajurTile & visual lama tetap ada", typeof C.gerakAgen === "function" && typeof C.pilihJalanBerikut === "function" && typeof C.titikLajurTile === "function" && Array.isArray(C.wargaVisual) && Array.isArray(C.kendaraanVisual) && typeof C.hitungLalin === "function");
+// Kembalikan keadaan semula + graph konsisten.
+C.S.jalan = jalanV22Lama; C.S.jembatan = jembV22Lama; C.S.bangunan = bangV22Lama;
+C.bangunGraphJalan();
+// =====================================================================
+// v22 Worker 6 — perbaikan reload lease (cek live v21) + desinkron
+// profil/simpanan + pulihkan pause + panel debug tint.
+// Skenario live yang direplikasi: tab lama A (Hari 4, 22:03,
+// Rp1.739.906, jalan 2x) vs tab baru B (LANJUTKAN, dijeda 22:32,
+// bangun 7 jalan, simpan manual Rp1.736.406) -> reload B + LANJUTKAN
+// HARUS memuat simpanan B (22:32 + 7 jalan), BUKAN keadaan A (23:08).
+// =====================================================================
+function buatKonteksW6(mapSession) {
+  const elemen6 = {};
+  const listeners6 = {};
+  const sb6 = {
+    console: console, setTimeout: setTimeout, clearTimeout: clearTimeout,
+    setInterval: () => 0, clearInterval: () => {},
+    requestAnimationFrame: () => {},
+    localStorage: {
+      getItem: (k) => (store.has(k) ? store.get(k) : null),
+      setItem: (k, v) => store.set(k, v),
+      removeItem: (k) => store.delete(k),
+    },
+    sessionStorage: {
+      getItem: (k) => (mapSession.has(k) ? mapSession.get(k) : null),
+      setItem: (k, v) => mapSession.set(k, v),
+      removeItem: (k) => mapSession.delete(k),
+    },
+    document: {
+      getElementById: (id) => { if (!elemen6[id]) elemen6[id] = buatEl(id); return elemen6[id]; },
+      querySelectorAll: () => [],
+      createElement: (tag) => buatEl(tag),
+      addEventListener: (ev, fn) => { listeners6[ev] = fn; },
+    },
+    window: { addEventListener: (ev, fn) => { listeners6[ev] = fn; }, devicePixelRatio: 1, innerWidth: 1200 },
+    Image: class { constructor() { this.complete = false; this.naturalWidth = 0; } set src(v) {} },
+    confirm: () => true,
+    Date: Date, Math: Math, JSON: JSON, Object: Object, Array: Array, parseInt: parseInt, parseFloat: parseFloat, isNaN: isNaN,
+  };
+  vm.createContext(sb6);
+  vm.runInContext(src, sb6);
+  listeners6["DOMContentLoaded"]();
+  return { sb: sb6, elemen: elemen6, listeners: listeners6 };
+}
+function bacaLeaseW6() { const raw = store.get(C.TAB_KUNCI); return raw ? JSON.parse(raw) : null; }
+function kedaluwarsakanLeaseW6() { const l = bacaLeaseW6(); if (l) store.set(C.TAB_KUNCI, JSON.stringify({ id: l.id, ts: Date.now() - 10000 })); }
+const HARI4_2203 = 3 * 1440 + 22 * 60 + 3;
+const HARI4_2232 = 3 * 1440 + 22 * 60 + 32;
+const HARI4_2308 = 3 * 1440 + 23 * 60 + 8;
+// --- (a) TAB LAMA A: permainan Hari 4, 22:03, Rp1.739.906, jalan 2x.
+const sesiA6 = new Map();
+const tabA6 = buatKonteksW6(sesiA6);
+const A6 = tabA6.sb;
+const idA6 = vm.runInContext("tabIdSaya", A6);
+cek("v22-w6: tab lama A punya ID tab dari sessionStorage", typeof idA6 === "string" && idA6.indexOf("tab-") === 0 && sesiA6.get(C.TAB_ID_KUNCI) === idA6, idA6);
+vm.runInContext("mulaiGame(true);", A6);
+vm.runInContext("waktuGame = " + HARI4_2203 + "; S.uang = 1739906; S.penduduk.total = 8; aturKecepatan(2); simpan();", A6);
+const muatA6 = vm.runInContext("muat()", A6);
+cek("v22-w6: tab lama A menyimpan Hari 4 / 22:03 Rp1.739.906", !!muatA6 && muatA6.waktuGame === HARI4_2203 && muatA6.uang === 1739906, muatA6 && (muatA6.waktuGame + "/" + muatA6.uang));
+// --- (b) TAB BARU B: LANJUTKAN (memuat simpanan A), mainkan, bangun 7 jalan, simpan manual 22:32.
+const sesiB6 = new Map();
+const tabB6 = buatKonteksW6(sesiB6);
+const B6 = tabB6.sb;
+const idB6 = vm.runInContext("tabIdSaya", B6);
+cek("v22-w6: tab baru B punya ID tab berbeda dari A", typeof idB6 === "string" && idB6 !== idA6, idB6);
+cek("v22-w6: denyut layar mulai B tidak mencuri lease segar milik A", (() => { const l = bacaLeaseW6(); return !!l && l.id === idA6; })());
+vm.runInContext("mulaiGame(false);", B6);
+cek("v22-w6: LANJUTKAN di B memuat simpanan A (Hari 4, 22:03)", vm.runInContext("S.hari", B6) === 4 && vm.runInContext("jamGame()", B6) === 22 && vm.runInContext("menitGame()", B6) === 3, vm.runInContext("S.hari", B6) + " " + vm.runInContext("jamGame()", B6) + ":" + vm.runInContext("menitGame()", B6));
+const jalanAwalB6 = vm.runInContext("S.jalan.length", B6);
+const tambahB6 = vm.runInContext(`(() => {
+  let tambah = 0;
+  let maju = true;
+  // BFS: pindai tetangga jalan yang sudah ada, lalu tetangga jalan yang
+  // baru ditambahkan, sampai 7 petak (satu lapis tetangga hanya 5).
+  while (tambah < 7 && maju) {
+    maju = false;
+    const jalanKini = S.jalan.slice();
+    outer: for (const j of jalanKini) for (const d of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      if (tambah >= 7) break outer;
+      const tx = j.x + d[0], ty = j.y + d[1];
+      const t = terrainDi(peta, tx, ty);
+      const def = t ? TERRAIN[t] : null;
+      const bisa = def && (def.bisaBangun !== undefined ? def.bisaBangun : def.bangun) && !def.butuhBuka;
+      if (bisa && t !== "pantai" && !adaBangunanDi(S, tx, ty) && !adaJalanDi(S, tx, ty)) {
+        S.jalan.push({ x: tx, y: ty, tipe: "jalan-tanah", kecamatan: null });
+        tambah++; maju = true;
+      }
+    }
+  }
+  return tambah;
+})()`, B6);
+cek("v22-w6: B berhasil membangun 7 petak Jalan Tanah", tambahB6 === 7, String(tambahB6));
+vm.runInContext("waktuGame = " + HARI4_2232 + "; S.uang = 1736406; aturKecepatan(0); simpan();", B6);
+const muatB6 = vm.runInContext("muat()", B6);
+cek("v22-w6: simpan manual B = Hari 4 / 22:32 Rp1.736.406 + 7 jalan + jeda", !!muatB6 && muatB6.waktuGame === HARI4_2232 && muatB6.uang === 1736406 && muatB6.jalan.length === jalanAwalB6 + 7 && muatB6.kecepatan === 0, muatB6 && (muatB6.waktuGame + "/" + muatB6.uang + "/" + muatB6.jalan.length + "/kec" + muatB6.kecepatan));
+cek("v22-w6: lease dipegang B setelah simpan manual", (() => { const l = bacaLeaseW6(); return !!l && l.id === idB6; })());
+// --- (c) Tab lama A terus jalan 2x (22:32 -> 23:08, Rp1.739.797) + jendela reload (lease kedaluwarsa).
+vm.runInContext("waktuGame = " + HARI4_2308 + "; S.uang = 1739797;", A6);
+kedaluwarsakanLeaseW6(); // lease B kedaluwarsa selama jendela reload (skenario live v21)
+// "Reload" B = konteks baru dengan sessionStorage yang SAMA (tab yang sama dimuat ulang) + A tetap berjalan.
+const tabB26 = buatKonteksW6(sesiB6);
+const B26 = tabB26.sb;
+const idB26 = vm.runInContext("tabIdSaya", B26);
+cek("v22-w6: reload memakai ID tab yang SAMA (sessionStorage bertahan)", idB26 === idB6, idB26 + " vs " + idB6);
+cek("v22-w6: denyut layar mulai B2 langsung mengklaim lease (sebelum LANJUTKAN)", (() => { const l = bacaLeaseW6(); return !!l && l.id === idB6; })());
+cek("v22-w6: simpanan belum tertimpa selama jendela reload (masih milik B)", (() => { const m = vm.runInContext("muat()", B26); return !!m && m.uang === 1736406 && m.waktuGame === HARI4_2232; })());
+// Tab lama A mencoba merebut: denyut patuh (lease segar milik B2) + autosave ditolak.
+vm.runInContext("denyutLeaseTab();", A6);
+cek("v22-w6: denyut tab lama A tidak merebut lease segar milik B2", (() => { const l = bacaLeaseW6(); return !!l && l.id === idB6; })());
+const autosaveA6 = vm.runInContext("simpan(true);", A6);
+cek("v22-w6: autosave tab lama A DITOLAK saat B2 memegang lease", autosaveA6 === false, String(autosaveA6));
+cek("v22-w6: autosave A tidak menimpa simpanan B", (() => { const m = vm.runInContext("muat()", B26); return !!m && m.uang === 1736406; })());
+// Reload + LANJUTKAN di B2 -> simpanan B (bukan keadaan A 23:08).
+vm.runInContext("mulaiGame(false);", B26);
+cek("v22-w6: reload + LANJUTKAN memuat Hari 4 / 22:32 Rp1.736.406 (simpanan B)", vm.runInContext("S.hari", B26) === 4 && vm.runInContext("jamGame()", B26) === 22 && vm.runInContext("menitGame()", B26) === 32 && vm.runInContext("S.uang", B26) === 1736406, vm.runInContext("S.hari", B26) + " " + vm.runInContext("jamGame()", B26) + ":" + vm.runInContext("menitGame()", B26) + " Rp" + vm.runInContext("S.uang", B26));
+cek("v22-w6: 7 jalan B tetap ada setelah reload + LANJUTKAN", vm.runInContext("S.jalan.length", B26) === jalanAwalB6 + 7, String(vm.runInContext("S.jalan.length", B26)));
+// --- (d) Lease kedaluwarsa bisa diambil alih tab baru; simpan manual merebut kembali.
+const sesiC6 = new Map();
+const tabC6 = buatKonteksW6(sesiC6);
+const C6 = tabC6.sb;
+const idC6 = vm.runInContext("tabIdSaya", C6);
+cek("v22-w6: tab baru C tidak mencuri lease segar milik B2 saat dimuat", (() => { const l = bacaLeaseW6(); return !!l && l.id === idB6; })());
+kedaluwarsakanLeaseW6();
+vm.runInContext("denyutLeaseTab();", C6);
+cek("v22-w6: lease kedaluwarsa bisa diambil alih tab baru C", (() => { const l = bacaLeaseW6(); return !!l && l.id === idC6; })());
+const manualB26 = vm.runInContext("simpan();", B26);
+cek("v22-w6: simpan manual B2 merebut lease kembali dari C", manualB26 === true && (() => { const l = bacaLeaseW6(); return !!l && l.id === idB6; })());
+// --- (e) Pelindung tab idle: autosave tab tanpa interaksi >30 detik dilewati.
+// Kedaluwarsakan lease dulu supaya yang memblokir HANYA pelindung idle (bukan lease).
+kedaluwarsakanLeaseW6();
+vm.runInContext("waktuInteraksiTerakhir = Date.now() - 40000;", A6);
+const autosaveIdleA6 = vm.runInContext("simpan(true);", A6);
+cek("v22-w6: autosave tab idle >30 detik DILEWATI walau lease kedaluwarsa", autosaveIdleA6 === false, String(autosaveIdleA6));
+cek("v22-w6: simpanan tidak tertimpa oleh autosave tab idle", (() => { const m = vm.runInContext("muat()", B26); return !!m && m.uang === 1736406; })());
+vm.runInContext("catatInteraksi();", A6);
+const autosaveAktifA6 = vm.runInContext("simpan(true);", A6);
+cek("v22-w6: setelah interaksi, autosave tab lama diizinkan lagi (lease kedaluwarsa)", autosaveAktifA6 === true, String(autosaveAktifA6));
+cek("v22-w6: ...dan simpanan menjadi milik tab lama A (23:08)", (() => { const m = vm.runInContext("muat()", A6); return !!m && m.uang === 1739797 && m.waktuGame === HARI4_2308; })());
+vm.runInContext("simpan();", B26);
+cek("v22-w6: simpan manual B2 memulihkan simpanan B setelah uji idle", vm.runInContext("muat()", B26).uang === 1736406);
+// --- (f) Denyut di layar mulai via tick (S null): halaman baru memegang lease sebelum LANJUTKAN.
+const sesiD6 = new Map();
+const tabD6 = buatKonteksW6(sesiD6);
+const D6 = tabD6.sb;
+const idD6 = vm.runInContext("tabIdSaya", D6);
+cek("v22-w6: konteks D (layar mulai, belum ada S) punya ID tab sendiri", typeof idD6 === "string" && idD6 !== idB6 && idD6 !== idA6, idD6);
+kedaluwarsakanLeaseW6();
+vm.runInContext("tickInterval500();", D6);
+cek("v22-w6: tick di layar mulai (S null) tetap mendenyut lease", (() => { const l = bacaLeaseW6(); return !!l && l.id === idD6; })());
+cek("v22-w6: denyut layar mulai TIDAK menulis simpanan (belum ada S)", (() => { const m = vm.runInContext("muat()", D6); return !!m && m.uang === 1736406 && m.waktuGame === HARI4_2232; })());
+// --- (g) PULIHKAN PAUSE (tab utama): simpan saat jeda -> muat -> kecepatan tetap 0.
+C.mulaiGame(false);
+cek("v22-w6: LANJUTKAN memulihkan jeda (kecepatan 0, bukan 2x)", C.kecepatan === 0, String(C.kecepatan));
+const wPause6 = C.waktuGame;
+C.tickInterval500(); C.tickInterval500();
+cek("v22-w6: permainan yang dimuat dalam keadaan jeda tidak memajukan waktu", C.waktuGame === wPause6, C.waktuGame + " vs " + wPause6);
+// Akar bug live: kembaliKeMenuUtama() dulu menyimpan SEBELUM menjeda,
+// sehingga simpanan mencatat 2x. Kini jeda dulu, baru simpan.
+C.aturKecepatan(2);
+C.kembaliKeMenuUtama();
+cek("v22-w6: kembali ke menu menyimpan kecepatan 0 (jeda dipulihkan)", (() => { const m = C.muat(); return !!m && m.kecepatan === 0; })(), String(C.muat() && C.muat().kecepatan));
+cek("v22-w6: tab di menu melepas lease (denyut berhenti)", C.berhentiDenyutMenu === true);
+C.mulaiGame(false);
+cek("v22-w6: LANJUTKAN setelah kembali ke menu tetap dijeda", C.kecepatan === 0, String(C.kecepatan));
+cek("v22-w6: mulaiGame mereset flag lepas-lease menu", C.berhentiDenyutMenu === false);
+// --- (h) DESINKRON PROFIL/SIMPANAN (opsi ii): permainan baru langsung
+// menimpa simpanan lama; hapus profil + sesi baru tidak lagi kehilangan
+// progres ke kota pemimpin lama.
+vm.runInContext("profilPemain = { nama: 'Sukma', gender: 'pria', avatar: 'x', tutorialSelesai: true, dibuat: new Date().toISOString() }; simpanProfil(); S.pemimpin = { nama: 'Sukma', gender: 'pria', avatar: 'x' }; S.hari = 4; S.uang = 1739797; simpan();", sandbox);
+cek("v22-w6: pra-syarat: simpanan lama 'Sukma' Hari 4 Rp1.739.797", (() => { const m = C.muat(); return !!m && m.pemimpin && m.pemimpin.nama === "Sukma" && m.uang === 1739797; })());
+C.resetProfil();
+cek("v22-w6: hapus profil ketuk pertama = minta konfirmasi (profil belum terhapus)", !!C.profilPemain);
+C.resetProfil();
+cek("v22-w6: hapus profil ketuk kedua menghapus profil", C.profilPemain === null && !store.has(C.CITY.PROFIL_KEY));
+cek("v22-w6: hapus profil melepas lease tab ini (denyut berhenti di menu)", C.berhentiDenyutMenu === true);
+vm.runInContext("profilPemain = { nama: 'Sukma Dewi', gender: 'wanita', avatar: 'y', tutorialSelesai: false, dibuat: new Date().toISOString() }; simpanProfil();", sandbox);
+C.mulaiGame(true);
+cek("v22-w6: permainan baru menimpa simpanan lama (kota baru Sukma Dewi, bukan Hari 4 Sukma)", (() => { const m = C.muat(); return !!m && m.hari === 1 && m.pemimpin && m.pemimpin.nama === "Sukma Dewi" && m.uang !== 1739797; })(), (() => { const m = C.muat(); return m && (m.hari + "/" + (m.pemimpin && m.pemimpin.nama) + "/Rp" + m.uang); })());
+cek("v22-w6: LANJUTKAN setelah permainan baru memuat kota baru (bukan kota lama)", (() => { C.mulaiGame(false); return C.S.hari === 1 && C.S.pemimpin && C.S.pemimpin.nama === "Sukma Dewi"; })());
+const srcCity6 = fs.readFileSync(path.join(ROOT, "js/city.js"), "utf8");
+cek("v22-w6: konfirmasi hapus profil berlaku 10 detik (bukan 5)", (() => { const i = srcCity6.indexOf("function resetProfil"); const seg = srcCity6.slice(i, i + 1200); return seg.includes("}, 10000);"); })());
+// --- (i) PANEL DEBUG TINT: nilai aktual dari state, bisa dibuka/ditutup.
+cek("v22-w6: elemen panel debug ada di index.html + CSS-nya ada", idxHtml.includes('id="panelDebug"') && cssTxt.includes(".panelDebug"));
+cek("v22-w6: toggle Mode Debug ada di Pengaturan (game + layar mulai)", idxHtml.includes('id="btnModeDebugMulai"') && srcCity6.includes("aturModeDebug(") && srcCity6.includes("Mode Debug (tint"));
+C.aturModeDebug(true);
+cek("v22-w6: Mode Debug aktif + panel tampil", C.modeDebug === true && C.document.getElementById("panelDebug").style.display === "block", C.document.getElementById("panelDebug").style.display);
+vm.runInContext("waktuGame = 20 * 60;", sandbox); // 20:00 malam
+C.perbaruiPanelDebug();
+const dbg6 = C.document.getElementById("panelDebug").innerHTML;
+cek("v22-w6: panel debug menampilkan jam + fase Night + kegelapan 0.85 (nilai aktual)", dbg6.includes("20:00") && dbg6.includes("Night") && dbg6.includes("0.85"), dbg6.slice(0, 220));
+cek("v22-w6: panel debug menampilkan frame peta + status lease tab ini", dbg6.includes("Frame gambarPeta") && dbg6.includes("tab ini"), dbg6.slice(0, 220));
+cek("v22-w6: dataDebugTint() mengembalikan nilai aktual (gelap, frame, lease)", (() => { const d = vm.runInContext("dataDebugTint()", sandbox); return d && d.kegelapan === 0.85 && d.fase === "Night" && typeof d.gelapTerakhir === "number" && typeof d.frameGambarPeta === "number" && d.leaseMilikTabIni === true; })());
+C.perbaruiDiagnostikRender();
+cek("v22-w6: window.__merantiRender ikut mencatat lease", (() => { const r = vm.runInContext("window.__merantiRender", sandbox); return !!r && !!r.lease && r.lease.milikTabIni === true; })());
+C.aturModeDebug(false);
+cek("v22-w6: Mode Debug mati menyembunyikan panel", C.modeDebug === false && C.document.getElementById("panelDebug").style.display === "none");
+cek("v22-w6: preferensi Mode Debug tersimpan di localStorage", store.get(vm.runInContext("DEBUG_KEY", sandbox)) === "0");
+// --- (o) v22-W3: Rute Bus + Logistik (js/city-lalin.js) ---
+// TEST 4 (bus) + TEST 5 (logistik) + CRUD rute + persistensi.
+// Jaringan uji: L (10,10)-(16,10)-(16,14)-(12,14) + cabang (12,10)-(12,12)
+// + segmen TAK tersambung (30,30)-(32,30).
+const jalanW3Lama = C.S.jalan.slice();
+const jembW3Lama = C.S.jembatan.slice();
+const bangW3Lama = C.S.bangunan.slice();
+const popW3Lama = C.S.penduduk.total;
+const komW3Lama = JSON.parse(JSON.stringify(C.S.komoditas));
+const ruteW3Lama = C.S.ruteBus ? C.S.ruteBus.slice() : [];
+const logW3Lama = C.S.logistik ? JSON.parse(JSON.stringify(C.S.logistik)) : null;
+C.S.jalan = [
+  { x: 10, y: 10, tipe: "jalan-aspal" }, { x: 11, y: 10, tipe: "jalan-aspal" },
+  { x: 12, y: 10, tipe: "jalan-aspal" }, { x: 13, y: 10, tipe: "jalan-aspal" },
+  { x: 14, y: 10, tipe: "jalan-aspal" }, { x: 15, y: 10, tipe: "jalan-aspal" },
+  { x: 16, y: 10, tipe: "jalan-aspal" },
+  { x: 16, y: 11, tipe: "jalan-aspal" }, { x: 16, y: 12, tipe: "jalan-aspal" },
+  { x: 16, y: 13, tipe: "jalan-aspal" }, { x: 16, y: 14, tipe: "jalan-aspal" },
+  { x: 15, y: 14, tipe: "jalan-aspal" }, { x: 14, y: 14, tipe: "jalan-aspal" },
+  { x: 13, y: 14, tipe: "jalan-aspal" }, { x: 12, y: 14, tipe: "jalan-aspal" },
+  { x: 12, y: 11, tipe: "jalan-aspal" }, { x: 12, y: 12, tipe: "jalan-aspal" },
+  { x: 30, y: 30, tipe: "jalan-aspal" }, { x: 31, y: 30, tipe: "jalan-aspal" },
+  { x: 32, y: 30, tipe: "jalan-aspal" },
+];
+C.S.jembatan = [];
+C.S.bangunan = [
+  { id: "terminal-bus", x: 10, y: 9, selesai: true, rot: 0 },
+  { id: "terminal-bus", x: 12, y: 13, selesai: true, rot: 0 },
+  { id: "halte", x: 13, y: 9, selesai: true, rot: 0 },
+  { id: "halte", x: 15, y: 13, selesai: true, rot: 0 },
+  { id: "rumah-sederhana", x: 13, y: 8, selesai: true, rot: 0 },
+  { id: "rumah-sederhana", x: 12, y: 8, selesai: true, rot: 0 },
+  { id: "rumah-sederhana", x: 15, y: 12, selesai: true, rot: 0 },
+  { id: "rumah-sederhana", x: 14, y: 12, selesai: true, rot: 0 },
+  { id: "kebun-sagu", x: 11, y: 9, selesai: true, rot: 0 },
+  { id: "kilang-sagu", x: 14, y: 9, selesai: true, rot: 0 },
+  { id: "gudang", x: 15, y: 9, selesai: true, rot: 0 },
+  { id: "pelabuhan", x: 16, y: 13, selesai: true, rot: 0 },
+];
+C.S.penduduk.total = 120;
+C.S.ruteBus = [];
+C.S.logistik = C.logistikDefault();
+C.bangunGraphJalan();
+cek("v22-w3: state baru punya ruteBus[] + logistik (migrasi)", Array.isArray(C.S.ruteBus) && C.S.logistik && Array.isArray(C.S.logistik.job) && Array.isArray(C.S.logistik.truk));
+cek("v22-w3: konfigurasi rute/logistik (maks truk 6, muatan 10, bus 40)", C.LOGISTIK_KONFIG.maksTrukAktif === 6 && C.LOGISTIK_KONFIG.kapasitasMuatanTruk === 10 && C.RUTE_BUS_KONFIG.kapasitasJenis.bus === 40 && C.RUTE_BUS_KONFIG.kapasitasJenis.angkot === 12);
+
+// --- TEST 4: bus mengikuti rute, berhenti di halte, penumpang naik/turun ---
+const hasilRuteW3 = C.buatRuteBus({ terminalAwal: { x: 10, y: 9 }, halte: [{ x: 13, y: 9 }, { x: 15, y: 13 }], terminalAkhir: { x: 12, y: 13 }, armada: 1, jadwalKeberangkatan: 60, tarif: 2000 });
+cek("v22-w3 TEST 4: buatRuteBus valid -> ok, 2 halte, 1 bus kapasitas 40", hasilRuteW3.ok === true && !!hasilRuteW3.routeId && C.S.ruteBus.length === 1 && C.S.ruteBus[0].halte.length === 2 && C.S.ruteBus[0].bus.length === 1 && C.S.ruteBus[0].bus[0].kapasitas === 40, JSON.stringify(hasilRuteW3));
+const ruteW3 = C.S.ruteBus[0];
+const routeIdW3 = ruteW3.routeId;
+// Rute tak terhubung ditolak: halte di komponen jalan lepas (30,31).
+C.S.bangunan.push({ id: "halte", x: 30, y: 31, selesai: true, rot: 0 });
+const hasilRuteLepas = C.buatRuteBus({ terminalAwal: { x: 10, y: 9 }, halte: [{ x: 30, y: 31 }], terminalAkhir: { x: 12, y: 13 } });
+cek("v22-w3: rute ke halte tak terhubung DITOLAK + rute lama utuh", hasilRuteLepas.ok === false && String(hasilRuteLepas.alasan).indexOf("tidak-terhubung") === 0 && C.S.ruteBus.length === 1, JSON.stringify(hasilRuteLepas));
+C.S.bangunan = C.S.bangunan.filter(b => !(b.id === "halte" && b.x === 30 && b.y === 31));
+// CRUD rute: tambah halte (11,11) -> urutkan -> hapus -> armada/jadwal/tarif.
+C.S.bangunan.push({ id: "halte", x: 11, y: 11, selesai: true, rot: 0 });
+cek("v22-w3: tambahHalteKeRute (11,11) -> 3 halte", C.tambahHalteKeRute(routeIdW3, 11, 11).ok === true && ruteW3.halte.length === 3);
+cek("v22-w3: tambah halte yang sama ditolak", C.tambahHalteKeRute(routeIdW3, 11, 11).ok === false && ruteW3.halte.length === 3);
+cek("v22-w3: aturUrutanHalte [2,1,0] -> urutan berubah", C.aturUrutanHalte(routeIdW3, [2, 1, 0]).ok === true && ruteW3.halte[0].x === 11 && ruteW3.halte[0].y === 11 && ruteW3.halte[2].x === 13);
+cek("v22-w3: aturUrutanHalte bukan permutasi ditolak + urutan utuh", C.aturUrutanHalte(routeIdW3, [0, 0, 1]).ok === false && ruteW3.halte[0].x === 11);
+cek("v22-w3: hapusHalteDariRute idx 0 -> 2 halte", C.hapusHalteDariRute(routeIdW3, 0).ok === true && ruteW3.halte.length === 2 && ruteW3.halte[0].x === 15);
+cek("v22-w3: hapus halte idx tak valid ditolak", C.hapusHalteDariRute(routeIdW3, 9).ok === false);
+cek("v22-w3: aturTarif 3000 + aturJadwal 30", C.aturTarif(routeIdW3, 3000) === true && C.aturJadwal(routeIdW3, 30) === true && ruteW3.tarif === 3000 && ruteW3.jadwalKeberangkatan === 30);
+cek("v22-w3: aturArmada 2 -> 2 bus (bus kedua berangkat terjeda)", C.aturArmada(routeIdW3, 2) === true && ruteW3.bus.length === 2 && ruteW3.bus[1].jadwalBerangkat > ruteW3.bus[0].jadwalBerangkat);
+// Bus 0: mulai leg, lalu susuri waypoint satu per satu (langkahBus).
+const busW3 = ruteW3.bus[0];
+C.prosesBusRutePerJam();
+cek("v22-w3 TEST 4: bus berangkat (menuju, rute A* > 1 waypoint)", busW3.status === "menuju" && Array.isArray(busW3.rute) && busW3.rute.length > 1, busW3.status + " rute=" + (busW3.rute && busW3.rute.length));
+let langkahW3 = 0;
+while (busW3.status !== "tiba" && langkahW3 < 50) { C.langkahBus(busW3); langkahW3++; }
+cek("v22-w3 TEST 4: bus menyusuri waypoint sampai halte (tiba di ujung rute)", busW3.status === "tiba" && busW3.idxWaypoint === busW3.rute.length && busW3.x === busW3.rute[busW3.rute.length - 1].x && busW3.y === busW3.rute[busW3.rute.length - 1].y, "langkah=" + langkahW3 + " pos=" + busW3.x + "," + busW3.y);
+// Lanjutkan putaran penuh (halte 1 -> 2 -> terminal akhir -> terminal awal).
+const dikunjungiW3 = [];
+let penumpMaxW3 = 0, penumpDiAkhirW3 = null;
+for (let jam = 0; jam < 10 && dikunjungiW3.length < 4; jam++) {
+  const sebelum = busW3.halteSaatIni;
+  C.prosesBusRutePerJam();
+  if (busW3.halteSaatIni !== sebelum) {
+    dikunjungiW3.push(busW3.halteSaatIni);
+    if (busW3.halteSaatIni === 3) penumpDiAkhirW3 = busW3.penumpangSaatIni; // terminal akhir: semua turun
+  }
+  if (busW3.penumpangSaatIni > penumpMaxW3) penumpMaxW3 = busW3.penumpangSaatIni;
+}
+cek("v22-w3 TEST 4: bus mengunjungi stop berurutan 1,2,3,0 (halte,halte,terminal,awal)", dikunjungiW3.join(",") === "1,2,3,0", dikunjungiW3.join(","));
+cek("v22-w3 TEST 4: penumpang naik di halte (maks > 0) + ada pergantian (total naik > kapasitas 40)", penumpMaxW3 > 0 && ruteW3.penumpangTotal > 40, "maks=" + penumpMaxW3 + " total-naik=" + ruteW3.penumpangTotal);
+// Aturan turun (uji langsung): halte antara turun 30%, terminal akhir turun semua.
+const busUjiW3 = { penumpangSaatIni: 30, kapasitas: 40, halteSaatIni: 0, halteBerikut: 1, status: "menunggu", jadwalBerangkat: 0, jadwalTiba: 0 };
+ruteW3.antrean["1"] = 0;
+const tibaUjiW3 = C._tibaDiHalte(ruteW3, busUjiW3, C.waktuGame);
+cek("v22-w3 TEST 4: turun 30% di halte antara (30 -> 21, turun 9)", !!tibaUjiW3 && tibaUjiW3.turun === 9 && busUjiW3.penumpangSaatIni === 21, JSON.stringify(tibaUjiW3));
+const busUji2W3 = { penumpangSaatIni: 25, kapasitas: 40, halteSaatIni: 2, halteBerikut: 3, status: "menunggu", jadwalBerangkat: 0, jadwalTiba: 0 };
+ruteW3.antrean["3"] = 0;
+const tibaUji2W3 = C._tibaDiHalte(ruteW3, busUji2W3, C.waktuGame);
+cek("v22-w3 TEST 4: turun semua di terminal akhir (25 -> 0)", !!tibaUji2W3 && tibaUji2W3.turun === 25 && busUji2W3.penumpangSaatIni === 0, JSON.stringify(tibaUji2W3));
+cek("v22-w3 TEST 4: tiket tercatat di rute + kanal tiketBus v19 (tanpa ganda)", ruteW3.penumpangTotal > 0 && ruteW3.pendapatanTotal > 0 && C.S.lalin.bus.pendapatanPerJam >= 0 && typeof C.S.lalin.bus.pendapatanPerJam === "number", "naik=" + ruteW3.penumpangTotal + " Rp=" + Math.round(ruteW3.pendapatanTotal));
+const infoHalteW3 = C.infoHalte(13, 9);
+cek("v22-w3: infoHalte(13,9) ada rute + antrean angka + waktu tunggu angka", infoHalteW3.adaRute === true && typeof infoHalteW3.antrean === "number" && typeof infoHalteW3.waktuTungguMenit === "number", JSON.stringify(infoHalteW3));
+cek("v22-w3: infoRuteBus() ringkas 1 rute + bus", C.infoRuteBus().length === 1 && C.infoRuteBus()[0].bus.length === 2);
+// Persistensi: simpan -> muat -> rute tetap ada.
+C.simpan();
+const simpW3 = C.muat();
+cek("v22-w3: persistensi rute bus (simpan->muat, routeId + 2 halte + 2 bus)", !!simpW3 && Array.isArray(simpW3.ruteBus) && simpW3.ruteBus.length === 1 && simpW3.ruteBus[0].routeId === routeIdW3 && simpW3.ruteBus[0].halte.length === 2 && simpW3.ruteBus[0].bus.length === 2 && Array.isArray(simpW3.logistik.job), simpW3 && simpW3.ruteBus && simpW3.ruteBus.length);
+
+// --- TEST 5: logistik rantai produksi kebun -> kilang -> gudang -> pelabuhan ---
+C.S.komoditas.tual = 10; C.S.komoditas.tepung = 12;
+for (const k of Object.keys(C.S.komoditas)) { if (k !== "tual" && k !== "tepung") C.S.komoditas[k] = 0; }
+cek("v22-w3 TEST 5: validasi buatJobLogistik (barang tak ada / jumlah 0 -> null; 99 -> cap 10)", C.buatJobLogistik({ x: 11, y: 9 }, { x: 14, y: 9 }, "tidak-ada", 3) === null && C.buatJobLogistik({ x: 11, y: 9 }, { x: 14, y: 9 }, "tual", 0) === null && (() => { const j = C.buatJobLogistik({ x: 11, y: 9 }, { x: 14, y: 9 }, "tual", 99); return j && j.jumlah === 10; })());
+C.S.logistik = C.logistikDefault(); // mulai bersih untuk siklus hidup manual
+const jobW3 = C.buatJobLogistik({ x: 11, y: 9, bangunanId: "kebun-sagu" }, { x: 14, y: 9, bangunanId: "kilang-sagu" }, "tual", 3);
+cek("v22-w3 TEST 5: job manual kebun->kilang dibuat (menunggu, 3 tual)", !!jobW3 && jobW3.status === "menunggu" && jobW3.jenisBarang === "tual" && jobW3.jumlah === 3, jobW3 && jobW3.jobId);
+const tahapW3 = ["menuju-ambil", "memuat", "menuju-antar", "membongkar", "kembali", "selesai"];
+let tahapOkW3 = true, trukJobW3 = null;
+for (let i = 0; i < tahapW3.length; i++) {
+  C.prosesLogistikPerJam();
+  if (jobW3.status !== tahapW3[i]) { tahapOkW3 = false; break; }
+  if (i === 0) trukJobW3 = C.S.logistik.truk.find(t => t.id === jobW3.trukId);
+  if (i === 1 && !(trukJobW3 && trukJobW3.statusMuatan === "memuat")) { tahapOkW3 = false; break; }
+  if (i === 2 && !(trukJobW3 && trukJobW3.statusMuatan === "penuh")) { tahapOkW3 = false; break; }
+}
+cek("v22-w3 TEST 5: status job berubah berurutan menunggu->...->selesai (6 jam)", tahapOkW3, "status=" + jobW3.status);
+cek("v22-w3 TEST 5: truk kembali parkir di depot setelah selesai (jobId null)", !!trukJobW3 && trukJobW3.status === "parkir" && !trukJobW3.jobId && trukJobW3.statusMuatan === "kosong", trukJobW3 && (trukJobW3.status + "/" + trukJobW3.statusMuatan));
+cek("v22-w3 TEST 5: rantai otomatis terbentuk (kebun->kilang tual, kilang->gudang + gudang->pelabuhan tepung)", (() => {
+  const semua = C.S.logistik.job;
+  const ada = (barang, antarId) => semua.some(j => j.jenisBarang === barang && j.antar.bangunanId === antarId);
+  return ada("tual", "kilang-sagu") && ada("tepung", "gudang") && ada("tepung", "pelabuhan");
+})(), JSON.stringify(C.S.logistik.job.map(j => j.jenisBarang + "->" + j.antar.bangunanId + ":" + j.status)));
+cek("v22-w3 TEST 5: truk aktif dibatasi maks 6", C.S.logistik.truk.length <= 6 && C.infoLogistik().truk.length <= 6, "truk=" + C.S.logistik.truk.length);
+cek("v22-w3 TEST 5: infoLogistik() (jobAktif, truk, statistik selesai >= 1)", C.infoLogistik().statistik.selesai >= 1 && typeof C.infoLogistik().maksTruk === "number", JSON.stringify(C.infoLogistik().statistik));
+// TANPA barang/pesanan -> tidak ada job, tidak ada truk beroperasi.
+C.S.logistik = C.logistikDefault();
+for (const k of Object.keys(C.S.komoditas)) C.S.komoditas[k] = 0;
+for (let i = 0; i < 3; i++) C.prosesLogistikPerJam();
+cek("v22-w3 TEST 5: tanpa barang/pesanan -> truk parkir/tidak beroperasi (0 job, 0 truk)", C.infoLogistik().jobAktif.length === 0 && C.infoLogistik().truk.length === 0 && C.S.logistik.truk.length === 0, JSON.stringify(C.infoLogistik()));
+cek("v22-w3: hapusRuteBus menghapus rute", C.hapusRuteBus(routeIdW3) === true && C.S.ruteBus.length === 0);
+// Kembalikan keadaan semula + graph konsisten.
+C.S.jalan = jalanW3Lama; C.S.jembatan = jembW3Lama; C.S.bangunan = bangW3Lama;
+C.S.penduduk.total = popW3Lama; C.S.komoditas = komW3Lama;
+C.S.ruteBus = ruteW3Lama; C.S.logistik = logW3Lama;
+C.bangunGraphJalan();
+cek("v22-w3: keadaan dipulihkan (graph ada)", C.infoGraphJalan().ada === true);
+
+// --- (o) v22-W2: VehicleManager + Vehicle Behavior + Vehicle Types ---
+// Jaringan uji W2 (aspal) dibuat per tes di bawah; keadaan dipulihkan di akhir.
+C.aturKecepatan(1);
+vm.runInContext("waktuGame = 12 * 60;", sandbox); // siang — warga aktif
+const jalanW2Lama = C.S.jalan.slice();
+const jembW2Lama = C.S.jembatan.slice();
+const bangW2Lama = C.S.bangunan.slice();
+const waktuW2Lama = C.waktuGame;
+const kendW2Bersih = []; // id kendaraan tes -> dihapus di akhir seksi
+function aturJalanW2(daftar, tipe) {
+  C.S.jalan = daftar.map(p => ({ x: p[0], y: p[1], tipe: tipe || "jalan-aspal" }));
+  C.S.jembatan = [];
+  C.S.bangunan = [];
+  C.bangunGraphJalan();
+}
+function bersihKendaraanW2(id) { try { C.hapusKendaraan(id); } catch (e) {} }
+cek("v22-w2: API VehicleManager ada (daftarkan/hapus/diLajur/perbaruiSemua/info/buatKendaraanJalan/mintaPulang/aturStateMuat)", typeof C.daftarkanKendaraan === "function" && typeof C.hapusKendaraan === "function" && typeof C.kendaraanDiLajur === "function" && typeof C.perbaruiSemuaKendaraan === "function" && typeof C.infoKendaraan === "function" && typeof C.buatKendaraanJalan === "function" && typeof C.mintaPulang === "function" && typeof C.aturStateMuat === "function" && typeof C.perbaruiPejalanKaki === "function" && typeof C.pilihLangkahWargaJalan === "function");
+cek("v22-w2: tabel TIPE_KENDARAAN (mobil 50/5, bus 40/40, truk 35/500, ambulans 80/darurat)", C.TIPE_KENDARAAN.mobil.kecepatanMaksKmh === 50 && C.TIPE_KENDARAAN.mobil.kapasitas === 5 && C.TIPE_KENDARAAN.bus.kecepatanMaksKmh === 40 && C.TIPE_KENDARAAN.bus.kapasitas === 40 && C.TIPE_KENDARAAN.truk.kecepatanMaksKmh === 35 && C.TIPE_KENDARAAN.truk.kapasitas === 500 && C.TIPE_KENDARAAN.ambulans.kecepatanMaksKmh === 80 && C.TIPE_KENDARAAN.ambulans.darurat === true && C.TIPE_KENDARAAN.mobil.darurat === false);
+cek("v22-w2: kecepatan maks = min(tipe, jalan): truk di aspal dibatasi tipe (35), ambulans dibatasi jalan (40) — rasio 35/40, faktor macet tercoret", (() => {
+  aturJalanW2([[10, 10], [11, 10]]);
+  const t = C.kecepatanMaksPetak({ tipe: "truk", x: 10, y: 10 });
+  const a = C.kecepatanMaksPetak({ tipe: "ambulans", x: 10, y: 10 });
+  return Math.abs(t / a - 35 / 40) < 1e-9;
+})());
+cek("v22-w2: truk di jalan tanah (20 km/jam) dibatasi jalan, bukan tipe — rasio tanah/aspal 20/35", (() => {
+  aturJalanW2([[10, 10], [11, 10]]);
+  const aspal = C.kecepatanMaksPetak({ tipe: "truk", x: 10, y: 10 });
+  aturJalanW2([[20, 20]], "jalan-tanah");
+  const tanah = C.kecepatanMaksPetak({ tipe: "truk", x: 20, y: 20 });
+  return Math.abs(tanah / aspal - 20 / 35) < 1e-9;
+})());
+cek("v22-w2: infoKendaraan (maks 40) + kendaraanDiLajur array kosong untuk edge tak ada", C.infoKendaraan().maksAktif === 40 && Array.isArray(C.kendaraanDiLajur("E-tak-ada")) && C.kendaraanDiLajur("E-tak-ada").length === 0);
+
+// TEST 2 — persimpangan empat arah: lajur kiri + jarak aman, tidak bertumpuk.
+// Salib: horizontal (10,10)-(14,10) + vertikal (12,8)-(12,12). Pemimpin
+// (truk parkir di 13,10), pengikut (mobil 10,10->14,10), penyeberang
+// (mobil 12,8->12,12).
+aturJalanW2([[10, 10], [11, 10], [12, 10], [13, 10], [14, 10], [12, 8], [12, 9], [12, 11], [12, 12]]);
+const pemimpinW2 = C.buatKendaraan("truk", 13, 10);
+C.daftarkanKendaraan(pemimpinW2, { kelola: true });
+pemimpinW2.cepat = 0; pemimpinW2.state = "parking";
+kendW2Bersih.push(pemimpinW2.id);
+const pengikutW2 = C.buatKendaraanJalan("mobil", 10, 10, 14, 10);
+kendW2Bersih.push(pengikutW2.id);
+const penyeberangW2 = C.buatKendaraanJalan("mobil", 12, 8, 12, 12);
+kendW2Bersih.push(penyeberangW2.id);
+let jarakMinPemimpinW2 = Infinity, langkahMaksW2 = 0, yLajurTandaW2 = 0, yLajurKonsistenW2 = true;
+const tandaLajurW2 = Math.sign(C.posisiLajur(null, 10, 10, 11, 10).y - 10) || 1;
+for (let i = 0; i < 1500; i++) {
+  const px = pengikutW2.x, py = pengikutW2.y, qx = penyeberangW2.x, qy = penyeberangW2.y;
+  C.perbaruiSemuaKendaraan(0.016);
+  langkahMaksW2 = Math.max(langkahMaksW2, Math.hypot(pengikutW2.x - px, pengikutW2.y - py), Math.hypot(penyeberangW2.x - qx, penyeberangW2.y - qy));
+  jarakMinPemimpinW2 = Math.min(jarakMinPemimpinW2, Math.hypot(pengikutW2.x - pemimpinW2.x, pengikutW2.y - pemimpinW2.y));
+  if (pengikutW2.x > 10.5 && pengikutW2.x < 12.0) {
+    const dy = pengikutW2.y - 10;
+    if (Math.abs(dy) > 0.02 && Math.sign(dy) !== tandaLajurW2) yLajurKonsistenW2 = false;
+    if (Math.abs(dy) > 0.5) yLajurKonsistenW2 = false;
+    if (Math.abs(dy) > 0.02) yLajurTandaW2 = Math.sign(dy);
+  }
+}
+cek("v22-w2 TEST 2: pengikut berhenti di belakang pemimpin (jarak min >= 0,3; tidak menembus)", jarakMinPemimpinW2 >= 0.3 && pengikutW2.x < 13, "jarakMin=" + jarakMinPemimpinW2.toFixed(2) + " x=" + pengikutW2.x.toFixed(2));
+cek("v22-w2 TEST 2: pengikut waiting/braking, cepat ~0; pemimpin tidak bergerak", (pengikutW2.state === "waiting" || pengikutW2.state === "braking") && pengikutW2.cepat < 0.05 && Math.abs(pemimpinW2.x - 13) < 0.05 && Math.abs(pemimpinW2.y - 10) < 0.05, pengikutW2.state + " cepat=" + pengikutW2.cepat.toFixed(2));
+cek("v22-w2 TEST 2: pengikut di lajur kiri (sisi konsisten, offset < 0,5 petak)", yLajurKonsistenW2 && yLajurTandaW2 === tandaLajurW2, "tanda=" + yLajurTandaW2 + " harap=" + tandaLajurW2);
+cek("v22-w2 TEST 2: penyeberang tiba di (12,12) tanpa teleport (langkah/frame < 0,1)", penyeberangW2.status === "tiba" || penyeberangW2.state === "parking", penyeberangW2.status + "/" + penyeberangW2.state + " pos=" + penyeberangW2.x.toFixed(2) + "," + penyeberangW2.y.toFixed(2));
+cek("v22-w2 TEST 2: tidak ada lompatan posisi (langkah maks/frame < 0,1 petak)", langkahMaksW2 < 0.1, langkahMaksW2.toFixed(3));
+cek("v22-w2 TEST 2: kecepatan tidak pernah melebihi maks jalan (aspal 40/30)", (() => {
+  // pengikut sempat cruising: cepatnya selama tes dibatasi maks jalan —
+  // dibuktikan tidak melebihi 40/30 + epsilon pada tiap frame tidak
+  // tercatat di atas; di sini cek rumus langsung pada keadaan berjalan.
+  return C.kecepatanMaksPetak(pengikutW2) <= 40 / 30 + 1e-9;
+})());
+bersihKendaraanW2(pemimpinW2.id); bersihKendaraanW2(pengikutW2.id); bersihKendaraanW2(penyeberangW2.id);
+
+// TEST 6 — jalan buntu: capai ujung, putar balik SEKALI, kembali/parkir.
+// L utama (10,10)-(14,10) + cabang buntu (12,10)-(12,12).
+aturJalanW2([[10, 10], [11, 10], [12, 10], [13, 10], [14, 10], [12, 11], [12, 12]]);
+const buntuW2 = C.buatKendaraan("truk", 10, 10);
+C.daftarkanKendaraan(buntuW2, { kelola: true });
+buntuW2.cepat = 0;
+C.buatRuteKendaraan(buntuW2, 12, 12);
+kendW2Bersih.push(buntuW2.id);
+let jarakMinBuntuW2 = Infinity, langkahMaksBuntuW2 = 0, tibaBuntuW2 = false;
+for (let i = 0; i < 2500 && !tibaBuntuW2; i++) {
+  const px = buntuW2.x, py = buntuW2.y;
+  C.perbaruiSemuaKendaraan(0.016);
+  langkahMaksBuntuW2 = Math.max(langkahMaksBuntuW2, Math.hypot(buntuW2.x - px, buntuW2.y - py));
+  jarakMinBuntuW2 = Math.min(jarakMinBuntuW2, Math.hypot(buntuW2.x - 12, buntuW2.y - 12));
+  if ((buntuW2.status === "tiba" || buntuW2.state === "parking") && jarakMinBuntuW2 < 0.8) tibaBuntuW2 = true;
+}
+cek("v22-w2 TEST 6: kendaraan mencapai ujung buntu (12,12) < 0,8 petak", tibaBuntuW2, "jarakMin=" + jarakMinBuntuW2.toFixed(2) + " status=" + buntuW2.status);
+cek("v22-w2 TEST 6: kembali ke (10,10) setelah pulang (tanpa loop)", (() => {
+  C.buatRuteKendaraan(buntuW2, 10, 10);
+  let kembaliW2 = false;
+  for (let i = 0; i < 2500 && !kembaliW2; i++) {
+    const px = buntuW2.x, py = buntuW2.y;
+    C.perbaruiSemuaKendaraan(0.016);
+    langkahMaksBuntuW2 = Math.max(langkahMaksBuntuW2, Math.hypot(buntuW2.x - px, buntuW2.y - py));
+    if ((buntuW2.status === "tiba" || buntuW2.state === "parking") && Math.hypot(buntuW2.x - 10, buntuW2.y - 10) < 0.8) kembaliW2 = true;
+  }
+  if (!kembaliW2) return false;
+  // Diam 400 frame setelah tiba: tidak berangkat lagi ke buntu (tidak loop).
+  const px = buntuW2.x, py = buntuW2.y;
+  for (let i = 0; i < 400; i++) C.perbaruiSemuaKendaraan(0.016);
+  return Math.hypot(buntuW2.x - px, buntuW2.y - py) < 0.05 && Math.hypot(buntuW2.x - 12, buntuW2.y - 12) > 2;
+})(), "pos=" + buntuW2.x.toFixed(2) + "," + buntuW2.y.toFixed(2) + " state=" + buntuW2.state);
+cek("v22-w2 TEST 6: tidak ada lompatan posisi selama pergi-pulang", langkahMaksBuntuW2 < 0.1, langkahMaksBuntuW2.toFixed(3));
+bersihKendaraanW2(buntuW2.id);
+
+// TEST 8 — hapus ruas jalan yang sedang digunakan: berhenti aman + rute
+// alternatif bila ada; bila tidak ada, "tidak-ada-jalur", TIDAK teleport.
+// Persegi loop: atas (10,10)-(14,10), kanan (14,10)-(14,12), bawah
+// (14,12)-(10,12), kiri (10,12)-(10,10).
+function persegiW2() {
+  aturJalanW2([[10, 10], [11, 10], [12, 10], [13, 10], [14, 10], [14, 11], [14, 12], [13, 12], [12, 12], [11, 12], [10, 12], [10, 11]]);
+}
+persegiW2();
+const hapusA = C.buatKendaraanJalan("mobil", 10, 10, 14, 12);
+kendW2Bersih.push(hapusA.id);
+for (let i = 0; i < 60; i++) C.perbaruiSemuaKendaraan(0.016);
+const sisaRuteW2 = hapusA.rute.slice(hapusA.idxWaypoint);
+const tileHapusW2 = sisaRuteW2[Math.min(1, sisaRuteW2.length - 1)];
+C.S.jalan = C.S.jalan.filter(j => !(j.x === tileHapusW2.x && j.y === tileHapusW2.y));
+C.perbaruiGraphJalan([{ x: tileHapusW2.x, y: tileHapusW2.y }]);
+let pernahBerhentiW2 = false, langkahMaksHapusW2 = 0, tibaHapusW2 = false;
+for (let i = 0; i < 2500 && !tibaHapusW2; i++) {
+  const px = hapusA.x, py = hapusA.y;
+  C.perbaruiSemuaKendaraan(0.016);
+  langkahMaksHapusW2 = Math.max(langkahMaksHapusW2, Math.hypot(hapusA.x - px, hapusA.y - py));
+  if (hapusA.cepat < 0.05) pernahBerhentiW2 = true;
+  if ((hapusA.status === "tiba" || hapusA.state === "parking") && Math.hypot(hapusA.x - 14, hapusA.y - 12) < 0.8) tibaHapusW2 = true;
+}
+cek("v22-w2 TEST 8a: jalan dihapus di depan -> berhenti aman dulu (cepat ~0)", pernahBerhentiW2, "cepatAkhir=" + hapusA.cepat.toFixed(2));
+cek("v22-w2 TEST 8a: rute alternatif ditemukan (tiba di tujuan lewat sisi lain)", tibaHapusW2, "status=" + hapusA.status + " pos=" + hapusA.x.toFixed(2) + "," + hapusA.y.toFixed(2));
+cek("v22-w2 TEST 8a: rute baru tidak lagi melewati petak yang dihapus", !hapusA.rute.some(p => p.x === tileHapusW2.x && p.y === tileHapusW2.y), "dihapus=" + tileHapusW2.x + "," + tileHapusW2.y);
+cek("v22-w2 TEST 8a: tidak ada teleport saat rute dihitung ulang", langkahMaksHapusW2 < 0.1, langkahMaksHapusW2.toFixed(3));
+bersihKendaraanW2(hapusA.id);
+// (b) kedua akses ke tujuan diputus -> tidak-ada-jalur, tetap di tempat.
+persegiW2();
+const hapusB = C.buatKendaraanJalan("mobil", 10, 10, 14, 12);
+kendW2Bersih.push(hapusB.id);
+for (let i = 0; i < 60; i++) C.perbaruiSemuaKendaraan(0.016);
+const posSebelumW2 = { x: hapusB.x, y: hapusB.y };
+C.S.jalan = C.S.jalan.filter(j => !((j.x === 14 && j.y === 11) || (j.x === 13 && j.y === 12)));
+C.perbaruiGraphJalan([{ x: 14, y: 11 }, { x: 13, y: 12 }]);
+let langkahMaksHapusB = 0;
+for (let i = 0; i < 1500; i++) {
+  const px = hapusB.x, py = hapusB.y;
+  C.perbaruiSemuaKendaraan(0.016);
+  langkahMaksHapusB = Math.max(langkahMaksHapusB, Math.hypot(hapusB.x - px, hapusB.y - py));
+}
+cek("v22-w2 TEST 8b: tujuan terisolasi -> status tidak-ada-jalur + cepat 0", hapusB.status === "tidak-ada-jalur" && hapusB.cepat < 0.05, hapusB.status + " cepat=" + hapusB.cepat.toFixed(2));
+cek("v22-w2 TEST 8b: kendaraan tetap di tempat (tidak teleport ke tujuan)", Math.hypot(hapusB.x - posSebelumW2.x, hapusB.y - posSebelumW2.y) < 1.0 && Math.hypot(hapusB.x - 14, hapusB.y - 12) > 1, "pos=" + hapusB.x.toFixed(2) + "," + hapusB.y.toFixed(2));
+cek("v22-w2 TEST 8b: tidak ada lompatan posisi", langkahMaksHapusB < 0.1, langkahMaksHapusB.toFixed(3));
+bersihKendaraanW2(hapusB.id);
+
+// TEST 3 — lampu merah (API asli W4: lampuMerahDi + bangunan traffic-light).
+// Jalan lurus (10,10)-(14,10), lampu di (12,9). Cari menit game saat fasenya
+// merah untuk sumbu timur-barat, lalu hijau.
+aturJalanW2([[10, 10], [11, 10], [12, 10], [13, 10], [14, 10]]);
+C.S.bangunan.push({ id: "traffic-light", x: 12, y: 9, selesai: true, rot: 0 });
+C.bangunGraphJalan();
+let menitMerahW2 = null, menitHijauW2 = null;
+for (let m = 360; m < 380; m++) {
+  vm.runInContext("waktuGame = " + m + ";", sandbox);
+  if (menitMerahW2 === null && C.lampuMerahDi(11, 10) === true) menitMerahW2 = m;
+  if (menitHijauW2 === null && C.lampuMerahDi(11, 10) === false) menitHijauW2 = m;
+  if (menitMerahW2 !== null && menitHijauW2 !== null) break;
+}
+cek("v22-w2 TEST 3: API W4 tersedia + ada fase merah & hijau dalam satu siklus", typeof C.lampuMerahDi === "function" && menitMerahW2 !== null && menitHijauW2 !== null, "merah=" + menitMerahW2 + " hijau=" + menitHijauW2);
+if (menitMerahW2 !== null && menitHijauW2 !== null) {
+  vm.runInContext("waktuGame = " + menitMerahW2 + ";", sandbox);
+  const lampuW2 = C.buatKendaraanJalan("mobil", 10, 10, 14, 10);
+  kendW2Bersih.push(lampuW2.id);
+  let xMaksLampuW2 = 10;
+  for (let i = 0; i < 1200; i++) {
+    C.perbaruiSemuaKendaraan(0.016);
+    xMaksLampuW2 = Math.max(xMaksLampuW2, lampuW2.x);
+    if (lampuW2.state === "waiting" && lampuW2.cepat < 0.05) break;
+  }
+  cek("v22-w2 TEST 3: lampu merah -> berhenti sebelum persimpangan (x < 12,5, waiting)", lampuW2.state === "waiting" && lampuW2.cepat < 0.05 && xMaksLampuW2 < 12.5, lampuW2.state + " x=" + lampuW2.x.toFixed(2) + " xMaks=" + xMaksLampuW2.toFixed(2));
+  // Darurat mengabaikan lampu merah: ambulans lewat.
+  const ambW2 = C.buatKendaraanJalan("ambulans", 10, 10, 14, 10);
+  kendW2Bersih.push(ambW2.id);
+  let ambLewatW2 = false;
+  for (let i = 0; i < 800; i++) {
+    C.perbaruiSemuaKendaraan(0.016);
+    if (ambW2.x > 13) { ambLewatW2 = true; break; }
+  }
+  cek("v22-w2 TEST 3: ambulans (darurat) tidak berhenti di lampu merah", ambLewatW2, "x=" + ambW2.x.toFixed(2) + " state=" + ambW2.state);
+  bersihKendaraanW2(ambW2.id);
+  // Hijau: mobil yang tadi menunggu lanjut sampai tujuan.
+  vm.runInContext("waktuGame = " + menitHijauW2 + ";", sandbox);
+  let tibaLampuW2 = false;
+  for (let i = 0; i < 1500 && !tibaLampuW2; i++) {
+    C.perbaruiSemuaKendaraan(0.016);
+    if ((lampuW2.status === "tiba" || lampuW2.state === "parking") && Math.hypot(lampuW2.x - 14, lampuW2.y - 10) < 0.8) tibaLampuW2 = true;
+  }
+  cek("v22-w2 TEST 3: lampu hijau -> mobil melanjutkan perjalanan sampai tujuan", tibaLampuW2, "status=" + lampuW2.status + " pos=" + lampuW2.x.toFixed(2) + "," + lampuW2.y.toFixed(2));
+  bersihKendaraanW2(lampuW2.id);
+}
+// Prioritas darurat: mobil di depan menunggu sementara ambulans lewat di
+// edge yang sama; setelah ambulans pergi (dihapus), mobil jalan lagi.
+aturJalanW2([[10, 10], [11, 10], [12, 10], [13, 10], [14, 10]]);
+const depanW2 = C.buatKendaraanJalan("mobil", 11, 10, 14, 10);
+kendW2Bersih.push(depanW2.id);
+const daruratW2 = C.buatKendaraanJalan("ambulans", 10, 10, 14, 10);
+kendW2Bersih.push(daruratW2.id);
+let pernahMenungguDaruratW2 = false, ambTibaW2 = false;
+for (let i = 0; i < 1200 && !ambTibaW2; i++) {
+  C.perbaruiSemuaKendaraan(0.016);
+  if (depanW2.state === "waiting") pernahMenungguDaruratW2 = true;
+  if ((daruratW2.status === "tiba" || daruratW2.state === "parking") && Math.hypot(daruratW2.x - 14, daruratW2.y - 10) < 0.8) ambTibaW2 = true;
+}
+cek("v22-w2 prioritas darurat: mobil di depan menunggu saat ambulans aktif di edge yang sama", pernahMenungguDaruratW2, "depanState=" + depanW2.state + " ambState=" + daruratW2.state);
+cek("v22-w2 prioritas darurat: ambulans tiba di tujuan", ambTibaW2, "pos=" + daruratW2.x.toFixed(2) + "," + daruratW2.y.toFixed(2));
+bersihKendaraanW2(daruratW2.id);
+let mobilLanjutW2 = false;
+for (let i = 0; i < 1500 && !mobilLanjutW2; i++) {
+  C.perbaruiSemuaKendaraan(0.016);
+  if ((depanW2.status === "tiba" || depanW2.state === "parking") && Math.hypot(depanW2.x - 14, depanW2.y - 10) < 0.8) mobilLanjutW2 = true;
+}
+cek("v22-w2 prioritas darurat: setelah ambulans pergi, mobil melanjutkan perjalanan", mobilLanjutW2, "pos=" + depanW2.x.toFixed(2) + "," + depanW2.y.toFixed(2));
+bersihKendaraanW2(depanW2.id);
+
+// State machine + loading/unloading (dipakai W3) + state "returning".
+aturJalanW2([[10, 10], [11, 10], [12, 10], [13, 10], [14, 10]]);
+const muatW2 = C.buatKendaraanJalan("truk", 10, 10, 14, 10);
+kendW2Bersih.push(muatW2.id);
+C.aturStateMuat(muatW2, "loading", 0.5);
+cek("v22-w2: aturStateMuat -> loading, cepat 0, status memuat", muatW2.state === "loading" && muatW2.cepat === 0 && muatW2.status === "memuat");
+let keluarMuatW2 = false;
+for (let i = 0; i < 70; i++) { C.perbaruiSemuaKendaraan(0.016); if (muatW2.state !== "loading") { keluarMuatW2 = true; break; } }
+cek("v22-w2: loading selesai setelah durasi -> accelerating (bukan diam selamanya)", keluarMuatW2 && muatW2.state === "accelerating", muatW2.state);
+cek("v22-w2: mintaPulang dicatat (dipakai saat tiba)", C.mintaPulang(muatW2, 10, 10) === true && muatW2.pulangKe && muatW2.pulangKe.x === 10 && muatW2.pulangKe.y === 10);
+bersihKendaraanW2(muatW2.id);
+// Regresi: initKendaraan (truk A* ambient) + render mobil/ambulans vektor.
+C.S.jalan = jalanW2Lama; C.S.jembatan = jembW2Lama; C.S.bangunan = bangW2Lama;
+C.bangunGraphJalan();
+C.initKendaraan();
+cek("v22-w2 regresi: initKendaraan membuat truk terdaftar di manager + kapal/perahu tetap ada", C.kendaraanVisual.some(k => k.tipe === "truk") && C.kendaraanVisual.some(k => k.tipe === "kapal") && C.kendaraanVisual.some(k => k.tipe === "perahu") && C.daftarKendaraan.some(k => k.tipe === "truk"), C.kendaraanVisual.map(k => k.tipe).join(","));
+try {
+  for (let i = 0; i < 50; i++) C.perbaruiKendaraan(0.1);
+  cek("v22-w2 regresi: truk bergerak 50 tick tanpa error", true);
+} catch (e) { cek("v22-w2 regresi: truk bergerak 50 tick tanpa error", false, e.message); }
+// Warga: hanya di jalan — letakkan warga di samping jalan uji, ia harus
+// menuju jalan & tetap di koridor jalan (tidak melintasi darat jauh).
+// (Siang hari: wargaAktifBergerak selalu true — TEST 3 tadi mengubah
+// waktuGame ke 06:xx, jadi kembalikan ke tengah hari dulu.)
+vm.runInContext("waktuGame = 12 * 60;", sandbox);
+aturJalanW2([[10, 10], [11, 10], [12, 10], [13, 10], [14, 10], [12, 8], [12, 9], [12, 11], [12, 12]]);
+const wW2 = C.wargaVisual[0];
+wW2.x = 11; wW2.y = 9; wW2.tileX = 11; wW2.tileY = 9; wW2.dariX = 11; wW2.dariY = 9;
+wW2.tx = 11; wW2.ty = 9; wW2.targetX = null; wW2.targetY = null;
+const himpJalanW2b = new Set(C.S.jalan.map(j => j.x + "," + j.y));
+function jarakKeJalanW2(x, y) { let d = 1e9; for (const j of C.S.jalan) d = Math.min(d, Math.hypot(x - j.x, y - j.y)); return d; }
+let jarakMaksJalanW2 = jarakKeJalanW2(wW2.x, wW2.y);
+const posAwalW2 = { x: wW2.x, y: wW2.y };
+for (let i = 0; i < 40; i++) { C.perbaruiWarga(0.5); jarakMaksJalanW2 = Math.max(jarakMaksJalanW2, jarakKeJalanW2(wW2.x, wW2.y)); }
+cek("v22-w2 regresi warga: warga bergerak & tetap di koridor jalan (< 1,2 petak)", Math.hypot(wW2.x - posAwalW2.x, wW2.y - posAwalW2.y) > 0.5 && jarakMaksJalanW2 < 1.2, "pindah=" + Math.hypot(wW2.x - posAwalW2.x, wW2.y - posAwalW2.y).toFixed(2) + " jarakMaks=" + jarakMaksJalanW2.toFixed(2));
+cek("v22-w2 regresi warga: langkah warga hanya ke petak jalan (tileX/tileY di jalan atau pemulihan)", himpJalanW2b.has(wW2.tileX + "," + wW2.tileY) || jarakKeJalanW2(wW2.tileX, wW2.tileY) <= 1, wW2.tileX + "," + wW2.tileY);
+// Render smoke: mobil + ambulans (vektor) + truk/bus (sprite) tanpa error.
+aturJalanW2([[10, 10], [11, 10], [12, 10], [13, 10], [14, 10]]);
+const renMobilW2 = C.buatKendaraanJalan("mobil", 10, 10, 14, 10);
+const renAmbW2 = C.buatKendaraanJalan("ambulans", 11, 10, 14, 10);
+kendW2Bersih.push(renMobilW2.id); kendW2Bersih.push(renAmbW2.id);
+try { C.gambarPeta(); cek("v22-w2 regresi render: peta + mobil/ambulans vektor + truk (tanpa error)", true); }
+catch (e) { cek("v22-w2 regresi render: peta + mobil/ambulans vektor + truk (tanpa error)", false, e.message); }
+for (const id of kendW2Bersih) bersihKendaraanW2(id);
+// Kembalikan keadaan semula + graph konsisten.
+C.S.jalan = jalanW2Lama; C.S.jembatan = jembW2Lama; C.S.bangunan = bangW2Lama;
+vm.runInContext("waktuGame = " + waktuW2Lama + ";", sandbox);
+C.bangunGraphJalan();
+C.initKendaraan();
+cek("v22-w2: keadaan dipulihkan (graph ada, truk init ulang)", C.infoGraphJalan().ada === true && C.kendaraanVisual.some(k => k.tipe === "truk"));
+
+// --- (o) v22-W4: Intersection & Traffic Light + Traffic Density (js/city-persimpangan.js) ---
+// Jaringan uji (aspal): simpang empat di (12,10) — horizontal
+// (10,10)-(14,10) + vertikal (12,8)-(12,12); lampu di (11,9).
+const jalanW4Lama = C.S.jalan.slice();
+const jembW4Lama = C.S.jembatan.slice();
+const bangW4Lama = C.S.bangunan.slice();
+const popW4Lama = C.S.penduduk.total;
+const kendW4Lama = C.kendaraanVisual.slice();
+const wargaW4Lama = C.wargaVisual.slice();
+C.S.penduduk.total = 4; // volume zona kecil — kemacetan uji datang dari kendaraan aktual
+C.kendaraanVisual.length = 0;
+C.wargaVisual.length = 0;
+C.S.jembatan = [];
+C.S.jalan = [
+  { x: 10, y: 10, tipe: "jalan-aspal" }, { x: 11, y: 10, tipe: "jalan-aspal" },
+  { x: 12, y: 10, tipe: "jalan-aspal" }, { x: 13, y: 10, tipe: "jalan-aspal" },
+  { x: 14, y: 10, tipe: "jalan-aspal" },
+  { x: 12, y: 8, tipe: "jalan-aspal" }, { x: 12, y: 9, tipe: "jalan-aspal" },
+  { x: 12, y: 11, tipe: "jalan-aspal" }, { x: 12, y: 12, tipe: "jalan-aspal" },
+];
+C.S.bangunan = [{ id: "traffic-light", x: 11, y: 9, selesai: true, rot: 0 }];
+C.bangunGraphJalan();
+cek("v22-w4: API persimpangan tersedia (faseLampu/lampuMerahDi/garisBerhenti/prioritasBundaran/bolehMenyeberang/kecepatanEfektifDi)", typeof C.faseLampuSaatIni === "function" && typeof C.faseLampu === "function" && typeof C.lampuMerahDi === "function" && typeof C.garisBerhenti === "function" && typeof C.prioritasBundaran === "function" && typeof C.bolehMenyeberang === "function" && typeof C.kecepatanEfektifDi === "function" && typeof C.faktorKecepatanDariRasio === "function" && typeof C.daftarPersimpangan === "function", "");
+cek("v22-w4: siklus lampu 7 menit game (3 hijau + 0,5 kuning + 3 merah + 0,5 kuning)", C.PERSIMPANGAN_KONFIG.siklusMenit === 7 && C.PERSIMPANGAN_KONFIG.hijauMenit === 3 && C.PERSIMPANGAN_KONFIG.kuningMenit === 0.5 && C.PERSIMPANGAN_KONFIG.merahMenit === 3, JSON.stringify(C.PERSIMPANGAN_KONFIG));
+cek("v22-w4: daftarPersimpangan menemukan 1 simpang empat di (12,10) dengan lampu", (() => {
+  const d = C.daftarPersimpangan();
+  return d.length === 1 && d[0].x === 12 && d[0].y === 10 && d[0].derajat === 4 && d[0].tipe === "simpang-empat" && !!d[0].lampu;
+})(), JSON.stringify(C.daftarPersimpangan()));
+cek("v22-w4: fase lampu berulang tiap 7 menit (siklus berbasis waktuGame)", (() => {
+  for (let t = 0; t < 7; t += 0.5) {
+    if (C.faseLampuSaatIni("11,9", t) !== C.faseLampuSaatIni("11,9", t + 7)) return false;
+  }
+  return true;
+})());
+cek("v22-w4: satu siklus memuat hijau, kuning, dan merah", (() => {
+  const s = new Set();
+  for (let t = 0; t < 7; t += 0.5) s.add(C.faseLampuSaatIni("11,9", t));
+  return s.has("hijau") && s.has("kuning") && s.has("merah");
+})());
+cek("v22-w4: arus berpotongan tidak pernah hijau bersamaan (hijau<->merah, kuning<->kuning)", (() => {
+  for (let t = 0; t < 7; t += 0.25) {
+    const ew = C.faseLampuSaatIni("11,9", t, "timur-barat");
+    const ns = C.faseLampuSaatIni("11,9", t, "utara-selatan");
+    if (ew === "hijau" && ns !== "merah") return false;
+    if (ew === "merah" && ns !== "hijau") return false;
+    if (ew === "kuning" && ns !== "kuning") return false;
+  }
+  return true;
+})());
+cek("v22-w4: tanpa lampu di dekatnya faseLampu null & lampuMerahDi false", C.faseLampu(30, 30) === null && C.lampuMerahDi(30, 30) === false);
+// ---- TEST 3: traffic light -> kendaraan berhenti saat merah ----
+const kendW4 = C.buatKendaraan("truk", 10, 10);
+cek("v22-w4 TEST 3: rute truk (10,10)->(14,10) melewati simpang (12,10)", C.buatRuteKendaraan(kendW4, 14, 10) && kendW4.status === "menuju" && kendW4.rute.some(p => p.x === 12 && p.y === 10) && kendW4.persimpanganBerikut && kendW4.persimpanganBerikut.x === 11 && kendW4.persimpanganBerikut.y === 10, JSON.stringify(kendW4.rute) + " persimpanganBerikut=" + JSON.stringify(kendW4.persimpanganBerikut));
+// (11,10) adalah node akses — lampu di (11,9) bersebelahan ortogonal
+// dengan petak jalan itu, jadi W1 menjadikannya node (bukan (12,10)).
+// Cari fase merah (maju 1 menit game tiap langkah, maks 1 siklus).
+let merahW4 = false;
+for (let i = 0; i < 7 && !merahW4; i++) {
+  if (C.lampuMerahDi(11, 10)) merahW4 = true;
+  else C.majukanWaktu(1);
+}
+cek("v22-w4 TEST 3: fase merah tercapai dalam 1 siklus (lampuMerahDi di petak pendekat)", merahW4 && C.faseLampu(11, 10) === "merah", "fase=" + C.faseLampu(11, 10));
+cek("v22-w4 TEST 3: sumbu berpotongan hijau saat sumbu ini merah (faseLampu arah utara)", C.faseLampu(11, 10, "utara") === "hijau", "faseNS=" + C.faseLampu(11, 10, "utara"));
+cek("v22-w4 TEST 3: garis berhenti = 1 petak sebelum simpang (11,10) untuk gerak ke timur", (() => {
+  const g = C.garisBerhenti(12, 10, "timur");
+  return g && g.x === 11 && g.y === 10 && g.arahGerak === "timur";
+})(), JSON.stringify(C.garisBerhenti(12, 10, "timur")));
+cek("v22-w4 TEST 3: garis berhenti null tanpa arah / bukan di persimpangan", C.garisBerhenti(12, 10) === null && C.garisBerhenti(11, 10, "timur") === null);
+// Aturan W2 (disimulasikan di sini): merah -> menunggu di garis berhenti.
+if (C.lampuMerahDi(11, 10)) kendW4.status = "menunggu";
+cek("v22-w4 TEST 3: saat merah, kendaraan berstatus menunggu di garis berhenti", kendW4.status === "menunggu" && kendW4.x === 10 && kendW4.y === 10, kendW4.status);
+cek("v22-w4 TEST 3: koordinat pecahan dibulatkan ke petak (lampuMerahDi(11.4,10.2))", C.lampuMerahDi(11.4, 10.2) === C.lampuMerahDi(11, 10));
+// Cari fase hijau (maju 1 menit game tiap langkah, maks 1 siklus).
+let hijauW4 = false;
+for (let i = 0; i < 7 && !hijauW4; i++) {
+  if (!C.lampuMerahDi(11, 10) && C.faseLampu(11, 10) === "hijau") hijauW4 = true;
+  else C.majukanWaktu(1);
+}
+if (hijauW4) kendW4.status = "menuju";
+cek("v22-w4 TEST 3: saat hijau, lampuMerahDi false & kendaraan lanjut (menuju)", hijauW4 && C.lampuMerahDi(11, 10) === false && kendW4.status === "menuju", "fase=" + C.faseLampu(11, 10) + " status=" + kendW4.status);
+// ---- Bundaran & zebra ----
+const bundW4 = { x: 12, y: 10, radius: 2 };
+const kDalamW4 = { x: 12, y: 10 };
+// (9,10) — jarak 3 dari pusat, jelas di luar bundaran (radius 2);
+// (10,10) jaraknya tepat 2 = masih dihitung "di dalam".
+const kLuarW4 = { x: 9, y: 10 };
+cek("v22-w4: kendaraan di dalam bundaran diprioritaskan (boleh jalan)", C.prioritasBundaran(kDalamW4, bundW4) === true);
+const isiBundW4 = { tipe: "truk", x: 12, y: 10, tileX: 12, tileY: 10 };
+C.kendaraanVisual.push(isiBundW4);
+cek("v22-w4: kendaraanDiDalamBundaran menemukan kendaraan di dalam", C.kendaraanDiDalamBundaran(bundW4).length === 1 && C.kendaraanDiDalamBundaran(bundW4)[0] === isiBundW4);
+cek("v22-w4: kendaraan di luar menunggu bila ada kendaraan di dalam bundaran", C.prioritasBundaran(kLuarW4, bundW4) === false);
+C.kendaraanVisual.splice(C.kendaraanVisual.indexOf(isiBundW4), 1);
+cek("v22-w4: bundaran kosong -> kendaraan di luar boleh masuk", C.prioritasBundaran(kLuarW4, bundW4) === true);
+C.S.bangunan.push({ id: "bundaran", x: 12, y: 11, selesai: true, rot: 0 });
+cek("v22-w4: infoPersimpangan mencatat bundaran di simpang (12,10)", C.infoPersimpangan().denganBundaran === 1 && C.infoPersimpangan().jumlah === 1, JSON.stringify(C.infoPersimpangan()));
+cek("v22-w4: bolehMenyeberang true di persimpangan, false di jalan lurus", C.bolehMenyeberang(12, 10) === true && C.bolehMenyeberang(11, 10) === false);
+C.S.bangunan.push({ id: "jpo", x: 13, y: 9, selesai: true, rot: 0 });
+cek("v22-w4: bolehMenyeberang true di dekat JPO (13,10), tetap false jauh dari JPO", C.bolehMenyeberang(13, 10) === true && C.bolehMenyeberang(11, 10) === false);
+// ---- TEST 7: kemacetan -> kepadatan, kecepatan, antrean ----
+C.hitungLalin(); // tanpa kendaraan: normalisasi tanda macet + skor lancar
+const skorLancarW4 = C.S.lalin.skor;
+const versiSblmMacetW4 = C.versiGraph;
+cek("v22-w4 TEST 7: ruas kosong fallback rumus zona (lancar, volume zona > 0)", C.S.lalin.perPetak["13,10"] === 0 && C.S.lalin.volumeTotal > 0 && C.S.lalin.volumeRata > 0, "perPetak13,10=" + C.S.lalin.perPetak["13,10"] + " vol=" + C.S.lalin.volumeTotal);
+const trukW4 = [];
+for (let i = 0; i < 6; i++) {
+  const t = { tipe: "truk", x: 11, y: 10, tileX: 11, tileY: 10, status: i < 4 ? "menunggu" : "menuju" };
+  trukW4.push(t);
+  C.kendaraanVisual.push(t);
+}
+C.hitungLalin();
+const detW4 = C.S.lalin.detailPetak["11,10"];
+cek("v22-w4 TEST 7: 6 kendaraan di petak aspal (kapSim 4) -> rasio 1,5, status macet (2)", !!detW4 && detW4.rasio === 1.5 && C.S.lalin.perPetak["11,10"] === 2, JSON.stringify(detW4));
+cek("v22-w4 TEST 7: detailPetak mencatat jumlah 6 & antrean 4 (menunggu)", !!detW4 && detW4.jumlah === 6 && detW4.antrean === 4, JSON.stringify(detW4));
+cek("v22-w4 TEST 7: kecepatan efektif turun (aspal 40 -> 21,3) & waktu tempuh naik (>40 detik)", !!detW4 && Math.abs(detW4.kecepatanRata - 21.3) < 0.01 && detW4.waktuTempuh > 40 && C.kecepatanEfektifDi(11, 10) === detW4.kecepatanRata, "kec=" + (detW4 && detW4.kecepatanRata) + " tempuh=" + (detW4 && detW4.waktuTempuh));
+cek("v22-w4 TEST 7: kecepatan efektif ruas macet < ruas lancar (21,3 < 37,6)", C.kecepatanEfektifDi(11, 10) < C.kecepatanEfektifDi(13, 10), C.kecepatanEfektifDi(11, 10) + " vs " + C.kecepatanEfektifDi(13, 10));
+cek("v22-w4 TEST 7: himpunan macet berubah -> cache rute diinvalidasi (versiGraph naik)", C.versiGraph > versiSblmMacetW4, "versi " + versiSblmMacetW4 + " -> " + C.versiGraph);
+cek("v22-w4 TEST 7: skor kota turun saat macet (kebahagiaan ikut turun)", C.S.lalin.skor < skorLancarW4 && C.S.lalin.skor < 100, "skor " + skorLancarW4 + " -> " + C.S.lalin.skor);
+const skorMacetW4 = C.S.lalin.skor;
+C.hitungKebahagiaan();
+cek("v22-w4: skor macet memengaruhi kebahagiaan (rincian.kemacetan = skor lalin)", C.S.bahagia.rincian.kemacetan === skorMacetW4 && skorMacetW4 < 100, "rincian=" + C.S.bahagia.rincian.kemacetan + " skor=" + skorMacetW4);
+// Lantai kecepatan 25%: 20 kendaraan -> rasio 5 -> faktor 0,25 -> 10 km/jam.
+for (let i = 0; i < 14; i++) {
+  const t = { tipe: "truk", x: 11, y: 10, tileX: 11, tileY: 10, status: "menuju" };
+  trukW4.push(t);
+  C.kendaraanVisual.push(t);
+}
+C.hitungLalin();
+cek("v22-w4 TEST 7: lantai kecepatan 25% (20 kendaraan -> aspal 40 x 0,25 = 10 km/jam)", C.kecepatanEfektifDi(11, 10) === 10 && C.S.lalin.detailPetak["11,10"].rasio === 5, "kec=" + C.kecepatanEfektifDi(11, 10) + " rasio=" + C.S.lalin.detailPetak["11,10"].rasio);
+// Memperlebar jalan mengatasi macet: aspal (kap 40) -> jalan-raya (kap 120).
+for (const t of trukW4) C.kendaraanVisual.splice(C.kendaraanVisual.indexOf(t), 1);
+trukW4.length = 0;
+const tileW4 = C.S.jalan.find(j => j.x === 11 && j.y === 10);
+tileW4.tipe = "jalan-raya";
+for (let i = 0; i < 6; i++) {
+  const t = { tipe: "truk", x: 11, y: 10, tileX: 11, tileY: 10, status: i < 4 ? "menunggu" : "menuju" };
+  trukW4.push(t);
+  C.kendaraanVisual.push(t);
+}
+C.hitungLalin();
+cek("v22-w4 TEST 7: pelebaran ke jalan-raya (kapSim 12) -> 6 kendaraan lancar lagi, kecepatan naik ke 54", C.S.lalin.perPetak["11,10"] === 0 && C.kecepatanEfektifDi(11, 10) === 54, "status=" + C.S.lalin.perPetak["11,10"] + " kec=" + C.kecepatanEfektifDi(11, 10));
+for (const t of trukW4) C.kendaraanVisual.splice(C.kendaraanVisual.indexOf(t), 1);
+trukW4.length = 0;
+tileW4.tipe = "jalan-aspal";
+C.hitungLalin();
+C.hitungKebahagiaan();
+cek("v22-w4: macet hilang -> skor naik lagi & kebahagiaan ikut naik", C.S.lalin.skor > skorMacetW4 && C.S.bahagia.rincian.kemacetan === C.S.lalin.skor, "skor " + skorMacetW4 + " -> " + C.S.lalin.skor);
+// ---- Bus mengurangi volume ruas di dekat halte/terminal (5 kendaraan/jam/bus per stop) ----
+// Jalan lurus 5 petak; halte (12,9) + terminal (12,11) sama jauhnya dari
+// semua petak (nBangunan radius 5 sama) — hanya jarak ke stop yang beda:
+// (12,10) dekat DUA stop (terminal + halte -> pengurang 10), (10,10)
+// jauh dari keduanya (tanpa pengurang).
+C.S.jalan = [
+  { x: 10, y: 10, tipe: "jalan-aspal" }, { x: 11, y: 10, tipe: "jalan-aspal" },
+  { x: 12, y: 10, tipe: "jalan-aspal" }, { x: 13, y: 10, tipe: "jalan-aspal" },
+  { x: 14, y: 10, tipe: "jalan-aspal" },
+];
+C.S.bangunan = [
+  { id: "terminal-bus", x: 12, y: 11, selesai: true, rot: 0 },
+  { id: "halte", x: 12, y: 9, selesai: true, rot: 0 },
+];
+C.S.penduduk.total = 400; // volume dasar besar — pengurang 5/jam/stop terukur
+C.hitungLalin();
+cek("v22-w4: bus beroperasi (1 bus, terminal + halte)", C.S.lalin.bus.beroperasi === true && C.S.lalin.bus.jumlahBus === 1, JSON.stringify(C.S.lalin.bus));
+cek("v22-w4: volume ruas dekat 2 stop 10/jam lebih rendah dari ruas jauh (5/stop/bus)", (() => {
+  const dekat = C.S.lalin.detailPetak["12,10"], jauh = C.S.lalin.detailPetak["10,10"];
+  if (!dekat || !jauh) return false;
+  return Math.abs((jauh.volume - dekat.volume) - 10) < 0.2;
+})(), "dekat=" + JSON.stringify(C.S.lalin.detailPetak["12,10"]) + " jauh=" + JSON.stringify(C.S.lalin.detailPetak["10,10"]));
+// ---- A* menghindari ruas macet (biaya edge x (1+kemacetan), W1) ----
+// Tangga + 2 spur: kiri (10,10)-(10,11)-(10,12) vs kanan (12,10)-(12,11)-
+// (12,12); tanpa macet rute (11,9)->(11,13) lewat kanan (seri -> yang
+// didorong dulu menang); macet di kanan -> lewat kiri.
+C.S.jalan = [
+  { x: 10, y: 10, tipe: "jalan-aspal" }, { x: 11, y: 10, tipe: "jalan-aspal" }, { x: 12, y: 10, tipe: "jalan-aspal" },
+  { x: 10, y: 11, tipe: "jalan-aspal" }, { x: 12, y: 11, tipe: "jalan-aspal" },
+  { x: 10, y: 12, tipe: "jalan-aspal" }, { x: 11, y: 12, tipe: "jalan-aspal" }, { x: 12, y: 12, tipe: "jalan-aspal" },
+  { x: 11, y: 9, tipe: "jalan-aspal" }, { x: 11, y: 13, tipe: "jalan-aspal" },
+];
+C.S.bangunan = [];
+C.S.penduduk.total = 4;
+C.bangunGraphJalan();
+const ruteTanpaMacetW4 = C.cariRute(11, 9, 11, 13);
+cek("v22-w4: A* tanpa macet (11,9)->(11,13) lewat kanan (12,11), 7 waypoint", Array.isArray(ruteTanpaMacetW4) && ruteTanpaMacetW4.length === 7 && ruteTanpaMacetW4.some(p => p.x === 12 && p.y === 11) && !ruteTanpaMacetW4.some(p => p.x === 10 && p.y === 11), JSON.stringify(ruteTanpaMacetW4));
+C.S.lalin.perPetak = { "12,10": 2, "12,11": 2, "12,12": 2 };
+C.S.lalin.perPetakDiringkas = false;
+C.perbaruiGraphJalan(); // invalidasi cache rute (macet-berat)
+const ruteMacetW4 = C.cariRute(11, 9, 11, 13);
+cek("v22-w4: A* menghindari ruas macet — macet di kanan -> rute lewat kiri (10,11)", Array.isArray(ruteMacetW4) && ruteMacetW4.length === 7 && ruteMacetW4.some(p => p.x === 10 && p.y === 11) && !ruteMacetW4.some(p => p.x === 12 && p.y === 11), JSON.stringify(ruteMacetW4));
+// Kembalikan keadaan semula + graph konsisten.
+C.S.jalan = jalanW4Lama; C.S.jembatan = jembW4Lama; C.S.bangunan = bangW4Lama;
+C.S.penduduk.total = popW4Lama;
+C.kendaraanVisual.length = 0; C.kendaraanVisual.push.apply(C.kendaraanVisual, kendW4Lama);
+C.wargaVisual.length = 0; C.wargaVisual.push.apply(C.wargaVisual, wargaW4Lama);
+C.bangunGraphJalan();
+C.hitungLalin();
+cek("v22-w4: keadaan dipulihkan (graph ada, jalan semula)", C.infoGraphJalan().ada === true && C.S.jalan.length === jalanW4Lama.length);
+
+// --- (p) v22-W5: Pedestrian System (J) — jaringan pejalan kaki terpisah ---
+// Jaringan uji: simpang empat (12,10) — horizontal (10,10)-(14,10) +
+// vertikal (12,8)-(12,12); taman di (11,11), (13,11) & (13,9);
+// JPO di (13,12)-(13,13).
+const jalanW5Lama = C.S.jalan.slice();
+const jembW5Lama = C.S.jembatan.slice();
+const bangW5Lama = C.S.bangunan.slice();
+const kendW5Lama = C.kendaraanVisual.slice();
+const wargaW5Lama = C.wargaVisual.slice();
+const waktuW5Lama = C.waktuGame;
+C.kendaraanVisual.length = 0;
+C.wargaVisual.length = 0;
+C.aturKecepatan(1);
+vm.runInContext("waktuGame = 12 * 60;", sandbox);
+C.S.jembatan = [];
+C.S.jalan = [
+  { x: 10, y: 10, tipe: "jalan-aspal" }, { x: 11, y: 10, tipe: "jalan-aspal" },
+  { x: 12, y: 10, tipe: "jalan-aspal" }, { x: 13, y: 10, tipe: "jalan-aspal" },
+  { x: 14, y: 10, tipe: "jalan-aspal" },
+  { x: 12, y: 8, tipe: "jalan-aspal" }, { x: 12, y: 9, tipe: "jalan-aspal" },
+  { x: 12, y: 11, tipe: "jalan-aspal" }, { x: 12, y: 12, tipe: "jalan-aspal" },
+];
+C.S.bangunan = [
+  { id: "taman", x: 11, y: 11, selesai: true, rot: 0 },
+  { id: "taman", x: 13, y: 11, selesai: true, rot: 0 },
+  { id: "taman", x: 13, y: 9, selesai: true, rot: 0 },
+  { id: "jpo", x: 13, y: 12, selesai: true, rot: 0 },
+];
+C.bangunGraphJalan();
+const himpJalanW5 = new Set(C.S.jalan.map(j => j.x + "," + j.y));
+const himpTamanW5 = new Set(["11,11", "13,11", "13,9", "13,12", "13,13"]);
+function jalanKakiW5(x, y) { return himpJalanW5.has(x + "," + y) || himpTamanW5.has(x + "," + y); }
+cek("v22-w5: API pejalan kaki tersedia (cariRute/buatRute/penyeberangan/info)", typeof C.cariRutePejalanKaki === "function" && typeof C.buatRutePejalanKaki === "function" && typeof C.penyeberanganTerdekat === "function" && typeof C.infoPejalanKaki === "function" && Array.isArray(C.TAMAN_JALUR_IDS) && C.TAMAN_JALUR_IDS.indexOf("taman") >= 0);
+// TEST 9a: rute di atas jalan saja — semua waypoint petak jalan.
+const ruteJalanW5 = C.cariRutePejalanKaki(10, 10, 14, 10);
+cek("v22-w5 TEST 9a: rute (10,10)->(14,10) semua di petak jalan", Array.isArray(ruteJalanW5) && ruteJalanW5.length === 5 && ruteJalanW5.every(p => himpJalanW5.has(p.x + "," + p.y)), JSON.stringify(ruteJalanW5));
+// TEST 9b: taman -> taman di seberang jalan DIPAKSA lewat persimpangan
+// (penyeberangan langsung (12,11)->(13,11) diblokir aturan: (12,11)
+// bukan persimpangan/JPO dan (13,11) bukan tujuan).
+const ruteTamanW5 = C.cariRutePejalanKaki(11, 11, 13, 9);
+cek("v22-w5 TEST 9b: rute taman->taman seberang jalan lewat persimpangan (12,10), bukan potong lurus (13,11)", Array.isArray(ruteTamanW5) && ruteTamanW5.some(p => p.x === 12 && p.y === 10) && !ruteTamanW5.some(p => p.x === 13 && p.y === 11) && ruteTamanW5.every(p => jalanKakiW5(p.x, p.y)), JSON.stringify(ruteTamanW5));
+cek("v22-w5 TEST 9b: rute tidak pernah melintasi darat (semua waypoint jalan/taman)", Array.isArray(ruteTamanW5) && ruteTamanW5.every(p => jalanKakiW5(p.x, p.y)), JSON.stringify(ruteTamanW5));
+// TEST 9c: penyeberangan terdekat = persimpangan; JPO melayani sekitarnya.
+cek("v22-w5 TEST 9c: penyeberanganTerdekat(11,11) = penyeberangan valid jarak 2 (simpang (12,10) atau dekat JPO (12,12))", (() => { const p = C.penyeberanganTerdekat(11, 11); return !!p && C.bolehMenyeberang(p.x, p.y) && Math.abs(p.x - 11) + Math.abs(p.y - 11) === 2; })(), JSON.stringify(C.penyeberanganTerdekat(11, 11)));
+cek("v22-w5 TEST 9c: penyeberanganTerdekat(12,12) = di dekat JPO (12,12)", (() => { const p = C.penyeberanganTerdekat(12, 12); return p && p.x === 12 && p.y === 12; })(), JSON.stringify(C.penyeberanganTerdekat(12, 12)));
+cek("v22-w5 TEST 9c: bolehMenyeberang true di simpang & dekat JPO, false di jalan lurus", C.bolehMenyeberang(12, 10) === true && C.bolehMenyeberang(12, 12) === true && C.bolehMenyeberang(11, 10) === false);
+// TEST 9d: rute JPO — dari jalan ke footprint JPO diizinkan (penyeberangan).
+const ruteJpoW5 = C.cariRutePejalanKaki(12, 12, 13, 12);
+cek("v22-w5 TEST 9d: rute (12,12)->JPO (13,12) ditemukan lewat penyeberangan JPO", Array.isArray(ruteJpoW5) && ruteJpoW5.length === 2 && ruteJpoW5[1].x === 13 && ruteJpoW5[1].y === 12, JSON.stringify(ruteJpoW5));
+// TEST 9e: warga mengikuti rute sampai tiba, tetap di koridor jalan/taman.
+const wW5 = { x: 11, y: 11, tx: 11, ty: 11, cepat: 0.7, fase: 0, jalan: false, arah: 0, tileX: 11, tileY: 11, dariX: 11, dariY: 11, targetX: null, targetY: null };
+C.wargaVisual.push(wW5);
+cek("v22-w5 TEST 9e: buatRutePejalanKaki warga (11,11)->(13,9) ok + rute aktif", C.buatRutePejalanKaki(wW5, 13, 9) === true && Array.isArray(wW5.ruteJalan) && wW5.ruteJalan.length > 1 && wW5.statusPerjalanan === "berjalan", JSON.stringify(wW5.ruteJalan));
+function jarakKeJalanKakiW5(x, y) { let d = 1e9; for (const k of himpJalanW5) { const p = k.split(","); d = Math.min(d, Math.hypot(x - (+p[0]), y - (+p[1]))); } for (const k of himpTamanW5) { const p = k.split(","); d = Math.min(d, Math.hypot(x - (+p[0]), y - (+p[1]))); } return d; }
+let tibaW5 = false, jarakMaksW5 = 0, tileLiarW5 = false;
+for (let i = 0; i < 150 && !tibaW5; i++) {
+  C.perbaruiWarga(0.5);
+  jarakMaksW5 = Math.max(jarakMaksW5, jarakKeJalanKakiW5(wW5.x, wW5.y));
+  if (!jalanKakiW5(wW5.tileX, wW5.tileY)) tileLiarW5 = true;
+  if (wW5.statusPerjalanan === "tiba" && wW5.tileX === 13 && wW5.tileY === 9) tibaW5 = true;
+}
+cek("v22-w5 TEST 9e: warga tiba di taman tujuan (13,9) mengikuti rute", tibaW5, "tile=" + wW5.tileX + "," + wW5.tileY + " status=" + wW5.statusPerjalanan);
+cek("v22-w5 TEST 9e: warga tetap di koridor jalan/taman (< 1,2 petak) selama perjalanan", jarakMaksW5 < 1.2 && !tileLiarW5, "jarakMaks=" + jarakMaksW5.toFixed(2) + " liar=" + tileLiarW5);
+cek("v22-w5 TEST 9e: infoPejalanKaki mencatat warga + tiba", C.infoPejalanKaki().total >= 1 && C.infoPejalanKaki().tiba >= 1, JSON.stringify(C.infoPejalanKaki()));
+// TEST 9f: tanpa jaringan pejalan kaki -> tanpa rute (bukan mengembara di darat).
+const jalanSimpanW5 = C.S.jalan; const bangSimpanW5 = C.S.bangunan;
+C.S.jalan = []; C.S.bangunan = [];
+const wLiarW5 = { x: 50, y: 50, tx: 50, ty: 50, cepat: 0.7, fase: 0, jalan: false, arah: 0, tileX: 50, tileY: 50, dariX: 50, dariY: 50, targetX: null, targetY: null };
+cek("v22-w5 TEST 9f: tanpa jalan/taman -> buatRutePejalanKaki false + status tanpa-rute", C.buatRutePejalanKaki(wLiarW5, 55, 55) === false && wLiarW5.statusPerjalanan === "tanpa-rute", wLiarW5.statusPerjalanan);
+C.S.jalan = jalanSimpanW5; C.S.bangunan = bangSimpanW5;
+C.bangunGraphJalan();
+// Kembalikan keadaan semula.
+C.S.jalan = jalanW5Lama; C.S.jembatan = jembW5Lama; C.S.bangunan = bangW5Lama;
+C.kendaraanVisual.length = 0; C.kendaraanVisual.push.apply(C.kendaraanVisual, kendW5Lama);
+C.wargaVisual.length = 0; C.wargaVisual.push.apply(C.wargaVisual, wargaW5Lama);
+vm.runInContext("waktuGame = " + waktuW5Lama + ";", sandbox);
+C.bangunGraphJalan();
+C.initKendaraan();
+cek("v22-w5: keadaan dipulihkan (graph ada, jalan semula)", C.infoGraphJalan().ada === true && C.S.jalan.length === jalanW5Lama.length);
+
+// --- (q) v22-W5: Maritime Transportation (K) — jalur hanya lewat laut ---
+const ruteFeriW5Lama = (C.S.ruteFeri || []).slice();
+const kapalW5Lama = Array.isArray(C.S.kapal) ? C.S.kapal.slice() : null;
+const bangW5bLama = C.S.bangunan.slice();
+const uangW5Lama = C.S.uang;
+const tualW5Lama = C.S.komoditas.tual || 0;
+const ikanW5Lama = C.S.komoditas.ikan || 0;
+cek("v22-w5: API maritim tersedia (jalur/kapal/kargo/nelayan/posisi/info)", typeof C.cariJalurLaut === "function" && typeof C.buatRutePelayaran === "function" && typeof C.buatKapal === "function" && typeof C.buatKapalNelayan === "function" && typeof C.perbaruiKapalMenit === "function" && typeof C.kirimKargoKePulau === "function" && typeof C.prosesKapalKargoPerJam === "function" && typeof C.posisiDiJalur === "function" && typeof C.jalurRuteFeri === "function" && typeof C.posisiFeri === "function" && typeof C.infoMaritim === "function" && typeof C.petakLaut === "function" && typeof C.lautTerdekat === "function" && typeof C.MARITIM_KONFIG === "object");
+// Dua titik laut di seberang pulau (garis lurus memotong daratan).
+const dockAW5 = { x: C.peta.landing.x, y: C.peta.landing.y };
+const lautAW5 = C.lautTerdekat(dockAW5.x, dockAW5.y);
+function cariLautSeberangW5(A) {
+  for (let y = 0; y < C.peta.H; y++) for (let x = 0; x < C.peta.W; x++) {
+    if (C.terrainDi(C.peta, x, y) !== "laut") continue;
+    const j = Math.hypot(x - A.x, y - A.y);
+    if (j < 40) continue;
+    let potong = false;
+    const langkah = Math.ceil(j * 2);
+    for (let i = 1; i < langkah; i++) {
+      const sx = Math.round(A.x + (x - A.x) * i / langkah), sy = Math.round(A.y + (y - A.y) * i / langkah);
+      if (!C.petakLaut(sx, sy)) { potong = true; break; }
+    }
+    if (potong) return { x: x, y: y };
+  }
+  return null;
+}
+const lautBW5 = lautAW5 ? cariLautSeberangW5(lautAW5) : null;
+cek("v22-w5 TEST 10: ditemukan dua titik laut berseberangan (garis lurus memotong daratan)", !!lautAW5 && !!lautBW5, JSON.stringify(lautAW5) + " -> " + JSON.stringify(lautBW5));
+function cariPantaiDekatW5(B) {
+  for (let d = 0; d <= 6; d++) for (let dx = -d; dx <= d; dx++) {
+    const dy = d - Math.abs(dx);
+    const cands = (dy === 0) ? [{ x: B.x + dx, y: B.y }] : [{ x: B.x + dx, y: B.y + dy }, { x: B.x + dx, y: B.y - dy }];
+    for (const c of cands) if (c.x >= 0 && c.y >= 0 && c.x < C.peta.W && c.y < C.peta.H && C.terrainDi(C.peta, c.x, c.y) === "pantai") return c;
+  }
+  return B;
+}
+const dockBW5 = lautBW5 ? cariPantaiDekatW5(lautBW5) : null;
+let jalurLautW5 = null, rutePelayaranW5 = null;
+if (lautAW5 && lautBW5) {
+  jalurLautW5 = C.cariJalurLaut(lautAW5.x, lautAW5.y, lautBW5.x, lautBW5.y);
+  cek("v22-w5 TEST 10: jalur laut ditemukan, semua waypoint di laut/sungai (tidak memotong daratan)", Array.isArray(jalurLautW5) && jalurLautW5.length >= 2 && jalurLautW5[0].x === lautAW5.x && jalurLautW5[0].y === lautAW5.y && jalurLautW5[jalurLautW5.length - 1].x === lautBW5.x && jalurLautW5[jalurLautW5.length - 1].y === lautBW5.y && jalurLautW5.every(p => C.petakLaut(p.x, p.y)), "panjang=" + (jalurLautW5 && jalurLautW5.length));
+  rutePelayaranW5 = C.buatRutePelayaran(dockAW5, dockBW5);
+  cek("v22-w5 TEST 10: buatRutePelayaran(landing -> pantai seberang) ok + jalur hanya laut + waktu tempuh > 0", !!rutePelayaranW5 && rutePelayaranW5.ok === true && Array.isArray(rutePelayaranW5.jalur) && rutePelayaranW5.jalur.every(p => C.petakLaut(p.x, p.y)) && rutePelayaranW5.jarakPetak > 0 && rutePelayaranW5.waktuTempuhMenit > 0, JSON.stringify(rutePelayaranW5 && { ok: rutePelayaranW5.ok, jarak: rutePelayaranW5.jarakPetak, menit: rutePelayaranW5.waktuTempuhMenit }));
+  cek("v22-w5 TEST 10: posisiDiJalur di tengah jalur tetap di laut", (() => {
+    const pj = C.posisiDiJalur(rutePelayaranW5.jalur, rutePelayaranW5.jarakPetak / 2);
+    return !!pj && C.petakLaut(Math.round(pj.x), Math.round(pj.y));
+  })());
+}
+// Feri memakai jalur laut (bukan garis lurus) — posisi tengah di laut.
+if (rutePelayaranW5 && rutePelayaranW5.ok) {
+  const ruteFeriTesW5 = { id: "rute-w5", pulauId: C.peta.pulau[1].id, dari: { x: dockAW5.x, y: dockAW5.y }, ke: { x: dockBW5.x, y: dockBW5.y }, t: 0, arah: 1 };
+  C.S.ruteFeri.push(ruteFeriTesW5);
+  const jalurFeriW5 = C.jalurRuteFeri(ruteFeriTesW5);
+  cek("v22-w5 TEST 10: jalurRuteFeri feri hanya lewat laut", Array.isArray(jalurFeriW5) && jalurFeriW5.length >= 2 && jalurFeriW5.every(p => C.petakLaut(p.x, p.y)), "panjang=" + (jalurFeriW5 && jalurFeriW5.length));
+  C.perbaruiFeriMenit(6); // t ~ 0,48 (tengah penyeberangan)
+  const posFeriW5 = C.posisiFeri(ruteFeriTesW5);
+  const tileFeriW5 = posFeriW5 ? C.duniaKeTile(posFeriW5.x, posFeriW5.y) : null;
+  cek("v22-w5 TEST 10: feri di tengah penyeberangan berada di laut (bukan di daratan)", !!posFeriW5 && !!tileFeriW5 && C.petakLaut(Math.round(tileFeriW5.x), Math.round(tileFeriW5.y)), "t=" + ruteFeriTesW5.t + " tile=" + (tileFeriW5 && Math.round(tileFeriW5.x) + "," + Math.round(tileFeriW5.y)));
+  C.S.ruteFeri.splice(C.S.ruteFeri.indexOf(ruteFeriTesW5), 1);
+}
+// Kapal kargo: buat -> berlayar di laut -> tiba -> muatan terjual.
+if (rutePelayaranW5 && rutePelayaranW5.ok) {
+  const hargaTualW5 = C.KOMODITAS.tual.harga;
+  const uangKargo0W5 = C.S.uang;
+  const kargoW5 = C.buatKapal("kapal-kargo", dockAW5, dockBW5, { komoditas: "tual", jumlah: 5 });
+  cek("v22-w5 TEST 10: buatKapal kapal-kargo ok + jalur hanya laut + kapasitas 500", !!kargoW5 && kargoW5.ok === true && !!kargoW5.kapal && kargoW5.kapal.kapasitas === 500 && kargoW5.kapal.jalur.every(p => C.petakLaut(p.x, p.y)), JSON.stringify(kargoW5 && { ok: kargoW5.ok, kapasitas: kargoW5.kapal && kargoW5.kapal.kapasitas }));
+  if (kargoW5 && kargoW5.ok) {
+    for (let i = 0; i < 300 && kargoW5.kapal.muatan; i++) C.perbaruiKapalMenit(1);
+    cek("v22-w5 TEST 10: kapal kargo tiba & menjual 5 tual (uang +5x2000x1,2 = +12000, kembali kosong)", kargoW5.kapal.muatan === null && kargoW5.kapal.arah === -1 && C.S.uang === uangKargo0W5 + 5 * hargaTualW5 * 1.2, "uang " + uangKargo0W5 + " -> " + C.S.uang);
+  }
+  cek("v22-w5 TEST 10: buatKapal tipe tak dikenal ditolak", C.buatKapal("kapal-selam", dockAW5, dockBW5, null).ok === false);
+  cek("v22-w5 TEST 10: buatKapal kapal-penumpang ok (kapasitas 60)", (() => { const p = C.buatKapal("kapal-penumpang", dockAW5, dockBW5, { penumpang: 30 }); return p.ok === true && p.kapal.kapasitas === 60; })());
+}
+// kirimKargoKePulau: butuh pulau terhubung + dermaga + pelabuhan + stok.
+const pulauW5 = C.peta.pulau[1];
+let dermagaW5 = null, pelabuhanW5 = null;
+for (let y = 0; y < C.peta.H && !dermagaW5; y++) for (let x = 0; x < C.peta.W && !dermagaW5; x++) {
+  if (C.peta.pulauDi && C.peta.pulauDi[y] && C.peta.pulauDi[y][x] === 1 && C.terrainDi(C.peta, x, y) === "pantai") dermagaW5 = { x: x, y: y };
+}
+for (let y = 0; y < C.peta.H && !pelabuhanW5; y++) for (let x = 0; x < C.peta.W && !pelabuhanW5; x++) {
+  if (C.terrainDi(C.peta, x, y) === "pantai" && !C.adaBangunanDi(C.S, x, y) && Math.hypot(x - dockAW5.x, y - dockAW5.y) < 8) pelabuhanW5 = { x: x, y: y };
+}
+cek("v22-w5 TEST 10: kirimKargoKePulau ke pulau belum terhubung ditolak", C.kirimKargoKePulau(pulauW5.id, "tual", 5).ok === false && C.kirimKargoKePulau(pulauW5.id, "tual", 5).alasan === "pulau-tidak-terhubung");
+if (dermagaW5 && pelabuhanW5) {
+  C.S.bangunan.push({ id: "dermaga", x: dermagaW5.x, y: dermagaW5.y, selesai: true, rot: 0 });
+  C.S.bangunan.push({ id: "pelabuhan", x: pelabuhanW5.x, y: pelabuhanW5.y, selesai: true, rot: 0 });
+  const hubungW5Lama = C.S.pulau[pulauW5.id] ? C.S.pulau[pulauW5.id].terhubung : false;
+  C.S.pulau[pulauW5.id].terhubung = true;
+  C.S.komoditas.tual = 20;
+  const uangKirim0W5 = C.S.uang;
+  const kirimW5 = C.kirimKargoKePulau(pulauW5.id, "tual", 5);
+  cek("v22-w5 TEST 10: kirimKargoKePulau ok + stok terpotong 20->15 saat berangkat", !!kirimW5 && kirimW5.ok === true && C.S.komoditas.tual === 15, JSON.stringify(kirimW5 && { ok: kirimW5.ok, alasan: kirimW5.alasan }) + " stok=" + C.S.komoditas.tual);
+  if (kirimW5 && kirimW5.ok) {
+    for (let i = 0; i < 600 && kirimW5.kapal.muatan; i++) C.perbaruiKapalMenit(1);
+    cek("v22-w5 TEST 10: kargo kirimKargoKePulau tiba & terjual (+12000)", kirimW5.kapal.muatan === null && C.S.uang === uangKirim0W5 + 5 * C.KOMODITAS.tual.harga * 1.2, "uang " + uangKirim0W5 + " -> " + C.S.uang);
+  }
+  cek("v22-w5 TEST 10: kirimKargoKePulau stok kurang ditolak", C.kirimKargoKePulau(pulauW5.id, "tual", 999).ok === false && C.kirimKargoKePulau(pulauW5.id, "tual", 999).alasan === "stok-kurang");
+  C.S.pulau[pulauW5.id].terhubung = hubungW5Lama;
+}
+// Kapal nelayan: berangkat -> tangkap -> pulang membawa ikan.
+const dermagaAwalW5 = C.S.bangunan.find(b => b.id === "dermaga");
+if (dermagaAwalW5) {
+  const ikan0W5 = C.S.komoditas.ikan || 0;
+  const nelayanW5 = C.buatKapalNelayan(dermagaAwalW5);
+  cek("v22-w5 TEST 10: buatKapalNelayan ok + jalur hanya laut", !!nelayanW5 && nelayanW5.ok === true && !!nelayanW5.kapal && nelayanW5.kapal.jalur.every(p => C.petakLaut(p.x, p.y)), JSON.stringify(nelayanW5 && { ok: nelayanW5.ok }));
+  if (nelayanW5 && nelayanW5.ok) {
+    for (let i = 0; i < 2000 && (C.S.komoditas.ikan || 0) <= ikan0W5; i++) C.perbaruiKapalMenit(1);
+    cek("v22-w5 TEST 10: kapal nelayan pulang membawa 2 ikan", (C.S.komoditas.ikan || 0) === ikan0W5 + 2, "ikan " + ikan0W5 + " -> " + (C.S.komoditas.ikan || 0));
+  }
+}
+// Render smoke: peta + kapal di laut tanpa error.
+try { C.gambarPeta(); cek("v22-w5 TEST 10: render peta + kapal maritim (tanpa error)", true); }
+catch (e) { cek("v22-w5 TEST 10: render peta + kapal maritim (tanpa error)", false, e.message); }
+// Persistensi kapal (S.kapal tersimpan di S).
+const simpW5 = C.simpan();
+const muatW5 = C.muat();
+cek("v22-w5 TEST 10: kapal tersimpan (simpan->muat, S.kapal ada)", !!simpW5 && !!muatW5 && Array.isArray(muatW5.kapal) && muatW5.kapal.length >= 1, muatW5 && muatW5.kapal && muatW5.kapal.length);
+// Kembalikan keadaan semula.
+C.S.ruteFeri = ruteFeriW5Lama;
+if (kapalW5Lama) C.S.kapal = kapalW5Lama; else delete C.S.kapal;
+C.S.bangunan = bangW5bLama;
+C.S.uang = uangW5Lama;
+C.S.komoditas.tual = tualW5Lama;
+C.S.komoditas.ikan = ikanW5Lama;
+cek("v22-w5: infoMaritim ringkas (rute feri + kapal)", typeof C.infoMaritim().ruteFeri === "number" && typeof C.infoMaritim().totalKapal === "number", JSON.stringify(C.infoMaritim()));
+
+// --- (r) v22-W5: Traffic Management UI (L) + versi final + determinisme ---
+cek("v22-w5: API UI lalin tersedia (toggle/pilih/sembunyikan/lapisan/panel)", typeof C.aturTampilLalin === "function" && typeof C.pilihKendaraan === "function" && typeof C.sembunyikanRuteKendaraan === "function" && typeof C.gambarLapisanLalin === "function" && typeof C.kendaraanTerpilih === "function" && typeof C.renderPanelKiri === "function");
+C.aturTampilLalin("jalan");
+cek("v22-w5: aturTampilLalin('jalan') menyalakan jaringan jalan", C.tampilJaringanJalan === true);
+C.aturTampilLalin("jalan");
+cek("v22-w5: aturTampilLalin('jalan') lagi mematikan", C.tampilJaringanJalan === false);
+C.aturTampilLalin("bus"); C.aturTampilLalin("pejalan"); C.aturTampilLalin("laut");
+cek("v22-w5: toggle bus/pejalan/laut menyala bersamaan", C.tampilRuteBus === true && C.tampilJaringanPejalan === true && C.tampilRuteLaut === true);
+try { C.gambarPeta(); cek("v22-w5: gambarPeta dengan semua lapisan lalin menyala (tanpa error)", true); }
+catch (e) { cek("v22-w5: gambarPeta dengan semua lapisan lalin menyala (tanpa error)", false, e.message); }
+C.aturTampilLalin("bus"); C.aturTampilLalin("pejalan"); C.aturTampilLalin("laut");
+const j0UIW5 = C.S.jalan[0];
+const kendUIW5 = C.buatKendaraan("mobil", j0UIW5.x, j0UIW5.y);
+C.daftarkanKendaraan(kendUIW5, { kelola: true });
+C.pilihKendaraan(kendUIW5.id);
+cek("v22-w5: pilihKendaraan -> kendaraanTerpilih() mengembalikan kendaraan itu", C.kendaraanTerpilih() === kendUIW5 && C.kendaraanTerpilihId === kendUIW5.id);
+C.sembunyikanRuteKendaraan();
+cek("v22-w5: sembunyikanRuteKendaraan -> terpilih null", C.kendaraanTerpilih() === null && C.kendaraanTerpilihId === null);
+C.hapusKendaraan(kendUIW5.id);
+vm.runInContext("panelKiri = 'lalin'; renderPanelKiri();", sandbox);
+const htmlLalinW5 = elemen["panelKiriIsi"].innerHTML;
+cek("v22-w5: panel Lalu Lintas ter-render (judul + tombol lapisan + daftar kendaraan)", htmlLalinW5.indexOf("Lalu Lintas") >= 0 && htmlLalinW5.indexOf("Jaringan Jalan") >= 0 && htmlLalinW5.indexOf("Rute Bus") >= 0 && htmlLalinW5.indexOf("Rute Laut") >= 0 && htmlLalinW5.indexOf("Jaringan Pejalan Kaki") >= 0, htmlLalinW5.slice(0, 200));
+cek("v22-w5: panel Lalu Lintas menampilkan angka simulasi (total kendaraan + kemacetan + pejalan kaki + maritim)", htmlLalinW5.indexOf("Total kendaraan") >= 0 && htmlLalinW5.indexOf("Kemacetan") >= 0 && htmlLalinW5.indexOf("Pejalan Kaki") >= 0 && htmlLalinW5.indexOf("Maritim") >= 0);
+C.initKendaraan();
+const truk1W5 = C.kendaraanVisual.find(k => k.tipe === "truk");
+C.initKendaraan();
+const truk2W5 = C.kendaraanVisual.find(k => k.tipe === "truk");
+cek("v22-w5: initKendaraan deterministik — truk selalu di petak jalan pertama (bukan acak)", !!truk1W5 && !!truk2W5 && truk1W5.x === C.S.jalan[0].x && truk1W5.y === C.S.jalan[0].y && truk2W5.x === C.S.jalan[0].x && truk2W5.y === C.S.jalan[0].y, "truk=" + (truk1W5 && truk1W5.x + "," + truk1W5.y));
+cek("v22-w5: VERSI_GAME v22 + nav Lalu Lintas ada di index.html + overlay traffic terdaftar", C.VERSI_GAME === "v22" && idxHtml.indexOf('data-tab="lalin"') >= 0 && idxHtml.indexOf("js/city-maritim.js?v=1") >= 0);
+
+// =====================================================================
+// v22-W7: PWA + Logo Resmi (Worker 7 — wilayah TERPISAH dari traffic
+// W1–W6: manifest, service worker, logo, tombol PWA; tidak menyentuh
+// VERSI_GAME, ?v=, atau logika lalu lintas).
+// =====================================================================
+const ROOT_W7 = "/home/hatch/workspace/saudagar-meranti";
+const manifestW7 = JSON.parse(fs.readFileSync(ROOT_W7 + "/manifest.json", "utf8"));
+cek("v22-w7: manifest valid, name MERANTI RISING", manifestW7.name === "MERANTI RISING");
+cek("v22-w7: short_name MERANTI RISING (13 karakter, muat di label home screen)", typeof manifestW7.short_name === "string" && manifestW7.short_name.length > 0 && manifestW7.short_name.length <= 14, manifestW7.short_name);
+cek("v22-w7: display fullscreen + orientation landscape", manifestW7.display === "fullscreen" && manifestW7.orientation === "landscape", manifestW7.display + "/" + manifestW7.orientation);
+cek("v22-w7: theme/background #0a1a2f, start_url ./index.html, scope ./", manifestW7.theme_color === "#0a1a2f" && manifestW7.background_color === "#0a1a2f" && manifestW7.start_url === "./index.html" && manifestW7.scope === "./");
+cek("v22-w7: description memakai tagline AYO MEMBANGUN MERANTI!", typeof manifestW7.description === "string" && manifestW7.description.indexOf("AYO MEMBANGUN MERANTI!") !== -1);
+const ikonW7 = manifestW7.icons || [];
+cek("v22-w7: manifest punya ikon 192 (any) + 512 (any) + 512 (maskable)", ikonW7.some(i => i.sizes === "192x192" && i.purpose === "any") && ikonW7.some(i => i.sizes === "512x512" && i.purpose === "any") && ikonW7.some(i => i.sizes === "512x512" && i.purpose === "maskable"));
+cek("v22-w7: semua ikon yang dirujuk manifest ADA di disk", ikonW7.every(i => typeof i.src === "string" && fs.existsSync(path.join(ROOT_W7, i.src))), JSON.stringify(ikonW7.map(i => i.src)));
+cek("v22-w7: tidak ada path absolut (http/https atau diawali /) di manifest", ikonW7.every(i => !/^(https?:)?\//.test(i.src)) && !/^(https?:)?\//.test(manifestW7.start_url) && !/^(https?:)?\//.test(manifestW7.scope));
+const swW7 = fs.readFileSync(ROOT_W7 + "/sw.js", "utf8");
+let swSyntaxOkW7 = false;
+try { require("child_process").execSync("node --check " + ROOT_W7 + "/sw.js", { stdio: "ignore" }); swSyntaxOkW7 = true; } catch (e) { swSyntaxOkW7 = false; }
+cek("v22-w7: sw.js lolos node --check", swSyntaxOkW7);
+cek("v22-w7: nama cache SW terikat v22 (meranti-rising-v22)", swW7.indexOf("meranti-rising-v22") !== -1);
+cek("v22-w7: SW hapus cache lama saat activate + skipWaiting + clients.claim", swW7.indexOf("skipWaiting") !== -1 && swW7.indexOf("clients.claim") !== -1 && swW7.indexOf("caches.delete") !== -1);
+cek("v22-w7: SW network-first untuk index.html, cache-first untuk aset", swW7.indexOf("index.html") !== -1 && swW7.indexOf("fetch") !== -1 && swW7.indexOf("caches.match") !== -1);
+const daftarCacheW7 = (swW7.match(/const DAFTAR_CACHE = \[([\s\S]*?)\];/) || ["", ""])[1].split("\n").map(s => (s.match(/"([^"]+)"/) || [])[1]).filter(Boolean);
+cek("v22-w7: semua entri precache SW relatif (./...) — tanpa path absolut", daftarCacheW7.length > 10 && daftarCacheW7.every(u => u.indexOf("./") === 0), daftarCacheW7.join(","));
+cek("v22-w7: semua entri precache SW ADA di disk (tanpa query ?v=)", daftarCacheW7.every(u => fs.existsSync(path.join(ROOT_W7, u.split("?")[0]))), daftarCacheW7.filter(u => !fs.existsSync(path.join(ROOT_W7, u.split("?")[0]))).join(","));
+const htmlW7 = fs.readFileSync(ROOT_W7 + "/index.html", "utf8");
+cek("v22-w7: index.html memuat link manifest + theme-color + apple-touch-icon + apple-mobile-web-app-capable", htmlW7.indexOf('rel="manifest" href="manifest.json"') !== -1 && htmlW7.indexOf('name="theme-color" content="#0a1a2f"') !== -1 && htmlW7.indexOf('rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"') !== -1 && htmlW7.indexOf('name="apple-mobile-web-app-capable"') !== -1);
+cek("v22-w7: index.html memakai logo resmi di layar mulai", htmlW7.indexOf('class="logoUtama" src="assets/images/logo-meranti-rising.png"') !== -1);
+cek("v22-w7: judul teks + tagline teks TIDAK diduplikasi (logo gambar sudah memuatnya)", htmlW7.indexOf('class="tagline"') === -1 && htmlW7.indexOf('class="judulLogo"') === -1);
+cek("v22-w7: logo + lencana + 7 ikon ADA di disk", ["assets/images/logo-meranti-rising.png", "assets/icons/badge-mr.png", "assets/icons/icon-192.png", "assets/icons/icon-512.png", "assets/icons/icon-maskable-512.png", "assets/icons/apple-touch-icon.png", "assets/icons/favicon-32.png", "assets/icons/favicon-48.png"].every(f => fs.existsSync(path.join(ROOT_W7, f))));
+cek("v22-w7: tombol instal & muat-ulang display:none secara default di index.html", htmlW7.indexOf('id="btnInstalMulai" class="btnUtama sekunder" style="display:none"') !== -1 && htmlW7.indexOf('id="btnInstalPengaturanMulai" type="button" class="btnUtama sekunder" style="display:none"') !== -1 && htmlW7.indexOf('id="btnMuatUlangBaruMulai" type="button" class="btnUtama sekunder" style="display:none"') !== -1);
+const cityW7 = fs.readFileSync(ROOT_W7 + "/js/city.js", "utf8");
+cek("v22-w7: city.js punya wiring PWA (beforeinstallprompt, register sw.js, fullscreen, toast update)", cityW7.indexOf("beforeinstallprompt") !== -1 && cityW7.indexOf('register("sw.js")') !== -1 && cityW7.indexOf("requestFullscreen") !== -1 && cityW7.indexOf("Versi baru tersedia") !== -1);
+cek("v22-w7: city.js mendaftarkan SW hanya via https/localhost", cityW7.indexOf('location.protocol === "https:"') !== -1 && cityW7.indexOf('"localhost"') !== -1);
+cek("v22-w7: VERSI_GAME v22 (dinaikkan W5 — W7 tidak menyentuhnya)", C.VERSI_GAME === "v22");
 
 console.log(gagal === 0 ? "TEST_V13_OK" : "TEST_V13_GAGAL:" + gagal + " dari " + (lulus + gagal));

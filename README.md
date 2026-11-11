@@ -6,6 +6,1000 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v22 — Advanced Traffic, Pathfinding & Transportation Engine (2026-11-11, Worker 1: INTI)
+
+**v22-W1 membangun inti mesin lalu lintas yang sesungguhnya** — menggantikan
+pemilihan jalan acak/rakus dengan graph jalan + A* + lajur kiri. Kendaraan
+visual lama (truk, warga, bus) BELUM dimigrasikan di W1 — mereka tetap
+berfungsi seperti sebelumnya; Worker 2 yang memigrasikan mereka ke sistem
+ini. Format simpanan TIDAK berubah (`petaVersi` tetap 5; graph & kendaraan
+adalah runtime, dibangun ulang dari `S.jalan`/`S.jembatan` saat mulaiGame).
+
+### v22-W6 — Perbaikan reload lease, desinkron profil/simpanan, pulihkan pause, diagnostik tint (2026-11-11)
+
+Perbaikan atas temuan kritis cek live v21 (bukan traffic). `SAVE_KEY`
+tetap `merantiRisingWorldV1`, `petaVersi` tetap 5; tidak ada perubahan
+logika gameplay/ekonomi/konstruksi/waktu kecuali yang disebut di sini.
+
+**Akar masalah reload (cek live v21).** Tab lama t1 (Hari 4, 22:03,
+Rp1.739.906, jalan 2x) menimpa simpanan tab baru t2 (Hari 4, 22:32,
+Rp1.736.406, +7 jalan) selama jendela reload, sehingga reload +
+LANJUTKAN memuat keadaan t1 (23:08, 7 jalan hilang). Tiga penyebab:
+(1) `tabIdSaya` dibuat baru tiap muat halaman; (2) `denyutLeaseTab()`
+kembali lebih awal bila `!S`, jadi halaman yang baru dimuat TIDAK
+pernah memegang lease selama di layar mulai; (3) tab background yang
+ditinggalkan tetap autosave.
+
+**Cara kerja lease baru.**
+- **ID tab di `sessionStorage`** (`merantiRisingTabIdV1`): reload memakai
+  ID yang SAMA sehingga tetap memegang lease; tab browser baru mendapat
+  ID baru (lease lama kedaluwarsa → bisa diklaim — benar). Bila
+  `sessionStorage` tidak tersedia, fallback ke ID acak seperti dulu.
+- **Denyut lease di layar mulai**: `denyutLeaseTab()` tidak lagi
+  digantung pada `S`; `tickInterval500` mendenyut juga saat `S` null dan
+  `DOMContentLoaded` langsung mengklaim lease — SEBELUM pengguna klik
+  LANJUTKAN. Denyut di layar mulai TIDAK memanggil `simpan()`.
+- **Pelindung tab idle**: `simpan(true)` dilewati bila tidak ada
+  interaksi pengguna (`pointerdown` kanvas / `keydown` / klik dokumen)
+  selama >30 detik (`INTERAKSI_IDLE_MS`). Simpan MANUAL tetap selalu
+  diizinkan dan selalu mengklaim lease. `mulaiGame()` mengklaim lease
+  SEBELUM `muat()`.
+- **Uji headless** (`tests/test13.js`, 49 cek `v22-w6`): replika
+  skenario live persis dengan dua konteks VM berbagi satu
+  `localStorage` + `sessionStorage` per-tab — tab lama A (22:03),
+  tab baru B (LANJUTKAN → 7 jalan → simpan manual 22:32), "reload" B
+  (konteks baru, `sessionStorage` yang sama) → LANJUTKAN memuat
+  simpanan B (22:32 + 7 jalan), BUKAN keadaan A (23:08). Juga diuji:
+  lease kedaluwarsa bisa diambil alih tab baru, simpan manual merebut
+  lease, autosave tab idle dilewati, denyut di layar mulai tidak
+  menulis simpanan.
+
+**Keputusan UX profil/simpanan — dipilih opsi (ii).** Saat profil
+dihapus, simpanan TIDAK ikut dihapus saat itu juga (tetap seperti
+dulu), TAPI permainan baru langsung menimpa simpanan lama
+(`mulaiGame(true)` → `simpan()` di akhir + klaim lease di awal),
+sehingga LANJUTKAN memuat kota pemimpin yang baru, bukan kota
+pemimpin lama. Alasan: opsi (i) — menghapus simpanan bersama profil —
+berisiko menghilangkan progres kota pemain yang hanya ingin mengulang
+tutorial/formulir identitas; opsi (ii) menjaga progres tetap aman
+sampai pemain secara eksplisit memulai permainan baru (yang sudah
+dikonfirmasi dua-ketuk "Simpanan lama dihapus"). Tambahan:
+`kembaliKeMenuUtama()` dan `resetProfil()` kini MELEPAS lease &
+menghentikan denyut/autosave tab ini sampai permainan baru/lanjutan
+dimulai (`berhentiDenyutMenu`, direset `mulaiGame()`), supaya tab yang
+kembali ke menu tidak memblokir tab lain. Konfirmasi dua-ketuk hapus
+profil diperpanjang 5 → 10 detik (klik konfirmasi yang terlambat dulu
+gagal). Teks di panel Pengaturan & layar mulai diperbarui sesuai
+keputusan ini.
+
+**Pulihkan pause saat muat (akar bug).** `kembaliKeMenuUtama()` dulu
+memanggil `simpan()` SEBELUM `kecepatan = 0`, sehingga simpanan
+mencatat kecepatan terakhir (mis. 2x) dan "Lanjutkan" setelah reload
+langsung jalan 2x. Kini: jeda dulu (`kecepatan = 0`, `S.kecepatan = 0`),
+baru simpan. `mulaiGame(false)` sudah memulihkan `S.kecepatan`
+(termasuk 0) — diuji headless: simpan saat jeda → muat → kecepatan
+tetap 0 dan waktu tidak maju.
+
+**Panel debug tint di dalam game (Mode Debug).** Toggle di panel
+Pengaturan (dalam game) dan di tahap Pengaturan layar mulai
+(`#btnModeDebugMulai`); preferensi tersimpan di
+`merantiRisingDebugV1`. Panel `#panelDebug` (kiri atas area peta,
+kecil, bisa ditutup dari tombol ✕ di panel itu sendiri) diperbarui
+tiap 500 ms dari state AKTUAL: waktu game (hari + jam), fase
+siang/malam, kegelapan saat ini (`faseSiangMalam`), `gelapTerakhir`
+(kegelapan frame `gambarPeta` terakhir), `jumlahFrameGambarPeta`,
+umur frame terakhir, kecepatan, status lease (pemegang + umur), waktu
+interaksi terakhir & status autosave. `window.__merantiRender` ikut
+mencatat `lease` (dipertahankan). Tujuannya: tint bisa diverifikasi
+live TANPA DevTools di cek berikutnya.
+
+**Batas jujur (belum terverifikasi live).** Tint malam MASIH belum
+terverifikasi live — panel debug ini hanya alat ukur, BUKAN perbaikan
+tint; tidak ada perubahan pada logika `faseSiangMalam`/`gambarPeta`.
+Perbaikan lease + pause + desinkron baru terbukti headless (skenario
+reload dua tab lulus); verifikasi live di browser sungguhan (dua tab,
+reload, hapus profil → permainan baru, jeda → reload) masih harus
+dilakukan di cek berikutnya. Skenario "dua tab aktif dipakai
+bersamaan" tetap ambigu — simpan manual yang menang. Ref `city.js`
+di `index.html` naik ke `?v=27` dan `VERSI_GAME` menjadi `"v22"` di
+finalisasi W5 (lihat bagian Worker 5 FINAL di bawah); `city-kendaraan.js`
+`?v=2`, `city-maritim.js?v=1` (baru).
+Hasil tes headless terakhir: 1016/1018 lolos; 2 gagal di luar lingkup
+W6, keduanya di kode traffic worker lain yang sedang disunting
+bersamaan: `v19-lalin` pendapatan tiket bus (`tiketBus=4166,67` <
+Rp7.000/jam — `js/city-lalin.js` disunting worker lain selama run)
+dan `v22-w3 TEST 4` penumpang bus tidak turun di terminal.
+
+### Modul baru: `js/city-jalan.js`
+
+Didaftarkan di `index.html` setelah `city-lalin.js`, sebelum `city.js`
+(`js/city-jalan.js?v=1`; ref `city.js` naik `v=23` → `v=24` karena ada hook
+baru di `city.js`). `city-lalin.js` tetap fokus ke kepadatan/bus/taksi/
+rekreasi. `titikLajurTile` TETAP di `city.js` (dipakai `city.js` +
+`city-lalin.js`) — tidak dipindah, tidak diduplikasi; helper lajur baru
+di sini memanggilnya.
+
+### Road Network Engine
+
+- **NODE** = petak jalan yang derajatnya ≠ 2 (ujung jalan / persimpangan),
+  ATAU petak jalan di depan bangunan (akses rumah/terminal/halte — petak
+  jalan yang bersebelahan ortogonal dengan petak bangunan). Cincin jalan
+  tertutup tanpa node dipecah dengan satu node buatan.
+- **EDGE** = ruas jalan antar dua node: `id`, node ujung, daftar petak
+  berurutan, `panjangM` (jumlah petak × 250 m), `jenis` (tipe terbanyak),
+  `lajur`, `arah: "dua-arah"`, `kapasitas` (minimum sepanjang ruas),
+  `kecepatanMaks` (minimum sepanjang ruas), `kondisi` (1,0 — hook W4),
+  `waktuTempuhDetik`.
+- **Kecepatan maks** diambil dari data `JALAN` yang sudah ada
+  (`JALAN[tipe].kecepatan`: tanah 20, lingkungan 30, aspal/kolektor/
+  pesisir 40, utama/industri 50, raya 60, arteri 80 km/jam); jembatan
+  (tanpa data kecepatan) = 40 km/jam, kapasitas 60. **Lajur** dari
+  kapasitas: ≤20 → 1, ≤60 → 2, >60 → 4 (tanah 1, aspal 2, raya 4).
+- **Komponen terhubung**: BFS lewat edge; jalan yang tidak tersambung =
+  komponen terpisah dan TIDAK BOLEH dirutekan (`cariRute` → `null`).
+- Graph dibangun ulang penuh (`O(petak jalan)`) hanya saat jalan/jembatan
+  dibangun/dihapus (`perbaruiGraphJalan`, dipanggil dari
+  `bangunJalanDi`/`bangunJembatanDi`/`hapusJalan`/`hapusJembatan`) dan saat
+  `mulaiGame` — TIDAK pernah tiap frame. Rebuild lokal per-ruas dicadangkan
+  untuk W4 bila peta jalan membesar.
+
+### Pathfinding Engine (A* pada graph)
+
+- `cariRute(x0,y0,x1,y1)` → daftar waypoint petak berurutan asal → tujuan,
+  atau `null` bila tidak ada rute. A* antar NODE (bukan grid mentah);
+  heuristik = jarak Chebyshev antar node × waktu optimistis per petak
+  (250 m pada 80 km/jam). Biaya edge = waktu tempuh × (1 + kemacetan),
+  kemacetan dari `S.lalin.perPetak` v19 (lancar 0 / padat 0,5 / macet 1,0,
+  dirata-rata sepanjang edge).
+- **Route caching**: per pasangan node (`asalNode>tujuanNode`), invalidasi
+  lewat `versiGraph` (naik tiap graph berubah; cache dikosongkan).
+  Statistik: `statistikCacheRute()` → `{jumlahEntri, hit, miss, versi}`.
+- **Struktur data kendaraan** (dipakai W2–W5):
+  `{id, tipe, x, y, arah, cepat, asal {x,y}, tujuan {x,y}|null, rute [{x,y}...], idxWaypoint, segmenSaatIni (id edge|null), persimpanganBerikut {x,y,id}|null, progres (0–1), status ("menuju"|"tiba"|"menunggu"|"tidak-ada-jalur"|"parkir"|"memuat"|"membongkar"), versiRute}`.
+  `buatRuteKendaraan(k, tx, ty)` mengisi rute + status (bila null →
+  `"tidak-ada-jalur"`, kendaraan tetap di lokasi aman).
+  `ruteUlangBilaPerlu(k, alasan)` HANYA untuk alasan sah
+  (`jalan-ditutup`, `macet-berat`, `tujuan-berubah`, `hambatan`,
+  `rute-tidak-valid`) — bukan tiap frame. `waypointBerikut(k)` dan
+  `lewatiWaypoint(k)` untuk memajukan kendaraan menyusuri rute.
+
+### Lane System (lajur kiri Indonesia)
+
+- `posisiLajur(k, x0,y0,x1,y1, off=7)` → posisi di lajur yang benar
+  (memakai `titikLajurTile`, offset 7 seperti sebelumnya).
+- `jarakAman(k, kendaraanDepan)` = 0,5 + 0,5 × `k.cepat` petak
+  (truk `cepat` 1,2 → 1,1 petak); `kendaraanTerlaluDekat(k, depan)` =
+  jarak aktual < jarak aman. Penegakan jarak di W2.
+- `titikBelok(x0,y0,x1,y1,x2,y2)` → 3 titik sampel kurva quadratic
+  Bezier (t=0,25/0,5/0,75) agar belokan 90° tidak tajam dalam satu
+  frame (perubahan arah maks ~38° per segmen, teruji); lurus → `[]`,
+  putar balik → 1 titik.
+
+### API untuk Worker 2–5 (contoh pemakaian)
+
+```js
+bangunGraphJalan();                 // sekali saat mulaiGame (sudah di-hook)
+perbaruiGraphJalan([{x, y}]);       // saat jalan/jembatan berubah (sudah di-hook)
+const info = infoGraphJalan();      // {ada, versi, jumlahNode, jumlahEdge, jumlahKomponen, ...}
+const rute = cariRute(ax, ay, bx, by); // [{x,y}...] atau null
+const k = buatKendaraan("truk", x, y);
+buatRuteKendaraan(k, tx, ty);       // k.status "menuju" / "tidak-ada-jalur"
+const w = waypointBerikut(k);       // {x,y} berikut — gerakkan k ke sana
+// ...setelah tiba di w: lewatiWaypoint(k);
+ruteUlangBilaPerlu(k, "jalan-ditutup"); // hitung ulang bila jalannya dihapus
+const pos = posisiLajur(k, x0, y0, x1, y1); // target gerakAgen di lajur kiri
+const belok = titikBelok(x0, y0, x1, y1, x2, y2); // sisipkan sebelum belok
+```
+
+### Batas jujur W1
+
+- Perbarui graph saat ini membangun ulang penuh (bukan inkremental
+  per-ruas) — benar & murah untuk ukuran kota saat ini, tapi dicadangkan
+  untuk W4 bila jalan menembus ribuan petak.
+- A* memakai open list array (cari minimum linear) — cukup untuk
+  ratusan node; heap biner bila node menembus ribuan (W4).
+- Feri masih garis lurus memotong daratan (di luar W1 — Worker 5).
+- ~~Warga masih bisa melintasi darat & truk masih ikut tetangga acak
+  sampai Worker 2 memigrasikan mereka ke `buatRuteKendaraan`.~~
+  Selesai di W2 (lihat bawah): truk & warga kini memakai rute A*.
+
+## Yang baru di v22 — Worker 2: Vehicle Behavior + Vehicle Types (2026-11-11)
+
+**v22-W2 memigrasikan truk & warga ke sistem W1 dan menambahkan state
+machine + tipe kendaraan.** Truk tidak lagi memilih tetangga acak
+(`pilihJalanBerikut` — fungsi itu DIPERTAHANKAN sebagai fallback untuk
+bus `city-lalin.js`, yang masih memakainya di `perbaruiBusVisual`),
+melainkan punya tujuan + rute A* (`buatRuteKendaraan`) dan mengikuti
+waypoint di lajur kiri dengan belokan Bezier. Warga tidak lagi
+melintasi darat: mereka hanya berjalan di jaringan jalan/trotoar.
+Format simpanan TIDAK berubah (`petaVersi` tetap 5; kendaraan & warga
+adalah runtime).
+
+### Modul baru: `js/city-kendaraan.js`
+
+Didaftarkan di `index.html` setelah `city-jalan.js`, sebelum
+`city-persimpangan.js` & `city.js` (`js/city-kendaraan.js?v=1`; ref
+`city.js` naik `v=25` → `v=26` karena ada edit di `city.js`).
+Satu-satunya struktur kendaraan adalah struktur W1
+(`buatKendaraan`) — manager TIDAK membuat struktur kedua.
+
+### VehicleManager
+
+- `daftarkanKendaraan(k, opts)` — menerima kendaraan buatan siapa pun.
+  Kendaraan W1 (id `"kend-..."`) atau `{kelola:true}` = **dikelola**
+  (digerakkan state machine); kendaraan lain (mis. bus dari
+  `city-lalin.js`, tanpa id `"kend-"`) hanya **dilacak** untuk jarak
+  aman & prioritas darurat — geraknya tetap pemiliknya
+  (`perbaruiBusVisual`) sampai W3 mendaftarkannya dengan rute jalan.
+  Normalisasi tidak pernah menimpa `cepat` yang sudah ada.
+- `hapusKendaraan(id)` — hapus dari manager DAN `kendaraanVisual`.
+- `kendaraanDiLajur(edgeId)` — kendaraan di satu edge (jarak aman).
+- `perbaruiSemuaKendaraan(dt)` — dipanggil tiap frame dari
+  `perbaruiKendaraan` (`city.js`); pause (`kecepatan` 0) = diam.
+  Kendaraan visual yang belum terdaftar (mis. bus) didaftarkan
+  otomatis sebagai "dilacak". Satu kendaraan gagal tidak menghentikan
+  yang lain (try/catch per kendaraan).
+- `buatKendaraanJalan(tipe, x, y, tx, ty)` — buat + daftar + rutekan.
+  Tanpa tujuan, truk/mobil menjadi **ambient**: tujuan jalan acak
+  (Manhattan ≥ 3), parkir 1–3 detik saat tiba, berangkat lagi.
+- `mintaPulang(k, x, y)` — perjalanan pulang setelah tiba (dipakai W3
+  untuk truk logistik); `aturStateMuat(k, "loading"|"unloading", detik)`
+  — diam selama durasi, lalu jalan lagi bila sudah punya rute (dipakai W3).
+- `infoKendaraan()` — `{total, aktif, parkir, menunggu, daruratAktif,
+  perTipe, maksAktif}`.
+- `bersihkanKendaraan()` — kosongkan registry (dipanggil
+  `initKendaraan` saat permainan dimulai).
+
+### State machine (field `k.state`, terpisah dari `k.status` W1)
+
+`status` = rencana/rute (`"menuju"|"tiba"|"tidak-ada-jalur"|
+"parkir"|"memuat"|"membongkar"`); `state` = perilaku gerak saat ini:
+
+| state | kapan |
+|---|---|
+| `accelerating` | berangkat / mengejar kecepatan target |
+| `cruising` | berjalan pada kecepatan maks |
+| `braking` | mengerem (depan berhenti/dekat, lampu merah, jalan ditutup) |
+| `turning` | melewati titik belok Bezier (kecepatan dibatasi 50% maks) |
+| `waiting` | diam: lampu merah / antrean / darurat lewat / tanpa rute |
+| `parking` | diam di tempat parkir/gudang/terminal |
+| `loading` / `unloading` | diam, hitung mundur durasi (W3) |
+| `arriving` | mengerem menjelang tiba di tujuan |
+| `returning` | rute kembali (setelah `mintaPulang`) |
+
+Gerakan halus via `gerakAgen` (`city.js`): target = posisi lajur kiri
+waypoint berikut (`posisiLajur` W1); saat arah berubah di waypoint,
+disisipkan 3 titik Bezier (`titikBelok`) — dan waypoint belok
+**dimajukan saat antrean Bezier habis**, kalau tidak kendaraan
+berputar di tempat (bug ini sempat tertangkap tes TEST 6/8).
+Kecepatan dalam petak/detik; `gerakAgen` mengalikan `kecepatan` game
+sendiri, jadi laju konsisten walau FPS berubah.
+**Skala kecepatan game: 1 petak/detik ≈ 30 km/jam** (1 petak = 250 m;
+konsisten dengan `cepat` truk lama 1,2 ≈ 36 km/jam).
+
+### Tipe kendaraan (`TIPE_KENDARAAN`)
+
+| tipe | maks (km/jam) | percepatan | kapasitas | sprite |
+|---|---|---|---|---|
+| mobil pribadi | 50 | 0,9 | 5 penumpang | vektor (belum ada sprite) |
+| bus | 40 | 0,6 | 40 penumpang | `assets/vehicles/bus.png` |
+| truk logistik | 35 | 0,5 | 500 unit muatan | `assets/vehicles/truk-pengangkut.png` |
+| ambulans | 80 | 1,2 | 2 pasien | vektor + lampu berkedip |
+
+**Kecepatan maks = min(maks tipe, maks jalan di petak itu)** — tidak
+pernah melebihi kecepatan jalan (truk di jalan tanah 20 km/jam =
+20/30 petak/detik), dikali faktor kemacetan v19
+(`faktorKecepatanLalin`, 0,5–1). Pejalan kaki (warga) tidak masuk
+tabel: kecepatannya 0,5–0,9 petak/detik (nilai lama) dan tidak
+dibatasi kecepatan jalan.
+
+### Jarak aman, lampu merah, prioritas darurat
+
+- **Jarak aman** (W1): `0,5 + 0,5 × cepat` petak. Kendaraan di depan =
+  satu edge yang sama, di depan sepanjang arah hadap, selateral
+  < 0,3 petak. Lajur berlawanan (lateral ~0,39 petak) TIDAK dihitung —
+  kendaraan dari arah berlawanan lewat di lajurnya sendiri. Bila
+  terlalu dekat: ikuti dari belakang (90% kecepatan depan) atau
+  berhenti bila < 60% jarak aman / depan berhenti. Kendaraan parkir
+  tanpa rute (tanpa `segmenSaatIni`) tetap dihitung sebagai halangan
+  bila segaris.
+- **Lampu merah**: memanggil `lampuMerahDi(x, y)` milik W4
+  (`city-persimpangan.js`) secara **defensif**
+  (`typeof lampuMerahDi === "function" ? ... : false`) — W2 berfungsi
+  walau W4 belum ada. Rem hanya bila persimpangan berikut ≤ 2,5 petak.
+  Diuji dengan API asli W4 (bangunan traffic-light + fase siklus 7 menit).
+- **Prioritas darurat** (aturan sederhana): bila ambulans aktif di satu
+  edge, kendaraan lain di edge itu berstatus `waiting` sampai ambulans
+  keluar edge / parkir; ambulans mengabaikan lampu merah & jarak aman.
+  Bukan simulasi menepi lateral penuh — ambulans lewat "menembus"
+  kendaraan yang menunggu secara visual (batas jujur, lihat bawah).
+
+### Jalan dihapus saat kendaraan jalan (TEST 8)
+
+Tiap frame dicek apakah sisa rute masih di atas petak jalan (bukan
+`ruteMasihValid`, yang juga gagal bila jalan DIBANGUN di tempat lain).
+Bila tidak valid: rem aman di tempat (tanpa teleport), lalu
+`ruteUlangBilaPerlu(k, "jalan-ditutup")` — rute alternatif bila ada,
+atau status `"tidak-ada-jalur"` dan kendaraan tetap di tempat.
+
+### Warga (pejalan kaki)
+
+`pilihLangkahWargaJalan` (dipakai `pilihLangkahWarga` &
+`perbaruiWarga` di `city.js` via `perbaruiPejalanKaki`) hanya memilih
+tetangga **jalan** (bobot 3, bonus +2 mendekati target zona; tiba di
+zona bila sudah bersebelahan dengan bangunan target). Bila warga
+terdampar tanpa jalan di sekitarnya, ia melangkah SATU petak menuju
+jalan terdekat (pemulihan, bukan berkeliaran di darat). Aturan malam
+(30% aktif) & pause dipertahankan.
+
+### Integrasi (edit `city.js`, surgical)
+
+- `initKendaraan`: graph dibangun segar dulu, truk dibuat via
+  `buatKendaraanJalan("truk", …)` (ambient); kapal/perahu tidak berubah.
+- `perbaruiKendaraan` → `perbaruiSemuaKendaraan(dt)` (fallback ke kode
+  lama bila modul tidak termuat); `perbaruiWarga` →
+  `perbaruiPejalanKaki(dt)` (fallback kode lama).
+- `gambarSatuKendaraan`: cabang baru `"mobil"`/`"ambulans"` — vektor
+  sederhana (badan + kabin + roda, dirotasi ke sudut layar isometri;
+  ambulans putih + palang merah + lampu berkedip saat bergerak).
+  Truk/bus/kapal/perahu tidak berubah.
+- Loop utama tidak diubah: `perbaruiKendaraan` sudah dipanggil di sana;
+  `perbaruiBusVisual` tetap berjalan setelahnya.
+
+### Tes (tests/test13.js, seksi v22-W2 — 37 cek baru)
+
+- **TEST 2** (simpang empat): pengikut berhenti ≥ 0,3 petak di belakang
+  truk parkir (waiting, cepat ~0, pemimpin tak bergerak); lajur kiri
+  sisi konsisten; penyeberang tiba; tanpa lompatan (< 0,1 petak/frame).
+- **TEST 6** (jalan buntu): mencapai ujung (12,12), kembali ke
+  (10,10), lalu parkir — tidak loop tanpa henti.
+- **TEST 8** (hapus jalan): (a) satu ruas di depan dihapus → berhenti
+  aman dulu, rute alternatif, tiba di tujuan, rute baru tanpa petak
+  yang dihapus; (b) kedua akses tujuan diputus → `"tidak-ada-jalur"`,
+  tetap di tempat, tanpa teleport.
+- **TEST 3** (lampu merah, API asli W4): berhenti sebelum
+  persimpangan saat merah (x < 12,5, waiting); ambulans lewat saat
+  merah; hijau → lanjut sampai tujuan. Prioritas darurat: mobil di
+  depan menunggu saat ambulans aktif di edge yang sama; setelah
+  ambulans pergi, mobil jalan lagi.
+- Regresi: tabel tipe + `min(tipe, jalan)` (rasio, faktor macet
+  tercoret); `loading` selesai setelah durasi; `mintaPulang` tercatat;
+  `initKendaraan` (truk terdaftar + kapal/perahu); truk 50 tick;
+  warga bergerak & tetap di koridor jalan (< 1,2 petak); render
+  mobil/ambulans vektor tanpa error.
+
+### Batas jujur W2
+
+- Prioritas darurat adalah aturan sederhana (menunggu di edge yang
+  sama), BUKAN manuver menepi lateral: ambulans lewat menembus
+  kendaraan yang menunggu secara visual.
+- Mobil & ambulans digambar vektor sederhana (belum ada sprite);
+  rotasi memakai sudut layar isometri, bukan sprite flip seperti
+  truk/bus.
+- Rem saat jalan ditutup berhenti di tempat (posisi membeku selama
+  deselerasi), lalu rute dihitung ulang — bukan pengereman sambil
+  melaju seperti rem lampu merah/antrean.
+- Batas aktif 40 kendaraan; "simulasi kawasan" (update setengah laju
+  untuk kendaraan jauh dari kamera) belum diperlukan pada skala ini —
+  semua kendaraan terdaftar di-update tiap frame (murah, O(40)).
+- Bus visual tetap digerakkan `perbaruiBusVisual` (W3) — manager
+  hanya melacaknya sampai W3 mendaftarkannya dengan rute jalan.
+- Warga yang rumahnya belum tersambung jalan hanya bisa pulih SATU
+  petak per langkah menuju jalan terdekat (radius 6); jalur pedestrian
+  lengkap (trotoar/zebra/JPO) adalah Worker 5.
+
+## Yang baru di v22 — Intersection & Traffic Light + Traffic Density (2026-11-11, Worker 4: bagian H + I)
+
+**v22-W4 menambahkan pengendali persimpangan + lampu lalu lintas dan
+kepadatan dari kendaraan aktual** di atas inti W1. Format simpanan
+TIDAK berubah (`petaVersi` tetap 5; `S.lalin` hanya mendapat field
+baru `detailPetak`, dimigrasi otomatis oleh `pastikanLalin()`).
+Overlay lalu lintas dipertahankan (hijau 0,55 / kuning 0,55 / merah
+0,6 — nilai v21, tidak diubah).
+
+### Modul baru: `js/city-persimpangan.js`
+
+Didaftarkan di `index.html` setelah `city-jalan.js` (dan setelah
+`city-kendaraan.js` W2), sebelum `city.js`
+(`js/city-persimpangan.js?v=1`; `city.js` TIDAK diubah W4 — ref-nya
+naik karena Worker 2/6). `city-lalin.js` hanya dibedah di wilayah
+`hitungLalin` + kepadatan (kode bus/logistik W3 tidak disentuh).
+
+### Traffic Light (siklus berbasis waktu game)
+
+- Siklus **7 menit game**: hijau 3 menit → kuning 0,5 menit → merah
+  3 menit → kuning 0,5 menit. Fase dihitung dari `waktuGame` +
+  offset deterministik per lampu (dari posisinya), jadi dua lampu
+  yang berbeda tidak selalu sinkron.
+- **Arus berpotongan tidak pernah hijau bersamaan**: fase sumbu
+  utara-selatan = fase timur-barat digeser setengah siklus (3,5
+  menit) — saat satu sumbu hijau, sumbu lain merah; keduanya hanya
+  bertemu di kuning (kuning vs kuning = hati-hati, bukan konflik).
+- Lampu (bangunan `traffic-light` selesai) mengendalikan
+  persimpangan dalam **radius 2 petak**. Lampu bekerja bila
+  bangunannya selesai saja — TIDAK mensyaratkan `bangunanBeroperasi`
+  (lampu jalan tetap bersiklus saat listrik padam); pengurang angka
+  kemacetan 0,3 di `hitungLalin` tetap mensyaratkan beroperasi,
+  seperti sebelumnya.
+- API (dipakai W2 secara defensif):
+  `faseLampuSaatIni(lampuId, waktuGameMenit, sumbu)` (murni, untuk
+  jadwal), `faseLampu(x, y, arahDatang)` →
+  `"merah"|"kuning"|"hijau"|null` (null bila tak ada lampu),
+  `lampuMerahDi(x, y, arahDatang)` (dipanggil W2 sebagai
+  `lampuMerahDi(x, y)` untuk memutuskan berhenti),
+  `lampuTerdekat(x, y)`. `arahDatang` opsional (arah gerak:
+  `"timur"|"utara"|...`, indeks `ARAH_TETANGGA`, atau vektor
+  `{dx,dy}`); tanpa itu sumbu ditebak dari jalan di petak itu
+  (petak persimpangan sendiri default timur-barat). Koordinat
+  pecahan (posisi kendaraan W2 di antara petak) dibulatkan ke petak.
+- `garisBerhenti(x, y, arahDatang)` → `{x, y, arahGerak}`: 1 petak
+  sebelum persimpangan di arah gerak kendaraan (null bila arah tak
+  diketahui / bukan persimpangan / petak berhenti bukan jalan).
+- `daftarPersimpangan()` / `persimpanganDi(x, y)` /
+  `infoPersimpangan()`: node graph berderajat ≥ 3 (derajat 3 =
+  simpang T, derajat 4 = simpang empat), lengkap dengan lampu /
+  bundaran terdekat (radius 2).
+
+### Bundaran & zebra
+
+- `prioritasBundaran(kendaraan, bundaran)`: kendaraan yang SUDAH di
+  dalam bundaran (radius 2 petak dari pusat) diprioritaskan (boleh
+  jalan); kendaraan yang akan masuk MENUNGGU bila ada kendaraan lain
+  di dalam — bila bundaran kosong, boleh masuk. `bundaran` boleh
+  `{x, y, radius?}` atau bangunan bundaran. `kendaraanDiDalamBundaran(bundaran)`
+  mengembalikan daftar kendaraan di dalamnya (dari `kendaraanVisual`).
+- `bolehMenyeberang(x, y)`: pejalan kaki hanya menyeberang di petak
+  persimpangan (derajat ≥ 3) atau di dekat JPO (radius 1,5 petak
+  dari bangunan `jpo` selesai) — data untuk sistem pejalan kaki W5.
+
+### Kepadatan gabungan (zona + kendaraan aktual) — `hitungLalin()`
+
+- Per petak, dua perkiraan digabung: **(a)** rumus zona lama (tetap
+  dipakai — ruas kosong tetap punya volume dari rumus zona), dan
+  **(b)** kendaraan AKTUAL di petak itu (`kendaraanVisual` di atas
+  petak jalan — truk/bus lama + kendaraan W2; `daftarKendaraan` W2
+  memuat referensi objek YANG SAMA, jadi tidak ada hitung ganda;
+  `wargaVisual` dihitung terpisah sebagai `pejalanKaki`, bukan
+  kendaraan).
+- `kapasitasSimultan` per petak = max(1, round(kapasitas/10))
+  (tanah 1, aspal 4, raya 12, arteri 20 kendaraan);
+  `rasioAktual = jumlahKendaraan / kapasitasSimultan`;
+  **rasio gabungan = max(rasioZona, rasioAktual)** (bukan dijumlah —
+  keduanya memperkirakan besaran yang sama).
+- `S.lalin.detailPetak` baru (per ruas: `{jumlah, antrean,
+  pejalanKaki, rasio, volume, kapasitas, status, kecepatanRata,
+  waktuTempuh}`) — hanya petak padat/macet/berkendaraan (petak
+  lancar kosong tidak disimpan, agar simpanan tetap kecil); bila
+  jalan > 2000 petak, `detailPetak = {}` seperti `perPetak`.
+  Antrean = kendaraan berstatus `menunggu`/`waiting`/`braking`/
+  `mengerem`/`berhenti` di petak itu.
+- Kecepatan rata-rata = kecepatan jalan × faktor(rasio):
+  `1 − 0,2×rasio` (rasio ≤ 1); `max(0,25, 0,8/rasio)` (rasio > 1) —
+  kontinu di rasio = 1 (0,8), lantai 25%. Waktu tempuh per petak =
+  `900 / kecepatanRata` detik (250 m).
+  `kecepatanEfektifDi(x, y)` (km/jam, untuk W2) membaca rasio dari
+  `detailPetak`, fallback perkiraan dari status `perPetak`
+  (0 → 0,3; 1 → 0,8; 2 → 1,5); bukan petak jalan → null.
+  `faktorKecepatanDariRasio(rasio)` kanonik di `city-lalin.js`.
+
+### Efek kemacetan & cara mengatasinya
+
+- Ruas padat (rasio > 1,0): kendaraan melambat (kecepatan efektif
+  turun sampai lantai 25%), antrean bertambah (dihitung di
+  `detailPetak`), waktu perjalanan meningkat, dan kepuasan menurun —
+  skor kota memakai rasio gabungan, jadi kemacetan nyata menurunkan
+  kebahagiaan lewat `S.lalin.skor` seperti sebelumnya (teruji regresi).
+- Pemain mengatasi kemacetan dengan: **memperlebar jalan**
+  (jalan-raya kapasitas 120 → kapasitas simultan 12/petak; teruji:
+  6 kendaraan yang macet di aspal jadi lancar di jalan-raya),
+  **jalur alternatif** (A* menghindari ruas macet via biaya edge ×
+  (1+kemacetan) — sudah ada di W1, teruji: rute memilih sisi lain
+  bila satu sisi macet), **bundaran/lampu lalu lintas** (aturan
+  perilaku di atas — lampu mengatur fase, bundaran mengatur
+  prioritas — DI SAMPING pengurang angka efekLalin 0,3/0,5/0,2 yang
+  tetap dipertahankan sebagai efek kelancaran), **transportasi umum**
+  (di samping pengurang kota v19 yang proporsional, tiap bus aktif
+  mengurangi volume ruas di dekat tiap stop rutenya sebesar
+  5 kendaraan/jam/bus, radius 2 petak — stop yang sama, mis.
+  terminal awal + akhir di rute v19, hanya dihitung sekali; stop
+  berbeda di dekat ruas yang sama masing-masing menyumbang).
+- **Invalidasi cache rute saat macet berubah** (temuan saat verifikasi
+  A*: cache rute W1 hanya invalidasi lewat `versiGraph`, jadi rute
+  yang di-cache tidak pernah menghindari ruas yang BARU macet):
+  bila himpunan petak macet (status 2) berubah, `hitungLalin()`
+  membangun ulang graph (`perbaruiGraphJalan` — mengosongkan cache
+  rute + menaikkan `versiGraph`, hanya bila graph sudah ada) agar
+  kendaraan menghitung ulang rutenya — pemicu "macet-berat" di
+  `ruteUlangBilaPerlu`. Tanda himpunan macet disimpan di variabel
+  runtime `_tandaMacetLalin` (TIDAK disimpan).
+
+### Batas jujur W4
+
+- Flyover/underpass TIDAK diimplementasikan sebagai struktur 3D —
+  hanya aturan lalu lintas: jalan arteri yang melintasi
+  persimpangan tetap berpotongan (aturan lampu/prioritas berlaku
+  seperti jalan biasa).
+- Aturan bundaran sederhana (masuk hanya bila bundaran kosong) —
+  belum ada model segmen-masuk per arah / antrean per pintu masuk.
+- `faseLampu` tanpa `arahDatang` menebak sumbu dari jalan di petak
+  itu; di petak persimpangan sendiri default timur-barat — W2
+  sebaiknya selalu mengoper arah gerak agar sumbu tepat.
+- Lampu hanya mengendalikan persimpangan dalam radius 2 petak dari
+  bangunannya; lampu yang dipasang jauh dari simpang tidak mengatur
+  apa pun (faseLampu → null).
+- Bus mengurangi volume ruas 5 kendaraan/jam/bus/stop — angka
+  sederhana (satu bus ≈ 5 mobil pribadi), bukan model penumpang
+  per ruas dari data naik/turun W3.
+
+## Yang baru di v22 — Worker 3: Rute Bus + Logistik (2026-11-11)
+
+**v22-W3 memperluas sistem bus v19 menjadi rute bus bernama yang
+persisten, dan menghubungkan transportasi dengan ekonomi lewat job
+logistik.** Semua di `js/city-lalin.js` (tidak ada file baru);
+`petaVersi` tetap 5, `SAVE_KEY` tetap sama. Hook ke `city.js` hanya
+tiga bedah kecil: `ruteBus: []` + `logistik` di `stateBaru()`,
+migrasi `pastikanRuteBus()`/`pastikanLogistik()` di `mulaiGame()`,
+dan satu baris `prosesLogistikPerJam()` di `akrualJamGame()` (setelah
+`hitungLalin()`, sebelum produksi). Tidak ada perubahan logika
+ekonomi/produksi/waktu/save — logistik HANYA membaca `produksi`.
+
+### Rute bus (persist di `S.ruteBus[]`)
+
+```js
+// Rute: {routeId, jenisKendaraan ("bus"|"minibus"|"angkot"),
+//   terminalAwal {x,y}, halte [{x,y}...] (urutan), terminalAkhir {x,y},
+//   armada (0-3), jadwalKeberangkatan (menit game, 5-240, default 60),
+//   tarif (Rp, default 2000), bus [BUS...], antrean {"idxStop": n},
+//   beroperasi, penumpangTotal, pendapatanTotal, dibuatHari}
+// BUS = buatKendaraan("bus") W1 + {routeId, busId,
+//   halteSaatIni, halteBerikut, kapasitas (bus 40 / minibus 20 / angkot 12),
+//   penumpangSaatIni, jadwalBerangkat, jadwalTiba, okupansi (0-1)}
+buatRuteBus({terminalAwal, halte, terminalAkhir, armada, jadwalKeberangkatan, tarif})
+  // -> {ok:true, routeId, route} atau {ok:false, alasan}
+  // Validasi: terminal awal/akhir harus terminal-bus selesai, minimal 1
+  // halte selesai, dan SEMUA leg (termasuk kembali terminalAkhir ->
+  // terminalAwal) terhubung jalan (A* non-null) — bila tidak, ditolak
+  // dengan alasan "tidak-terhubung:i->j".
+tambahHalteKeRute(routeId, x, y)   // -> {ok, jumlahHalte} (cek halte + konektivitas)
+hapusHalteDariRute(routeId, idx)   // 0 halte tersisa -> beroperasi=false
+aturUrutanHalte(routeId, [2,0,1])  // permutasi; ditolak bila bukan permutasi / tak terhubung
+aturArmada(routeId, n)             // 0-3 bus; bus baru berangkat terjeda (interval/armada)
+aturJadwal(routeId, menit)         // interval keberangkatan (menit game)
+aturTarif(routeId, rp)             // Rp/penumpang
+hapusRuteBus(routeId)
+buatRuteOtomatisDariTerminal()     // terminal pertama + semua halte selesai (dipakai
+  // otomatis tiap jam bila S.ruteBus kosong; UI W5 bisa memanggil langsung)
+infoHalte(x, y)                    // -> {antrean, waktuTungguMenit, busBerikut, adaRute, routeId}
+infoRuteBus()                      // ringkasan rute + bus untuk UI W5
+langkahBus(bus)                    // majukan bus 1 waypoint (untuk Worker 2 / gerak per-frame)
+prosesBusRutePerJam()              // antrean + 1 leg per bus per jam (dipanggil prosesLogistikPerJam)
+```
+
+Stop = `[terminalAwal, ...halte, terminalAkhir]`; bus berputar terus
+(terminalAkhir → kembali ke terminalAwal). Tiap leg dirutekan A* lewat
+`buatRuteKendaraan()` W1 — bus tidak berkeliling tanpa tujuan; bila
+tak ada rute → status `"tidak-ada-jalur"` dan menunggu (coba lagi jam
+berikut). **Penumpang** (per jam game): antrean tiap stop += penduduk
+dalam radius × 0,1 (radius halte 4 / terminal 8, dari data; antrean
+dibatasi 60/stop); saat bus tiba: turun 30% penumpang (semua di
+terminal awal/akhir), naik = min(sisa kapasitas, antrean). **Tiket**:
+naik × tarif / 24 per jam (konvensi yang sama dengan v19), ditulis ke
+`S.lalin.bus` (pendapatanPerJam/penumpangPerJam/jumlahBus) sehingga
+`akrualJamGame` 4b memakainya lewat kanal `tiketBus` yang sudah ada.
+Estimasi v19 ditimpa HANYA pada jam ada keberangkatan aktual
+(`totalNaik > 0`); pada jam sepi estimasi dipertahankan, karena
+`totalNaik == 0` bukan berarti pendapatan 0 (bus bisa sudah
+berpenumpang dari jam sebelumnya / masih di tengah leg). Teruji:
+tiketBus Rp7.500/jam untuk 40 penumpang bus + 20 taksi.
+
+### Logistik & transportasi industri (persist di `S.logistik`)
+
+```js
+// JOB: {jobId, jenisBarang, jumlah, ambil {x,y,bangunanId},
+//       antar {x,y,bangunanId}, status, dibuatJam, trukId, alasan}
+// status: menunggu -> menuju-ambil -> memuat -> menuju-antar ->
+//         membongkar -> kembali -> selesai (atau dibatalkan)
+// TRUK = buatKendaraan("truk") W1 + {jobId, kapasitasMuatan (10),
+//       jenisBarang, statusMuatan ("kosong"|"memuat"|"penuh"),
+//       rutePergi, ruteKembali, depot {x,y}}
+buatJobLogistik(ambil, antar, barang, jumlah) // -> job atau null (jumlah dicap 10; maks 12 job aktif)
+prosesLogistikPerJam()  // dipanggil dari akrualJamGame; juga menjalankan prosesBusRutePerJam()
+infoLogistik()          // -> {jobAktif[], jobSelesai, truk[], antrean, maksTruk, statistik{}}
+```
+
+Rantai dibuat dari `produksi {masuk, keluar}` yang sudah ada, tiap jam
+game: (1) **kebutuhan konsumen** — `produksi.masuk` diakumulasi
+fraksional (masuk/24 per jam, dicap 10); bila ≥ 1 unit DAN stok global
+komoditas itu ≥ 1 DAN belum ada job aktif ke konsumen itu → job
+produsen-terdekat → konsumen; (2) **ekspor** — pelabuhan + stok ≥ 5 →
+job gudang/produsen → pelabuhan; (3) **penyimpanan** — produsen →
+gudang bila stok output ≥ 10. Contoh rantai yang didukung: kebun sagu
+→ kilang sagu (tual) → gudang (tepung) → pelabuhan (tepung); juga
+berlaku umum untuk semua komoditas (kopra → pabrik minyak, tepung →
+pabrik mie, ikan → pabrik olahan laut, dst). Tiap job maju SATU tahap
+per jam game; truk dibuat HANYA bila ada job yang menunggu (maks **6**
+truk aktif; job menunggu bila semua truk sibuk); tanpa job, truk parkir
+di depot (gudang → terminal-bus → pelabuhan) dan tidak ada truk baru.
+Rute kembali: setelah membongkar, truk kembali ke depot lalu parkir /
+mengambil job berikut. Bila asal/tujuan tak terhubung jalan, job tetap
+`menunggu` dengan `alasan: "tidak-ada-jalur"` (truk tidak dipakai).
+
+### Batas jujur W3
+
+- `S.komoditas` adalah stok GLOBAL (bukan stok per bangunan), jadi job
+  TIDAK memindah unit antar stok per-bangunan — truk mengangkut secara
+  representatif (statusMuatan + rute A* + pencatatan `terkirim`);
+  penjualan/ekspor tetap tugas `akrualJamGame`. Stok per-bangunan
+  adalah langkah berikutnya, bukan bagian W3.
+- minibus/angkot baru berbeda kapasitas (20/12 vs bus 40) — belum ada
+  perilaku, kecepatan, atau sprite yang berbeda.
+- Gerakan bus/truk diabstraksi per jam game (satu leg / satu tahap job
+  per jam); gerak per-frame diserahkan ke Worker 2 lewat
+  `langkahBus()`/`waypointBerikut()`. Bus W3 TIDAK masuk
+  `kendaraanVisual` v19 (agar tidak bentrok dengan `sinkronBusVisual`).
+- Pada jam tanpa keberangkatan (bus di tengah leg), pendapatan tiket
+  mengikuti estimasi v19; pada jam ada keberangkatan, mengikuti aktual
+  W3 — tidak pernah dijumlah ganda dalam jam yang sama, dan tidak
+  pernah ditimpa 0 pada jam sepi (guard `totalNaik > 0`).
+- Auto-register rute hanya berjalan bila `S.ruteBus` kosong; `bangunDi`
+  tidak di-hook karena bangunan selesai belakangan (konstruksi).
+
+## Yang baru di v22 — Worker 7: PWA + Logo Resmi (2026-11-11)
+
+**v22-W7 membuat MERANTI RISING bisa diinstal sebagai aplikasi
+(PWA) dan memakai logo resmi di layar mulai.** Tidak ada perubahan
+gameplay, ekonomi, save, atau lalu lintas (wilayah W1–W6) — hanya
+manifest, service worker, logo/ikon, dan tombol aplikasi.
+
+### Manifest (`manifest.json`, baru)
+
+| Field | Nilai | Alasan |
+|---|---|---|
+| `name` / `short_name` | `MERANTI RISING` / `MERANTI RISING` | `short_name` 13 karakter — muat di label home screen Android; `MR` terlalu samar, merek harus terbaca |
+| `description` | Island City Builder… `AYO MEMBANGUN MERANTI!` | Tagline resmi |
+| `display` | `fullscreen` | Permintaan pengguna — game tampil tanpa bilah browser saat dibuka dari ikon terinstal |
+| `orientation` | `landscape` | Game dirancang landscape-first (prioritas tablet landscape, sudah ditetapkan v20/v21); HP portrait yang membuka dari ikon home screen akan dipaksa landscape — konsisten dengan desain game, bukan kejutan baru |
+| `theme_color` / `background_color` | `#0a1a2f` | Navy gelap khas game (juga warna latar ikon maskable/Apple) |
+| `start_url` | `./index.html` | Eksplisit (bukan `./`) — titik masuk yang sama di GitHub Pages maupun `http.server` lokal |
+| `scope` | `./` | Relatif — aman di subpath GitHub Pages (`/saudagar-meranti/`) |
+| `icons` | 192 (`any`), 512 (`any`), 512 (`maskable`) | Ikon maskable terpisah (lencana 80% di atas navy solid) supaya tidak terpotong di Android |
+
+Semua path di manifest relatif — tidak ada `http(s)://` atau path
+diawali `/` (dicek headless, seksi v22-W7).
+
+### Service worker (`sw.js`, baru)
+
+- **Nama cache terikat versi:** `meranti-rising-v22` (naik bersama
+  `VERSI_GAME` setiap rilis). `activate` menghapus cache lama yang
+  bernama `meranti-rising-*` — cache aplikasi lain di origin yang sama
+  (mis. repo lain di GitHub Pages) **tidak** dihapus.
+- **Strategi anti-build-basi:**
+  - `index.html` → **network-first** (deploy baru langsung terlihat
+    di muat ulang berikut; cache hanya cadangan offline).
+  - Aset berversi (`?v=`) → **cache-first** — tiap deploy mengubah
+    `?v=`, jadi URL baru selalu diambil dari network lalu disimpan;
+    URL lama tidak pernah dipakai halaman baru.
+  - Aset lain sesama origin (sprite, logo, ikon) → cache-first +
+    runtime-cache saat miss (game bisa dibuka offline setelah instal
+    pertama).
+  - Fetch lintas origin **tidak disentuh**.
+- **Daftar precache** mengikuti `?v=` di `index.html` saat v22
+  ditulis (termasuk modul baru W5 `js/city-maritim.js?v=1`). Bila
+  `?v=` berubah di deploy berikut, fetch handler tetap mengambil URL
+  baru dari network — daftar ini tidak perlu dikejar setiap bump
+  kecil. Satu aset gagal tidak menggagalkan instalasi SW
+  (`cache.add` per URL dengan `catch`).
+- **Pendaftaran** (`daftarkanServiceWorker()` di `js/city.js`):
+  hanya bila `navigator.serviceWorker` tersedia **dan** halaman
+  disajikan via `https:`/`localhost`/`127.0.0.1` — `file://` dan
+  `http` non-localhost dilewati (SW memang tidak diizinkan browser
+  di sana).
+- **Update:** bila SW baru terinstal sementara halaman lama masih
+  berjalan (`updatefound` → `installed` + ada `controller`), game
+  menampilkan toast yang sudah ada — `Versi baru tersedia — muat
+  ulang halaman untuk memakai versi terbaru.` — dan tombol
+  **Muat Ulang** muncul di Pengaturan (layar mulai & dalam game).
+  Tidak ada muat ulang otomatis (progres pemain tidak boleh
+  terpotong).
+
+### Logo & ikon (file biner — sudah ada di disk, di-upload via web UI)
+
+- Layar mulai (tahap sinematik): `assets/images/logo-meranti-rising.png`
+  (1132×894, transparan) sebagai logo utama — **menggantikan** logo
+  SVG + judul teks `MERANTI RISING` + tagline teks (gambar sudah
+  memuat judul + tagline `AYO MEMBANGUN MERANTI!`, jadi tidak ada
+  duplikasi). CSS `.logoUtama`: lebar `min(340px, 88%)`, tinggi
+  maks `30vh` (rasio dipertahankan) — tombol menu tetap terlihat di
+  tablet landscape & layar kecil.
+- Lencana `assets/icons/badge-mr.png` **tidak** dipasang di HUD:
+  zona identitas HUD (avatar + nama + XP) sudah padat di mode
+  Compact v21, dan lencana kecil di samping judul `MERANTI RISING`
+  hanya menduplikasi merek. Lencana dipakai sebagai sumber ikon
+  aplikasi (manifest, PWA, favicon) — itu peran yang tepat.
+- Ikon PWA: `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`
+  (lencana 80% di atas navy `#0a1a2f`), `apple-touch-icon.png`
+  (180×180, di atas navy — iOS tidak menangani transparansi dengan
+  baik), `favicon-32.png`, `favicon-48.png`.
+- `<head>` `index.html` ditambah: `manifest`, `theme-color`,
+  `mobile-web-app-capable`, `apple-mobile-web-app-capable`,
+  `apple-mobile-web-app-status-bar-style` (`black-translucent`),
+  `apple-mobile-web-app-title`, `apple-touch-icon`, favicon 32/48 +
+  `shortcut icon`. `<title>` tidak diubah.
+
+### Tombol fullscreen & instal (`js/city.js`, seksi `BAGIAN PWA — v22-W7`)
+
+- **Fullscreen:** tombol di Pengaturan (layar mulai `#btnFullscreenMulai`
+  + panel Pengaturan dalam game) — masuk/keluar via
+  `requestFullscreen`/`exitFullscreen` (fallback `webkit*`), toast
+  bila tidak didukung. Tombol **disembunyikan** bila API tidak tersedia
+  atau game sudah berjalan sebagai PWA fullscreen
+  (`matchMedia("(display-mode: fullscreen)")` / `navigator.standalone`).
+  Fullscreen **tidak pernah dipaksa** saat game dibuka di browser biasa.
+- **Instal:** event `beforeinstallprompt` ditangkap & disimpan;
+  tombol **Instal Aplikasi** (`#btnInstalMulai` di menu utama,
+  `#btnInstalPengaturanMulai` di Pengaturan) `display:none` secara
+  default dan **hanya muncul** saat event datang — tidak ada tombol
+  dekoratif. Setelah `appinstalled`, tombol disembunyikan + toast
+  konfirmasi. Bila prompt tidak pernah datang, pengguna tetap bisa
+  instal dari menu browser (toast memberi tahu caranya).
+- Semua fungsi PWA dijaga (`typeof`-guard + `try/catch`) supaya aman
+  di harness headless maupun browser lama tanpa API PWA.
+
+### Cara verifikasi live
+
+1. Buka game via https (GitHub Pages) → DevTools → Application →
+   Manifest: nama, ikon, `display: fullscreen` terbaca; Service
+   Workers: `sw.js` aktif, cache `meranti-rising-v22` berisi shell game.
+2. Menu utama menampilkan logo resmi (bukan judul teks). Pengaturan →
+   Aplikasi: tombol fullscreen ada; tombol instal muncul bila browser
+   mengirim `beforeinstallprompt` (Chrome/Edge Android & desktop).
+3. Instal dari ikon/Chrome → buka dari layar utama → game tampil
+   fullscreen; matikan jaringan → muat ulang → game tetap terbuka
+   (offline).
+4. Deploy baru → buka game → toast `Versi baru tersedia` muncul →
+   Muat Ulang → versi baru tampil (cek `VERSI_GAME` di Pengaturan).
+
+### Tes (tests/test13.js, seksi v22-W7 — 22 cek baru)
+
+Manifest valid + field wajib; semua ikon yang dirujuk ada di disk;
+`sw.js` lolos `node --check`; `index.html` memuat link manifest /
+theme-color / apple-touch-icon; logo dipakai & judul/tagline teks
+tidak diduplikasi; tidak ada path absolut di manifest/SW/index.html
+(untuk aset lokal); tombol instal/muat-ulang `display:none` secara
+default; wiring PWA di `city.js` ada; SW hanya didaftar via
+https/localhost.
+
+### Batas jujur W7
+
+- **Instalasi PWA & mode fullscreen hanya bisa dibuktikan lewat cek
+  live di browser nyata** — headless tidak bisa membuktikan prompt
+  instal muncul, tidak bisa membuktikan `display: fullscreen`
+  benar-benar menyembunyikan bilah browser, dan tidak bisa membuktikan
+  mode offline. Tes headless hanya membuktikan manifest valid,
+  file ada, dan wiring-nya terpasang.
+- **SW bisa membuat deploy baru terasa lambat bila strateginya
+  salah** — strategi yang dipilih: network-first untuk `index.html`
+  + cache-first untuk aset berversi `?v=`. Verifikasi live: buka game,
+  deploy baru, muat ulang → versi baru harus muncul (lihat langkah 4
+  di atas). Bila versi lama tetap muncul, curigai cache SW lama:
+  hapus cache `meranti-rising-*` di DevTools → Application → Cache
+  Storage, atau naikkan `VERSI_GAME` + nama cache.
+- **Suite penuh sempat crash saat W7 dikerjakan** (paralel dengan W5):
+  `RangeError: Maximum call stack size exceeded` di
+  `pilihLangkahWargaJalan` (`js/city-kendaraan.js`, wilayah pedestrian
+  W5) — bukan dari wilayah W7 (tidak ada frame PWA di trace; 8 cek
+  pertama lolos, artinya semua file JS termasuk seksi PWA berhasil
+  dimuat + `DOMContentLoaded` jalan). W5 memperbaikinya saat W7
+  berjalan; suite penuh terakhir lolos **TEST_V13_OK, 1162 cek, 0
+  gagal** (termasuk 22 cek W7). Satu run di tengah edit W5 sempat
+  menunjukkan 6 gagal — artefak file yang berubah saat tes berjalan,
+  bukan kegagalan yang menetap.
+- Orientasi `landscape` di manifest memaksa landscape saat dibuka
+  dari ikon home screen di HP portrait — disengaja (game
+  landscape-first), tapi bila pengguna mengeluh, ubah ke `"any"`.
+- `apple-touch-icon` & ikon maskable memakai latar navy solid
+  `#0a1a2f` (bukan transparan) karena iOS & maskable Android
+  memotong/mengisi latar transparan dengan tidak rapi.
+- Sisa tambalan kotak-kotak sangat kecil di tepi atas langit logo
+  dibiarkan (sesuai catatan) — tidak terlihat pada ukuran tampil.
+
+## Yang baru di v22 — Worker 5 (FINAL): Pedestrian + Maritim + Traffic UI + Integrasi (2026-11-11)
+
+**v22-W5 menutup v22**: sistem pejalan kaki (J), transportasi maritim
+(K), panel pengelolaan lalu lintas (L), plus integrasi final —
+penyelarasan versi ke `v22`, perbaikan tes traffic-light yang flaky,
+suite penuh hijau 3× berturut-turut, dan dokumentasi akhir ini.
+`VERSI_GAME` kini `"v22"`, `js/city.js?v=27`, `js/city-kendaraan.js?v=2`,
+`js/city-maritim.js?v=1` (baru). `SAVE_KEY` tetap
+`"merantiRisingWorldV1"` dan `petaVersi` tetap 5 — tidak ada migrasi
+simpanan. Logika ekonomi/konstruksi/waktu/save tidak diubah.
+
+### Arsitektur akhir — struktur modul
+
+| Modul | Isi (v22) |
+|---|---|
+| `js/city-jalan.js` (W1, 661 baris) | RoadGraph NODE/EDGE, A* `cariRute()` + cache (`versiGraph`), `buatKendaraan`/`buatRuteKendaraan`/`ruteUlangBilaPerlu`/`waypointBerikut`, lajur kiri (`posisiLajur`/`jarakAman`/`titikBelok`) |
+| `js/city-kendaraan.js` (W2 + W5, ~800 baris) | VehicleManager + state machine + 4 tipe kendaraan (W2); jaringan pejalan kaki BFS + `buatRutePejalanKaki` + `infoPejalanKaki` (W5) |
+| `js/city-lalin.js` (W3, 1543 baris) | Rute bus bernama + logistik (job/truk/rantai produksi), `hitungLalin` (rasio gabungan zona + aktual), bus mengurangi volume ruas |
+| `js/city-persimpangan.js` (W4, 426 baris) | Siklus lampu 7 menit game, `faseLampu`/`lampuMerahDi`/`garisBerhenti`/`prioritasBundaran`/`bolehMenyeberang`/`kecepatanEfektifDi`, detailPetak |
+| `js/city-maritim.js` (W5, baru) | BFS jalur laut, `buatRutePelayaran`, kapal (feri/penumpang/kargo/nelayan/perahu), `kirimKargoKePulau`, hook kargo per jam, `gambarKapal`, `infoMaritim` |
+| `js/city.js` (v22) | Hook: `perbaruiKapalMenit` di `majukanWaktu`, `prosesKapalKargoPerJam` di `akrualJamGame`, feri memakai jalur laut di `gambarFeri`, lapisan `gambarLapisanLalin` di `gambarPeta`, panel `lalin` di `renderPanelKiri`, `initKendaraan` deterministik |
+
+### J — Pedestrian System (`city-kendaraan.js`, perluasan W2)
+
+Jaringan pejalan kaki TERPISAH dari lajur kendaraan, di atas
+`perbaruiPejalanKaki` (W2) + `bolehMenyeberang` (W4). Warga berjalan
+di trotoar (petak jalan, offset lajur kiri via `titikLajurTile` —
+bukan di tengah lajur), di jalur pedestrian (footprint `taman`,
+`taman-bermain`, `lapangan-bola/basket/badminton`, `jogging-track`,
+`waterfront`, `pantai-wisata`, `jpo`), di zebra cross (petak
+persimpangan derajat ≥ 3), dan di JPO. Rute dihitung BFS
+(`cariRutePejalanKaki`) di atas petak jalan/taman — warga TIDAK PERNAH
+melintasi darat kosong (petak non-jalan/non-taman tidak bisa dilewati).
+Aturan penyeberangan: langkah taman↔jalan hanya di penyeberangan
+(persimpangan/JPO), di langkah pertama (keluar rumah/taman), atau di
+langkah terakhir (tiba di depan tujuan) — rute taman→taman di seberang
+jalan dipaksa memutar lewat persimpangan/JPO terdekat
+(`penyeberanganTerdekat`). Tiap pejalan kaki punya titik awal, tujuan
+(zona via `pilihZonaWarga`), rute (`w.ruteJalan` + `w.idxRute`), dan
+status perjalanan (`berjalan`/`tiba`/`menunggu`/`tanpa-rute`);
+kecepatan tetap 0,5–0,9 petak/detik. Bila tujuan tak terjangkau,
+warga berstatus `tanpa-rute` dan mengembara seperti sebelumnya (W2) —
+tidak diam selamanya, tidak memotong darat. `infoPejalanKaki()` untuk
+panel UI. Perbaikan bug saat implementasi: warga yang spawn di atas
+bangunan sempat memicu rekursi tak berhingga di
+`pilihLangkahWargaJalan` (rute dimulai dari akses terdekat, bukan
+petak warga) — diperbaiki dengan normalisasi rute ke petak warga +
+langkah rute tanpa rekursi (`_langkahRutePejalanKaki`).
+
+### K — Maritime Transportation (`js/city-maritim.js`, baru)
+
+Jenis: feri (SUDAH ADA — dipertahankan, jalurnya diperbaiki), kapal
+penumpang, kapal kargo, kapal nelayan, perahu kecil. Tiap kapal punya
+dermaga asal/tujuan, jalur pelayaran, kapasitas, muatan, dan kecepatan
+(petak/menit game: feri/penumpang 3, kargo 2, nelayan/perahu 1,5).
+**Jalur kapal HANYA di perairan**: `cariJalurLaut` = BFS 4-arah di
+atas petak `laut`/`sungai` (disederhanakan ke titik belok); dermaga di
+pantai dipetakan dulu ke laut terdekat (`lautTerdekat`, radius 6).
+Feri v15/v18 TIDAK diganti: `S.ruteFeri` + `perbaruiFeriMenit` tetap
+satu jalur gerak; yang baru adalah `rute.jalur` (dihitung sekali saat
+`bukaRuteFeri`, atau malas di `jalurRuteFeri`) dan `gambarFeri` kini
+menempatkan feri di sepanjang jalur laut (`posisiFeri`) dengan
+fallback garis lurus untuk simpanan lama. Kapal bergerak per menit
+game (`perbaruiKapalMenit`, hook di `majukanWaktu`), bolak-balik
+seperti feri. Rantai logistik: `kirimKargoKePulau(pulauId, komoditas,
+jumlah)` memuat kapal kargo dari pelabuhan/terminal ke dermaga pulau
+terhubung (stok dipotong saat berangkat, dijual saat tiba: harga ×
+1,2, `S.statistik.ekspor` naik); `prosesKapalKargoPerJam` (hook di
+`akrualJamGame`, setelah `prosesLogistikPerJam`) otomatis mengirim
+job logistik yang selesai di pelabuhan ke pulau terhubung pertama
+yang punya dermaga (maks 4 kapal kargo aktif; tanpa pulau/dermaga/
+stok, job dibiarkan — barang tetap di stok). Kapal nelayan
+(`buatKapalNelayan`) berlayar ke titik tangkap 8–15 petak dan pulang
+membawa 2 ikan. Kapal tersimpan di `S.kapal` (simpan() menyerialkan
+S utuh — teruji simpan→muat).
+
+### L — Traffic Management UI (tab nav baru "Lalu Lintas")
+
+Cabang baru di nav kiri (`data-tab="lalin"`, ikon lampu lalu lintas)
++ cabang `renderPanelKiri` — dipilih sebagai tab baru (bukan perluasan
+Infrastruktur/Statistik) karena isinya operasional lalu lintas
+harian, bukan utilitas dan bukan statistik kota umum. SEMUA angka
+dari simulasi aktual: total/aktif/parkir/menunggu kendaraan
+(`infoKendaraan`), bus beroperasi + penumpang/jam + total naik
+(`S.lalin.bus` + `infoRuteBus`), volume (`S.lalin.volumeTotal`),
+kemacetan/skor, kecepatan rata-rata + waktu perjalanan rata-rata
+(rata-rata `S.lalin.detailPetak`), 3 ruas terpadat (rasio tertinggi),
+pejalan kaki (`infoPejalanKaki`), maritim (`infoMaritim`), logistik
+(`infoLogistik`). Tombol: Overlay Lalu Lintas (`aturOverlay("traffic")`
+— overlay yang sudah ada), Jaringan Jalan (graph node/edge),
+Rute Bus (garis putus hijau lewat halte + rute live tiap bus),
+Jaringan Pejalan Kaki (berlian hijau di petak taman/JPO), Rute Laut
+(jalur feri putus-putus biru). Semua digambar sebagai garis canvas di
+atas peta (`gambarLapisanLalin`, langkah 4b `gambarPeta`, di bawah
+tint malam) — bukan DOM per kendaraan. Daftar kendaraan (maks 8
+tampil) + tombol "Rute" per kendaraan: rute terpilih digambar tebal
+di peta dengan warna tipe — biru pribadi, hijau bus, oranye logistik,
+merah darurat — plus tombol "✕ Sembunyikan Rute". Panel mengikuti
+pola compact v21 (judul, baris stat, tombol kecil) dan bisa
+dibuka/ditutup lewat nav seperti tab lain.
+
+### Perbaikan tes traffic-light flaky (temuan W3)
+
+Akar masalah terbukti 100% korelasi: `initKendaraan` menaruh truk
+ambient di petak jalan ACAK; dengan 3 petak jalan awal, ~1/3 run
+truk mendarat di petak ukur tes `v19-lalin`; satu kendaraan di petak
+tanah (kapSim = max(1, round(10/10)) = 1) memaksa rasio ≥ 1,0 sehingga
+efek traffic-light (×0,7 pada rasio zona SEBELUM max()) tidak pernah
+terlihat. Perbaikan yang dipilih: **opsi (i)** — truk ambient kini
+SELALU di petak jalan pertama (`jalan[0]`, deterministik, juga
+memudahkan debug runtime) DAN tes `cariTileTLW4` melewati petak jalan
+yang sedang diduduki kendaraan. Opsi (ii)/(iii) ditolak: (ii) efek
+setelah max() mengubah arti rasio gabungan (kendaraan aktual ikut
+didiskon lampu — salah secara model); (iii) tidak memperbaiki kasus
+ini karena truk ambient sedang bergerak (`menuju`), bukan berhenti.
+Hasil: tes traffic-light lulus deterministik; suite penuh hijau 3×
+berturut-turut (dan 2 run verifikasi tambahan, total 5 run hijau).
+
+### Hasil tes headless — TEST_V13_OK, 1162 cek, 0 gagal
+
+Suite: `node tests/test13.js` — 1162 cek (naik dari 1095: +67 cek
+baru W5 — 12 TEST 9, 18 TEST 10, 15 UI/versi/determinisme, sisanya
+penyesuaian pin/versi). 3 run berturut-turut hijau (ditambah 2 run
+verifikasi per-TEST). Regresi v21/v20/v19/v18/v17 lulus penuh
+(compact HUD, lease tab dua-tab W6, generasiSimpan, tutorial 4/5/6,
+overlay, legenda, waktuGame, listrik/air, kebahagiaan, zoning, APBD,
+konstruksi 4 jam, gambarPeta smoke).
+
+### Tabel 10 TEST wajib v22 — semua LULUS
+
+| # | TEST wajib | Hasil | Bukti (cek headless) |
+|---|---|---|---|
+| 1 | Dua rumah + gudang → mobil punya tujuan + rute A* valid | LULUS | W1: `buatRuteKendaraan` → `menuju`, 9 waypoint; node akses rumah → (14,11) jadi node |
+| 2 | Simpang empat → lajur + jarak aman | LULUS | 6 cek W2 (pengikut berhenti ≥ 0,3 petak, lajur kiri konsisten) |
+| 3 | Lampu merah → berhenti | LULUS | 12 cek W2+W4 (berhenti sebelum simpang, ambulans lewat, hijau → lanjut) |
+| 4 | Halte + dua terminal → bus ikut rute + berhenti di halte | LULUS | 8 cek W3 (rute bernama, stop berurutan 1,2,3,0, naik/turun + tiket) |
+| 5 | Kebun→kilang→pelabuhan → truk ikut rantai | LULUS | 8 cek W3 (job menunggu→…→selesai, truk kembali parkir, maks 6 truk) |
+| 6 | Jalan buntu → U-turn sekali, tidak loop | LULUS | 3 cek W2 (capai ujung, kembali, tanpa lompatan posisi) |
+| 7 | Kemacetan → kepadatan/kecepatan/antrean | LULUS | 9 cek W4 (6 kendaraan → rasio 1,5 macet, kecepatan 21,3, lantai 25%) |
+| 8 | Hapus jalan → berhenti aman + rute alternatif / "tidak ada jalur" | LULUS | 7 cek W2 (berhenti dulu, rute alternatif tiba; terisolasi → tidak-ada-jalur, tetap di tempat) |
+| 9 | Pedestrian → warga di jalur benar | LULUS | 12 cek W5 (rute hanya jalan/taman, dipaksa lewat simpang (12,10), JPO, warga tiba di (13,9) dalam koridor < 1,2 petak, tanpa rute → `tanpa-rute`) |
+| 10 | Dua dermaga → kapal ikut jalur pelayaran, hanya lewat laut | LULUS | 18 cek W5 (BFS laut semua waypoint laut, feri tengah laut, kargo jual +Rp12.000, nelayan +2 ikan, persistensi `S.kapal`) |
+
+### Versi final (diselaraskan W5)
+
+`VERSI_GAME "v22"` (`js/city.js`); `index.html`:
+`css/city.css?v=13`, `city-data.js?v=9`, `city-map.js?v=4`,
+`city-utilitas.js?v=1`, `city-bahagia.js?v=1`, `city-lalin.js?v=1`,
+`city-jalan.js?v=1`, `city-kendaraan.js?v=2` (diubah W5),
+`city-persimpangan.js?v=1`, `city-maritim.js?v=1` (baru),
+`city.js?v=27`. Pin yang sama ditegakkan di `tests/test13.js`
+(3 cek pin + cek `VERSI_GAME` lama yang masih menyebut v21
+diperbarui ke v22; tooltip nav 8 → 9 tombol). `css/city.css`
+TIDAK diubah di v22 (tidak ada file CSS dalam daftar push).
+
+### Tabel batas jujur LENGKAP (v22 — gabungan W1–W7)
+
+- Tint malam MASIH belum terverifikasi live (panel debug W6 hanya
+  alat ukur; tidak ada perubahan pada `faseSiangMalam`/`gambarPeta`).
+  Verifikasi live dua tab reload + hapus profil + jeda→reload masih
+  harus dilakukan di browser sungguhan.
+- Flyover/underpass HANYA aturan lalu lintas, bukan struktur 3D —
+  arteri yang melintasi persimpangan tetap berpotongan.
+- Prioritas darurat sederhana: kendaraan lain di edge yang sama
+  menunggu; BUKAN menepi lateral (tidak ada lajur menepi).
+- Mobil & ambulans digambar vektor (bukan sprite); truk/bus pakai
+  sprite yang sudah ada.
+- `S.komoditas` global — job logistik TIDAK memindah unit antar stok
+  per-bangunan (truk mengangkut representatif: statusMuatan + rute +
+  `terkirim`); kapal kargo memotong stok global saat berangkat dan
+  menjual saat tiba. Stok per-bangunan adalah langkah berikutnya.
+- Gerak bus/truk logistik diabstraksi per jam game (satu leg / satu
+  tahap job per jam); gerak per-frame hanya kendaraan jalan W2
+  (mobil/truk ambient, bus visual v19 tetap per-frame via
+  `sinkronBusVisual`); bus W3 tidak masuk `kendaraanVisual` v19.
+- Kapal penumpang TIDAK punya ekonomi tiket (hanya angkut; tarif
+  belum diputuskan). Kapal nelayan menangkap tetap 2 ikan per pulang
+  (bukan simulasi stok ikan per petak laut). Jalur laut = BFS grid
+  (bukan alur pelayaran resmi/kedalaman); kapal tidak menghindari
+  kapal lain (tidak ada tabrakan laut).
+- Minibus/angkot baru berbeda kapasitas (20/12 vs bus 40) — belum
+  ada perilaku, kecepatan, atau sprite yang berbeda.
+- Pada jam tanpa keberangkatan bus, pendapatan tiket mengikuti
+  estimasi v19; pada jam ada keberangkatan, mengikuti aktual W3 —
+  tidak pernah dijumlah ganda dalam jam yang sama, dan tidak pernah
+  ditimpa 0 pada jam sepi (guard `totalNaik > 0`).
+- Simulasi kawasan (update setengah laju untuk kendaraan jauh dari
+  kamera) BELUM diperlukan — semua kendaraan terdaftar di-update tiap
+  frame (murah: O(40)); batas aktif 40 kendaraan.
+- Ukuran viewport dari token CSS, bukan diukur di browser sungguhan;
+  `:has()` butuh Chrome 105+/Safari 15.4+; money pill di ~1074px
+  belum bisa diuji (browser tidak bisa resize).
+- Rute bus di peta digambar skematis (garis putus lewat halte
+  berurutan + rute live tiap bus), bukan polilin A* antar halte.
+- Skenario "dua tab aktif dipakai bersamaan" tetap ambigu — simpan
+  manual yang menang.
+
 ## Yang baru di v21 — Compact HUD & Full Viewport Optimization (2026-11-11)
 
 **v21 adalah penyempurnaan v20, bukan remake.** Seluruh sistem gameplay

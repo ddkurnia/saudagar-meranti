@@ -4,6 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>MERANTI RISING — Ayo Membangun Meranti!</title>
+<!-- v22-W7 (PWA + Logo Resmi): manifest, theme-color, ikon Apple & favicon. -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a1a2f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MERANTI RISING">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="assets/icons/favicon-48.png">
+<link rel="shortcut icon" href="assets/icons/favicon-32.png">
 <link rel="stylesheet" href="css/city.css?v=13">
 </head>
 <body>
@@ -15,9 +26,10 @@
   <div class="ombakSinematik"></div>
   <!-- Tahap 1: sinematik -->
   <div id="tahapSinematik" class="kartuMulai">
-    <div class="logoMulai" aria-hidden="true"><svg viewBox="0 0 64 64" width="56" height="56"><circle cx="32" cy="26" r="13" fill="#fbbf24"/><path d="M6 44c8-6 16-6 26 0s18 6 26 0" stroke="#4ade80" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M10 54c8-5 14-5 22 0s16 5 22 0" stroke="#22c55e" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M32 13V6M20 18 15 13M44 18l5-5" stroke="#fde68a" stroke-width="3" stroke-linecap="round"/></svg></div>
-    <h1 class="judulLogo">MERANTI <span>RISING</span></h1>
-    <p class="tagline">AYO MEMBANGUN MERANTI!</p>
+    <!-- v22-W7: logo resmi (gambar sudah memuat judul "MERANTI RISING"
+         + tagline "AYO MEMBANGUN MERANTI!") — menggantikan logo SVG +
+         h1 + tagline teks agar tidak ada duplikasi judul. -->
+    <img class="logoUtama" src="assets/images/logo-meranti-rising.png" alt="MERANTI RISING — Ayo Membangun Meranti!">
     <p class="subMulai">Island City Builder · Simulasi Ekonomi · Peradaban Kepulauan Meranti</p>
     <p id="sambutanKembali" class="sambutanKembali" style="display:none"></p>
     <div class="tombolMulai">
@@ -26,6 +38,9 @@
       <button id="btnBaru" class="btnUtama sekunder">＋ PERMAINAN BARU</button>
       <button id="btnProfil" class="btnUtama sekunder"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.5 3.5-5 7-5s6.2 1.5 7 5"/></svg> PROFIL PEMAIN</button>
       <button id="btnPengaturanMulai" class="btnUtama sekunder">⚙️ PENGATURAN</button>
+      <!-- v22-W7: tombol instal PWA — display:none secara default, hanya
+           muncul saat event beforeinstallprompt datang (lihat city.js). -->
+      <button id="btnInstalMulai" class="btnUtama sekunder" style="display:none">⬇ INSTAL APLIKASI</button>
     </div>
     <p id="infoSave" class="infoSave"></p>
     <details class="caraMain">
@@ -96,12 +111,29 @@
       <button type="button" class="btnUtama sekunder" data-density="normal" onclick="aturDensity('normal')">Normal — ukuran v20</button>
       <button type="button" class="btnUtama sekunder" data-density="expanded" onclick="aturDensity('expanded')">Expanded — panel lega</button>
     </div>
+    <p class="labelForm">Diagnostik</p>
+    <div class="tombolMulai">
+      <button id="btnModeDebugMulai" type="button" class="btnUtama sekunder">🔍 Mode Debug: Mati</button>
+    </div>
+    <p class="infoSave">Mode Debug menampilkan panel kecil di dalam game berisi kegelapan malam, frame peta, fase siang/malam &amp; status lease — untuk verifikasi tint tanpa DevTools.</p>
+    <!-- v22-W7 (PWA + Logo Resmi): fullscreen, instal, update. Tombol
+         instal & muat-ulang display:none secara default — hanya muncul
+         bila kondisinya terpenuhi (lihat perbaruiTombolPWA di city.js);
+         tombol fullscreen disembunyikan bila API tidak tersedia atau
+         game sudah berjalan sebagai PWA fullscreen. -->
+    <p class="labelForm">Aplikasi</p>
+    <div class="tombolMulai">
+      <button id="btnFullscreenMulai" type="button" class="btnUtama sekunder">⛶ Masuk Fullscreen</button>
+      <button id="btnInstalPengaturanMulai" type="button" class="btnUtama sekunder" style="display:none">⬇ Instal Aplikasi</button>
+      <button id="btnMuatUlangBaruMulai" type="button" class="btnUtama sekunder" style="display:none">🔄 Muat Ulang — Versi Baru Tersedia</button>
+    </div>
+    <p class="infoSave">Instal Aplikasi memasang MERANTI RISING di layar utama — bisa dibuka offline setelah instal pertama. Fullscreen menyembunyikan bilah browser (cocok untuk tablet).</p>
     <p class="labelForm">Profil Pemain</p>
     <div class="tombolMulai">
       <button id="btnHapusProfilMulai" class="btnUtama sekunder">🗑 Hapus Profil</button>
       <button id="btnKembaliPengaturanMulai" class="btnUtama">← Kembali</button>
     </div>
-    <p class="infoSave">Hapus profil mengembalikan layar mulai ke formulir identitas — tutorial muncul lagi di permainan baru. Simpanan game TIDAK dihapus.</p>
+    <p class="infoSave">Hapus profil mengembalikan layar mulai ke formulir identitas — tutorial muncul lagi di permainan baru. Simpanan game TIDAK dihapus saat profil dihapus; permainan baru langsung menimpa simpanan lama dengan kota baru.</p>
   </div>
 </div>
 
@@ -111,6 +143,9 @@
   <section id="panggung">
     <canvas id="peta"></canvas>
     <div id="toast" class="toast"></div>
+    <!-- v22-W6: panel debug tint & lease (Mode Debug, diaktifkan dari
+         Pengaturan) — menampilkan nilai aktual dari state, tanpa DevTools. -->
+    <div id="panelDebug" class="panelDebug" style="display:none"></div>
     <div id="modeChip" style="display:none">
       <span id="modeChipTeks"></span>
       <button id="btnBatalMode">✕ Batal</button>
@@ -187,6 +222,7 @@
         <button data-tab="penduduk" aria-label="Penduduk" title="Penduduk"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.6c2.6.3 4.4 1.9 5 4.4"/></svg><span class="navTip">Penduduk</span></button>
         <button data-tab="ekonomi" aria-label="Ekonomi" title="Ekonomi"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-8M21 20H3"/></svg><span class="navTip">Ekonomi</span></button>
         <button data-tab="infrastruktur" aria-label="Infrastruktur" title="Infrastruktur"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 0 0-5.6 5L3 17.4V21h3.6l5.9-5.9a4 4 0 0 0 5-5.6L14 12.9l-2.4-2.4 2.9-4Z"/></svg><span class="navTip">Infrastruktur</span></button>
+        <button data-tab="lalin" aria-label="Lalu Lintas" title="Lalu Lintas"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="19" rx="3"/><circle cx="12" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="17" r="1.5" fill="currentColor" stroke="none"/></svg><span class="navTip">Lalu Lintas</span></button>
         <button data-tab="peradaban" aria-label="Pemerintahan" title="Pemerintahan"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-6 9 6M4 9v11M20 9v11M8 12v5M12 12v5M16 12v5M2 20h20"/></svg><span class="navTip">Pemerintahan</span></button>
         <button data-tab="riset" aria-label="Penelitian" title="Penelitian"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v5.5L4.5 18a2 2 0 0 0 1.8 3h11.4a2 2 0 0 0 1.8-3L14 8.5V3"/><path d="M7.5 14h9"/></svg><span class="navTip">Penelitian</span></button>
         <button data-tab="statistik" aria-label="Statistik" title="Statistik"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20V4"/><path d="M4 20h16"/><path d="M8 16v-5M12 16V8M16 16v-3"/></svg><span class="navTip">Statistik</span></button>
@@ -326,6 +362,10 @@
 <script src="js/city-utilitas.js?v=1"></script>
 <script src="js/city-bahagia.js?v=1"></script>
 <script src="js/city-lalin.js?v=1"></script>
-<script src="js/city.js?v=23"></script>
+<script src="js/city-jalan.js?v=1"></script>
+<script src="js/city-kendaraan.js?v=2"></script>
+<script src="js/city-persimpangan.js?v=1"></script>
+<script src="js/city-maritim.js?v=1"></script>
+<script src="js/city.js?v=27"></script>
 </body>
 </html>

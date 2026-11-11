@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v21"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v22"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -261,6 +261,9 @@ function majukanWaktu(menit) {
     if (S) {
       if (S.bangunan && S.bangunan.some(b => !b.selesai) && typeof majuKonstruksi === "function") { try { majuKonstruksi(1); } catch (e) {} }
       if (S.ruteFeri && S.ruteFeri.length && typeof perbaruiFeriMenit === "function") { try { perbaruiFeriMenit(1); } catch (e) {} }
+      // v22-W5 (K): kapal maritim (kargo/penumpang/nelayan) bergerak
+      // per menit game, di samping feri (satu jalur, anti-ganda).
+      if (S && typeof perbaruiKapalMenit === "function") { try { perbaruiKapalMenit(1); } catch (e) {} }
     }
     if (Math.floor(waktuGame / 60) !== jamSblm && typeof akrualJamGame === "function") { try { akrualJamGame(); } catch (e) {} }
     if (Math.floor(waktuGame / 1440) !== hariSblm) {
@@ -561,6 +564,8 @@ function stateBaru(petaBaru) {
     lingkungan: (typeof lingkunganDefault === "function" ? lingkunganDefault() : { polusi: 0, mangroveSehat: {}, gambutSehat: {}, pantaiTerabrasi: [], kebakaranAktif: [] }), // v19 Worker 3
     zona: {}, // v19 Worker 3: peta jarang "x,y" -> id zona (hanya petak berzona)
     lalin: (typeof lalinDefault === "function" ? lalinDefault() : null), // v19 Worker 4: lalu lintas + bus/taksi/rekreasi (js/city-lalin.js)
+    ruteBus: [], // v22-W3: rute bus persist (js/city-lalin.js) — {routeId, jenisKendaraan, terminalAwal, halte[], terminalAkhir, armada, jadwalKeberangkatan, tarif, bus[], antrean, ...}
+    logistik: (typeof logistikDefault === "function" ? logistikDefault() : null), // v22-W3: job + truk logistik (js/city-lalin.js)
     pemimpin: profilPemain ? { nama: profilPemain.nama, gender: profilPemain.gender, avatar: profilPemain.avatar } : { nama: "Pemimpin", gender: "pria", avatar: AVATAR_KARAKTER.pria },
     tutorial: { aktif: profilPemain ? !profilPemain.tutorialSelesai : true, langkah: 0, selesai: profilPemain ? !!profilPemain.tutorialSelesai : false },
   };
@@ -779,7 +784,41 @@ function pilihJalanBerikut(a) {
 // "Permainan disimpan." bila tulisnya gagal.
 const TAB_KUNCI = "merantiRisingTabAktifV1"; // lease tab aktif (BUKAN kunci simpanan)
 const LEASE_TAB_MS = 3000; // lease segar selama 3 detik (heartbeat tiap 500 ms)
-let tabIdSaya = "tab-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
+// v22-W6 (perbaikan reload, cek live v21): ID TAB PERSISTEN —
+// tabIdSaya disimpan di sessionStorage (per-tab, bertahan saat reload),
+// BUKAN dibuat baru tiap muat halaman. Halaman yang di-reload memakai
+// ID yang SAMA sehingga tetap memegang lease; tab BARU mendapat ID baru
+// (lease lama kedaluwarsa -> bisa diklaim — benar). Guard typeof karena
+// sessionStorage tidak ada di sebagian konteks headless/privat.
+const TAB_ID_KUNCI = "merantiRisingTabIdV1";
+function buatIdTabBaru() { return "tab-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10); }
+let tabIdSaya = null;
+try {
+  if (typeof sessionStorage !== "undefined" && sessionStorage && typeof sessionStorage.getItem === "function") {
+    tabIdSaya = sessionStorage.getItem(TAB_ID_KUNCI);
+    if (!tabIdSaya) { tabIdSaya = buatIdTabBaru(); try { sessionStorage.setItem(TAB_ID_KUNCI, tabIdSaya); } catch (e) {} }
+  }
+} catch (e) { tabIdSaya = null; }
+if (!tabIdSaya) tabIdSaya = buatIdTabBaru();
+// v22-W6 (pelindung tab idle): tab yang TIDAK ADA interaksi pengguna
+// baru-baru ini (>30 detik tanpa pointerdown/keydown/click) JANGAN
+// autosave — tab background yang ditinggalkan tidak boleh menimpa
+// simpanan tab yang sedang dipakai. Simpan MANUAL tetap selalu
+// diizinkan (mengklaim lease). Diperbarui catatInteraksi() (listener
+// dipasang di DOMContentLoaded + pasangInput).
+let waktuInteraksiTerakhir = Date.now();
+const INTERAKSI_IDLE_MS = 30000;
+function catatInteraksi() { waktuInteraksiTerakhir = Date.now(); }
+// v22-W6 (desinkron profil/simpanan, opsi ii): tab yang kembali ke menu
+// utama dari dalam game MELEPAS lease & berhenti denyut/autosave sampai
+// permainan baru/lanjutan dimulai (mulaiGame mereset flag ini). Tab yang
+// BARU dimuat (fresh load) TIDAK kena flag ini — denyut di layar mulai
+// tetap jalan (lihat denyutLeaseTab) untuk melindungi jendela reload.
+let berhentiDenyutMenu = false;
+// v22-W6 (diagnostik tint): Mode Debug — panel kecil di dalam game.
+// Preferensi tersimpan di localStorage; dimuat di DOMContentLoaded.
+const DEBUG_KEY = "merantiRisingDebugV1";
+let modeDebug = false;
 let peringatanTabGandaSudah = false; // toast tab ganda: sekali sampai tab ini merebut lease lagi
 let waktuToastSimpanGagalTerakhir = 0;
 function bacaLeaseTab() {
@@ -800,8 +839,15 @@ function klaimLeaseTab() {
 // tab background tidak merebut lease dari permainan yang sedang dijeda.
 // Bila lease milik tab lain & masih segar, jangan sentuh. Bila lease
 // sudah kedaluwarsa, klaim (tab pemiliknya sudah tutup / tidak aktif).
+// v22-W6: denyut TIDAK lagi digantung pada `S` — halaman yang baru
+// dimuat harus segera mengklaim/memperbarui lease (dengan ID
+// sessionStorage-nya) SEBELUM pengguna klik LANJUTKAN, supaya tab lama
+// tidak sempat merebut selama jendela muat. Denyut di layar mulai TIDAK
+// memanggil simpan() (belum ada S) — hanya klaim lease. Satu-satunya
+// pengecualian: berhentiDenyutMenu (tab kembali ke menu dari dalam game
+// — melepas lease sampai permainan baru/lanjutan dimulai).
 function denyutLeaseTab() {
-  if (!S) return;
+  if (berhentiDenyutMenu) return;
   const l = bacaLeaseTab();
   if (l && l.id === tabIdSaya) { klaimLeaseTab(); return; }
   if (l && (Date.now() - l.ts) < LEASE_TAB_MS) return; // milik tab lain yang masih aktif
@@ -813,6 +859,11 @@ function simpan(otomatis) {
   // (lease segar milik tab lain) — tab lama yang di-background-kan
   // tidak boleh menimpa simpanan tab baru dengan keadaan basi.
   if (otomatis) {
+    // v22-W6 (pelindung tab idle): tab tanpa interaksi pengguna
+    // >30 detik JANGAN autosave — tab yang ditinggalkan tidak boleh
+    // menimpa simpanan tab yang sedang dipakai. Simpan manual tetap
+    // selalu diizinkan (jalur ini hanya untuk otomatis=true).
+    if (Date.now() - waktuInteraksiTerakhir > INTERAKSI_IDLE_MS) return false;
     const l = bacaLeaseTab();
     if (l && l.id !== tabIdSaya && (Date.now() - l.ts) < LEASE_TAB_MS) {
       if (!peringatanTabGandaSudah) {
@@ -1127,6 +1178,8 @@ function bangunJalanDi(tipe, x, y) {
   bayarBiaya(JALAN[tipe].harga);
   if (terrainDi(peta, x, y) === "hutan") { peta.terrain[y][x] = "permukiman"; S.kayu += 2; S.bersih.push({ x: x, y: y }); invalidasiMinimapCache(); }
   S.jalan.push({ x: x, y: y, tipe: tipe, kecamatan: kecamatanDiPeta(peta, x, y) });
+  // v22-W1: jalan baru -> graph jalan berubah (rute/cache ikut invalid).
+  if (typeof perbaruiGraphJalan === "function") { try { perbaruiGraphJalan([{ x: x, y: y }]); } catch (e) {} }
   S.statistik.jalan++;
   bunyiKlik(); cekMisi(); simpan(); renderHUD();
   if (panelKiri === "misi") renderPanelKiri(); // penghitung misi langsung diperbarui
@@ -1138,6 +1191,8 @@ function bangunJembatanDi(tipe, x, y) {
   if (!cek.ok) { toast(cek.alasan, "gagal"); bunyiGagal(); return false; }
   bayarBiaya(JEMBATAN[tipe].harga);
   S.jembatan.push({ x: x, y: y, tipe: tipe, kecamatan: kecamatanDiPeta(peta, x, y) });
+  // v22-W1: jembatan baru -> graph jalan berubah.
+  if (typeof perbaruiGraphJalan === "function") { try { perbaruiGraphJalan([{ x: x, y: y }]); } catch (e) {} }
   S.statistik.jembatan++;
   bunyiSukses(); toast(JEMBATAN[tipe].nama + " dibangun.", "ok");
   cekMisi(); simpan(); renderHUD();
@@ -1486,6 +1541,15 @@ function akrualJamGame() {
   // v19 Worker 4: hitung ulang lalu lintas tiap jam game SEBELUM
   // kebahagiaan — hitungKebahagiaan (Worker 3) membaca S.lalin.skor.
   if (typeof hitungLalin === "function") { try { hitungLalin(); } catch (e) {} }
+  // v22-W3: rute bus + logistik per jam game (naik/turun, job, truk) —
+  // SETELAH hitungLalin agar penimpaan tiket bus W3 (aktual) dibaca 4b
+  // di bawah lewat kanal tiketBus yang sama; SEBELUM produksi agar job
+  // dibuat dari stok/kebutuhan jam sebelumnya. Tidak mengubah ekonomi.
+  if (typeof prosesLogistikPerJam === "function") { try { prosesLogistikPerJam(); } catch (e) {} }
+  // v22-W5 (K): job logistik yang selesai di pelabuhan -> kapal kargo
+  // ke pulau terhubung (rute laut, jual di tujuan). Setelah
+  // prosesLogistikPerJam agar job "selesai" jam ini ikut diproses.
+  if (typeof prosesKapalKargoPerJam === "function") { try { prosesKapalKargoPerJam(); } catch (e) {} }
   // v19 Worker 3: hitung ulang kebahagiaan (20 indikator) tiap jam game.
   if (typeof hitungKebahagiaan === "function") { try { hitungKebahagiaan(); } catch (e) {} }
   terapkanEfekPajakKebahagiaan(); // v19 Worker 5: efek tarif pajak properti
@@ -1841,41 +1905,17 @@ function sinkronWarga() {
   }
   if (wargaVisual.length > target) wargaVisual.length = target;
 }
-// Pilih langkah berikut untuk warga: tetangga jalan (bobot 3) atau darat
-// (bobot 1), tidak langsung kembali kecuali buntu. Bila langkahnya di
-// jalan, targetnya titik lajur kiri ruas itu; bila di darat, tengah tile.
-// v18-B: langkah yang mendekati target zona (pilihZonaWarga: kerja/rumah/
-// sosial sesuai jam) mendapat bonus bobot +2, sehingga warga pagi hari
-// cenderung menuju tempat kerja, sore ke rumah/pasar, bukan sekadar acak.
+// Pilih langkah berikut untuk warga — v22-W2: didelegasikan ke
+// pilihLangkahWargaJalan (VehicleManager): HANYA tetangga jalan, tidak
+// pernah melintasi darat. Tanpa manager, warga diam (aman) daripada
+// kembali ke perilaku lama yang memotong darat.
 function pilihLangkahWarga(w) {
-  if (w.targetX === undefined || w.targetX === null || (w.tileX === w.targetX && w.tileY === w.targetY)) pilihZonaWarga(w);
-  const pil = [];
-  for (let d = 0; d < 4; d++) {
-    const nx = w.tileX + ARAH_TETANGGA[d][0], ny = w.tileY + ARAH_TETANGGA[d][1];
-    if (nx < 0 || ny < 0 || nx >= peta.W || ny >= peta.H) continue;
-    if (adaJalanDi(S, nx, ny)) pil.push({ x: nx, y: ny, bobot: 3, jalan: true });
-    else if (terrainBisaBangun(terrainDi(peta, nx, ny)) && !adaBangunanDi(S, nx, ny)) pil.push({ x: nx, y: ny, bobot: 1, jalan: false });
-  }
-  let cand = pil.filter(p => !(p.x === w.dariX && p.y === w.dariY));
-  if (!cand.length) cand = pil;
-  if (!cand.length) return false;
-  if (w.targetX !== null && w.targetX !== undefined) {
-    const jarakKini = Math.abs(w.tileX - w.targetX) + Math.abs(w.tileY - w.targetY);
-    for (const p of cand) {
-      const jarakBaru = Math.abs(p.x - w.targetX) + Math.abs(p.y - w.targetY);
-      if (jarakBaru < jarakKini) p.bobot += 2;
-    }
-  }
-  let total = 0; for (const p of cand) total += p.bobot;
-  let acak = Math.random() * total, pilih = cand[0];
-  for (const p of cand) { acak -= p.bobot; if (acak <= 0) { pilih = p; break; } }
-  w.dariX = w.tileX; w.dariY = w.tileY;
-  w.tileX = pilih.x; w.tileY = pilih.y;
-  if (pilih.jalan) { const p = titikLajurTile(w.dariX, w.dariY, pilih.x, pilih.y); w.tx = p.x; w.ty = p.y; }
-  else { w.tx = pilih.x; w.ty = pilih.y; }
-  return true;
+  if (typeof pilihLangkahWargaJalan === "function") return pilihLangkahWargaJalan(w);
+  return false;
 }
 function perbaruiWarga(dt) {
+  // v22-W2: pejalan kaki dikelola VehicleManager (jalan/trotoar saja).
+  if (typeof perbaruiPejalanKaki === "function") { perbaruiPejalanKaki(dt); return; }
   if (kecepatan === 0) return;
   for (const w of wargaVisual) {
     if (w.arah === undefined) w.arah = Math.random() * Math.PI * 2;
@@ -2216,6 +2256,47 @@ function gambarSatuKendaraan(k, lebar, tinggi) {
       ctx.font = Math.max(8, 10 * z) + "px sans-serif"; ctx.textAlign = "center";
       ctx.fillText("BUS", s.x, s.y + 2 * z);
     }
+  } else if (k.tipe === "mobil" || k.tipe === "ambulans") {
+    // v22-W2: mobil & ambulans belum punya sprite — gambar vektor
+    // sederhana (badan + kabin + roda, dirotasi mengikuti arah layar).
+    // Sudut layar dari arah tile (isometri): sx = cos-sin, sy = (cos+sin)/2.
+    const t = tileTengahDunia(k.x, k.y);
+    const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
+    const warna = (k.tipe === "ambulans") ? "#ffffff" : (k.warna || "#0984e3");
+    const ca = Math.cos(k.arah || 0), sa = Math.sin(k.arah || 0);
+    const sudutLayar = Math.atan2((ca + sa) * 0.5, ca - sa);
+    ctx.save();
+    ctx.translate(s.x, s.y + 6 * z);
+    ctx.rotate(sudutLayar);
+    const pw = 26 * z, ph = 12 * z, r = 4 * z;
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.beginPath(); ctx.ellipse(0, 2 * z, pw * 0.55, ph * 0.55, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = warna;
+    ctx.beginPath();
+    ctx.moveTo(-pw / 2 + r, -ph / 2); ctx.lineTo(pw / 2 - r, -ph / 2);
+    ctx.quadraticCurveTo(pw / 2, -ph / 2, pw / 2, -ph / 2 + r);
+    ctx.lineTo(pw / 2, ph / 2 - r); ctx.quadraticCurveTo(pw / 2, ph / 2, pw / 2 - r, ph / 2);
+    ctx.lineTo(-pw / 2 + r, ph / 2); ctx.quadraticCurveTo(-pw / 2, ph / 2, -pw / 2, ph / 2 - r);
+    ctx.lineTo(-pw / 2, -ph / 2 + r); ctx.quadraticCurveTo(-pw / 2, -ph / 2, -pw / 2 + r, -ph / 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,0.35)"; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = (k.tipe === "ambulans") ? "#dfe6e9" : "rgba(255,255,255,0.75)";
+    ctx.fillRect(-pw * 0.18, -ph * 0.32, pw * 0.36, ph * 0.64);
+    ctx.fillStyle = "#2d3436";
+    for (const [rx, ry] of [[-pw * 0.32, -ph / 2], [pw * 0.32, -ph / 2], [-pw * 0.32, ph / 2], [pw * 0.32, ph / 2]]) {
+      ctx.beginPath(); ctx.arc(rx, ry, 2.6 * z, 0, Math.PI * 2); ctx.fill();
+    }
+    if (k.tipe === "ambulans") {
+      ctx.fillStyle = "#d63031";
+      ctx.fillRect(-pw * 0.08, -ph * 0.32, pw * 0.16, ph * 0.64);
+      ctx.fillRect(-pw * 0.18, -ph * 0.12, pw * 0.36, ph * 0.24);
+      ctx.fillRect(-pw / 2, ph / 2 - 2 * z, pw, 2 * z);
+      if ((k.state === "cruising" || k.state === "accelerating") && Math.floor(frame / 12) % 2 === 0) {
+        ctx.fillStyle = "#ff0000";
+        ctx.beginPath(); ctx.arc(0, -ph / 2 - 2 * z, 3 * z, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    ctx.restore();
   } else if (k.tipe === "kapal") {
     const t = tileTengahDunia(k.x, k.y + Math.sin(frame / 30) * 0.15);
     const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
@@ -2477,6 +2558,13 @@ function gambarPeta() {
   if (typeof gambarOverlay === "function") { try { gambarOverlay(lebar, tinggi, minX, maxX, minY, maxY); } catch (e) {} }
   // 4. Feri antar pulau (di laut lepas, jauh dari bangunan)
   gambarFeri(lebar, tinggi);
+  // 4b. v22-W5 (L): lapisan manajemen lalu lintas — jaringan jalan,
+  // rute bus/pejalan kaki/laut, dan rute kendaraan terpilih. Digambar
+  // di atas feri, di bawah tint malam (langkah 7); hanya aktif bila
+  // salah satu tombol panel Lalu Lintas dinyalakan.
+  if (typeof gambarLapisanLalin === "function") { try { gambarLapisanLalin(lebar, tinggi, minX, maxX, minY, maxY); } catch (e) {} }
+  // 4c. v22-W5 (K): kapal maritim (kargo/penumpang/nelayan) di laut.
+  if (typeof gambarKapal === "function") { try { gambarKapal(lebar, tinggi); } catch (e) {} }
   // 5. Hover & ghost
   if (hover && mode.jenis !== "pilih") gambarGhost(lebar, tinggi);
   else if (hover && mode.jenis === "pilih") {
@@ -2656,19 +2744,37 @@ function gambarKendaraan(lebar, tinggi) {
 }
 function initKendaraan() {
   kendaraanVisual = [];
+  if (typeof bersihkanKendaraan === "function") { try { bersihkanKendaraan(); } catch (e) {} }
   const jalan = S.jalan;
   if (jalan.length) {
-    const j = jalan[Math.floor(Math.random() * jalan.length)];
-    const truk = { tipe: "truk", x: j.x, y: j.y, tx: j.x, ty: j.y, cepat: 1.2,
-      arah: 0, tileX: j.x, tileY: j.y, dariX: j.x, dariY: j.y };
-    kendaraanVisual.push(truk);
-    pilihJalanBerikut(truk); // target pertama di jaringan jalan
+    // v22-W2: graph segar dulu (S.jalan bisa berubah tanpa hook), lalu
+    // truk dibuat lewat VehicleManager — rute A* + tujuan acak, bukan
+    // tetangga acak via pilihJalanBerikut.
+    if (typeof bangunGraphJalan === "function") { try { bangunGraphJalan(); } catch (e) {} }
+    // v22-W5 (flaky v19-lalin): truk ambient SELALU di petak jalan
+    // pertama (bukan acak) — posisi acak membuat tes traffic-light
+    // gagal ~1/3 run: truk yang mendarat di petak ukur memaksa rasio
+    // petak itu ke 1,0 (kapSim tanah = 1) sehingga efek traffic-light
+    // (x0,7 pada rasio zona) tidak pernah terlihat. Deterministik di
+    // runtime juga memudahkan debug.
+    const j = jalan[0];
+    if (typeof buatKendaraanJalan === "function") {
+      buatKendaraanJalan("truk", j.x, j.y); // ambient: tujuan acak, parkir, ulang
+    } else {
+      const truk = { tipe: "truk", x: j.x, y: j.y, tx: j.x, ty: j.y, cepat: 1.2,
+        arah: 0, tileX: j.x, tileY: j.y, dariX: j.x, dariY: j.y };
+      kendaraanVisual.push(truk);
+      pilihJalanBerikut(truk); // target pertama di jaringan jalan
+    }
   }
   const L = peta.landing;
   kendaraanVisual.push({ tipe: "kapal", x: L.x + 1, y: L.y + 2 });
   kendaraanVisual.push({ tipe: "perahu", x: L.x - 2, y: L.y + 1 });
 }
 function perbaruiKendaraan(dt) {
+  // v22-W2: semua kendaraan jalan dikelola VehicleManager (state machine
+  // + rute A*). Fallback lama hanya bila city-kendaraan.js tidak termuat.
+  if (typeof perbaruiSemuaKendaraan === "function") { perbaruiSemuaKendaraan(dt); return; }
   if (kecepatan === 0) return;
   const truk = kendaraanVisual.find(k => k.tipe === "truk");
   if (truk && S.jalan.length) {
@@ -2713,7 +2819,13 @@ function bukaRuteFeri(pulauId) {
   if (S.uang < BIAYA_RUTE) { toast("Biaya membuka rute: Rp50.000.", "gagal"); bunyiGagal(); return false; }
   S.uang -= BIAYA_RUTE;
   const p = peta.pulau[idx];
-  S.ruteFeri.push({ id: "rute-" + pulauId, pulauId: pulauId, dari: { x: terminal.x, y: terminal.y }, ke: { x: dermaga.x, y: dermaga.y }, t: 0, arah: 1 });
+  const ruteBaru = { id: "rute-" + pulauId, pulauId: pulauId, dari: { x: terminal.x, y: terminal.y }, ke: { x: dermaga.x, y: dermaga.y }, t: 0, arah: 1 };
+  S.ruteFeri.push(ruteBaru);
+  // v22-W5 (K): hitung jalur pelayaran mengikuti perairan SEKALI saat
+  // rute dibuka (BFS laut; fallback garis lurus bila gagal) — feri
+  // tidak lagi memotong daratan. Simpanan lama tanpa jalur dihitung
+  // malas di jalurRuteFeri/gambarFeri.
+  if (typeof jalurRuteFeri === "function") { try { jalurRuteFeri(ruteBaru); } catch (e) {} }
   S.pulau[pulauId].terhubung = true;
   log("Rute feri ke " + p.nama + " dibuka — kapal feri mulai berlayar!");
   toast("Rute feri ke " + p.nama + " dibuka!", "ok");
@@ -2880,6 +2992,112 @@ function bangunCacheOverlay() {
   overlayCache = petaWarna; overlayCacheKunci = kunci;
   return petaWarna;
 }
+// ---------------- Lapisan manajemen lalu lintas (v22-W5, L) ----------------
+// Toggle runtime (TIDAK disimpan — tampilan peta saja): jaringan jalan
+// (graph W1), rute bus (W3), jaringan pejalan kaki (taman/JPO),
+// rute laut (jalur feri/kapal), dan rute kendaraan terpilih.
+// Digambar sebagai garis canvas di atas peta (bukan DOM per kendaraan).
+// Warna rute kendaraan: biru = pribadi, hijau = bus, oranye = logistik,
+// merah = darurat.
+let tampilJaringanJalan = false, tampilRuteBus = false, tampilJaringanPejalan = false, tampilRuteLaut = false;
+let kendaraanTerpilihId = null;
+const WARNA_RUTE_KENDARAAN = { mobil: "#0984e3", bus: "#00b894", truk: "#e17055", ambulans: "#e74c3c" };
+function aturTampilLalin(jenis) {
+  if (jenis === "jalan") tampilJaringanJalan = !tampilJaringanJalan;
+  else if (jenis === "bus") tampilRuteBus = !tampilRuteBus;
+  else if (jenis === "pejalan") tampilJaringanPejalan = !tampilJaringanPejalan;
+  else if (jenis === "laut") tampilRuteLaut = !tampilRuteLaut;
+  else return;
+  bunyiKlik(); renderPanelKiri();
+}
+function pilihKendaraan(id) { kendaraanTerpilihId = id || null; bunyiKlik(); renderPanelKiri(); }
+function sembunyikanRuteKendaraan() { kendaraanTerpilihId = null; bunyiKlik(); renderPanelKiri(); }
+// Kendaraan terpilih (dari manager W2 / kendaraanVisual).
+function kendaraanTerpilih() {
+  if (!kendaraanTerpilihId) return null;
+  if (typeof daftarKendaraan !== "undefined" && Array.isArray(daftarKendaraan)) {
+    const k = daftarKendaraan.find(v => v && v.id === kendaraanTerpilihId);
+    if (k) return k;
+  }
+  if (Array.isArray(kendaraanVisual)) return kendaraanVisual.find(v => v && v.id === kendaraanTerpilihId) || null;
+  return null;
+}
+function gambarLapisanLalin(lebar, tinggi, minX, maxX, minY, maxY) {
+  if (!S || !peta || typeof ctx === "undefined" || !ctx) return;
+  if (!tampilJaringanJalan && !tampilRuteBus && !tampilJaringanPejalan && !tampilRuteLaut && !kendaraanTerpilihId) return;
+  const z = kamera.zoom;
+  const keLayar = (tx, ty) => { const w = tileTengahDunia(tx, ty); return duniaKeLayar(w.x, w.y, lebar, tinggi); };
+  const garis = (pts, warna, putus, tebal) => {
+    if (!pts || pts.length < 2) return;
+    ctx.save();
+    ctx.strokeStyle = warna;
+    ctx.lineWidth = Math.max(1.5, (tebal || 2) * z);
+    ctx.setLineDash(putus ? [8 * z, 6 * z] : []);
+    ctx.beginPath();
+    for (let i = 0; i < pts.length; i++) {
+      const s = keLayar(pts[i].x, pts[i].y);
+      if (i === 0) ctx.moveTo(s.x, s.y); else ctx.lineTo(s.x, s.y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  };
+  const titik = (tx, ty, warna, r) => {
+    const s = keLayar(tx, ty);
+    ctx.save();
+    ctx.fillStyle = warna;
+    ctx.beginPath(); ctx.arc(s.x, s.y, Math.max(2, (r || 3) * z), 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  };
+  const berlian = (tx, ty, warna) => {
+    const s = keLayar(tx, ty);
+    ctx.save();
+    ctx.fillStyle = warna;
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y - 10 * z); ctx.lineTo(s.x + 14 * z, s.y); ctx.lineTo(s.x, s.y + 10 * z); ctx.lineTo(s.x - 14 * z, s.y);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  };
+  // Jaringan jalan: edge graph (garis biru) + node (titik putih).
+  if (tampilJaringanJalan && typeof graphJalan !== "undefined" && graphJalan) {
+    for (const e of (graphJalan.edge || [])) garis(e.petak, "rgba(9,132,227,0.85)", false, 2);
+    for (const n of (graphJalan.node || [])) titik(n.x, n.y, "#ffffff", 3);
+  }
+  // Rute bus: garis putus hijau lewat halte (berurutan) + rute live tiap
+  // bus (rute A* yang sedang dijalani) + titik di tiap halte.
+  if (tampilRuteBus && Array.isArray(S.ruteBus)) {
+    for (const r of S.ruteBus) {
+      if (!r.halte || !r.halte.length) continue;
+      garis(r.halte, "rgba(0,184,148,0.9)", true, 2.5);
+      for (const h of r.halte) titik(h.x, h.y, "#00b894", 4);
+      for (const b of (r.bus || [])) if (b.rute && b.rute.length) garis(b.rute, "rgba(0,184,148,0.7)", false, 2);
+    }
+  }
+  // Jaringan pejalan kaki: petak taman/lapangan/JPO (berlian hijau).
+  if (tampilJaringanPejalan && Array.isArray(S.bangunan) && typeof TAMAN_JALUR_IDS !== "undefined") {
+    for (const b of S.bangunan) {
+      if (TAMAN_JALUR_IDS.indexOf(b.id) < 0) continue;
+      let kaki = null;
+      if (typeof petakBangunan === "function") { try { kaki = petakBangunan(b); } catch (e) { kaki = null; } }
+      if (!Array.isArray(kaki) || !kaki.length) kaki = [{ x: b.x, y: b.y }];
+      for (const t of kaki) berlian(t.x, t.y, "rgba(0,184,148,0.55)");
+    }
+  }
+  // Rute laut: jalur pelayaran feri (garis putus biru laut).
+  if (tampilRuteLaut && Array.isArray(S.ruteFeri) && typeof jalurRuteFeri === "function") {
+    for (const rute of S.ruteFeri) {
+      let j = null;
+      try { j = jalurRuteFeri(rute); } catch (e) { j = null; }
+      if (j && j.length >= 2) garis(j, "rgba(9,132,227,0.9)", true, 2.5);
+    }
+  }
+  // Rute kendaraan terpilih: garis tebal warna tipe + titik posisi.
+  const k = kendaraanTerpilih();
+  if (k) {
+    const warna = WARNA_RUTE_KENDARAAN[k.tipe] || "#0984e3";
+    if (k.rute && k.rute.length >= 2) garis(k.rute, warna, false, 3.5);
+    titik(k.x, k.y, warna, 5);
+  }
+}
 function gambarOverlay(lebar, tinggi, minX, maxX, minY, maxY) {
   if (!overlayAktif || !S || !peta) return;
   const petaWarna = bangunCacheOverlay();
@@ -2980,13 +3198,23 @@ function gambarFeri(lebar, tinggi) {
     const a = tileTengahDunia(rute.dari.x, rute.dari.y);
     const b = tileTengahDunia(rute.ke.x, rute.ke.y);
     const t = rute.t || 0;
-    const wx = a.x + (b.x - a.x) * t, wy = a.y + (b.y - a.y) * t;
+    // v22-W5 (K): posisi di sepanjang JALUR LAUT (bukan garis lurus) —
+    // feri mengikuti perairan; fallback garis lurus bila jalur belum
+    // ada (simpanan lama / jalur laut gagal dihitung).
+    let wx, wy, hadapKiri;
+    if (typeof posisiFeri === "function") {
+      const pf = posisiFeri(rute);
+      if (pf) { wx = pf.x; wy = pf.y; hadapKiri = Math.cos(pf.arah || 0) < 0; }
+    }
+    if (wx === undefined) {
+      wx = a.x + (b.x - a.x) * t; wy = a.y + (b.y - a.y) * t;
+      hadapKiri = (b.x - a.x) * (rute.arah || 1) < 0;
+    }
     const s = duniaKeLayar(wx, wy, lebar, tinggi);
     const bob = Math.sin(frame / 30 + t * 6) * 2 * z;
     const besar = p.ukuran !== "kecil";
     const img = gambarAset[besar ? "assets/vehicles/kapal-feri.png" : "assets/vehicles/perahu-penyeberangan.png"]
       || gambarAset["assets/vehicles/kapal-kargo.png"];
-    const hadapKiri = (b.x - a.x) * (rute.arah || 1) < 0;
     ctx.save();
     if (img && img.complete && img.naturalWidth) {
       const w = (besar ? 90 : 60) * z, h = w * (img.naturalHeight / img.naturalWidth);
@@ -3751,6 +3979,91 @@ function renderPanelKiri() {
     html += "<div class='barisStat'><span>Bangunan</span><span>" + bangunanSelesai().length + " · " + S.jalan.length + " jln · " + S.jembatan.length + " jmb</span></div>";
     html += "<div class='catatan'>Detail lengkap di tab Penduduk & Ekonomi.</div>";
     isi.innerHTML = html;
+  } else if (panelKiri === "lalin") {
+    // v22-W5 (L): panel Lalu Lintas & Transportasi — SEMUA angka dari
+    // simulasi aktual (infoKendaraan W2, S.lalin/detailPetak W4,
+    // infoRuteBus/infoLogistik W3, infoPejalanKaki + infoMaritim W5),
+    // bukan angka dekoratif. Panel compact (pola v21): judul, baris
+    // stat, tombol kecil; dibuka/ditutup lewat nav (bukaTabKiri).
+    let html = "<div class='judulPanel'>Lalu Lintas & Transportasi</div>";
+    const ik = (typeof infoKendaraan === "function") ? infoKendaraan() : { total: 0, aktif: 0, parkir: 0, menunggu: 0, perTipe: {} };
+    const busL = (S.lalin && S.lalin.bus) || {};
+    const det = (S.lalin && S.lalin.detailPetak) || {};
+    const kunciDet = Object.keys(det);
+    let kecRata = null, tempuhRata = null;
+    if (kunciDet.length) {
+      let sK = 0, sT = 0;
+      for (const kk of kunciDet) { sK += det[kk].kecepatanRata || 0; sT += det[kk].waktuTempuh || 0; }
+      kecRata = Math.round((sK / kunciDet.length) * 10) / 10;
+      tempuhRata = Math.round((sT / kunciDet.length) * 10) / 10;
+    }
+    const terpadat = kunciDet.map(kk => ({ kunci: kk, rasio: det[kk].rasio || 0, status: det[kk].status })).sort((a, b) => b.rasio - a.rasio).slice(0, 3);
+    const ruteBusInfo = (typeof infoRuteBus === "function") ? infoRuteBus() : [];
+    const penumpBus = ruteBusInfo.reduce((a, r) => a + (r.penumpangTotal || 0), 0);
+    const penumpPerJam = (typeof busL.penumpangPerJam === "number") ? busL.penumpangPerJam : 0;
+    const ip = (typeof infoPejalanKaki === "function") ? infoPejalanKaki() : null;
+    const im = (typeof infoMaritim === "function") ? infoMaritim() : null;
+    const il = (typeof infoLogistik === "function") ? infoLogistik() : null;
+    html += "<div class='judulPanel' style='margin-top:6px'>🚗 Kendaraan Jalan</div>";
+    html += "<div class='barisStat'><span>Total kendaraan</span><b>" + ik.total + "</b></div>";
+    html += "<div class='barisStat'><span>Aktif / parkir / menunggu</span><span>" + ik.aktif + " / " + ik.parkir + " / " + ik.menunggu + "</span></div>";
+    html += "<div class='barisStat'><span>Bus beroperasi</span><span>" + (busL.beroperasi ? busL.jumlahBus + " bus" : "tidak ada") + "</span></div>";
+    html += "<div class='barisStat'><span>Penumpang bus</span><span>" + penumpPerJam + "/jam · total naik " + penumpBus + "</span></div>";
+    html += "<div class='judulPanel' style='margin-top:10px'>📊 Lalu Lintas</div>";
+    html += "<div class='barisStat'><span>Volume lalu lintas</span><span>" + ((S.lalin && typeof S.lalin.volumeTotal === "number") ? S.lalin.volumeTotal + " kend/jam" : "—") + "</span></div>";
+    html += "<div class='barisStat'><span>Kemacetan (skor)</span><b>" + ((S.lalin && typeof S.lalin.skor === "number") ? S.lalin.skor + "/100 · " + (S.lalin.skor >= 70 ? "Lancar" : S.lalin.skor >= 40 ? "Padat" : "Macet") : "—") + "</b></div>";
+    html += "<div class='barisStat'><span>Kecepatan rata-rata</span><span>" + (kecRata !== null ? kecRata + " km/jam" : "—") + "</span></div>";
+    html += "<div class='barisStat'><span>Waktu perjalanan</span><span>" + (tempuhRata !== null ? tempuhRata + " detik/petak" : "—") + "</span></div>";
+    if (terpadat.length) {
+      html += "<div class='judulPanel' style='margin-top:10px'>🔴 Ruas Terpadat</div>";
+      for (const t of terpadat) html += "<div class='barisStat kecil'><span>Petak " + t.kunci + "</span><span>rasio " + t.rasio + " · " + (t.status === 2 ? "Macet" : t.status === 1 ? "Padat" : "Lancar") + "</span></div>";
+    } else html += "<div class='misiDes'>Belum ada ruas padat/macet — semua lancar.</div>";
+    if (ip) {
+      html += "<div class='judulPanel' style='margin-top:10px'>🚶 Pejalan Kaki</div>";
+      html += "<div class='barisStat'><span>Warga berjalan / total</span><span>" + ip.berjalan + " / " + ip.total + "</span></div>";
+      html += "<div class='barisStat'><span>Di jalan / di taman</span><span>" + ip.diJalan + " / " + ip.diTaman + "</span></div>";
+      html += "<div class='barisStat'><span>Rute aktif / tanpa rute</span><span>" + ip.ruteAktif + " / " + ip.tanpaRute + "</span></div>";
+    }
+    if (im) {
+      html += "<div class='judulPanel' style='margin-top:10px'>⛴️ Maritim</div>";
+      html += "<div class='barisStat'><span>Rute feri / kapal</span><span>" + im.ruteFeri + " / " + im.totalKapal + "</span></div>";
+      html += "<div class='barisStat'><span>Kapal kargo aktif</span><span>" + im.kargoAktif + "</span></div>";
+    }
+    if (il) {
+      html += "<div class='judulPanel' style='margin-top:10px'>📦 Logistik</div>";
+      html += "<div class='barisStat'><span>Job aktif / selesai</span><span>" + il.jobAktif.length + " / " + il.jobSelesai + "</span></div>";
+      html += "<div class='barisStat'><span>Truk logistik</span><span>" + il.truk.length + " / " + il.maksTruk + "</span></div>";
+    }
+    html += "<div class='judulPanel' style='margin-top:10px'>🗺️ Tampilan Peta</div>";
+    html += "<div class='barisAksi'>";
+    html += "<button class='btnKecil" + (overlayAktif === "traffic" ? " aktif" : "") + "' onclick='aturOverlay(\"traffic\")'>🚗 Overlay Lalu Lintas</button>";
+    html += "<button class='btnKecil" + (tampilJaringanJalan ? " aktif" : "") + "' onclick='aturTampilLalin(\"jalan\")'>🛣️ Jaringan Jalan</button>";
+    html += "<button class='btnKecil" + (tampilRuteBus ? " aktif" : "") + "' onclick='aturTampilLalin(\"bus\")'>🚌 Rute Bus</button>";
+    html += "<button class='btnKecil" + (tampilJaringanPejalan ? " aktif" : "") + "' onclick='aturTampilLalin(\"pejalan\")'>🚶 Jaringan Pejalan Kaki</button>";
+    html += "<button class='btnKecil" + (tampilRuteLaut ? " aktif" : "") + "' onclick='aturTampilLalin(\"laut\")'>⛴️ Rute Laut</button>";
+    html += "</div>";
+    html += "<div class='misiDes'>Overlay & lapisan digambar di atas peta (bukan DOM per kendaraan). Rute kendaraan: biru = pribadi, hijau = bus, oranye = logistik, merah = darurat.</div>";
+    const daftarK = (typeof daftarKendaraan !== "undefined" && Array.isArray(daftarKendaraan)) ? daftarKendaraan : [];
+    html += "<div class='judulPanel' style='margin-top:10px'>🚙 Kendaraan (" + daftarK.length + ")</div>";
+    if (!daftarK.length) html += "<div class='misiDes'>Belum ada kendaraan — bangun jalan agar truk/mobil muncul.</div>";
+    else {
+      const terpilih = kendaraanTerpilih();
+      if (terpilih) html += "<div class='barisStat'><span>Rute ditampilkan</span><span>" + (terpilih.id || "?") + " · " + (terpilih.tipe || "?") + "</span></div><div class='barisAksi'><button class='btnKecil' onclick='sembunyikanRuteKendaraan()'>✕ Sembunyikan Rute</button></div>";
+      for (const k of daftarK.slice(0, 8)) {
+        const namaT = (typeof TIPE_KENDARAAN !== "undefined" && TIPE_KENDARAAN[k.tipe]) ? TIPE_KENDARAAN[k.tipe].nama : k.tipe;
+        html += "<div class='barisStat kecil'><span>" + namaT + " · " + (k.state || k.status || "?") + "</span><button class='btnKecil' onclick='pilihKendaraan(\"" + k.id + "\")'>Rute</button></div>";
+      }
+      if (daftarK.length > 8) html += "<div class='misiDes'>+" + (daftarK.length - 8) + " kendaraan lain.</div>";
+    }
+    if (ruteBusInfo.length) {
+      html += "<div class='judulPanel' style='margin-top:10px'>🚌 Rute Bus (" + ruteBusInfo.length + ")</div>";
+      for (const r of ruteBusInfo) html += "<div class='barisStat kecil'><span>" + r.routeId + " · " + r.jumlahHalte + " halte · " + (r.bus ? r.bus.length : 0) + " bus</span><span>" + (r.penumpangTotal || 0) + " penumpang</span></div>";
+    }
+    if (im && im.kapal.length) {
+      html += "<div class='judulPanel' style='margin-top:10px'>🚢 Kapal (" + im.kapal.length + ")</div>";
+      for (const k of im.kapal.slice(0, 6)) html += "<div class='barisStat kecil'><span>" + k.id + " · " + k.tipe + "</span><span>" + k.muatan + " · " + k.posisi + "</span></div>";
+    }
+    isi.innerHTML = html;
   } else if (panelKiri === "pengaturan") {
     // v20: panel Pengaturan (dibuka tombol ⚙️ di bar atas).
     let html = "<div class='judulPanel'>Pengaturan</div>";
@@ -3764,6 +4077,9 @@ function renderPanelKiri() {
     html += "<div class='judulPanel' style='margin-top:10px'>Tampilan (Density)</div>";
     html += "<div class='barisAksi'><button class='btnKecil" + (densitas === "compact" ? " aktif" : "") + "' data-density='compact' onclick='aturDensity(\"compact\")'>Compact</button><button class='btnKecil" + (densitas === "normal" ? " aktif" : "") + "' data-density='normal' onclick='aturDensity(\"normal\")'>Normal</button><button class='btnKecil" + (densitas === "expanded" ? " aktif" : "") + "' data-density='expanded' onclick='aturDensity(\"expanded\")'>Expanded</button></div>";
     html += "<div class='misiDes'>Compact = HUD ringkas (default, tablet); Normal = ukuran v20; Expanded = panel lebih lega. Skala UI terpisah dari zoom peta.</div>";
+    html += "<div class='judulPanel' style='margin-top:10px'>Diagnostik</div>";
+    html += "<div class='barisStat'><span>Mode Debug (tint &amp; lease)</span><button class='btnKecil' onclick='aturModeDebug(" + (modeDebug ? "false" : "true") + ")'>" + (modeDebug ? "Aktif" : "Mati") + "</button></div>";
+    html += "<div class='misiDes'>Menampilkan panel kecil berisi kegelapan malam, frame peta, fase siang/malam &amp; status lease — untuk verifikasi tint tanpa DevTools. Panel bisa ditutup dari tombol ✕ di panel itu sendiri.</div>";
     html += "<div class='judulPanel' style='margin-top:10px'>Permainan</div>";
     html += "<div class='barisAksi'><button class='btnKecil' onclick='kembaliKeMenuUtama()'>Kembali ke Menu Utama</button></div>";
     html += "<div class='misiDes'>Progres disimpan dulu, lalu kembali ke menu utama (tanpa reload). Permainan dijeda selama di menu — lanjutkan dari menu untuk bermain lagi.</div>";
@@ -3780,7 +4096,24 @@ function renderPanelKiri() {
     html += "<div class='barisAksi'><button class='btnKecil" + (profilPemain && profilPemain.gender === "pria" ? " aktif" : "") + "' onclick='ubahGenderPemimpin(\"pria\")'>Pria</button><button class='btnKecil" + (profilPemain && profilPemain.gender === "wanita" ? " aktif" : "") + "' onclick='ubahGenderPemimpin(\"wanita\")'>Wanita</button></div>";
     html += "<div class='misiDes'>Mengubah nama/karakter memperbarui profil & pemimpin di permainan ini. Simpanan game tidak dihapus.</div>";
     html += "<div class='barisAksi'><button class='btnKecil bahaya' onclick='resetProfil()'>" + (konfirmasiResetProfil ? "Yakin hapus profil?" : "Hapus Profil") + "</button></div>";
-    html += "<div class='misiDes'>Hapus profil mengembalikan layar mulai ke formulir identitas — tutorial muncul lagi di permainan baru (tutorialSelesai tersimpan di profil, ikut ter-reset). Simpanan game TIDAK dihapus; buat profil baru lewat MULAI untuk memunculkan lagi tombol Lanjutkan.</div>";
+    html += "<div class='misiDes'>Hapus profil mengembalikan layar mulai ke formulir identitas — tutorial muncul lagi di permainan baru (tutorialSelesai tersimpan di profil, ikut ter-reset). Simpanan game TIDAK dihapus saat profil dihapus; TAPI permainan baru (MULAI → narasi) langsung menimpa simpanan lama dengan kota baru, jadi Lanjutkan tidak lagi memuat kota pemimpin lama.</div>";
+    // v22-W7 (PWA + Logo Resmi): fullscreen, instal, update — BUKAN
+    // lalu lintas (W5). Baris instal/update hanya dirender bila
+    // kondisinya terpenuhi (tombol tidak pernah dekoratif); baris
+    // fullscreen disembunyikan bila API tidak ada / sudah jadi PWA.
+    html += "<div class='judulPanel' style='margin-top:10px'>Aplikasi (PWA)</div>";
+    if (pwaBisaFullscreen() && !pwaBerjalanSebagaiPWA()) {
+      html += "<div class='barisStat'><span>Layar penuh</span><button class='btnKecil' onclick='toggleFullscreenPWA()'>" + (pwaSedangFullscreen() ? "Keluar Fullscreen" : "Masuk Fullscreen") + "</button></div>";
+      html += "<div class='misiDes'>Mode fullscreen menyembunyikan bilah browser — cocok untuk tablet.</div>";
+    }
+    if (pwaPromptTersedia()) {
+      html += "<div class='barisStat'><span>Instal aplikasi</span><button class='btnKecil' onclick='pasangPWA()'>Instal Aplikasi</button></div>";
+      html += "<div class='misiDes'>Pasang MERANTI RISING di layar utama — bisa dibuka offline setelah instal pertama.</div>";
+    }
+    if (pwaUpdateTersedia) {
+      html += "<div class='barisStat'><span>Versi baru tersedia</span><button class='btnKecil' onclick='location.reload()'>Muat Ulang</button></div>";
+      html += "<div class='misiDes'>Muat ulang untuk memakai versi terbaru game.</div>";
+    }
     html += "<div class='barisStat'><span>Versi game</span><b>" + VERSI_GAME + "</b></div>";
     isi.innerHTML = html;
   }
@@ -3913,11 +4246,11 @@ function aksiHapus() {
 }
 function hapusJalan(x, y) {
   const i = S.jalan.findIndex(j => j.x === x && j.y === y);
-  if (i >= 0) { S.jalan.splice(i, 1); S.statistik.jalan = Math.max(0, S.statistik.jalan - 1); toast("Jalan dihapus.", "ok"); simpan(); renderPanelKanan(); renderHUD(); }
+  if (i >= 0) { S.jalan.splice(i, 1); S.statistik.jalan = Math.max(0, S.statistik.jalan - 1); toast("Jalan dihapus.", "ok"); simpan(); renderPanelKanan(); renderHUD(); if (typeof perbaruiGraphJalan === "function") { try { perbaruiGraphJalan([{ x: x, y: y }]); } catch (e) {} } }
 }
 function hapusJembatan(x, y) {
   const i = S.jembatan.findIndex(j => j.x === x && j.y === y);
-  if (i >= 0) { S.jembatan.splice(i, 1); S.statistik.jembatan = Math.max(0, S.statistik.jembatan - 1); toast("Jembatan dihapus.", "ok"); simpan(); renderPanelKanan(); renderHUD(); }
+  if (i >= 0) { S.jembatan.splice(i, 1); S.statistik.jembatan = Math.max(0, S.statistik.jembatan - 1); toast("Jembatan dihapus.", "ok"); simpan(); renderPanelKanan(); renderHUD(); if (typeof perbaruiGraphJalan === "function") { try { perbaruiGraphJalan([{ x: x, y: y }]); } catch (e) {} } }
 }
 
 // ---------------- Modal level up ----------------
@@ -4037,6 +4370,7 @@ function bangunanDiLayar(px, py) {
 function pasangInput() {
   kanvas.addEventListener("contextmenu", e => e.preventDefault());
   kanvas.addEventListener("pointerdown", e => {
+    catatInteraksi(); // v22-W6: interaksi pengguna (pelindung autosave tab idle)
     kanvas.setPointerCapture(e.pointerId);
     pointerAktif.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointerAktif.size === 2) {
@@ -4109,6 +4443,7 @@ function pasangInput() {
     kameraZoomDi(e.clientX - rect.left, e.clientY - rect.top, e.deltaY < 0 ? 1.12 : 1 / 1.12, rect.width, rect.height);
   }, { passive: false });
   window.addEventListener("keydown", e => {
+    catatInteraksi(); // v22-W6: interaksi pengguna (pelindung autosave tab idle)
     // v21 Worker 5 (cacat 8): JANGAN makan tombol saat mengetik di input
     // — spasi / a / d / w / s / p di #inputNamaPemimpin (panel Pengaturan)
     // harus masuk ke teks, bukan toggle pause / geser kamera. Tanpa
@@ -4387,9 +4722,70 @@ function perbaruiDiagnostikRender() {
         kesalahanLoopTerakhir: kesalahanLoopTerakhir,
         kesalahanRenderTerakhir: kesalahanRenderTerakhir,
         waktuGame: (typeof waktuGame === "number" ? waktuGame : null),
+        // v22-W6: status lease ikut tercatat agar cek live bisa melihat
+        // pemegang lease tanpa DevTools (panel debug membaca ini juga).
+        lease: (() => { const l = bacaLeaseTab(); return l ? { id: l.id, umurMs: Date.now() - l.ts, milikTabIni: l.id === tabIdSaya } : null; })(),
       };
     }
   } catch (e) {}
+}
+// v22-W6 — PANEL DEBUG TINT DI DALAM GAME (cek live v21: tint malam
+// belum terverifikasi karena konsol tidak bisa dibuka di lingkungan
+// cek; panel ini menampilkan nilai AKTUAL dari state, bukan angka
+// dekoratif, supaya tint bisa diverifikasi live TANPA DevTools).
+// Diaktifkan dari Pengaturan (dalam game / layar mulai) — toggle Mode
+// Debug. JANGAN klaim tint sudah diperbaiki: panel ini hanya alat ukur.
+function dataDebugTint() {
+  const l = bacaLeaseTab();
+  let fase = null;
+  try { fase = faseSiangMalam(jamDesimal()); } catch (e) { fase = null; }
+  return {
+    hari: (S ? S.hari : null),
+    jam: jamGame(), menit: menitGame(),
+    fase: fase ? fase.nama : "—",
+    kegelapan: fase ? fase.kegelapan : null,
+    gelapTerakhir: gelapTerakhir,
+    frameGambarPeta: jumlahFrameGambarPeta,
+    umurFrameMs: waktuGambarPetaTerakhir ? Math.max(0, Date.now() - waktuGambarPetaTerakhir) : null,
+    kecepatan: kecepatan,
+    leaseId: l ? l.id : null,
+    leaseUmurMs: l ? Math.max(0, Date.now() - l.ts) : null,
+    leaseMilikTabIni: l ? l.id === tabIdSaya : null,
+    tabIdSaya: tabIdSaya,
+    interaksiLaluDetik: Math.round((Date.now() - waktuInteraksiTerakhir) / 1000),
+    autosaveAktif: (Date.now() - waktuInteraksiTerakhir) <= INTERAKSI_IDLE_MS,
+  };
+}
+function perbaruiPanelDebug() {
+  const el = $("panelDebug");
+  if (!el) return;
+  if (!modeDebug || !S) { el.style.display = "none"; return; }
+  const d = dataDebugTint();
+  const jamTxt = String(d.jam).padStart(2, "0") + ":" + String(d.menit).padStart(2, "0");
+  const leaseTxt = d.leaseId ? (d.leaseMilikTabIni ? "tab ini" : "tab lain") + " · " + (Math.round(d.leaseUmurMs / 100) / 10) + " dtk lalu" : "tidak ada";
+  el.style.display = "block";
+  el.innerHTML = "<b>🔍 DEBUG — tint &amp; lease</b> <button class='btnKecil' style='float:right' onclick='aturModeDebug(false)'>✕ Tutup</button>"
+    + "<div>Waktu game: Hari " + d.hari + " · " + jamTxt + " · fase " + d.fase + "</div>"
+    + "<div>Kegelapan saat ini: " + (d.kegelapan === null ? "—" : d.kegelapan.toFixed(2)) + " · gelap frame terakhir: " + d.gelapTerakhir.toFixed(2) + "</div>"
+    + "<div>Frame gambarPeta: " + d.frameGambarPeta + " · frame terakhir: " + (d.umurFrameMs === null ? "belum pernah" : (Math.round(d.umurFrameMs / 100) / 10) + " dtk lalu") + "</div>"
+    + "<div>Kecepatan: " + (d.kecepatan === 0 ? "Jeda" : d.kecepatan + "×") + " · Lease: " + leaseTxt + "</div>"
+    + "<div>Interaksi terakhir: " + d.interaksiLaluDetik + " dtk lalu · Autosave: " + (d.autosaveAktif ? "aktif" : "DIJEDA (tab idle)") + "</div>";
+}
+function aturModeDebug(on) {
+  modeDebug = !!on;
+  try { localStorage.setItem(DEBUG_KEY, modeDebug ? "1" : "0"); } catch (e) {}
+  perbaruiTombolDebugMulai();
+  if (typeof renderPanelKiri === "function") { try { renderPanelKiri(); } catch (e) {} }
+  perbaruiPanelDebug();
+  if (typeof bunyiKlik === "function") { try { bunyiKlik(); } catch (e) {} }
+}
+function perbaruiTombolDebugMulai() {
+  const b = $("btnModeDebugMulai");
+  if (b) b.textContent = "🔍 Mode Debug: " + (modeDebug ? "Aktif" : "Mati");
+}
+function muatModeDebug() {
+  try { modeDebug = localStorage.getItem(DEBUG_KEY) === "1"; } catch (e) { modeDebug = false; }
+  perbaruiTombolDebugMulai();
 }
 function catatKesalahanRender(sumber, e) {
   kesalahanRenderTerakhir = (sumber || "render") + ": " + ((e && e.message) || String(e));
@@ -4451,6 +4847,9 @@ function tickInterval500() {
   // dt nyata di-clamp maks 5 detik agar kembali dari tab idle tidak
   // melompat; pause (kecepatan 0) menghentikan simulasi, tapi render
   // tetap jalan (loop rAF di atas tidak di-return early karena pause).
+  // v22-W6: denyut lease JUGA saat S null (layar mulai) — halaman yang
+  // baru dimuat memegang lease sejak awal, sebelum LANJUTKAN diklik.
+  denyutLeaseTab();
   if (!S) { waktuTickTerakhir = Date.now(); return; }
   const kini = Date.now();
   const dtNyataDetik = waktuTickTerakhir ? Math.min(5, (kini - waktuTickTerakhir) / 1000) : 0.5;
@@ -4461,10 +4860,10 @@ function tickInterval500() {
     tickSimpanKe = (tickSimpanKe + 1) % 2;
     if (tickSimpanKe === 0) simpan(true); // autosave: patuh lease tab aktif (v21 Worker 4)
   }
-  // v21 Worker 4: heartbeat lease tab aktif (termasuk saat pause).
-  denyutLeaseTab();
   // HUD disegarkan tiap tick — termasuk saat pause (angka tetap benar).
   renderHUD();
+  // v22-W6: segarkan panel debug (bila Mode Debug aktif) dari state aktual.
+  if (modeDebug) perbaruiPanelDebug();
   // v20 Worker 3 (temuan cek live v19 — tint malam "baru muncul setelah
   // 00:00"): jalur tint di gambarPeta sudah BENAR (faseSiangMalam memberi
   // kegelapan 0,85 pada 19–05; tes headless 19:47 lulus). Gejala yang
@@ -4497,6 +4896,13 @@ setInterval(tickInterval500, 500);
 
 // ---------------- Init & layar mulai ----------------
 function mulaiGame(baru) {
+  // v22-W6: permainan dimulai lagi — denyut/autosave jalan kembali,
+  // dan klaim lease SEBELUM muat() supaya tab lain tidak menimpa di
+  // tengah jalan. Permainan baru juga langsung menimpa simpanan lama
+  // (simpan() di akhir mulaiGame) — opsi ii desinkron profil/simpanan:
+  // Lanjutkan tidak lagi memuat kota pemimpin lama.
+  berhentiDenyutMenu = false;
+  klaimLeaseTab();
   if (baru) {
     peta = generatePeta(CITY.SEED);
     S = stateBaru(peta);
@@ -4525,6 +4931,13 @@ function mulaiGame(baru) {
     // mendapat default (skor 100, lancar) & dihitung ulang jam berikutnya.
     if (typeof pastikanLalin === "function") pastikanLalin();
     else if (!S.lalin) S.lalin = null;
+    // v22-W3: migrasi rute bus + logistik — simpanan lama tanpa keduanya
+    // mendapat default kosong (rute dibuat otomatis jam berikutnya bila
+    // ada terminal + halte; job dibuat dari rantai produksi).
+    if (typeof pastikanRuteBus === "function") pastikanRuteBus();
+    else if (!S.ruteBus) S.ruteBus = [];
+    if (typeof pastikanLogistik === "function") pastikanLogistik();
+    else if (!S.logistik) S.logistik = null;
     if (typeof pastikanZona === "function") pastikanZona();
     else if (!S.zona || typeof S.zona !== "object") S.zona = {};
     kecepatan = KECEPATAN_VALID.includes(S.kecepatan) ? S.kecepatan : 1;
@@ -4576,6 +4989,9 @@ function mulaiGame(baru) {
   // v19 Worker 4: hitung lalu lintas awal (skor, bus, rekreasi) setelah
   // kendaraan di-init — bus visual disinkronkan di sini.
   if (typeof hitungLalin === "function") { try { hitungLalin(); } catch (e) {} }
+  // v22-W1: bangun graph jalan (runtime, dari S.jalan/S.jembatan) —
+  // dipakai A* & kendaraan Worker 2-5; bukan bagian simpanan.
+  if (typeof bangunGraphJalan === "function") { try { bangunGraphJalan(); } catch (e) {} }
   // Identitas pemimpin di bar atas
   if (S.pemimpin) {
     $("avatarPemain").src = S.pemimpin.avatar;
@@ -4601,6 +5017,146 @@ function mulaiGame(baru) {
   simpan();
   bunyiSukses();
 }
+// =====================================================================
+// BAGIAN PWA — v22-W7 (PWA + Logo Resmi). Wilayah W7: pendaftaran
+// service worker, prompt instal, fullscreen, tombol PWA di layar mulai
+// & panel Pengaturan. BUKAN lalu lintas (W5) — tidak menyentuh
+// VERSI_GAME, ?v=, panel/nav lalu lintas, ekonomi, save, atau gameplay.
+// Semua fungsi dijaga (typeof-guard + try/catch) supaya aman di
+// harness headless (tanpa navigator/location/matchMedia) maupun di
+// browser lama tanpa API PWA.
+// =====================================================================
+let pwaPromptInstal = null; // event beforeinstallprompt yang ditangkap
+let pwaSudahTerinstal = false; // true setelah event appinstalled
+let pwaUpdateTersedia = false; // true bila SW baru terinstal (menunggu muat ulang)
+
+// true bila game sudah berjalan sebagai PWA (fullscreen/standalone).
+function pwaBerjalanSebagaiPWA() {
+  try {
+    if (typeof navigator !== "undefined" && navigator.standalone) return true;
+    if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
+      if (window.matchMedia("(display-mode: fullscreen)").matches) return true;
+      if (window.matchMedia("(display-mode: standalone)").matches) return true;
+    }
+  } catch (e) {}
+  return false;
+}
+// true bila API fullscreen tersedia di browser ini.
+function pwaBisaFullscreen() {
+  try {
+    if (typeof document === "undefined" || !document.documentElement) return false;
+    const el = document.documentElement;
+    return typeof el.requestFullscreen === "function" || typeof el.webkitRequestFullscreen === "function";
+  } catch (e) { return false; }
+}
+function pwaSedangFullscreen() {
+  try { return !!(typeof document !== "undefined" && document.fullscreenElement); } catch (e) { return false; }
+}
+function toggleFullscreenPWA() {
+  try {
+    if (typeof document === "undefined") return;
+    if (pwaSedangFullscreen()) {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    } else {
+      const el = document.documentElement;
+      if (!el) return;
+      const p = el.requestFullscreen ? el.requestFullscreen() : (el.webkitRequestFullscreen ? el.webkitRequestFullscreen() : null);
+      if (p && typeof p.catch === "function") p.catch(() => toast("Fullscreen tidak didukung di perangkat ini.", "gagal"));
+    }
+  } catch (e) { toast("Fullscreen tidak didukung di perangkat ini.", "gagal"); }
+  perbaruiTombolFullscreen();
+  if (typeof panelKiri !== "undefined" && panelKiri === "pengaturan") renderPanelKiri();
+}
+// true bila prompt instal tersedia & game belum terinstal.
+function pwaPromptTersedia() { return !!pwaPromptInstal && !pwaSudahTerinstal; }
+function pasangPWA() {
+  if (!pwaPromptInstal) { toast("Instal belum tersedia di browser ini — coba dari menu browser (Tambahkan ke Layar Utama).", "info"); return; }
+  try {
+    const ev = pwaPromptInstal;
+    pwaPromptInstal = null;
+    perbaruiTombolInstal();
+    ev.prompt();
+    if (ev.userChoice && typeof ev.userChoice.then === "function") ev.userChoice.then(() => { perbaruiTombolInstal(); });
+  } catch (e) { toast("Tidak bisa membuka prompt instal.", "gagal"); }
+}
+// ---- Perbarui tombol PWA (layar mulai + Pengaturan layar mulai) ----
+function perbaruiTombolInstal() {
+  const tampil = pwaPromptTersedia();
+  for (const id of ["btnInstalMulai", "btnInstalPengaturanMulai"]) {
+    const b = $(id);
+    if (b && b.style) b.style.display = tampil ? "" : "none";
+  }
+}
+function perbaruiTombolFullscreen() {
+  const b = $("btnFullscreenMulai");
+  if (!b || !b.style) return;
+  if (!pwaBisaFullscreen() || pwaBerjalanSebagaiPWA()) { b.style.display = "none"; return; }
+  b.style.display = "";
+  b.textContent = pwaSedangFullscreen() ? "⛶ Keluar Fullscreen" : "⛶ Masuk Fullscreen";
+}
+function perbaruiTombolUpdatePWA() {
+  const b = $("btnMuatUlangBaruMulai");
+  if (b && b.style) b.style.display = pwaUpdateTersedia ? "" : "none";
+}
+function perbaruiTombolPWA() {
+  perbaruiTombolInstal();
+  perbaruiTombolFullscreen();
+  perbaruiTombolUpdatePWA();
+}
+// ---- Service worker: daftar hanya via https/localhost ----
+function daftarkanServiceWorker() {
+  try {
+    if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+    if (typeof location === "undefined") return;
+    const aman = location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1";
+    if (!aman) return; // file:// & http non-localhost: SW tidak diizinkan browser
+    navigator.serviceWorker.register("sw.js").then((reg) => {
+      reg.addEventListener("updatefound", () => {
+        const baru = reg.installing;
+        if (!baru) return;
+        baru.addEventListener("statechange", () => {
+          if (baru.state === "installed" && navigator.serviceWorker.controller) {
+            // SW baru terinstal, halaman lama masih berjalan: beri tahu
+            // lewat toast (pola toast yang sudah ada) + tombol muat ulang
+            // di Pengaturan (perbaruiTombolUpdatePWA).
+            pwaUpdateTersedia = true;
+            toast("Versi baru tersedia — muat ulang halaman untuk memakai versi terbaru.", "info");
+            perbaruiTombolUpdatePWA();
+            if (typeof panelKiri !== "undefined" && panelKiri === "pengaturan") renderPanelKiri();
+          }
+        });
+      });
+    }).catch(() => {});
+  } catch (e) {}
+}
+// ---- Inisialisasi PWA: dipanggil sekali di DOMContentLoaded ----
+function initPWA() {
+  try {
+    if (typeof window !== "undefined" && window.addEventListener) {
+      window.addEventListener("beforeinstallprompt", (ev) => {
+        ev.preventDefault(); // tahan prompt bawaan browser; tampilkan tombol sendiri
+        pwaPromptInstal = ev;
+        perbaruiTombolInstal();
+      });
+      window.addEventListener("appinstalled", () => {
+        pwaSudahTerinstal = true;
+        pwaPromptInstal = null;
+        perbaruiTombolInstal();
+        toast("MERANTI RISING terinstal — bisa dibuka dari layar utama & offline.", "ok");
+      });
+    }
+    if (typeof document !== "undefined" && document.addEventListener) {
+      document.addEventListener("fullscreenchange", () => {
+        perbaruiTombolFullscreen();
+        if (typeof panelKiri !== "undefined" && panelKiri === "pengaturan") renderPanelKiri();
+      });
+    }
+    daftarkanServiceWorker();
+    perbaruiTombolPWA();
+  } catch (e) {}
+}
+
 window.addEventListener("DOMContentLoaded", () => {
   kanvas = $("peta");
   ctx = kanvas.getContext("2d");
@@ -4611,7 +5167,15 @@ window.addEventListener("DOMContentLoaded", () => {
   // ---- Onboarding MERANTI RISING (v16) ----
   muatProfil();
   muatDensity(); // v21 Worker 5 (lingkup M): pulihkan pilihan density
+  muatModeDebug(); // v22-W6: pulihkan preferensi Mode Debug
+  // v22-W6: klik di mana saja di dokumen = interaksi (tombol/menu).
+  // pointerdown kanvas & keydown dicatat di pasangInput() — BUKAN
+  // listener terpisah di sini, supaya tidak menimpa handler yang sudah
+  // ada (stub tes memakai satu map listeners untuk window+document).
+  try { document.addEventListener("click", catatInteraksi); } catch (e) {}
+  denyutLeaseTab();
   aturLayarMulai();
+  initPWA(); // v22-W7: service worker, prompt instal, tombol fullscreen
   $("infoSave").textContent = (adaSave() ? "Simpanan ditemukan — lanjutkan pembangunan pulau Anda." : "Belum ada simpanan — mulai pulau baru.") + " · Versi " + VERSI_GAME;
   // Tahap sinematik → identitas
   $("btnMulai").onclick = () => { bunyiKlik(); tampilkanTahap("identitas"); };
@@ -4660,12 +5224,25 @@ window.addEventListener("DOMContentLoaded", () => {
   // Setelah profil dihapus, MULAI menampilkan formulir identitas lagi.
   const bpm = $("btnPengaturanMulai");
   if (bpm) bpm.onclick = () => { bunyiKlik(); tampilkanTahap("pengaturan"); };
+  // v22-W6: toggle Mode Debug dari layar mulai (panel debug tint & lease).
+  const bdbg = $("btnModeDebugMulai");
+  if (bdbg) bdbg.onclick = () => { bunyiKlik(); aturModeDebug(!modeDebug); };
+  perbaruiTombolDebugMulai();
   const bkpm = $("btnKembaliPengaturanMulai");
   if (bkpm) bkpm.onclick = () => { bunyiKlik(); tampilkanTahap("sinematik"); };
   const bhpm = $("btnHapusProfilMulai");
   if (bhpm) bhpm.onclick = () => resetProfil();
   const bhp = $("btnHapusProfil");
   if (bhp) bhp.onclick = () => resetProfil();
+  // v22-W7 (PWA): tombol fullscreen/instal/muat-ulang di layar mulai.
+  const bfsm = $("btnFullscreenMulai");
+  if (bfsm) bfsm.onclick = () => { bunyiKlik(); toggleFullscreenPWA(); };
+  const bim = $("btnInstalMulai");
+  if (bim) bim.onclick = () => { bunyiKlik(); pasangPWA(); };
+  const bipm = $("btnInstalPengaturanMulai");
+  if (bipm) bipm.onclick = () => { bunyiKlik(); pasangPWA(); };
+  const bmbm = $("btnMuatUlangBaruMulai");
+  if (bmbm) bmbm.onclick = () => { bunyiKlik(); location.reload(); };
   // Tutorial
   $("btnTutorialLewatiLangkah").onclick = () => { bunyiKlik(); lanjutTutorial(); };
   $("btnTutorialLewati").onclick = () => { bunyiKlik(); selesaikanTutorial(); };
@@ -4682,6 +5259,7 @@ function tampilkanTahap(nama) {
   // menutupi peta saat permainan baru dimulai.
   tutupSemuaPanel();
   if (nama === "pengaturan") tandaiDensity();
+  if (nama === "pengaturan") perbaruiTombolPWA(); // v22-W7: segarkan tombol fullscreen/instal/update
   if (nama === "sinematik") aturLayarMulai();
 }
 // v20: kembali ke menu utama — simpan dulu, sembunyikan aplikasi,
@@ -4690,9 +5268,18 @@ function tampilkanTahap(nama) {
 // simpanan tetap menyimpan kecepatan terakhir, jadi "Lanjutkan"
 // memulihkan kecepatan seperti semula).
 function kembaliKeMenuUtama() {
-  if (S) simpan();
+  // v22-W6 (pulihkan pause): JEDA DULU, baru simpan — sebelumnya
+  // simpan() dipanggil SEBELUM kecepatan=0, sehingga simpanan mencatat
+  // kecepatan terakhir (mis. 2x) dan "Lanjutkan" setelah reload langsung
+  // jalan 2x padahal permainan ditinggalkan dalam keadaan dijeda.
   kecepatan = 0;
   if (S) S.kecepatan = 0;
+  if (S) simpan();
+  // v22-W6 (desinkron profil/simpanan, opsi ii): tab ini MELEPAS lease
+  // & berhenti denyut/autosave selama di menu — tab lain yang sedang
+  // dipakai tidak lagi diblokir, dan tab ini tidak menimpa simpanan
+  // sampai permainan baru/lanjutan dimulai (mulaiGame mereset flag).
+  berhentiDenyutMenu = true;
   // v21 Worker 5 (cacat 9): tutup semua panel sebelum kembali ke menu.
   tutupSemuaPanel();
   const ap = $("aplikasi");
@@ -4709,8 +5296,13 @@ function kembaliKeMenuUtama() {
 // Profil (nama, gender, avatar, tutorialSelesai, dibuat) tersimpan
 // TERPISAH dari simpanan game di CITY.PROFIL_KEY. Mengubah profil di
 // sini memperbarui profilPemain + S.pemimpin sesi ini; menghapus profil
-// TIDAK menghapus simpanan game (tombol Lanjutkan muncul lagi setelah
-// profil baru dibuat lewat MULAI).
+// TIDAK menghapus simpanan game saat itu juga (tombol Lanjutkan muncul
+// lagi setelah profil baru dibuat lewat MULAI). v22-W6 (opsi ii
+// desinkron profil/simpanan): permainan BARU langsung menimpa simpanan
+// lama (mulaiGame(true) -> simpan()), jadi Lanjutkan memuat kota
+// pemimpin yang baru, bukan kota pemimpin lama; dan kembaliKeMenuUtama
+// / resetProfil melepas lease + menghentikan autosave tab ini sampai
+// permainan baru/lanjutan dimulai.
 function ubahNamaPemimpin(nama) {
   const bersih = String(nama || "").trim();
   if (!bersih) { toast("Isi nama pemimpin dulu.", "gagal"); bunyiGagal(); return; }
@@ -4752,7 +5344,11 @@ function resetProfil() {
     bunyiKlik();
     perbaruiLabelHapusProfil();
     if (panelKiri === "pengaturan") renderPanelKiri();
-    setTimeout(() => { konfirmasiResetProfil = false; perbaruiLabelHapusProfil(); if (panelKiri === "pengaturan") renderPanelKiri(); }, 5000);
+    // v22-W6: konfirmasi dua-ketuk berlaku 10 detik (sebelumnya 5 detik
+    // — klik konfirmasi yang terlambat gagal); tetap aktif sampai
+    // diklik di tempat lain tidak dipilih agar tombol tidak "nyangkut"
+    // dalam keadaan Yakin selamanya.
+    setTimeout(() => { konfirmasiResetProfil = false; perbaruiLabelHapusProfil(); if (panelKiri === "pengaturan") renderPanelKiri(); }, 10000);
     return;
   }
   konfirmasiResetProfil = false;
