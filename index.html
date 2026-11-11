@@ -3,20 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Saudagar Sagu Meranti — City Builder</title>
-<link rel="stylesheet" href="css/city.css?v=5">
+<title>MERANTI RISING — Ayo Membangun Meranti!</title>
+<link rel="stylesheet" href="css/city.css?v=6">
 </head>
 <body>
-<!-- Layar mulai -->
+<!-- Layar mulai: pembuka sinematik MERANTI RISING -->
 <div id="layarMulai">
-  <div class="kartuMulai">
+  <div class="latarSinematik"><img src="assets/images/pembuka-meranti.webp" alt="Kepulauan Meranti yang masih alami"></div>
+  <div class="awanSinematik awan1"></div>
+  <div class="awanSinematik awan2"></div>
+  <div class="ombakSinematik"></div>
+  <!-- Tahap 1: sinematik -->
+  <div id="tahapSinematik" class="kartuMulai">
     <div class="logoMulai">🌴</div>
-    <h1>Saudagar Sagu Meranti</h1>
+    <h1 class="judulLogo">MERANTI <span>RISING</span></h1>
+    <p class="tagline">AYO MEMBANGUN MERANTI!</p>
     <p class="subMulai">Island City Builder · Simulasi Ekonomi · Peradaban Kepulauan Meranti</p>
-    <p class="desMulai">Mulailah dari pulau yang masih alami — hutan, sungai, dan pantai. Bangun rumah, jalan, kebun sagu, pasar, sekolah, dan pelabuhan, lalu kembangkan pulau menjadi Pusat Perdagangan Nusantara.</p>
+    <p id="sambutanKembali" class="sambutanKembali" style="display:none"></p>
     <div class="tombolMulai">
-      <button id="btnLanjut" class="btnUtama">▶ Lanjutkan Permainan</button>
-      <button id="btnBaru" class="btnUtama sekunder">＋ Pulau Baru</button>
+      <button id="btnMulai" class="btnUtama">▶ MULAI PERMAINAN</button>
+      <button id="btnLanjut" class="btnUtama">▶ LANJUTKAN PERMAINAN</button>
+      <button id="btnBaru" class="btnUtama sekunder">＋ PERMAINAN BARU</button>
+      <button id="btnProfil" class="btnUtama sekunder">👤 PROFIL PEMAIN</button>
     </div>
     <p id="infoSave" class="infoSave"></p>
     <div class="caraMain">
@@ -27,6 +35,49 @@
       <span>🛣️ Bangunan butuh jalan di sampingnya · jembatan hanya di atas air</span>
       <span>👷 Bangunan butuh pekerja — penduduk tumbuh bila ada rumah & layanan</span>
       <span>⏭️ Spasi = hari berikutnya · P = jeda · Esc = batal</span>
+    </div>
+  </div>
+  <!-- Tahap 2: identitas pemain -->
+  <div id="tahapIdentitas" class="kartuMulai" style="display:none">
+    <h2>Siapa pemimpin Meranti?</h2>
+    <p class="desMulai">Setiap pulau besar butuh seorang pemimpin. Perkenalkan dirimu, dan pilih karaktermu.</p>
+    <label class="labelForm" for="inputNama">Nama pemimpin</label>
+    <input id="inputNama" class="inputNama" type="text" maxlength="20" placeholder="Contoh: Sukma Dewi" autocomplete="off">
+    <p class="labelForm">Pilih karakter</p>
+    <div class="pilihKarakter">
+      <button type="button" class="kartuKarakter" data-gender="pria"><img src="assets/characters/player/idle.png" alt="Karakter pria"><span>👨 Pria</span></button>
+      <button type="button" class="kartuKarakter" data-gender="wanita"><img src="assets/characters/pelanggan/idle.png" alt="Karakter wanita"><span>👩 Wanita</span></button>
+    </div>
+    <div class="tombolMulai">
+      <button id="btnSimpanProfil" class="btnUtama">✓ MULAI MEMBANGUN</button>
+      <button id="btnKembaliSinematik" class="btnUtama sekunder">← Kembali</button>
+    </div>
+    <p id="infoIdentitas" class="infoSave"></p>
+  </div>
+  <!-- Tahap 3: narasi pembuka -->
+  <div id="tahapNarasi" class="kartuMulai" style="display:none">
+    <h2>Selamat datang di Kepulauan Meranti</h2>
+    <p class="narasi">Selamat datang di Kepulauan Meranti. Kamu telah dipercaya menjadi pemimpin pembangunan. Sebuah wilayah dengan kekayaan alam yang luar biasa kini menantikan perubahan. Bangun permukiman, ciptakan lapangan pekerjaan, kembangkan ekonomi, bangun infrastruktur, dan wujudkan masa depan yang lebih baik.</p>
+    <div class="tombolMulai">
+      <button id="btnMulaiNarasi" class="btnUtama">🏝️ MULAI MEMBANGUN MERANTI</button>
+    </div>
+  </div>
+  <!-- Tahap profil pemain -->
+  <div id="tahapProfil" class="kartuMulai" style="display:none">
+    <h2>Profil Pemain</h2>
+    <div class="profilIsi">
+      <img id="profilAvatar" src="assets/characters/player/idle.png" alt="Avatar pemain">
+      <div class="profilData">
+        <p><b>Pemimpin:</b> <span id="profilNama">—</span></p>
+        <p><b>Karakter:</b> <span id="profilGender">—</span></p>
+        <p><b>Level:</b> <span id="profilLevel">—</span></p>
+        <p><b>Hari:</b> <span id="profilHari">—</span> · <b>Penduduk:</b> <span id="profilPenduduk">—</span></p>
+        <p><b>Kas:</b> <span id="profilUang">—</span></p>
+        <p><b>Sejak:</b> <span id="profilDibuat">—</span></p>
+      </div>
+    </div>
+    <div class="tombolMulai">
+      <button id="btnTutupProfil" class="btnUtama">Tutup</button>
     </div>
   </div>
 </div>
@@ -40,6 +91,16 @@
       <span id="modeChipTeks"></span>
       <button id="btnBatalMode">✕ Batal</button>
     </div>
+    <div id="kartuTutorial" style="display:none">
+      <div class="tutorialAtas"><span id="tutorialLangkah">Langkah 1 dari 7</span><span id="tutorialJudul"></span></div>
+      <div class="tutorialBarLuar"><div id="tutorialBar" class="tutorialBarDalam"></div></div>
+      <p id="tutorialDes"></p>
+      <div class="tutorialTombol">
+        <button id="btnTutorialAksi" class="btnTutorialAksi" style="display:none"></button>
+        <button id="btnTutorialLewatiLangkah" class="btnTutorialKecil">Lewati langkah ›</button>
+        <button id="btnTutorialLewati" class="btnTutorialKecil">✕ Lewati tutorial</button>
+      </div>
+    </div>
   </section>
 
   <!-- Bar atas: identitas + sumber daya + ikon -->
@@ -47,7 +108,8 @@
     <div class="identitas">
       <img id="avatarPemain" src="assets/characters/player/idle.png" alt="Pengelola Pulau">
       <div class="judulBlok">
-        <div class="judulGame">🌴 Saudagar Sagu <b>Meranti</b></div>
+        <div class="judulGame">🌴 MERANTI <b>RISING</b></div>
+        <div id="namaPemimpin" class="namaPemimpin">Pemimpin: —</div>
         <div class="levelBox">
           <span id="lvlTeks">Lv. 1 · Pulau Alam</span>
           <div class="xpBarLuar"><div id="xpBar" class="xpBarDalam"></div></div>
@@ -172,8 +234,8 @@
   </div>
 </div>
 
-<script src="js/city-data.js?v=3"></script>
-<script src="js/city-map.js?v=2"></script>
-<script src="js/city.js?v=14"></script>
+<script src="js/city-data.js?v=4"></script>
+<script src="js/city-map.js?v=3"></script>
+<script src="js/city.js?v=15"></script>
 </body>
 </html>

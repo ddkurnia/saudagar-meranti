@@ -214,6 +214,7 @@ function layarKeDunia(px, py, lebar, tinggi) {
 function kameraGeser(dxLayar, dyLayar) {
   kamera.cx -= dxLayar / kamera.zoom;
   kamera.cy -= dyLayar / kamera.zoom;
+  if (typeof cekTutorial === "function") cekTutorial();
 }
 function kameraZoomDi(px, py, faktor, lebar, tinggi) {
   const sebelum = layarKeDunia(px, py, lebar, tinggi);
@@ -221,6 +222,7 @@ function kameraZoomDi(px, py, faktor, lebar, tinggi) {
   const sesudah = layarKeDunia(px, py, lebar, tinggi);
   kamera.cx += sebelum.x - sesudah.x;
   kamera.cy += sebelum.y - sesudah.y;
+  if (typeof cekTutorial === "function") cekTutorial();
 }
 function kameraZoomTombol(faktor, lebar, tinggi) {
   kameraZoomDi(lebar / 2, tinggi / 2, faktor, lebar, tinggi);

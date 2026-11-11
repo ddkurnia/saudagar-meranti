@@ -9,6 +9,7 @@ const CITY = {
   VERSI_SAVE: 1,
   SAVE_KEY: "saudagarSaguMerantiCityV1",
   SAVE_LAMA: "saudagarSaguMerantiV1",
+  PROFIL_KEY: "merantiRisingProfilV1", // profil pemain (nama, karakter, avatar) — terpisah dari simpanan game
   GRID_W: 96,
   GRID_H: 72,
   TILE_W: 64,

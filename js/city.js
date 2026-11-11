@@ -5,10 +5,96 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v15.1.3"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v16"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+// ---------------- Profil pemain & tutorial (MERANTI RISING, v16) ----------------
+const AVATAR_KARAKTER = { pria: "assets/characters/player/idle.png", wanita: "assets/characters/pelanggan/idle.png" };
+let profilPemain = null; // {nama, gender, avatar, tutorialSelesai, dibuat}
+function muatProfil() {
+  try {
+    const t = localStorage.getItem(CITY.PROFIL_KEY);
+    profilPemain = t ? JSON.parse(t) : null;
+    if (profilPemain && !profilPemain.nama) profilPemain = null;
+  } catch (e) { profilPemain = null; }
+}
+function simpanProfil() { try { localStorage.setItem(CITY.PROFIL_KEY, JSON.stringify(profilPemain)); } catch (e) {} }
+
+const TUTORIAL = [
+  { judul: "Kenali peta Kepulauan Meranti", des: "Seret peta dengan 1 jari (atau mouse) untuk menggeser, cubit 2 jari (atau roda mouse) untuk zoom. Lihat pulau utama, sungai, dan laut di sekelilingnya." },
+  { judul: "Pilih lahan kosong", des: "Ketuk sebuah petak rumput kosong di dekat jalan. Petak yang dipilih akan menampilkan info lahannya." },
+  { judul: "Bangun rumah pertama", des: "Buka menu bangun, pilih Rumah Sederhana (Rp25.000 + 4 kayu), lalu ketuk lahan kosong di samping jalan.", aksi: { label: "🏠 Buka menu bangun", fn: () => bukaMenuBangunUntuk("permukiman") } },
+  { judul: "Buka jalan pertama", des: "Pilih Jalan Tanah di menu Jalan, lalu seret di peta untuk menggambar jalan. Bangunan butuh jalan di sampingnya.", aksi: { label: "🛣️ Pilih Jalan Tanah", fn: () => bukaMenuBangunUntuk("jalan", "jalan", "jalan-tanah") } },
+  { judul: "Rekrut pekerja", des: "Penduduk yang tinggal di rumahmu siap bekerja. Majukan satu hari dengan tombol ⏭ (Hari Berikutnya) dan lihat pekerja dipekerjakan di dermaga.", aksi: { label: "⏭ Hari Berikutnya", fn: () => hariBerikutnya() } },
+  { judul: "Bangun kebun sagu", des: "Buka menu Lahan, pilih Kebun Sagu (Rp50.000 + 2 kayu), lalu bangun di lahan kosong. Kebun menghasilkan 3 tual sagu per hari.", aksi: { label: "🌱 Pilih Kebun Sagu", fn: () => bukaMenuBangunUntuk("perkebunan", "bangun", "kebun-sagu") } },
+  { judul: "Kembangkan permukiman", des: "Bangun satu bangunan lagi (apa saja) atau tunggu penduduk bertambah sampai 10 jiwa. Permukimanmu sudah berjalan — lanjutkan sampai menjadi kota!" },
+];
+let tutorialKameraAwal = null, tutorialJalanAwal = 0, tutorialBangunanAwal = 0, tutorialRumahAwal = 0, tutorialHariAwal = 0;
+function bukaMenuBangunUntuk(tab, jenisMode, idMode) {
+  const mb = $("menuBangun");
+  mb.classList.remove("tersembunyi");
+  $("btnModeBangun").classList.add("aktif");
+  kategoriBangun = tab; renderMenuBangun();
+  if (jenisMode) { mode = { jenis: jenisMode, id: idMode }; tilePratinjau = null; terpilih = null; renderHUD(); renderMenuBangun(); }
+  bunyiKlik();
+}
+function tampilkanTutorial() {
+  if (!S || !S.tutorial || !S.tutorial.aktif || S.tutorial.selesai) { $("kartuTutorial").style.display = "none"; return; }
+  const t = TUTORIAL[S.tutorial.langkah];
+  if (!t) { selesaikanTutorial(); return; }
+  if (S.tutorial.langkah === 0) tutorialKameraAwal = { cx: kamera.cx, cy: kamera.cy, zoom: kamera.zoom };
+  if (S.tutorial.langkah === 2) tutorialRumahAwal = S.bangunan.filter(b => (BANGUNAN_MAP[b.id].rumah || 0) > 0).length;
+  if (S.tutorial.langkah === 3) tutorialJalanAwal = S.jalan.length;
+  if (S.tutorial.langkah === 4) tutorialHariAwal = S.hari;
+  if (S.tutorial.langkah === 6) tutorialBangunanAwal = S.bangunan.length;
+  $("tutorialLangkah").textContent = "Langkah " + (S.tutorial.langkah + 1) + " dari " + TUTORIAL.length;
+  $("tutorialJudul").textContent = t.judul;
+  $("tutorialDes").textContent = t.des;
+  $("tutorialBar").style.width = (S.tutorial.langkah / TUTORIAL.length * 100) + "%";
+  const btnAksi = $("btnTutorialAksi");
+  if (t.aksi) { btnAksi.style.display = "inline-block"; btnAksi.textContent = t.aksi.label; btnAksi.onclick = t.aksi.fn; }
+  else btnAksi.style.display = "none";
+  $("kartuTutorial").style.display = "block";
+  cekTutorial(); // langkah yang kondisinya sudah terpenuhi langsung dilewati
+}
+function cekTutorial() {
+  if (!S || !S.tutorial || !S.tutorial.aktif || S.tutorial.selesai) return;
+  const L = S.tutorial.langkah;
+  let selesai = false;
+  if (L === 0) {
+    if (tutorialKameraAwal && (Math.abs(kamera.cx - tutorialKameraAwal.cx) > 40 || Math.abs(kamera.cy - tutorialKameraAwal.cy) > 40 || Math.abs(kamera.zoom - tutorialKameraAwal.zoom) > 0.15)) selesai = true;
+  } else if (L === 1) {
+    if (terpilih && terpilih.jenis === "tile") selesai = true;
+  } else if (L === 2) {
+    if (S.bangunan.filter(b => (BANGUNAN_MAP[b.id].rumah || 0) > 0).length > tutorialRumahAwal) selesai = true;
+  } else if (L === 3) {
+    if (S.jalan.length > tutorialJalanAwal) selesai = true;
+  } else if (L === 4) {
+    if (S.hari > tutorialHariAwal && hitungTenagaKerja().bekerja > 0) selesai = true;
+  } else if (L === 5) {
+    if (S.bangunan.some(b => b.id === "kebun-sagu")) selesai = true;
+  } else if (L === 6) {
+    if (S.bangunan.length > tutorialBangunanAwal || S.penduduk.total >= 10) selesai = true;
+  }
+  if (selesai) lanjutTutorial();
+}
+function lanjutTutorial() {
+  if (!S || !S.tutorial) return;
+  S.tutorial.langkah++;
+  if (S.tutorial.langkah >= TUTORIAL.length) { selesaikanTutorial(); return; }
+  simpan(); tampilkanTutorial();
+}
+function selesaikanTutorial() {
+  if (!S || !S.tutorial) return;
+  S.tutorial.aktif = false; S.tutorial.selesai = true;
+  if (profilPemain) { profilPemain.tutorialSelesai = true; simpanProfil(); }
+  $("kartuTutorial").style.display = "none";
+  simpan(); renderHUD();
+  toast("🎉 Tutorial selesai! Selamat membangun Meranti, " + (S.pemimpin ? S.pemimpin.nama : "Pemimpin") + "!", "ok");
+  bunyiSukses();
+}
 
 // ---------------- State ----------------
 let peta = null;
@@ -43,6 +129,8 @@ function stateBaru(petaBaru) {
     petaVersi: 2, // v15: kepulauan 96x72, 25 pulau
     pulau: pulauStateBaru(),
     ruteFeri: [], // { id, pulauId, dari:{x,y}, ke:{x,y}, t, arah }
+    pemimpin: profilPemain ? { nama: profilPemain.nama, gender: profilPemain.gender, avatar: profilPemain.avatar } : { nama: "Pemimpin", gender: "pria", avatar: AVATAR_KARAKTER.pria },
+    tutorial: { aktif: profilPemain ? !profilPemain.tutorialSelesai : true, langkah: 0, selesai: profilPemain ? !!profilPemain.tutorialSelesai : false },
   };
   for (const k of Object.keys(KOMODITAS)) st.komoditas[k] = 0;
   // Migrasi dari game lama (v1-v12): modal awal dari usaha sagu lama
@@ -376,6 +464,7 @@ function bangunDi(def, x, y, rot) {
   log("Membangun " + def.nama + " di (" + (x + 1) + "," + (y + 1) + ").");
   simpan(); renderHUD(); renderPanelKanan(); renderMenuBangun();
   if (panelKiri === "misi") renderPanelKiri(); // penghitung misi langsung diperbarui
+  cekTutorial();
   return true;
 }
 function bangunJalanDi(tipe, x, y) {
@@ -387,6 +476,7 @@ function bangunJalanDi(tipe, x, y) {
   S.statistik.jalan++;
   bunyiKlik(); simpan(); renderHUD();
   if (panelKiri === "misi") renderPanelKiri(); // penghitung misi langsung diperbarui
+  cekTutorial();
   return true;
 }
 function bangunJembatanDi(tipe, x, y) {
@@ -398,6 +488,7 @@ function bangunJembatanDi(tipe, x, y) {
   bunyiSukses(); toast(JEMBATAN[tipe].nama + " dibangun.", "ok");
   simpan(); renderHUD();
   if (panelKiri === "misi") renderPanelKiri(); // penghitung misi langsung diperbarui
+  cekTutorial();
   return true;
 }
 // ---------------- Jembatan Gantung (v15): membentang lurus 2-8 petak air ----------------
@@ -451,6 +542,7 @@ function bangunJembatanGantung(x0, y0, x1, y1) {
   log("Jembatan Gantung selesai (" + cek.n + " petak).");
   simpan(); renderHUD();
   if (panelKiri === "misi") renderPanelKiri(); // penghitung misi langsung diperbarui
+  cekTutorial();
   return true;
 }
 function catatDibangun(def) {
@@ -751,6 +843,7 @@ function hariBerikutnya() {
   log("Hari " + S.hari + " — pemasukan " + rp(masukTotal) + ", pengeluaran " + rp(keluarTotal) + ", penduduk " + popBaru + ".");
   if (S.uang < 0) { toast("Kas minus! Jual komoditas atau kurangi biaya operasional.", "gagal"); }
   simpan(); renderHUD(); renderPanelKiri(); renderPanelKanan(); renderMenuBangun();
+  cekTutorial();
 }
 
 function cekMisi() {
@@ -1664,6 +1757,7 @@ function renderHUD() {
   if (!S) return;
   const lvl = LEVEL_PERADABAN[S.level - 1];
   $("lvlTeks").textContent = "Lv. " + S.level + " · " + lvl.nama;
+  if (S.pemimpin) $("namaPemimpin").textContent = "Pemimpin: " + S.pemimpin.nama;
   const butuhXp = S.level >= 6 ? 0 : xpUntukLevel(S.level);
   const persenXp = S.level >= 6 ? 100 : Math.min(100, (S.xp / butuhXp) * 100);
   $("xpBar").style.width = persenXp + "%";
@@ -2175,6 +2269,7 @@ function tanganiKetuk(t, tombol, sentuh, layar) {
     else terpilih = { jenis: "tile", x: t.x, y: t.y };
     konfirmasiHapus = false;
     bunyiKlik(); renderPanelKanan();
+    cekTutorial();
   } else if (mode.jenis === "bangun") {
     if (sentuh && !(tilePratinjau && tilePratinjau.x === t.x && tilePratinjau.y === t.y)) {
       tilePratinjau = { x: t.x, y: t.y }; hover = { x: t.x, y: t.y };
@@ -2434,6 +2529,10 @@ function mulaiGame(baru) {
     if (S.petaVersi !== 2) migrasiKepulauan(S);
     if (!S.pulau) S.pulau = pulauStateBaru();
     if (!S.ruteFeri) S.ruteFeri = [];
+    // Simpanan lama (sebelum v16) belum punya pemimpin/tutorial — isi dari profil, tutorial dianggap selesai
+    if (!S.pemimpin && profilPemain) S.pemimpin = { nama: profilPemain.nama, gender: profilPemain.gender, avatar: profilPemain.avatar };
+    if (!S.pemimpin) S.pemimpin = { nama: "Pemimpin", gender: "pria", avatar: AVATAR_KARAKTER.pria };
+    if (!S.tutorial) S.tutorial = { aktif: false, langkah: 0, selesai: true };
     peta = generatePeta(S.seed || CITY.SEED);
     for (const c of (S.bersih || [])) { if (peta.terrain[c.y] && peta.terrain[c.y][c.x]) peta.terrain[c.y][c.x] = "rumput"; }
     S.log.unshift("Permainan dilanjutkan — Hari " + S.hari + ".");
@@ -2445,10 +2544,16 @@ function mulaiGame(baru) {
   hitungTenagaKerja();
   sinkronWarga();
   initKendaraan();
+  // Identitas pemimpin di bar atas
+  if (S.pemimpin) {
+    $("avatarPemain").src = S.pemimpin.avatar;
+    $("namaPemimpin").textContent = "Pemimpin: " + S.pemimpin.nama;
+  }
   $("layarMulai").style.display = "none";
   $("aplikasi").style.display = "flex";
   aturUkuranKanvas();
   renderHUD(); renderMenuBangun(); renderPanelKiri(); renderPanelKanan(); renderBerita();
+  tampilkanTutorial();
   simpan();
   bunyiSukses();
 }
@@ -2459,8 +2564,33 @@ window.addEventListener("DOMContentLoaded", () => {
   pasangInput();
   pasangTombol();
   aturUkuranKanvas();
-  $("btnLanjut").style.display = adaSave() ? "inline-block" : "none";
+  // ---- Onboarding MERANTI RISING (v16) ----
+  muatProfil();
+  aturLayarMulai();
   $("infoSave").textContent = (adaSave() ? "Simpanan ditemukan — lanjutkan pembangunan pulau Anda." : "Belum ada simpanan — mulai pulau baru.") + " · Versi " + VERSI_GAME;
+  // Tahap sinematik → identitas
+  $("btnMulai").onclick = () => { bunyiKlik(); tampilkanTahap("identitas"); };
+  // Identitas: pilih karakter
+  let genderTerpilih = "pria";
+  const kartuKarakter = document.querySelectorAll(".kartuKarakter");
+  const tandaiKarakter = (g) => {
+    genderTerpilih = g;
+    kartuKarakter.forEach(k => k.classList.toggle("aktif", k.dataset.gender === g));
+  };
+  kartuKarakter.forEach(k => { k.onclick = () => { tandaiKarakter(k.dataset.gender); bunyiKlik(); }; });
+  tandaiKarakter("pria");
+  $("btnKembaliSinematik").onclick = () => { bunyiKlik(); tampilkanTahap("sinematik"); };
+  $("btnSimpanProfil").onclick = () => {
+    const nama = $("inputNama").value.trim();
+    if (!nama) { $("infoIdentitas").textContent = "Isi nama pemimpin dulu."; bunyiGagal(); return; }
+    profilPemain = { nama: nama, gender: genderTerpilih, avatar: AVATAR_KARAKTER[genderTerpilih], tutorialSelesai: false, dibuat: new Date().toISOString() };
+    simpanProfil();
+    bunyiSukses();
+    tampilkanTahap("narasi");
+  };
+  // Narasi → mulai permainan baru
+  $("btnMulaiNarasi").onclick = () => { bunyiKlik(); mulaiGame(true); };
+  // Lanjutkan / permainan baru / profil
   $("btnLanjut").onclick = () => { bunyiKlik(); mulaiGame(false); };
   $("btnBaru").onclick = () => {
     // Tanpa dialog confirm() (tidak muncul di sebagian browser/HP):
@@ -2468,14 +2598,56 @@ window.addEventListener("DOMContentLoaded", () => {
     if (adaSave() && !konfirmasiBaru) {
       konfirmasiBaru = true;
       $("btnBaru").textContent = "⚠️ Yakin? Simpanan lama dihapus";
-      toast("Ketuk ＋ Pulau Baru lagi untuk mengonfirmasi.", "ok");
-      setTimeout(() => { konfirmasiBaru = false; $("btnBaru").textContent = "＋ Pulau Baru"; }, 5000);
+      toast("Ketuk ＋ Permainan Baru lagi untuk mengonfirmasi.", "ok");
+      setTimeout(() => { konfirmasiBaru = false; $("btnBaru").textContent = "＋ PERMAINAN BARU"; }, 5000);
       return;
     }
     konfirmasiBaru = false;
-    $("btnBaru").textContent = "＋ Pulau Baru";
+    $("btnBaru").textContent = "＋ PERMAINAN BARU";
     try { localStorage.removeItem(CITY.SAVE_KEY); } catch (e) {}
-    bunyiKlik(); mulaiGame(true);
+    bunyiKlik();
+    tampilkanTahap("narasi"); // profil sudah ada — langsung ke narasi, tanpa isi nama lagi
   };
+  $("btnProfil").onclick = () => { bunyiKlik(); tampilkanProfil(); };
+  $("btnTutupProfil").onclick = () => { bunyiKlik(); tampilkanTahap("sinematik"); };
+  // Tutorial
+  $("btnTutorialLewatiLangkah").onclick = () => { bunyiKlik(); lanjutTutorial(); };
+  $("btnTutorialLewati").onclick = () => { bunyiKlik(); selesaikanTutorial(); };
   requestAnimationFrame(loop);
 });
+
+// Tampilkan salah satu tahap layar mulai (sinematik / identitas / narasi / profil)
+function tampilkanTahap(nama) {
+  for (const t of ["sinematik", "identitas", "narasi", "profil"]) {
+    $("tahap" + t.charAt(0).toUpperCase() + t.slice(1)).style.display = (t === nama) ? "block" : "none";
+  }
+  if (nama === "sinematik") aturLayarMulai();
+}
+// Atur tombol layar mulai sesuai profil & simpanan (profil tidak ditanya ulang)
+function aturLayarMulai() {
+  const adaProfil = !!profilPemain;
+  $("btnMulai").style.display = adaProfil ? "none" : "inline-block";
+  $("btnLanjut").style.display = (adaProfil && adaSave()) ? "inline-block" : "none";
+  $("btnBaru").style.display = adaProfil ? "inline-block" : "none";
+  $("btnProfil").style.display = adaProfil ? "inline-block" : "none";
+  const sambutan = $("sambutanKembali");
+  if (adaProfil) { sambutan.style.display = "block"; sambutan.textContent = "Selamat datang kembali, " + profilPemain.nama + "!"; }
+  else sambutan.style.display = "none";
+}
+function tampilkanProfil() {
+  if (!profilPemain) return;
+  $("profilAvatar").src = profilPemain.avatar;
+  $("profilNama").textContent = profilPemain.nama;
+  $("profilGender").textContent = profilPemain.gender === "wanita" ? "Wanita" : "Pria";
+  let lvl = "—", hari = "—", penduduk = "—", uang = "—";
+  try {
+    const s = JSON.parse(localStorage.getItem(CITY.SAVE_KEY) || "null");
+    if (s) { lvl = "Lv. " + s.level; hari = s.hari; penduduk = s.penduduk.total + " jiwa"; uang = rp(s.uang); }
+  } catch (e) {}
+  $("profilLevel").textContent = lvl;
+  $("profilHari").textContent = hari;
+  $("profilPenduduk").textContent = penduduk;
+  $("profilUang").textContent = uang;
+  $("profilDibuat").textContent = profilPemain.dibuat ? new Date(profilPemain.dibuat).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "—";
+  tampilkanTahap("profil");
+}

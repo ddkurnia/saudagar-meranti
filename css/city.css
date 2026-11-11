@@ -339,3 +339,51 @@ button { font-family: inherit; cursor: pointer; }
   .kartuBangun { min-height: 44px; }
   #btnGeserKiri, #btnGeserKanan { min-width: 44px; min-height: 44px; }
 }
+
+/* ---------- MERANTI RISING: pembuka sinematik ---------- */
+#layarMulai { overflow: hidden; }
+.latarSinematik { position: absolute; inset: -4%; z-index: 0; }
+.latarSinematik img { width: 100%; height: 100%; object-fit: cover; animation: kenBurns 36s ease-in-out infinite alternate; }
+@keyframes kenBurns { from { transform: scale(1) translate(0, 0); } to { transform: scale(1.12) translate(-1.5%, -1%); } }
+.awanSinematik { position: absolute; z-index: 1; pointer-events: none; height: 90px; border-radius: 50%; background: rgba(255,255,255,.55); filter: blur(28px); }
+.awan1 { width: 420px; top: 8%; left: -100px; animation: awanHanyut 46s linear infinite; }
+.awan2 { width: 320px; top: 22%; left: -80px; animation: awanHanyut 64s linear infinite; }
+@keyframes awanHanyut { from { transform: translateX(-10vw); } to { transform: translateX(115vw); } }
+.ombakSinematik { position: absolute; left: 0; right: 0; bottom: 0; height: 90px; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,.22) 55%, rgba(255,255,255,.35));
+  animation: ombakNaik 5s ease-in-out infinite alternate; }
+@keyframes ombakNaik { from { transform: translateY(14px); opacity: .7; } to { transform: translateY(0); opacity: 1; } }
+#layarMulai .kartuMulai { position: relative; z-index: 2; }
+.judulLogo { font-size: 40px; font-weight: 900; letter-spacing: 2px; line-height: 1; text-shadow: 0 4px 24px rgba(0,0,0,.55); }
+.judulLogo span { color: #fbbf24; }
+.tagline { font-size: 17px; font-weight: 800; letter-spacing: 1.5px; color: #a5f3c0; margin: 8px 0 4px; text-shadow: 0 2px 12px rgba(0,0,0,.6); }
+.sambutanKembali { font-size: 14px; color: #fde68a; font-weight: 700; margin: 10px 0 2px; }
+.namaPemimpin { font-size: 12px; font-weight: 700; color: #fde68a; white-space: nowrap; margin-top: 2px; }
+
+/* Formulir identitas */
+.labelForm { display: block; text-align: left; font-size: 13px; font-weight: 700; margin: 14px 0 6px; }
+.inputNama { width: 100%; padding: 12px 14px; font-size: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,.35); background: rgba(0,0,0,.3); color: #fff; font-family: inherit; }
+.inputNama::placeholder { color: rgba(255,255,255,.55); }
+.inputNama:focus { outline: 2px solid #22c55e; }
+.pilihKarakter { display: flex; gap: 12px; justify-content: center; }
+.kartuKarakter { flex: 1; max-width: 150px; background: rgba(255,255,255,.1); border: 2px solid rgba(255,255,255,.25); border-radius: 16px; padding: 10px 8px 8px; color: #fff; font-size: 14px; font-weight: 700; }
+.kartuKarakter img { width: 84px; height: 110px; object-fit: contain; display: block; margin: 0 auto 4px; }
+.kartuKarakter.aktif { border-color: #22c55e; background: rgba(34,197,94,.25); box-shadow: 0 0 0 3px rgba(34,197,94,.35); }
+.narasi { font-size: 15px; line-height: 1.7; text-align: left; color: #e8f0f2; background: rgba(0,0,0,.25); border-radius: 12px; padding: 14px 16px; margin: 14px 0 6px; }
+
+/* Profil pemain */
+.profilIsi { display: flex; gap: 16px; align-items: center; text-align: left; background: rgba(0,0,0,.25); border-radius: 12px; padding: 14px; margin: 12px 0; }
+#profilAvatar { width: 96px; height: 124px; object-fit: contain; flex: none; }
+.profilData p { font-size: 14px; line-height: 1.6; margin: 2px 0; }
+
+/* Kartu tutorial interaktif */
+#kartuTutorial { position: absolute; top: calc(78px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); z-index: 24; width: min(560px, 92%); background: rgba(8, 28, 48, .92); border: 1px solid rgba(74, 222, 128, .55); border-radius: 16px; padding: 12px 16px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 12px 32px rgba(0,0,0,.45); }
+.tutorialAtas { display: flex; gap: 10px; align-items: baseline; }
+#tutorialLangkah { font-size: 11px; font-weight: 800; color: #4ade80; white-space: nowrap; }
+#tutorialJudul { font-size: 15px; font-weight: 800; }
+.tutorialBarLuar { height: 6px; background: rgba(255,255,255,.18); border-radius: 3px; overflow: hidden; margin: 8px 0; }
+.tutorialBarDalam { height: 100%; width: 0%; background: linear-gradient(90deg, #22c55e, #4ade80); transition: width .4s; }
+#tutorialDes { font-size: 13px; line-height: 1.55; color: #dbe7f3; }
+.tutorialTombol { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.btnTutorialAksi { background: linear-gradient(135deg, #16a34a, #22c55e); color: #fff; border: none; border-radius: 10px; padding: 8px 14px; font-size: 13px; font-weight: 800; min-height: 44px; }
+.btnTutorialKecil { background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.25); border-radius: 10px; padding: 8px 12px; font-size: 12.5px; min-height: 44px; }

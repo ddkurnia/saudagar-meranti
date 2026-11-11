@@ -6,6 +6,43 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v16 — MERANTI RISING: Onboarding Pemain (2026-11-11)
+
+- **Nama resmi game: MERANTI RISING** — tagline **"AYO MEMBANGUN MERANTI!"**
+  (judul di bar atas & judul halaman diganti; nama lama "Saudagar Sagu
+  Meranti" tetap dipakai di repo & URL).
+- **Halaman pembuka sinematik:** foto pulau Meranti yang masih alami
+  saat fajar (`assets/images/pembuka-meranti.webp`, 1920×1280) sebagai
+  latar dengan animasi Ken Burns, awan yang hanyut, dan ombak di bawah,
+  logo MERANTI RISING + tagline + tombol MULAI PERMAINAN. Peta tidak
+  langsung ditampilkan.
+- **Formulir identitas pemain:** nama pemimpin + pilihan karakter
+  Pria (sprite player) / Wanita (sprite pelanggan, berhijab pink) +
+  avatar. Profil disimpan permanen di localStorage
+  (`merantiRisingProfilV1`) — **nama tidak ditanya ulang saat
+  refresh**; pemain lama langsung melihat LANJUTKAN PERMAINAN /
+  PERMAINAN BARU / PROFIL PEMAIN + sambutan "Selamat datang kembali,
+  [Nama]!".
+- **Narasi pembuka** (teks persis sesuai permintaan pengguna) tampil
+  setelah identitas (atau setelah konfirmasi Permainan Baru).
+- **Tutorial interaktif 7 langkah** (kartu di atas peta, ada tombol
+  aksi kontekstual + "Lewati langkah" + "Lewati tutorial"): 1) kenali
+  peta (geser/zoom), 2) pilih lahan kosong, 3) bangun rumah pertama,
+  4) buka jalan pertama, 5) rekrut pekerja (majukan 1 hari — pekerja
+  dipekerjakan di dermaga), 6) bangun kebun sagu, 7) kembangkan
+  permukiman (1 bangunan lagi / 10 jiwa). Langkah yang kondisinya
+  sudah terpenuhi langsung dilewati. Tutorial selesai dicatat permanen
+  di profil (tidak diulang di permainan baru).
+- **Nama pemimpin di dashboard:** "Pemimpin: [Nama]" di bar atas
+  (di bawah judul) + avatar sesuai karakter yang dipilih. Panel
+  PROFIL PEMAIN menampilkan nama, karakter, level, hari, penduduk,
+  kas, dan tanggal mulai.
+- **Integrasi penyimpanan:** profil (localStorage) terpisah dari
+  simpanan game; simpanan game ikut menyimpan pemimpin + status
+  tutorial. Simpanan lama (sebelum v16) dimigrasikan: pemimpin diisi
+  dari profil, tutorial dianggap selesai.
+- Uji headless lolos (`TEST_V13_OK`, 163 cek).
+
 ## Yang baru di v15.1.3 — Perbaikan dari cek live HP (2026-11-11)
 
 - **Jam hari baru:** tombol "Hari berikutnya" kini memulai hari baru

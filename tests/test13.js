@@ -55,7 +55,7 @@ const src = fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-data
   + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-map.js", "utf8")
   + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city.js", "utf8");
 vm.runInContext(src, sandbox);
-for (const nama of ["S", "peta", "BANGUNAN", "BANGUNAN_MAP", "TEKNOLOGI_MAP", "KATEGORI", "MISI", "LEVEL_PERADABAN", "KOMODITAS", "JALAN", "JEMBATAN", "TERRAIN", "CITY", "mode", "hover", "terpilih", "kecepatan", "kamera", "jamVisual", "akumulasiHari", "wargaVisual", "kendaraanVisual", "TAB_BANGUN", "tilePratinjau", "jembatanMulai"]) {
+for (const nama of ["S", "peta", "BANGUNAN", "BANGUNAN_MAP", "TEKNOLOGI_MAP", "KATEGORI", "MISI", "LEVEL_PERADABAN", "KOMODITAS", "JALAN", "JEMBATAN", "TERRAIN", "CITY", "mode", "hover", "terpilih", "kecepatan", "kamera", "jamVisual", "akumulasiHari", "wargaVisual", "kendaraanVisual", "TAB_BANGUN", "tilePratinjau", "jembatanMulai", "profilPemain", "TUTORIAL"]) {
   Object.defineProperty(sandbox, nama, { get: () => vm.runInContext(nama, sandbox), configurable: true });
 }
 listeners["DOMContentLoaded"]();
@@ -581,5 +581,101 @@ C.bukaTabKiri("misi");
 cek("ketuk ikon lagi membuka panel kiri", !elKiri.classList.contains("tersembunyi"));
 C.bukaTabKiri("riset");
 cek("ketuk ikon lain mengganti tab", vm.runInContext("panelKiri", sandbox) === "riset" && !elKiri.classList.contains("tersembunyi"));
+
+// ---- v16: MERANTI RISING — onboarding & tutorial ----
+// Profil pemain tersimpan permanen (localStorage) dan dimuat lagi
+vm.runInContext('profilPemain = { nama: "Sukma", gender: "wanita", avatar: AVATAR_KARAKTER.wanita, tutorialSelesai: false, dibuat: "2026-11-11T00:00:00.000Z" }; simpanProfil(); profilPemain = null; muatProfil();', sandbox);
+cek("profil tersimpan & dimuat dari localStorage", C.profilPemain && C.profilPemain.nama === "Sukma" && C.profilPemain.gender === "wanita" && C.profilPemain.avatar === "assets/characters/pelanggan/idle.png", C.profilPemain ? JSON.stringify(C.profilPemain) : "null");
+// State baru memakai profil (pemimpin + tutorial aktif)
+const stBaru = C.stateBaru(C.peta);
+cek("state baru: pemimpin dari profil", stBaru.pemimpin && stBaru.pemimpin.nama === "Sukma" && stBaru.pemimpin.avatar === "assets/characters/pelanggan/idle.png");
+cek("state baru: tutorial aktif untuk pemain baru", stBaru.tutorial && stBaru.tutorial.aktif === true && stBaru.tutorial.selesai === false && stBaru.tutorial.langkah === 0);
+// Layar mulai: profil ada → tombol MULAI disembunyikan, LANJUTKAN/BARU/PROFIL tampil
+C.aturLayarMulai();
+cek("layar mulai: btnMulai disembunyikan bila profil ada", vm.runInContext('$("btnMulai").style.display', sandbox) === "none");
+cek("layar mulai: btnProfil tampil bila profil ada", vm.runInContext('$("btnProfil").style.display', sandbox) === "inline-block");
+// Permainan baru: tutorial langkah 0 + nama pemimpin di bar atas
+C.mulaiGame(true);
+cek("permainan baru: tutorial aktif di langkah 0", C.S.tutorial.aktif === true && C.S.tutorial.langkah === 0);
+cek("bar atas: nama pemimpin tampil", vm.runInContext('$("namaPemimpin").textContent', sandbox) === "Pemimpin: Sukma");
+cek("bar atas: avatar wanita dipakai", vm.runInContext('$("avatarPemain").src', sandbox) === "assets/characters/pelanggan/idle.png");
+// Cari petak rumput kosong di samping jalan (untuk rumah) & petak jalan kosong
+function cariTileRumah() {
+  for (const j of C.S.jalan) {
+    for (const d of [[1,0],[-1,0],[0,1],[0,-1]]) {
+      const x = j.x + d[0], y = j.y + d[1];
+      const t = C.terrainDi(C.peta, x, y);
+      // Rumah boleh di rumput maupun pantai (kawasan pendaratan berpasir)
+      if ((t === "rumput" || t === "pantai") && !C.adaJalanDi(C.S, x, y) && !C.adaBangunanDi(C.S, x, y)) return { x, y };
+    }
+  }
+  return null;
+}
+function cariTileJalan() {
+  for (let y = 0; y < C.peta.H; y++) for (let x = 0; x < C.peta.W; x++) {
+    if (C.terrainDi(C.peta, x, y) === "rumput" && !C.adaJalanDi(C.S, x, y) && !C.adaBangunanDi(C.S, x, y)) return { x, y };
+  }
+  return null;
+}
+function cariTileKebun() {
+  for (let y = 0; y < C.peta.H - 1; y++) for (let x = 0; x < C.peta.W - 1; x++) {
+    let ok = true;
+    for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) {
+      if (C.terrainDi(C.peta, x + i, y + j) !== "rumput" || C.adaJalanDi(C.S, x + i, y + j) || C.adaBangunanDi(C.S, x + i, y + j)) ok = false;
+    }
+    if (!ok) continue;
+    // butuh jalan di samping footprint 2x2
+    for (let j = -1; j <= 2; j++) for (let i = -1; i <= 2; i++) {
+      if ((i === -1 || i === 2 || j === -1 || j === 2) && C.adaJalanDi(C.S, x + i, y + j)) return { x, y };
+    }
+  }
+  return null;
+}
+// Langkah 0: geser kamera (reset pilihan dulu — tes sebelumnya meninggalkan terpilih)
+vm.runInContext('terpilih = null;', sandbox);
+C.kameraGeser(100, 0);
+cek("tutorial langkah 0 → 1 setelah kamera digeser", C.S.tutorial.langkah === 1, "langkah=" + C.S.tutorial.langkah);
+// Langkah 1: pilih petak kosong
+vm.runInContext('terpilih = { jenis: "tile", x: 10, y: 10 }; cekTutorial();', sandbox);
+cek("tutorial langkah 1 → 2 setelah memilih petak", C.S.tutorial.langkah === 2, "langkah=" + C.S.tutorial.langkah);
+// Langkah 2: bangun rumah pertama
+const tRumah = cariTileRumah();
+cek("tutorial: ada petak valid untuk rumah", !!tRumah);
+if (tRumah) {
+  const ok = C.bangunDi(C.BANGUNAN_MAP["rumah-sederhana"], tRumah.x, tRumah.y, 0);
+  cek("tutorial langkah 2 → 3 setelah membangun rumah", ok === true && C.S.tutorial.langkah === 3, "ok=" + ok + " langkah=" + C.S.tutorial.langkah);
+}
+// Langkah 3: buka jalan pertama
+const tJalan = cariTileJalan();
+cek("tutorial: ada petak valid untuk jalan", !!tJalan);
+if (tJalan) {
+  const ok = C.bangunJalanDi("jalan-tanah", tJalan.x, tJalan.y);
+  cek("tutorial langkah 3 → 4 setelah membangun jalan", ok === true && C.S.tutorial.langkah === 4, "ok=" + ok + " langkah=" + C.S.tutorial.langkah);
+}
+// Langkah 4: majukan satu hari (pekerja direkrut di dermaga)
+const hariSblm = C.S.hari;
+C.hariBerikutnya();
+cek("tutorial langkah 4 → 5 setelah hari berganti & pekerja bekerja", C.S.hari === hariSblm + 1 && C.S.tutorial.langkah === 5, "hari=" + C.S.hari + " langkah=" + C.S.tutorial.langkah);
+// Langkah 5: bangun kebun sagu
+const tKebun = cariTileKebun();
+cek("tutorial: ada lahan 2x2 valid untuk kebun sagu", !!tKebun);
+if (tKebun) {
+  const ok = C.bangunDi(C.BANGUNAN_MAP["kebun-sagu"], tKebun.x, tKebun.y, 0);
+  cek("tutorial langkah 5 → 6 setelah membangun kebun sagu", ok === true && C.S.tutorial.langkah === 6, "ok=" + ok + " langkah=" + C.S.tutorial.langkah);
+}
+// Langkah 6: bangun satu bangunan lagi → tutorial selesai
+const tRumah2 = cariTileRumah();
+if (tRumah2) {
+  const ok = C.bangunDi(C.BANGUNAN_MAP["rumah-sederhana"], tRumah2.x, tRumah2.y, 0);
+  cek("tutorial selesai setelah membangun satu bangunan lagi", ok === true && C.S.tutorial.selesai === true && C.S.tutorial.aktif === false, "ok=" + ok + " selesai=" + C.S.tutorial.selesai);
+}
+cek("profil: tutorialSelesai tercatat permanen", C.profilPemain && C.profilPemain.tutorialSelesai === true);
+// Simpanan lama tanpa pemimpin/tutorial dimigrasikan (tutorial dianggap selesai)
+const sLama = JSON.parse(store.get(C.CITY.SAVE_KEY));
+delete sLama.pemimpin; delete sLama.tutorial;
+store.set(C.CITY.SAVE_KEY, JSON.stringify(sLama));
+C.mulaiGame(false);
+cek("simpanan lama: pemimpin diisi dari profil", C.S.pemimpin && C.S.pemimpin.nama === "Sukma");
+cek("simpanan lama: tutorial dianggap selesai", C.S.tutorial && C.S.tutorial.selesai === true && C.S.tutorial.aktif === false);
 
 console.log(gagal === 0 ? "TEST_V13_OK" : "TEST_V13_GAGAL:" + gagal + " dari " + (lulus + gagal));

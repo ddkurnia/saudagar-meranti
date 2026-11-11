@@ -1,18 +1,27 @@
 {
  "game": "Saudagar Sagu Meranti",
- "version": 12,
- "note": "Aset v15: 4 aset baru (Terminal Feri, Kapal Feri, Jembatan Gantung, Perahu Penyeberangan) untuk kepulauan 25 pulau.",
- "total_files": 136,
- "total_bytes": 33651797,
+ "version": 13,
+ "note": "Aset v16: gambar pembuka sinematik MERANTI RISING (pembuka-meranti.webp, pulau alami saat fajar).",
+ "total_files": 137,
+ "total_bytes": 34393875,
  "assets": [
   {
-   "path": "assets/referensi-konsep.png",
-   "category": "referensi-konsep.png",
-   "size_bytes": 3216193,
-   "width": 1672,
-   "height": 941,
-   "mode": "RGB",
-   "corners_transparent": false
+   "path": "assets/animations/asap-cerobong-sheet.png",
+   "category": "animations",
+   "size_bytes": 77422,
+   "width": 1024,
+   "height": 256,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/animations/ombak-sheet.png",
+   "category": "animations",
+   "size_bytes": 138166,
+   "width": 1024,
+   "height": 256,
+   "mode": "RGBA",
+   "corners_transparent": true
   },
   {
    "path": "assets/buildings/building-apartemen.png",
@@ -510,168 +519,6 @@
    "corners_transparent": true
   },
   {
-   "path": "assets/characters/player/idle.png",
-   "category": "characters",
-   "size_bytes": 147415,
-   "width": 402,
-   "height": 517,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/characters/player/interact.png",
-   "category": "characters",
-   "size_bytes": 166436,
-   "width": 402,
-   "height": 517,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/characters/player/walk-strip.png",
-   "category": "characters",
-   "size_bytes": 217943,
-   "width": 1024,
-   "height": 256,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/characters/player/walk.png",
-   "category": "characters",
-   "size_bytes": 153938,
-   "width": 402,
-   "height": 517,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/characters/player/work-strip.png",
-   "category": "characters",
-   "size_bytes": 231762,
-   "width": 1024,
-   "height": 256,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/characters/player/work.png",
-   "category": "characters",
-   "size_bytes": 180591,
-   "width": 402,
-   "height": 517,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/characters/petani/idle.png",
-   "category": "characters",
-   "size_bytes": 174381,
-   "width": 473,
-   "height": 527,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/characters/petani/interact.png",
-   "category": "characters",
-   "size_bytes": 191189,
-   "width": 473,
-   "height": 527,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/characters/petani/walk-strip.png",
-   "category": "characters",
-   "size_bytes": 228815,
-   "width": 1024,
-   "height": 256,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/characters/petani/walk.png",
-   "category": "characters",
-   "size_bytes": 189440,
-   "width": 473,
-   "height": 527,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/characters/petani/work-strip.png",
-   "category": "characters",
-   "size_bytes": 235990,
-   "width": 1024,
-   "height": 256,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/characters/petani/work.png",
-   "category": "characters",
-   "size_bytes": 217721,
-   "width": 473,
-   "height": 527,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/characters/pekerja-kilang/idle.png",
-   "category": "characters",
-   "size_bytes": 158130,
-   "width": 433,
-   "height": 524,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/characters/pekerja-kilang/interact.png",
-   "category": "characters",
-   "size_bytes": 176003,
-   "width": 433,
-   "height": 524,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/characters/pekerja-kilang/walk-strip.png",
-   "category": "characters",
-   "size_bytes": 206871,
-   "width": 1024,
-   "height": 256,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/characters/pekerja-kilang/walk.png",
-   "category": "characters",
-   "size_bytes": 163260,
-   "width": 433,
-   "height": 524,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/characters/pekerja-kilang/work-strip.png",
-   "category": "characters",
-   "size_bytes": 272680,
-   "width": 1024,
-   "height": 256,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/characters/pekerja-kilang/work.png",
-   "category": "characters",
-   "size_bytes": 201195,
-   "width": 433,
-   "height": 524,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
    "path": "assets/characters/barista/idle.png",
    "category": "characters",
    "size_bytes": 121868,
@@ -780,6 +627,114 @@
    "corners_transparent": true
   },
   {
+   "path": "assets/characters/pekerja-kilang/idle.png",
+   "category": "characters",
+   "size_bytes": 158130,
+   "width": 433,
+   "height": 524,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/characters/pekerja-kilang/interact.png",
+   "category": "characters",
+   "size_bytes": 176003,
+   "width": 433,
+   "height": 524,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/characters/pekerja-kilang/walk-strip.png",
+   "category": "characters",
+   "size_bytes": 206871,
+   "width": 1024,
+   "height": 256,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/characters/pekerja-kilang/walk.png",
+   "category": "characters",
+   "size_bytes": 163260,
+   "width": 433,
+   "height": 524,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/characters/pekerja-kilang/work-strip.png",
+   "category": "characters",
+   "size_bytes": 272680,
+   "width": 1024,
+   "height": 256,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/characters/pekerja-kilang/work.png",
+   "category": "characters",
+   "size_bytes": 201195,
+   "width": 433,
+   "height": 524,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/characters/pekerja-pelabuhan/idle.png",
+   "category": "characters",
+   "size_bytes": 152257,
+   "width": 417,
+   "height": 527,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/characters/pekerja-pelabuhan/interact.png",
+   "category": "characters",
+   "size_bytes": 150458,
+   "width": 417,
+   "height": 527,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/characters/pekerja-pelabuhan/walk-strip.png",
+   "category": "characters",
+   "size_bytes": 202731,
+   "width": 1024,
+   "height": 256,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/characters/pekerja-pelabuhan/walk.png",
+   "category": "characters",
+   "size_bytes": 144967,
+   "width": 417,
+   "height": 527,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/characters/pekerja-pelabuhan/work-strip.png",
+   "category": "characters",
+   "size_bytes": 196315,
+   "width": 1024,
+   "height": 256,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/characters/pekerja-pelabuhan/work.png",
+   "category": "characters",
+   "size_bytes": 177753,
+   "width": 417,
+   "height": 527,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
    "path": "assets/characters/pelanggan/idle.png",
    "category": "characters",
    "size_bytes": 154316,
@@ -834,6 +789,114 @@
    "corners_transparent": true
   },
   {
+   "path": "assets/characters/petani/idle.png",
+   "category": "characters",
+   "size_bytes": 174381,
+   "width": 473,
+   "height": 527,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/characters/petani/interact.png",
+   "category": "characters",
+   "size_bytes": 191189,
+   "width": 473,
+   "height": 527,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/characters/petani/walk-strip.png",
+   "category": "characters",
+   "size_bytes": 228815,
+   "width": 1024,
+   "height": 256,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/characters/petani/walk.png",
+   "category": "characters",
+   "size_bytes": 189440,
+   "width": 473,
+   "height": 527,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/characters/petani/work-strip.png",
+   "category": "characters",
+   "size_bytes": 235990,
+   "width": 1024,
+   "height": 256,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/characters/petani/work.png",
+   "category": "characters",
+   "size_bytes": 217721,
+   "width": 473,
+   "height": 527,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/characters/player/idle.png",
+   "category": "characters",
+   "size_bytes": 147415,
+   "width": 402,
+   "height": 517,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/characters/player/interact.png",
+   "category": "characters",
+   "size_bytes": 166436,
+   "width": 402,
+   "height": 517,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/characters/player/walk-strip.png",
+   "category": "characters",
+   "size_bytes": 217943,
+   "width": 1024,
+   "height": 256,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/characters/player/walk.png",
+   "category": "characters",
+   "size_bytes": 153938,
+   "width": 402,
+   "height": 517,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/characters/player/work-strip.png",
+   "category": "characters",
+   "size_bytes": 231762,
+   "width": 1024,
+   "height": 256,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/characters/player/work.png",
+   "category": "characters",
+   "size_bytes": 180591,
+   "width": 402,
+   "height": 517,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
    "path": "assets/characters/sopir/idle.png",
    "category": "characters",
    "size_bytes": 156889,
@@ -883,60 +946,6 @@
    "category": "characters",
    "size_bytes": 180002,
    "width": 415,
-   "height": 527,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/characters/pekerja-pelabuhan/idle.png",
-   "category": "characters",
-   "size_bytes": 152257,
-   "width": 417,
-   "height": 527,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/characters/pekerja-pelabuhan/interact.png",
-   "category": "characters",
-   "size_bytes": 150458,
-   "width": 417,
-   "height": 527,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/characters/pekerja-pelabuhan/walk-strip.png",
-   "category": "characters",
-   "size_bytes": 202731,
-   "width": 1024,
-   "height": 256,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/characters/pekerja-pelabuhan/walk.png",
-   "category": "characters",
-   "size_bytes": 144967,
-   "width": 417,
-   "height": 527,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/characters/pekerja-pelabuhan/work-strip.png",
-   "category": "characters",
-   "size_bytes": 196315,
-   "width": 1024,
-   "height": 256,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/characters/pekerja-pelabuhan/work.png",
-   "category": "characters",
-   "size_bytes": 177753,
-   "width": 417,
    "height": 527,
    "mode": "RGBA",
    "corners_transparent": true
@@ -1050,76 +1059,13 @@
    "corners_transparent": true
   },
   {
-   "path": "assets/vehicles/crane.png",
-   "category": "vehicles",
-   "size_bytes": 270508,
-   "width": 500,
-   "height": 516,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/vehicles/forklift.png",
-   "category": "vehicles",
-   "size_bytes": 243458,
-   "width": 485,
-   "height": 408,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/vehicles/kapal-feri.png",
-   "category": "vehicles",
-   "size_bytes": 283092,
-   "width": 640,
-   "height": 447,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/vehicles/kapal-kargo.png",
-   "category": "vehicles",
-   "size_bytes": 266660,
-   "width": 565,
-   "height": 442,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/vehicles/perahu-kecil.png",
-   "category": "vehicles",
-   "size_bytes": 185974,
-   "width": 478,
-   "height": 324,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/vehicles/perahu-muatan.png",
-   "category": "vehicles",
-   "size_bytes": 245266,
-   "width": 512,
-   "height": 394,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/vehicles/perahu-penyeberangan.png",
-   "category": "vehicles",
-   "size_bytes": 221545,
-   "width": 627,
-   "height": 421,
-   "mode": "RGBA",
-   "corners_transparent": true
-  },
-  {
-   "path": "assets/vehicles/truk-pengangkut.png",
-   "category": "vehicles",
-   "size_bytes": 244091,
-   "width": 508,
-   "height": 452,
-   "mode": "RGBA",
-   "corners_transparent": true
+   "path": "assets/images/pembuka-meranti.webp",
+   "category": "images",
+   "size_bytes": 742078,
+   "width": 1920,
+   "height": 1280,
+   "mode": "RGB",
+   "corners_transparent": false
   },
   {
    "path": "assets/objects/conveyor.png",
@@ -1212,20 +1158,83 @@
    "corners_transparent": true
   },
   {
-   "path": "assets/animations/asap-cerobong-sheet.png",
-   "category": "animations",
-   "size_bytes": 77422,
-   "width": 1024,
-   "height": 256,
+   "path": "assets/referensi-konsep.png",
+   "category": "referensi-konsep.png",
+   "size_bytes": 3216193,
+   "width": 1672,
+   "height": 941,
+   "mode": "RGB",
+   "corners_transparent": false
+  },
+  {
+   "path": "assets/vehicles/crane.png",
+   "category": "vehicles",
+   "size_bytes": 270508,
+   "width": 500,
+   "height": 516,
    "mode": "RGBA",
    "corners_transparent": true
   },
   {
-   "path": "assets/animations/ombak-sheet.png",
-   "category": "animations",
-   "size_bytes": 138166,
-   "width": 1024,
-   "height": 256,
+   "path": "assets/vehicles/forklift.png",
+   "category": "vehicles",
+   "size_bytes": 243458,
+   "width": 485,
+   "height": 408,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/vehicles/kapal-feri.png",
+   "category": "vehicles",
+   "size_bytes": 283092,
+   "width": 640,
+   "height": 447,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/vehicles/kapal-kargo.png",
+   "category": "vehicles",
+   "size_bytes": 266660,
+   "width": 565,
+   "height": 442,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/vehicles/perahu-kecil.png",
+   "category": "vehicles",
+   "size_bytes": 185974,
+   "width": 478,
+   "height": 324,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/vehicles/perahu-muatan.png",
+   "category": "vehicles",
+   "size_bytes": 245266,
+   "width": 512,
+   "height": 394,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/vehicles/perahu-penyeberangan.png",
+   "category": "vehicles",
+   "size_bytes": 221545,
+   "width": 627,
+   "height": 421,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/vehicles/truk-pengangkut.png",
+   "category": "vehicles",
+   "size_bytes": 244091,
+   "width": 508,
+   "height": 452,
    "mode": "RGBA",
    "corners_transparent": true
   }
