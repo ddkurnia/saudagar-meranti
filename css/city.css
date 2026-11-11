@@ -756,19 +756,19 @@ h1, h2, h3 { line-height: 1.2; font-weight: 800; }
 .logoMulai { line-height: 0; margin-bottom: 4px; }
 .logoMulai svg { filter: drop-shadow(0 4px 16px rgba(0, 0, 0, .5)); }
 /* v22-W7 (PWA + Logo Resmi): logo resmi di layar mulai. Gambar sudah
-   memuat judul + tagline, jadi lebar dijaga ~setengah kartu supaya logo
-   menjadi aksen header, BUKAN spanduk raksasa — tombol menu tetap
-   terlihat & kartu muat tanpa scroll di tablet landscape. Tinggi
-   dibatasi 22vh (rasio dipertahankan browser). Di layar kecil menyusut
-   mengikuti lebar kartu. (v22.1: dikecilkan dari 340px/30vh — logo
-   terlalu besar dan mendominasi kartu.) */
+   memuat judul + tagline, jadi lebar dijaga KECIL (~sepertiga kartu)
+   supaya logo menjadi aksen header mungil, BUKAN spanduk — tombol menu
+   dan panorama tetap dominan. Tinggi dibatasi 16vh (rasio dipertahankan
+   browser). Di layar kecil menyusut mengikuti lebar kartu. (v22.1:
+   340px/30vh -> 240px/22vh; v22.2: -> 180px/16vh atas permintaan
+   pengguna "harusnya dibuat kecil".) */
 .logoUtama {
-  display: block; width: min(240px, 72%); max-height: 22vh; object-fit: contain;
-  height: auto; margin: 0 auto 8px;
+  display: block; width: min(180px, 52%); max-height: 16vh; object-fit: contain;
+  height: auto; margin: 0 auto 6px;
   filter: drop-shadow(0 6px 20px rgba(0, 0, 0, .55));
 }
 @media (max-width: 480px) {
-  .logoUtama { width: min(200px, 68%); max-height: 20vh; }
+  .logoUtama { width: min(150px, 48%); max-height: 14vh; }
 }
 .kartuMulai h1, .kartuModal h2 { font-size: 28px; margin: 6px 0; letter-spacing: .5px; }
 .kartuMulai h2 { font-size: 24px; }

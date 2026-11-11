@@ -854,8 +854,8 @@ const kecHarap = ["tebing-tinggi-barat", "tebing-tinggi", "tebing-tinggi-timur",
 // (a) konstanta, ukuran peta & cakupan kecamatan
 cek("CITY 480x320, seed 20261111", C.CITY.GRID_W === 480 && C.CITY.GRID_H === 320 && C.CITY.SEED === 20261111, C.CITY.GRID_W + "x" + C.CITY.GRID_H + " seed " + C.CITY.SEED);
 cek("CITY SAVE_KEY/SAVE_LAMA/PROFIL_KEY v17", C.CITY.SAVE_KEY === "merantiRisingWorldV1" && C.CITY.SAVE_LAMA === "saudagarSaguMerantiCityV1" && C.CITY.PROFIL_KEY === "merantiRisingProfilV1", C.CITY.SAVE_KEY + " / " + C.CITY.SAVE_LAMA + " / " + C.CITY.PROFIL_KEY);
-cek("VERSI_GAME v22.1", versiGame17 === "v22.1", versiGame17);
-cek("index.html memakai ?v=14/9/4/1/28 (v22.1)", idxHtml.includes("css/city.css?v=14") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=1") && idxHtml.includes("js/city-jalan.js?v=1") && idxHtml.includes("js/city-kendaraan.js?v=2") && idxHtml.includes("js/city-persimpangan.js?v=1") && idxHtml.includes("js/city-maritim.js?v=1") && idxHtml.includes("js/city.js?v=28"));
+cek("VERSI_GAME v22.2", versiGame17 === "v22.2", versiGame17);
+cek("index.html memakai ?v=15/9/4/1/29 (v22.2)", idxHtml.includes("css/city.css?v=15") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=1") && idxHtml.includes("js/city-jalan.js?v=1") && idxHtml.includes("js/city-kendaraan.js?v=2") && idxHtml.includes("js/city-persimpangan.js?v=1") && idxHtml.includes("js/city-maritim.js?v=1") && idxHtml.includes("js/city.js?v=29"));
 cek("PULAU_DEFS 27 pulau", !!pulauDefs17 && pulauDefs17.length === 27, pulauDefs17 ? pulauDefs17.length : "tidak ada");
 cek("KECAMATAN_DEFS 9 kecamatan", kecIds.length === 9, kecIds.length);
 cek("9 id kecamatan sesuai kontrak", kecHarap.every(id => kecIds.includes(id)), kecIds.join(","));
@@ -1162,7 +1162,7 @@ cek("v17.1: helper cariTileKebunSagu ada", srcCityA.includes("function cariTileK
 cek("v17.1: panel legenda terrain ada", srcCityA.includes("Peta — Legenda Terrain"));
 cek("v17.1: auto-pan tutorial langkah 6 memakai cariTileKebunSagu", srcCityA.includes("cariTileKebunSagu()"));
 cek("v18-A: kontrol waktu baru di index.html (btnKec05, tanpa btnHari/btnKec3)", idxHtml.includes('id="btnKec05"') && !idxHtml.includes('id="btnHari"') && !idxHtml.includes('id="btnKec3"'));
-cek("v18-D: VERSI_GAME naik ke v22.1 (modul akhir)", C.VERSI_GAME === "v22.1", C.VERSI_GAME);
+cek("v18-D: VERSI_GAME naik ke v22.2 (modul akhir)", C.VERSI_GAME === "v22.2", C.VERSI_GAME);
 // Kembalikan ke permainan baru yang bersih setelah semua uji waktu
 C.mulaiGame(true);
 cek("v18-A: permainan baru mulai 06:00 hari ke-0", C.waktuGame === 360 && C.hariGame() === 0 && C.jamGame() === 6, C.waktuGame);
@@ -1420,7 +1420,7 @@ cek("v18-C: riset tetap harian (olah-sagu 2 hari, konstruksi-beton 3 hari)", C.T
 cek("v18-C: prosesPergantianHari tetap memajukan riset per hari", srcCityB.includes("S.riset.sisa--"));
 cek("v18-C: tidak ada lagi progres konstruksi harian (b.progres += 1 / d.waktu)", !srcCityB.includes("b.progres += 1 / d.waktu"));
 cek("v18-C: loop utama tidak lagi memanggil perbaruiFeri(dt)", !srcCityB.includes("perbaruiFeri(dt);"));
-cek("v18-D: VERSI_GAME v22.1 (modul akhir)", C.VERSI_GAME === "v22.1", C.VERSI_GAME);
+cek("v18-D: VERSI_GAME v22.2 (modul akhir)", C.VERSI_GAME === "v22.2", C.VERSI_GAME);
 let mangroveC = 0;
 for (const baris of C.peta.terrain) for (const t of baris) if (t === "mangrove") mangroveC++;
 cek("v18-C: v17.1 mangrove > 1000 petak", mangroveC > 1000, mangroveC);
@@ -1429,8 +1429,8 @@ cek("v18-C: v17.1 cariTileKebunSagu menemukan petak valid", !!tkSaguC && C.cekBa
 cek("v18-C: v17.1 legenda terrain masih ada", srcCityB.includes("Peta — Legenda Terrain"));
 // ---- v18-D: UI jam/kalender bar atas + tutorial langkah 4 baru + hapus hariBerikutnya ----
 // (a) versi & refs di index.html (dibaca dari disk; harness sudah memakai fs)
-cek("v18-D: VERSI_GAME v22.1", C.VERSI_GAME === "v22.1", C.VERSI_GAME);
-cek("v18-D: index.html refs v22.1 (css v=14, city-data v=9, city-map v=4, city-utilitas v=1, city v=28) + city-bahagia v=1 + city-lalin v=1 + city-jalan v=1 + city-kendaraan v=2 + city-persimpangan v=1 + city-maritim v=1 (v22-W5)", idxHtml.includes("css/city.css?v=14") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city.js?v=28") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=1") && idxHtml.includes("js/city-jalan.js?v=1") && idxHtml.includes("js/city-kendaraan.js?v=2") && idxHtml.includes("js/city-persimpangan.js?v=1") && idxHtml.includes("js/city-maritim.js?v=1"));
+cek("v18-D: VERSI_GAME v22.2", C.VERSI_GAME === "v22.2", C.VERSI_GAME);
+cek("v18-D: index.html refs v22.2 (css v=15, city-data v=9, city-map v=4, city-utilitas v=1, city v=29) + city-bahagia v=1 + city-lalin v=1 + city-jalan v=1 + city-kendaraan v=2 + city-persimpangan v=1 + city-maritim v=1 (v22-W5)", idxHtml.includes("css/city.css?v=15") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city.js?v=29") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=1") && idxHtml.includes("js/city-jalan.js?v=1") && idxHtml.includes("js/city-kendaraan.js?v=2") && idxHtml.includes("js/city-persimpangan.js?v=1") && idxHtml.includes("js/city-maritim.js?v=1"));
 cek("v18-D: #jamAtas ada di bar atas (jam, hari, fase, cuaca)", idxHtml.includes('id="jamAtas"') && idxHtml.includes('id="jamAtasJam"') && idxHtml.includes('id="jamAtasHari"') && idxHtml.includes('id="jamAtasFase"') && idxHtml.includes('id="jamAtasCuaca"'));
 cek("v18-D: #ikonFase hanya satu (dipindah ke #jamAtas, tidak duplikat)", (idxHtml.match(/id="ikonFase"/g) || []).length === 1);
 cek("v18-D: tidak ada tombol Hari Berikutnya di index.html", !idxHtml.includes('id="btnHari"') && !idxHtml.includes('id="btnKec3"') && !/<button[^>]*>[^<]*Hari Berikutnya/.test(idxHtml) && !idxHtml.includes("⏭ Hari Berikutnya"));
@@ -3273,7 +3273,7 @@ cek("v21-w5: CSS portrait HP: minimap disembunyikan saat panel kiri terbuka (:ha
 // --- (l) v21 tetap jalan: regresi sistem inti ---
 if (typeof C.perbaruiDiagnostikRender === "function") C.perbaruiDiagnostikRender();
 cek("v21-w5: regresi — 19 kategori, overlay, profil, density, minimap besar, tutup panel, petaVersi 5, generasiSimpan, diagnostik render", C.TAB_BANGUN.length === 19 && typeof C.aturOverlay === "function" && typeof C.resetProfil === "function" && typeof C.aturDensity === "function" && typeof C.toggleMinimapBesar === "function" && typeof C.tutupSemuaPanel === "function" && C.S.petaVersi === 5 && typeof C.S.generasiSimpan === "number" && typeof vm.runInContext("window.__merantiRender", sandbox) === "object", "petaVersi=" + C.S.petaVersi + " gen=" + C.S.generasiSimpan);
-cek("v21-w5: VERSI_GAME v22.1 + refs v22.1 (css v=14, city.js v=28, city-jalan v=1, city-kendaraan v=2, city-maritim v=1)", C.VERSI_GAME === "v22.1" && idxHtml.includes("css/city.css?v=14") && idxHtml.includes("js/city.js?v=28") && idxHtml.includes("js/city-jalan.js?v=1") && idxHtml.includes("js/city-kendaraan.js?v=2") && idxHtml.includes("js/city-maritim.js?v=1"));
+cek("v21-w5: VERSI_GAME v22.2 + refs v22.2 (css v=15, city.js v=29, city-jalan v=1, city-kendaraan v=2, city-maritim v=1)", C.VERSI_GAME === "v22.2" && idxHtml.includes("css/city.css?v=15") && idxHtml.includes("js/city.js?v=29") && idxHtml.includes("js/city-jalan.js?v=1") && idxHtml.includes("js/city-kendaraan.js?v=2") && idxHtml.includes("js/city-maritim.js?v=1"));
 
 // --- (n) v22-W1: RoadGraph + A* + Lane System (js/city-jalan.js) ---
 // Jaringan uji (aspal): L utama (10,10)-(14,10)-(14,14) + cabang buntu
@@ -4402,7 +4402,7 @@ const truk1W5 = C.kendaraanVisual.find(k => k.tipe === "truk");
 C.initKendaraan();
 const truk2W5 = C.kendaraanVisual.find(k => k.tipe === "truk");
 cek("v22-w5: initKendaraan deterministik — truk selalu di petak jalan pertama (bukan acak)", !!truk1W5 && !!truk2W5 && truk1W5.x === C.S.jalan[0].x && truk1W5.y === C.S.jalan[0].y && truk2W5.x === C.S.jalan[0].x && truk2W5.y === C.S.jalan[0].y, "truk=" + (truk1W5 && truk1W5.x + "," + truk1W5.y));
-cek("v22-w5: VERSI_GAME v22.1 + nav Lalu Lintas ada di index.html + overlay traffic terdaftar", C.VERSI_GAME === "v22.1" && idxHtml.indexOf('data-tab="lalin"') >= 0 && idxHtml.indexOf("js/city-maritim.js?v=1") >= 0);
+cek("v22-w5: VERSI_GAME v22.2 + nav Lalu Lintas ada di index.html + overlay traffic terdaftar", C.VERSI_GAME === "v22.2" && idxHtml.indexOf('data-tab="lalin"') >= 0 && idxHtml.indexOf("js/city-maritim.js?v=1") >= 0);
 
 // =====================================================================
 // v22-W7: PWA + Logo Resmi (Worker 7 — wilayah TERPISAH dari traffic
@@ -4424,7 +4424,7 @@ const swW7 = fs.readFileSync(ROOT_W7 + "/sw.js", "utf8");
 let swSyntaxOkW7 = false;
 try { require("child_process").execSync("node --check " + ROOT_W7 + "/sw.js", { stdio: "ignore" }); swSyntaxOkW7 = true; } catch (e) { swSyntaxOkW7 = false; }
 cek("v22-w7: sw.js lolos node --check", swSyntaxOkW7);
-cek("v22-w7: nama cache SW terikat v22.1 (meranti-rising-v22.1)", swW7.indexOf("meranti-rising-v22.1") !== -1);
+cek("v22-w7: nama cache SW terikat v22.2 (meranti-rising-v22.2)", swW7.indexOf("meranti-rising-v22.2") !== -1);
 cek("v22-w7: SW hapus cache lama saat activate + skipWaiting + clients.claim", swW7.indexOf("skipWaiting") !== -1 && swW7.indexOf("clients.claim") !== -1 && swW7.indexOf("caches.delete") !== -1);
 cek("v22-w7: SW network-first untuk index.html, cache-first untuk aset", swW7.indexOf("index.html") !== -1 && swW7.indexOf("fetch") !== -1 && swW7.indexOf("caches.match") !== -1);
 const daftarCacheW7 = (swW7.match(/const DAFTAR_CACHE = \[([\s\S]*?)\];/) || ["", ""])[1].split("\n").map(s => (s.match(/"([^"]+)"/) || [])[1]).filter(Boolean);
@@ -4435,14 +4435,14 @@ cek("v22-w7: index.html memuat link manifest + theme-color + apple-touch-icon + 
 cek("v22-w7: index.html memakai logo resmi di layar mulai", htmlW7.indexOf('class="logoUtama" src="assets/images/logo-meranti-rising.png"') !== -1);
 const cssW7 = fs.readFileSync(ROOT_W7 + "/css/city.css", "utf8");
 const logoCssW7 = (cssW7.match(/\.logoUtama \{([\s\S]*?)\}/) || ["", ""])[1];
-cek("v22.1: logo layar mulai COMPACT — lebar maks 240px (bukan 340px) + tinggi maks 22vh (bukan 30vh)", logoCssW7.indexOf("width: min(240px, 72%)") !== -1 && logoCssW7.indexOf("max-height: 22vh") !== -1, logoCssW7.trim().slice(0, 120));
-cek("v22.1: logo layar mulai di HP maks 200px / 20vh", cssW7.indexOf("width: min(200px, 68%)") !== -1 && cssW7.indexOf("max-height: 20vh") !== -1);
+cek("v22.2: logo layar mulai KECIL — lebar maks 180px + tinggi maks 16vh", logoCssW7.indexOf("width: min(180px, 52%)") !== -1 && logoCssW7.indexOf("max-height: 16vh") !== -1, logoCssW7.trim().slice(0, 120));
+cek("v22.2: logo layar mulai di HP maks 150px / 14vh", cssW7.indexOf("width: min(150px, 48%)") !== -1 && cssW7.indexOf("max-height: 14vh") !== -1);
 cek("v22-w7: judul teks + tagline teks TIDAK diduplikasi (logo gambar sudah memuatnya)", htmlW7.indexOf('class="tagline"') === -1 && htmlW7.indexOf('class="judulLogo"') === -1);
 cek("v22-w7: logo + lencana + 7 ikon ADA di disk", ["assets/images/logo-meranti-rising.png", "assets/icons/badge-mr.png", "assets/icons/icon-192.png", "assets/icons/icon-512.png", "assets/icons/icon-maskable-512.png", "assets/icons/apple-touch-icon.png", "assets/icons/favicon-32.png", "assets/icons/favicon-48.png"].every(f => fs.existsSync(path.join(ROOT_W7, f))));
 cek("v22-w7: tombol instal & muat-ulang display:none secara default di index.html", htmlW7.indexOf('id="btnInstalMulai" class="btnUtama sekunder" style="display:none"') !== -1 && htmlW7.indexOf('id="btnInstalPengaturanMulai" type="button" class="btnUtama sekunder" style="display:none"') !== -1 && htmlW7.indexOf('id="btnMuatUlangBaruMulai" type="button" class="btnUtama sekunder" style="display:none"') !== -1);
 const cityW7 = fs.readFileSync(ROOT_W7 + "/js/city.js", "utf8");
 cek("v22-w7: city.js punya wiring PWA (beforeinstallprompt, register sw.js, fullscreen, toast update)", cityW7.indexOf("beforeinstallprompt") !== -1 && cityW7.indexOf('register("sw.js")') !== -1 && cityW7.indexOf("requestFullscreen") !== -1 && cityW7.indexOf("Versi baru tersedia") !== -1);
 cek("v22-w7: city.js mendaftarkan SW hanya via https/localhost", cityW7.indexOf('location.protocol === "https:"') !== -1 && cityW7.indexOf('"localhost"') !== -1);
-cek("v22-w7: VERSI_GAME v22.1 (dinaikkan v22.1 — W7 tidak menyentuhnya)", C.VERSI_GAME === "v22.1");
+cek("v22-w7: VERSI_GAME v22.2 (dinaikkan v22.2 — W7 tidak menyentuhnya)", C.VERSI_GAME === "v22.2");
 
 console.log(gagal === 0 ? "TEST_V13_OK" : "TEST_V13_GAGAL:" + gagal + " dari " + (lulus + gagal));
