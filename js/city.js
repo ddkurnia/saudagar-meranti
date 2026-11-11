@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v22.2"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v22.3"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -809,11 +809,17 @@ if (!tabIdSaya) tabIdSaya = buatIdTabBaru();
 let waktuInteraksiTerakhir = Date.now();
 const INTERAKSI_IDLE_MS = 30000;
 function catatInteraksi() { waktuInteraksiTerakhir = Date.now(); }
-// v22-W6 (desinkron profil/simpanan, opsi ii): tab yang kembali ke menu
-// utama dari dalam game MELEPAS lease & berhenti denyut/autosave sampai
-// permainan baru/lanjutan dimulai (mulaiGame mereset flag ini). Tab yang
-// BARU dimuat (fresh load) TIDAK kena flag ini — denyut di layar mulai
-// tetap jalan (lihat denyutLeaseTab) untuk melindungi jendela reload.
+// v22.3-W2 (sinkron profil/simpanan): tab yang kembali ke menu utama
+// TIDAK lagi melepas lease (dulu: berhentiDenyutMenu = true di
+// kembaliKeMenuUtama — simpanan tidak terlindungi di layar mulai:
+// lease kedaluwarsa dalam 3 detik, tab basi lain mengklaimnya lalu
+// autosave-nya menimpa simpanan dengan kota lama; reproduksi headless
+// di tests/test13.js v22.3-W2 membuktikannya). Tab tetap mendenyut di
+// layar mulai sampai tab ditutup (lease kedaluwarsa alami bila tab idle
+// >30 detik, lihat denyutLeaseTab) atau tab lain merebutnya secara sah
+// (klaim manual di mulaiGame / lease kedaluwarsa). Flag
+// berhentiDenyutMenu dipertahankan sebagai pengaman (tidak pernah
+// diset true lagi) supaya denyut bisa dihentikan bila suatu saat perlu.
 let berhentiDenyutMenu = false;
 // v22-W6 (diagnostik tint): Mode Debug — panel kecil di dalam game.
 // Preferensi tersimpan di localStorage; dimuat di DOMContentLoaded.
@@ -844,10 +850,20 @@ function klaimLeaseTab() {
 // sessionStorage-nya) SEBELUM pengguna klik LANJUTKAN, supaya tab lama
 // tidak sempat merebut selama jendela muat. Denyut di layar mulai TIDAK
 // memanggil simpan() (belum ada S) — hanya klaim lease. Satu-satunya
-// pengecualian: berhentiDenyutMenu (tab kembali ke menu dari dalam game
-// — melepas lease sampai permainan baru/lanjutan dimulai).
+// pengecualian: berhentiDenyutMenu (pengaman, tidak pernah diset true
+// sejak v22.3-W2 — kembali ke menu TIDAK lagi melepas lease).
 function denyutLeaseTab() {
   if (berhentiDenyutMenu) return;
+  // v22.3-W2 (sinkron profil/simpanan): heartbeat JUGA menghormati idle
+  // — guard yang SAMA dengan simpan() (INTERAKSI_IDLE_MS /
+  // waktuInteraksiTerakhir). Tab tanpa interaksi >30 detik JANGAN
+  // memperbarui lease (bila pemilik) DAN JANGAN mengklaim lease
+  // (bila kedaluwarsa): lease kedaluwarsa dalam 3 detik, tab aktif bisa
+  // merebutnya. Tanpa guard ini tab basi yang ditinggalkan terus
+  // memperbarui lease tiap 500 ms dan memblokir autosave tab aktif
+  // (autosave menolak bila lease segar milik tab lain) — terbukti di
+  // probe reproduksi: denyut tab A idle merebut lease B.
+  if (Date.now() - waktuInteraksiTerakhir > INTERAKSI_IDLE_MS) return;
   const l = bacaLeaseTab();
   if (l && l.id === tabIdSaya) { klaimLeaseTab(); return; }
   if (l && (Date.now() - l.ts) < LEASE_TAB_MS) return; // milik tab lain yang masih aktif
@@ -1164,7 +1180,16 @@ function bangunDi(def, x, y, rot) {
   S.bangunan.push(b);
   catatDibangun(def);
   bunyiSukses();
-  toast(def.nama + " mulai dibangun (" + teksDurasi(def.waktu) + ").", "ok");
+  // v22.3-W3: toast JUJUR soal durasi — bila kekurangan pekerja membuat
+  // durasi efektif lebih lama dari nominal, tampilkan keduanya + jumlah
+  // pekerja menganggur (bukan hanya "4 jam" yang ternyata 16 jam).
+  const infoPk = (typeof infoPekerjaKonstruksi === "function") ? infoPekerjaKonstruksi(def, b) : null;
+  if (infoPk && infoPk.faktor < 1) {
+    const durEf = durasiKonstruksiEfektif(def, b);
+    toast(def.nama + " mulai dibangun (~" + teksDurasi(Math.ceil(durEf)) + ", bukan " + teksDurasi(def.waktu) + ": kekurangan pekerja " + infoPk.tersedia + "/" + infoPk.dibutuhkan + " menganggur — bangun rumah untuk menambah pekerja).", "info");
+  } else {
+    toast(def.nama + " mulai dibangun (" + teksDurasi(def.waktu) + ").", "ok");
+  }
   log("Membangun " + def.nama + " di (" + (x + 1) + "," + (y + 1) + ").");
   cekMisi(); // hadiah misi dibayar seketika, bukan menunggu pergantian hari
   simpan(); renderHUD(); renderPanelKanan(); renderMenuBangun();
@@ -1451,15 +1476,43 @@ function teksDurasi(jam) {
 //     bekerja); bila def.pekerja = 0 (mis. rumah) faktor = 1.
 //   (Material kayu/batu/besi TIDAK memengaruhi durasi: biaya sudah dibayar
 //   lunas saat bangunDi, jadi tidak ada kekurangan material saat konstruksi.)
+//   v22.3-W3 — BANGUNAN PERTAMA TIAP JENIS: faktorPekerja = 1 (tanpa
+//   penalti pekerja). Alasan (temuan cek live v22, direproduksi headless):
+//   kota awal berpenduduk 4 jiwa -> angkatan kerja 2, dan Dermaga awal
+//   (pekerja 2) menyerap keduanya -> menganggur 0 -> faktor 0,25 ->
+//   Kebun Sagu "4 jam" butuh 16 jam game, Gudang 48 jam, Kilang 96 jam.
+//   Penalti itu memblokir early game (dan tes lalu lintas: tanpa produksi
+//   tidak ada job logistik). Bangunan pertama adalah langkah belajar +
+//   target misi ("Kebun Sagu Pertama"), jadi dibangun kru penuh; bangunan
+//   kedua dst. tetap kena penalti pekerja (lantai 0,25 tidak diubah) dan
+//   kekurangan pekerja ditampilkan jujur di UI (toast bangunDi +
+//   renderPanelKanan) lewat infoPekerjaKonstruksi() di bawah.
+//   Bangunan DALAM KONSTRUKSI tidak memesan pekerja (hitungTenagaKerja
+//   hanya menghitung bangunan selesai), jadi beberapa bangunan pertama
+//   dari jenis BERBEDA yang dibangun bersamaan masing-masing tetap
+//   faktor penuh; bangunan kedua dari jenis yang sama (sudah ada yang
+//   selesai/dalam konstruksi) kena penalti normal.
+function infoPekerjaKonstruksi(def, b) {
+  // Info kekurangan pekerja untuk konstruksi (dipakai durasiKonstruksi-
+  // Efektif, toast bangunDi, panel kanan). null bila bangunan tidak
+  // butuh pekerja / tidak ada durasi. `pertama` = belum ada bangunan
+  // lain jenis yang sama (selesai maupun dalam konstruksi, di luar b).
+  if (!def || !(def.waktu > 0) || (def.pekerja || 0) <= 0 || !S) return null;
+  const tk = hitungTenagaKerja();
+  const tersedia = tk.menganggur || 0;
+  const dibutuhkan = def.pekerja;
+  const pertama = !S.bangunan.some(x => x !== b && x.id === def.id);
+  const faktor = pertama ? 1 : Math.min(1, Math.max(0.25, tersedia / dibutuhkan));
+  return { tersedia: tersedia, dibutuhkan: dibutuhkan, pertama: pertama, faktor: faktor };
+}
 function durasiKonstruksiEfektif(def, b) {
   if (!def || !(def.waktu > 0)) return 1;
   let faktorTeknologi = 1;
   if (S && S.teknologi && S.teknologi["konstruksi-beton"] && def.tech === "konstruksi-beton") faktorTeknologi = 1.25;
   let faktorPekerja = 1;
   if ((def.pekerja || 0) > 0 && S) {
-    const tk = hitungTenagaKerja();
-    const tersedia = tk.menganggur || 0;
-    faktorPekerja = Math.min(1, Math.max(0.25, tersedia / def.pekerja));
+    const info = infoPekerjaKonstruksi(def, b);
+    faktorPekerja = info ? info.faktor : 1;
   }
   return def.waktu / (faktorTeknologi * faktorPekerja);
 }
@@ -2766,6 +2819,11 @@ function initKendaraan() {
       kendaraanVisual.push(truk);
       pilihJalanBerikut(truk); // target pertama di jaringan jalan
     }
+    // v22.3-W1: mobil pribadi warga — begitu ada rumah selesai + jalan,
+    // spawn 1-2 mobil yang bergerak antar bangunan (VehicleManager + A*).
+    // Runtime (tidak disimpan); disinkronkan berkala juga dari
+    // perbaruiSemuaKendaraan saat rumah baru selesai dibangun.
+    if (typeof sinkronMobilWarga === "function") { try { sinkronMobilWarga(); } catch (e) {} }
   }
   const L = peta.landing;
   kendaraanVisual.push({ tipe: "kapal", x: L.x + 1, y: L.y + 2 });
@@ -4010,14 +4068,35 @@ function renderPanelKiri() {
     html += "<div class='barisStat'><span>Bus beroperasi</span><span>" + (busL.beroperasi ? busL.jumlahBus + " bus" : "tidak ada") + "</span></div>";
     html += "<div class='barisStat'><span>Penumpang bus</span><span>" + penumpPerJam + "/jam · total naik " + penumpBus + "</span></div>";
     html += "<div class='judulPanel' style='margin-top:10px'>📊 Lalu Lintas</div>";
-    html += "<div class='barisStat'><span>Volume lalu lintas</span><span>" + ((S.lalin && typeof S.lalin.volumeTotal === "number") ? S.lalin.volumeTotal + " kend/jam" : "—") + "</span></div>";
-    html += "<div class='barisStat'><span>Kemacetan (skor)</span><b>" + ((S.lalin && typeof S.lalin.skor === "number") ? S.lalin.skor + "/100 · " + (S.lalin.skor >= 70 ? "Lancar" : S.lalin.skor >= 40 ? "Padat" : "Macet") : "—") + "</b></div>";
-    html += "<div class='barisStat'><span>Kecepatan rata-rata</span><span>" + (kecRata !== null ? kecRata + " km/jam" : "—") + "</span></div>";
-    html += "<div class='barisStat'><span>Waktu perjalanan</span><span>" + (tempuhRata !== null ? tempuhRata + " detik/petak" : "—") + "</span></div>";
-    if (terpadat.length) {
+    // v22.3-W3 — PANEL JUJUR (temuan cek live v22): S.lalin.volumeTotal
+    // adalah ESTIMASI permintaan zona (rumus penduduk & bangunan), BUKAN
+    // kendaraan nyata — panel lama menampilkannya sebagai "Volume lalu
+    // lintas: 57–90 kend/jam" + skor zona sebagai "Padat"/"Macet" padahal
+    // 0 kendaraan aktif. Sekarang: volume selalu dilabeli estimasi,
+    // kendaraan AKTUAL (bergerak, dari infoKendaraan) ditampilkan
+    // eksplisit, dan status kemacetan TIDAK BOLEH "Padat"/"Macet" bila
+    // tidak ada kendaraan bergerak (parkir tidak menimbulkan macet).
+    // Skor zona/kemacetan & overlay tetap dipakai kebahagiaan + peta
+    // (v19) — yang diperbaiki hanya klaim panel ini.
+    const kendaraanBergerak = ik.aktif + ik.menunggu;
+    const jalanKosong = kendaraanBergerak === 0;
+    const volumeEst = (S.lalin && typeof S.lalin.volumeEstimasi === "number") ? S.lalin.volumeEstimasi : ((S.lalin && typeof S.lalin.volumeTotal === "number") ? S.lalin.volumeTotal : null);
+    html += "<div class='barisStat'><span>Estimasi permintaan (zona)</span><span>" + (volumeEst !== null ? volumeEst + " kend/jam" : "—") + "</span></div>";
+    html += "<div class='barisStat'><span>Kendaraan aktual di jalan</span><b>" + ik.aktif + " bergerak · " + ik.total + " total</b></div>";
+    if (jalanKosong) {
+      html += "<div class='barisStat'><span>Kemacetan (nyata)</span><b>Lancar — jalan kosong</b></div>";
+      html += "<div class='misiDes'>Tidak ada kendaraan bergerak — angka volume di atas estimasi permintaan zona (rumus penduduk &amp; bangunan), bukan lalu lintas nyata.</div>";
+    } else {
+      html += "<div class='barisStat'><span>Kemacetan (skor)</span><b>" + ((S.lalin && typeof S.lalin.skor === "number") ? S.lalin.skor + "/100 · " + (S.lalin.skor >= 70 ? "Lancar" : S.lalin.skor >= 40 ? "Padat" : "Macet") : "—") + "</b></div>";
+    }
+    html += "<div class='barisStat'><span>Kecepatan rata-rata</span><span>" + (kecRata !== null ? kecRata + " km/jam" + (jalanKosong ? " (estimasi)" : "") : "—") + "</span></div>";
+    html += "<div class='barisStat'><span>Waktu perjalanan</span><span>" + (tempuhRata !== null ? tempuhRata + " detik/petak" + (jalanKosong ? " (estimasi)" : "") : "—") + "</span></div>";
+    if (terpadat.length && !jalanKosong) {
       html += "<div class='judulPanel' style='margin-top:10px'>🔴 Ruas Terpadat</div>";
       for (const t of terpadat) html += "<div class='barisStat kecil'><span>Petak " + t.kunci + "</span><span>rasio " + t.rasio + " · " + (t.status === 2 ? "Macet" : t.status === 1 ? "Padat" : "Lancar") + "</span></div>";
-    } else html += "<div class='misiDes'>Belum ada ruas padat/macet — semua lancar.</div>";
+    } else if (!terpadat.length) html += "<div class='misiDes'>Belum ada ruas padat/macet — semua lancar.</div>";
+    // (jalanKosong + terpadat zona non-kosong: daftar ruas disembunyikan —
+    // itu estimasi zona, bukan kemacetan nyata; sudah dijelaskan di atas.)
     if (ip) {
       html += "<div class='judulPanel' style='margin-top:10px'>🚶 Pejalan Kaki</div>";
       html += "<div class='barisStat'><span>Warga berjalan / total</span><span>" + ip.berjalan + " / " + ip.total + "</span></div>";
@@ -4184,7 +4263,18 @@ function renderPanelKanan() {
   if (b.kebanjiran) html += "<div class='barisStat'><span>Banjir</span><b class='merah'>🌊 Kebanjiran — tidak beroperasi</b></div>";
   if (typeof zonaDi === "function") { const zid = zonaDi(b.x, b.y); if (zid) { const zd = (typeof zonaDef === "function") ? zonaDef(zid) : null; html += "<div class='barisStat'><span>Zona</span><span>" + (zd ? zd.nama : zid) + "</span></div>"; } }
   if (typeof b.pengunjung === "number" && b.pengunjung > 0) html += "<div class='barisStat'><span>Pengunjung</span><span>" + b.pengunjung + " /jam</span></div>";
-  if (!b.selesai) html += bar(b.progres * 100, "#fdcb6e");
+  if (!b.selesai) {
+    html += bar(b.progres * 100, "#fdcb6e");
+    // v22.3-W3: kekurangan pekerja DITAMPILKAN di panel bangunan dalam
+    // konstruksi — durasi efektif + jumlah pekerja menganggur, supaya
+    // pemain tahu kenapa bangunan lambat & apa yang mempercepatnya.
+    const infoPk = (typeof infoPekerjaKonstruksi === "function") ? infoPekerjaKonstruksi(def, b) : null;
+    if (infoPk && infoPk.faktor < 1) {
+      const durEf = durasiKonstruksiEfektif(def, b);
+      html += "<div class='barisStat'><span>Kecepatan bangun</span><span>~" + teksDurasi(Math.ceil(durEf)) + " (nominal " + teksDurasi(def.waktu) + ")</span></div>";
+      html += "<div class='catatan'>Menunggu pekerja: " + infoPk.tersedia + "/" + infoPk.dibutuhkan + " menganggur — bangun rumah untuk menambah pekerja.</div>";
+    }
+  }
   if (def.rumah) html += "<div class='barisStat'><span>Kapasitas rumah</span><span>" + def.rumah + " jiwa</span></div>";
   if (def.pekerja) {
     const eff = b.efisiensi == null ? 1 : b.efisiensi;
@@ -4903,6 +4993,14 @@ function mulaiGame(baru) {
   // Lanjutkan tidak lagi memuat kota pemimpin lama.
   berhentiDenyutMenu = false;
   klaimLeaseTab();
+  // v22.3-W1: warga visual dari kota SEBELUMNYA dalam sesi yang sama
+  // (mis. PERMAINAN BARU tanpa reload, atau tes headless) HARUS
+  // dibuang — sinkronWarga() di bawah hanya menyamakan JUMLAH, jadi
+  // warga lama yang posisinya di luar kota baru (jauh dari jalan /
+  // rumah baru) tidak pernah di-spawn ulang dan diam selamanya di
+  // tempat yang salah ("Warga berjalan: 0/1"). Kendaraan sudah
+  // melakukan hal yang sama (initKendaraan: kendaraanVisual = []).
+  wargaVisual = [];
   if (baru) {
     peta = generatePeta(CITY.SEED);
     S = stateBaru(peta);
@@ -5275,11 +5373,17 @@ function kembaliKeMenuUtama() {
   kecepatan = 0;
   if (S) S.kecepatan = 0;
   if (S) simpan();
-  // v22-W6 (desinkron profil/simpanan, opsi ii): tab ini MELEPAS lease
-  // & berhenti denyut/autosave selama di menu — tab lain yang sedang
-  // dipakai tidak lagi diblokir, dan tab ini tidak menimpa simpanan
-  // sampai permainan baru/lanjutan dimulai (mulaiGame mereset flag).
-  berhentiDenyutMenu = true;
+  // v22.3-W2 (sinkron profil/simpanan): JANGAN melepas lease hanya
+  // karena kembali ke menu. Dulu `berhentiDenyutMenu = true` di sini —
+  // lease (milik tab ini) kedaluwarsa dalam 3 detik, tab basi lain
+  // (termasuk build lama tanpa pelindung idle) mengklaimnya lalu
+  // autosave-nya menimpa simpanan Putri Ayu dengan kota lama Sukma
+  // (reproduksi headless tests/test13.js v22.3-W2). Kini tab TETAP
+  // mendenyut di layar mulai dan melindungi simpanannya sampai tab
+  // ditutup / idle >30 detik (lease kedaluwarsa alami) / tab lain
+  // merebut secara sah. Tab lain yang dibuka untuk bermain TIDAK
+  // terhalang: mulaiGame() selalu klaim manual dulu, dan denyut tab
+  // menu tidak menyentuh lease segar milik tab lain.
   // v21 Worker 5 (cacat 9): tutup semua panel sebelum kembali ke menu.
   tutupSemuaPanel();
   const ap = $("aplikasi");
@@ -5300,9 +5404,9 @@ function kembaliKeMenuUtama() {
 // lagi setelah profil baru dibuat lewat MULAI). v22-W6 (opsi ii
 // desinkron profil/simpanan): permainan BARU langsung menimpa simpanan
 // lama (mulaiGame(true) -> simpan()), jadi Lanjutkan memuat kota
-// pemimpin yang baru, bukan kota pemimpin lama; dan kembaliKeMenuUtama
-// / resetProfil melepas lease + menghentikan autosave tab ini sampai
-// permainan baru/lanjutan dimulai.
+// pemimpin yang baru, bukan kota pemimpin lama. v22.3-W2:
+// kembaliKeMenuUtama / resetProfil TIDAK lagi melepas lease — tab
+// tetap melindungi simpanannya di layar mulai (lihat denyutLeaseTab).
 function ubahNamaPemimpin(nama) {
   const bersih = String(nama || "").trim();
   if (!bersih) { toast("Isi nama pemimpin dulu.", "gagal"); bunyiGagal(); return; }

@@ -9,7 +9,7 @@ function buatCtx() {
     closePath() {}, fill() {}, stroke() {}, strokeRect() {}, arc() {}, ellipse() {},
     quadraticCurveTo() {}, bezierCurveTo() {},
     fillText() {}, measureText() { return { width: 0 }; }, drawImage() {}, save() {}, restore() {},
-    translate() {}, scale() {}, setLineDash() {},
+    translate() {}, scale() {}, rotate() {}, setLineDash() {},
     fillStyle: "", strokeStyle: "", lineWidth: 1, font: "", textAlign: "", textBaseline: "", globalAlpha: 1,
   };
 }
@@ -827,6 +827,11 @@ cek("alasan kunci Jembatan Gantung menyebut level + penelitian", C.alasanKunci(C
 const rumahZ = C.S.bangunan.find(b => b.id === "rumah-sederhana");
 cek("z-order: ada rumah untuk uji", !!rumahZ);
 if (rumahZ) {
+  // v22.3: paksa rumah selesai — gambarPeta hanya menggambar bangunan yang
+  // sudah selesai di pass depth-sorted; tanpa ini uji gagal bila rumah yang
+  // ditemukan masih dalam konstruksi (bergantung keadaan acak dari tes misi
+  // sebelumnya), padahal yang diuji adalah urutan gambar, bukan konstruksi.
+  vm.runInContext('S.bangunan.find(b => b.id === "rumah-sederhana").selesai = true; S.bangunan.find(b => b.id === "rumah-sederhana").progres = 1;', sandbox);
   // v17: peta 480x320 memakai chunk culling — pusatkan kamera ke rumah dulu,
   // kalau tidak rumah di luar layar dan tidak digambar sama sekali.
   vm.runInContext('kamera.cx = tileTengahDunia(' + rumahZ.x + ', ' + rumahZ.y + ').x; kamera.cy = tileTengahDunia(' + rumahZ.x + ', ' + rumahZ.y + ').y; kamera.zoom = 1;', sandbox);
@@ -854,8 +859,8 @@ const kecHarap = ["tebing-tinggi-barat", "tebing-tinggi", "tebing-tinggi-timur",
 // (a) konstanta, ukuran peta & cakupan kecamatan
 cek("CITY 480x320, seed 20261111", C.CITY.GRID_W === 480 && C.CITY.GRID_H === 320 && C.CITY.SEED === 20261111, C.CITY.GRID_W + "x" + C.CITY.GRID_H + " seed " + C.CITY.SEED);
 cek("CITY SAVE_KEY/SAVE_LAMA/PROFIL_KEY v17", C.CITY.SAVE_KEY === "merantiRisingWorldV1" && C.CITY.SAVE_LAMA === "saudagarSaguMerantiCityV1" && C.CITY.PROFIL_KEY === "merantiRisingProfilV1", C.CITY.SAVE_KEY + " / " + C.CITY.SAVE_LAMA + " / " + C.CITY.PROFIL_KEY);
-cek("VERSI_GAME v22.2", versiGame17 === "v22.2", versiGame17);
-cek("index.html memakai ?v=15/9/4/1/29 (v22.2)", idxHtml.includes("css/city.css?v=15") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=1") && idxHtml.includes("js/city-jalan.js?v=1") && idxHtml.includes("js/city-kendaraan.js?v=2") && idxHtml.includes("js/city-persimpangan.js?v=1") && idxHtml.includes("js/city-maritim.js?v=1") && idxHtml.includes("js/city.js?v=29"));
+cek("VERSI_GAME v22.3", versiGame17 === "v22.3", versiGame17);
+cek("index.html memakai ?v=16/9/4/1/30 (v22.3)", idxHtml.includes("css/city.css?v=16") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=1") && idxHtml.includes("js/city-jalan.js?v=1") && idxHtml.includes("js/city-kendaraan.js?v=2") && idxHtml.includes("js/city-persimpangan.js?v=1") && idxHtml.includes("js/city-maritim.js?v=1") && idxHtml.includes("js/city.js?v=30"));
 cek("PULAU_DEFS 27 pulau", !!pulauDefs17 && pulauDefs17.length === 27, pulauDefs17 ? pulauDefs17.length : "tidak ada");
 cek("KECAMATAN_DEFS 9 kecamatan", kecIds.length === 9, kecIds.length);
 cek("9 id kecamatan sesuai kontrak", kecHarap.every(id => kecIds.includes(id)), kecIds.join(","));
@@ -1162,7 +1167,7 @@ cek("v17.1: helper cariTileKebunSagu ada", srcCityA.includes("function cariTileK
 cek("v17.1: panel legenda terrain ada", srcCityA.includes("Peta — Legenda Terrain"));
 cek("v17.1: auto-pan tutorial langkah 6 memakai cariTileKebunSagu", srcCityA.includes("cariTileKebunSagu()"));
 cek("v18-A: kontrol waktu baru di index.html (btnKec05, tanpa btnHari/btnKec3)", idxHtml.includes('id="btnKec05"') && !idxHtml.includes('id="btnHari"') && !idxHtml.includes('id="btnKec3"'));
-cek("v18-D: VERSI_GAME naik ke v22.2 (modul akhir)", C.VERSI_GAME === "v22.2", C.VERSI_GAME);
+cek("v18-D: VERSI_GAME naik ke v22.3 (modul akhir)", C.VERSI_GAME === "v22.3", C.VERSI_GAME);
 // Kembalikan ke permainan baru yang bersih setelah semua uji waktu
 C.mulaiGame(true);
 cek("v18-A: permainan baru mulai 06:00 hari ke-0", C.waktuGame === 360 && C.hariGame() === 0 && C.jamGame() === 6, C.waktuGame);
@@ -1295,7 +1300,13 @@ cek("v18-C: riset beton tidak memengaruhi bangunan non-beton (rumah-sederhana te
 vm.runInContext('delete S.teknologi["konstruksi-beton"];', sandbox);
 C.mulaiGame(true);
 C.S.penduduk.total = 4; // angkatan 2, dermaga butuh 2 -> menganggur 0
-cek("v18-C: durasi kilang (butuh 8 pekerja) tanpa pekerja menganggur = 96 jam (x4)", C.durasiKonstruksiEfektif(C.BANGUNAN_MAP["kilang-sagu"], null) === 96, C.durasiKonstruksiEfektif(C.BANGUNAN_MAP["kilang-sagu"], null));
+// v22.3-W3 (alasan perubahan tes ini): aturan "bangunan PERTAMA tiap
+// jenis = faktor penuh" — kilang pertama TIDAK lagi kena lantai 0,25,
+// jadi 24 jam, bukan 96 jam. Lantai 0,25 tetap berlaku & diuji pada
+// kilang KEDUA (satu kilang selesai sudah ada di kota).
+cek("v22.3-w3: durasi kilang PERTAMA tanpa pekerja menganggur = 24 jam (faktor penuh)", C.durasiKonstruksiEfektif(C.BANGUNAN_MAP["kilang-sagu"], null) === 24, C.durasiKonstruksiEfektif(C.BANGUNAN_MAP["kilang-sagu"], null));
+C.S.bangunan.push({ id: "kilang-sagu", x: 0, y: 0, rot: 0, selesai: true, progres: 1 });
+cek("v22.3-w3: durasi kilang KEDUA tanpa pekerja menganggur = 96 jam (x4, lantai 0,25 tetap)", C.durasiKonstruksiEfektif(C.BANGUNAN_MAP["kilang-sagu"], null) === 96, C.durasiKonstruksiEfektif(C.BANGUNAN_MAP["kilang-sagu"], null));
 C.S.penduduk.total = 60; // angkatan 33, menganggur 31 >= 8
 cek("v18-C: durasi kilang dengan pekerja cukup = 24 jam", C.durasiKonstruksiEfektif(C.BANGUNAN_MAP["kilang-sagu"], null) === 24, C.durasiKonstruksiEfektif(C.BANGUNAN_MAP["kilang-sagu"], null));
 // (c) ekonomi per jam = 1/24 tarif harian: 24 jam game = 1 hari lama.
@@ -1420,7 +1431,7 @@ cek("v18-C: riset tetap harian (olah-sagu 2 hari, konstruksi-beton 3 hari)", C.T
 cek("v18-C: prosesPergantianHari tetap memajukan riset per hari", srcCityB.includes("S.riset.sisa--"));
 cek("v18-C: tidak ada lagi progres konstruksi harian (b.progres += 1 / d.waktu)", !srcCityB.includes("b.progres += 1 / d.waktu"));
 cek("v18-C: loop utama tidak lagi memanggil perbaruiFeri(dt)", !srcCityB.includes("perbaruiFeri(dt);"));
-cek("v18-D: VERSI_GAME v22.2 (modul akhir)", C.VERSI_GAME === "v22.2", C.VERSI_GAME);
+cek("v18-D: VERSI_GAME v22.3 (modul akhir)", C.VERSI_GAME === "v22.3", C.VERSI_GAME);
 let mangroveC = 0;
 for (const baris of C.peta.terrain) for (const t of baris) if (t === "mangrove") mangroveC++;
 cek("v18-C: v17.1 mangrove > 1000 petak", mangroveC > 1000, mangroveC);
@@ -1429,8 +1440,8 @@ cek("v18-C: v17.1 cariTileKebunSagu menemukan petak valid", !!tkSaguC && C.cekBa
 cek("v18-C: v17.1 legenda terrain masih ada", srcCityB.includes("Peta — Legenda Terrain"));
 // ---- v18-D: UI jam/kalender bar atas + tutorial langkah 4 baru + hapus hariBerikutnya ----
 // (a) versi & refs di index.html (dibaca dari disk; harness sudah memakai fs)
-cek("v18-D: VERSI_GAME v22.2", C.VERSI_GAME === "v22.2", C.VERSI_GAME);
-cek("v18-D: index.html refs v22.2 (css v=15, city-data v=9, city-map v=4, city-utilitas v=1, city v=29) + city-bahagia v=1 + city-lalin v=1 + city-jalan v=1 + city-kendaraan v=2 + city-persimpangan v=1 + city-maritim v=1 (v22-W5)", idxHtml.includes("css/city.css?v=15") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city.js?v=29") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=1") && idxHtml.includes("js/city-jalan.js?v=1") && idxHtml.includes("js/city-kendaraan.js?v=2") && idxHtml.includes("js/city-persimpangan.js?v=1") && idxHtml.includes("js/city-maritim.js?v=1"));
+cek("v18-D: VERSI_GAME v22.3", C.VERSI_GAME === "v22.3", C.VERSI_GAME);
+cek("v18-D: index.html refs v22.3 (css v=16, city-data v=9, city-map v=4, city-utilitas v=1, city v=30) + city-bahagia v=1 + city-lalin v=1 + city-jalan v=1 + city-kendaraan v=2 + city-persimpangan v=1 + city-maritim v=1 (v22-W5)", idxHtml.includes("css/city.css?v=16") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city.js?v=30") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=1") && idxHtml.includes("js/city-jalan.js?v=1") && idxHtml.includes("js/city-kendaraan.js?v=2") && idxHtml.includes("js/city-persimpangan.js?v=1") && idxHtml.includes("js/city-maritim.js?v=1"));
 cek("v18-D: #jamAtas ada di bar atas (jam, hari, fase, cuaca)", idxHtml.includes('id="jamAtas"') && idxHtml.includes('id="jamAtasJam"') && idxHtml.includes('id="jamAtasHari"') && idxHtml.includes('id="jamAtasFase"') && idxHtml.includes('id="jamAtasCuaca"'));
 cek("v18-D: #ikonFase hanya satu (dipindah ke #jamAtas, tidak duplikat)", (idxHtml.match(/id="ikonFase"/g) || []).length === 1);
 cek("v18-D: tidak ada tombol Hari Berikutnya di index.html", !idxHtml.includes('id="btnHari"') && !idxHtml.includes('id="btnKec3"') && !/<button[^>]*>[^<]*Hari Berikutnya/.test(idxHtml) && !idxHtml.includes("⏭ Hari Berikutnya"));
@@ -2310,6 +2321,13 @@ C.aturKecepatan(1);
 vm.runInContext("waktuGame = 360;", sandbox);
 C.S.cuaca = "Cerah";
 C.S.penduduk.total = 10;
+// v22.3-W1 (perbaikan setup tes, BUKAN pelemahan asersi): sinkronkan
+// kendaraan dengan populasi BARU sebelum hitung skor — skor lalin
+// (v22-W4) memakai kendaraan AKTUAL per petak, dan jumlah mobil warga
+// berskala populasi (pop 10 -> 2 mobil). Tanpa ini, simpanan dihitung
+// dengan 1 mobil (spawn saat pop 4) sementara muat() me-respawn 2
+// mobil -> skor 10 vs 0. Asersi (skor sama persis) TIDAK diubah.
+C.initKendaraan();
 C.hitungLalin();
 const skorSimpanW4 = C.S.lalin.skor;
 const perPetakSimpanW4 = JSON.stringify(C.S.lalin.perPetak);
@@ -3273,7 +3291,7 @@ cek("v21-w5: CSS portrait HP: minimap disembunyikan saat panel kiri terbuka (:ha
 // --- (l) v21 tetap jalan: regresi sistem inti ---
 if (typeof C.perbaruiDiagnostikRender === "function") C.perbaruiDiagnostikRender();
 cek("v21-w5: regresi — 19 kategori, overlay, profil, density, minimap besar, tutup panel, petaVersi 5, generasiSimpan, diagnostik render", C.TAB_BANGUN.length === 19 && typeof C.aturOverlay === "function" && typeof C.resetProfil === "function" && typeof C.aturDensity === "function" && typeof C.toggleMinimapBesar === "function" && typeof C.tutupSemuaPanel === "function" && C.S.petaVersi === 5 && typeof C.S.generasiSimpan === "number" && typeof vm.runInContext("window.__merantiRender", sandbox) === "object", "petaVersi=" + C.S.petaVersi + " gen=" + C.S.generasiSimpan);
-cek("v21-w5: VERSI_GAME v22.2 + refs v22.2 (css v=15, city.js v=29, city-jalan v=1, city-kendaraan v=2, city-maritim v=1)", C.VERSI_GAME === "v22.2" && idxHtml.includes("css/city.css?v=15") && idxHtml.includes("js/city.js?v=29") && idxHtml.includes("js/city-jalan.js?v=1") && idxHtml.includes("js/city-kendaraan.js?v=2") && idxHtml.includes("js/city-maritim.js?v=1"));
+cek("v21-w5: VERSI_GAME v22.3 + refs v22.3 (css v=16, city.js v=30, city-jalan v=1, city-kendaraan v=2, city-maritim v=1)", C.VERSI_GAME === "v22.3" && idxHtml.includes("css/city.css?v=16") && idxHtml.includes("js/city.js?v=30") && idxHtml.includes("js/city-jalan.js?v=1") && idxHtml.includes("js/city-kendaraan.js?v=2") && idxHtml.includes("js/city-maritim.js?v=1"));
 
 // --- (n) v22-W1: RoadGraph + A* + Lane System (js/city-jalan.js) ---
 // Jaringan uji (aspal): L utama (10,10)-(14,10)-(14,14) + cabang buntu
@@ -3517,7 +3535,16 @@ cek("v22-w6: permainan yang dimuat dalam keadaan jeda tidak memajukan waktu", C.
 C.aturKecepatan(2);
 C.kembaliKeMenuUtama();
 cek("v22-w6: kembali ke menu menyimpan kecepatan 0 (jeda dipulihkan)", (() => { const m = C.muat(); return !!m && m.kecepatan === 0; })(), String(C.muat() && C.muat().kecepatan));
-cek("v22-w6: tab di menu melepas lease (denyut berhenti)", C.berhentiDenyutMenu === true);
+// v22.3-W2 (PERUBAHAN PERILAKU — tes lama di bawah ini salah dan diganti):
+// kembaliKeMenuUtama() TIDAK lagi melepas lease. Dulu tab di menu
+// melepas lease sehingga tab basi lain merebutnya dan autosave-nya
+// menimpa simpanan (desinkron cek live v22 ?v=40). Kini tab tetap
+// mendenyut di layar mulai dan melindungi simpanannya.
+vm.runInContext("catatInteraksi();", sandbox); // klik "Kembali ke Menu" = interaksi
+cek("v22.3-w2: kembali ke menu TIDAK melepas lease (flag tetap false)", C.berhentiDenyutMenu === false);
+kedaluwarsakanLeaseW6(); // >3 detik berlalu di layar mulai
+C.tickInterval500(); // denyut menu menyegarkan lease tab ini
+cek("v22.3-w2: denyut di menu menyegarkan lease tab ini", (() => { const l = bacaLeaseW6(); return !!l && l.id === vm.runInContext("tabIdSaya", sandbox); })());
 C.mulaiGame(false);
 cek("v22-w6: LANJUTKAN setelah kembali ke menu tetap dijeda", C.kecepatan === 0, String(C.kecepatan));
 cek("v22-w6: mulaiGame mereset flag lepas-lease menu", C.berhentiDenyutMenu === false);
@@ -3530,7 +3557,9 @@ C.resetProfil();
 cek("v22-w6: hapus profil ketuk pertama = minta konfirmasi (profil belum terhapus)", !!C.profilPemain);
 C.resetProfil();
 cek("v22-w6: hapus profil ketuk kedua menghapus profil", C.profilPemain === null && !store.has(C.CITY.PROFIL_KEY));
-cek("v22-w6: hapus profil melepas lease tab ini (denyut berhenti di menu)", C.berhentiDenyutMenu === true);
+// v22.3-W2 (PERUBAHAN PERILAKU — tes lama salah dan diganti):
+// resetProfil() (via kembaliKeMenuUtama) TIDAK lagi melepas lease.
+cek("v22.3-w2: hapus profil TIDAK melepas lease (flag false, lease milik tab ini)", C.berhentiDenyutMenu === false && (() => { const l = bacaLeaseW6(); return !!l && l.id === vm.runInContext("tabIdSaya", sandbox); })());
 vm.runInContext("profilPemain = { nama: 'Sukma Dewi', gender: 'wanita', avatar: 'y', tutorialSelesai: false, dibuat: new Date().toISOString() }; simpanProfil();", sandbox);
 C.mulaiGame(true);
 cek("v22-w6: permainan baru menimpa simpanan lama (kota baru Sukma Dewi, bukan Hari 4 Sukma)", (() => { const m = C.muat(); return !!m && m.hari === 1 && m.pemimpin && m.pemimpin.nama === "Sukma Dewi" && m.uang !== 1739797; })(), (() => { const m = C.muat(); return m && (m.hari + "/" + (m.pemimpin && m.pemimpin.nama) + "/Rp" + m.uang); })());
@@ -4402,7 +4431,7 @@ const truk1W5 = C.kendaraanVisual.find(k => k.tipe === "truk");
 C.initKendaraan();
 const truk2W5 = C.kendaraanVisual.find(k => k.tipe === "truk");
 cek("v22-w5: initKendaraan deterministik — truk selalu di petak jalan pertama (bukan acak)", !!truk1W5 && !!truk2W5 && truk1W5.x === C.S.jalan[0].x && truk1W5.y === C.S.jalan[0].y && truk2W5.x === C.S.jalan[0].x && truk2W5.y === C.S.jalan[0].y, "truk=" + (truk1W5 && truk1W5.x + "," + truk1W5.y));
-cek("v22-w5: VERSI_GAME v22.2 + nav Lalu Lintas ada di index.html + overlay traffic terdaftar", C.VERSI_GAME === "v22.2" && idxHtml.indexOf('data-tab="lalin"') >= 0 && idxHtml.indexOf("js/city-maritim.js?v=1") >= 0);
+cek("v22-w5: VERSI_GAME v22.3 + nav Lalu Lintas ada di index.html + overlay traffic terdaftar", C.VERSI_GAME === "v22.3" && idxHtml.indexOf('data-tab="lalin"') >= 0 && idxHtml.indexOf("js/city-maritim.js?v=1") >= 0);
 
 // =====================================================================
 // v22-W7: PWA + Logo Resmi (Worker 7 — wilayah TERPISAH dari traffic
@@ -4424,7 +4453,7 @@ const swW7 = fs.readFileSync(ROOT_W7 + "/sw.js", "utf8");
 let swSyntaxOkW7 = false;
 try { require("child_process").execSync("node --check " + ROOT_W7 + "/sw.js", { stdio: "ignore" }); swSyntaxOkW7 = true; } catch (e) { swSyntaxOkW7 = false; }
 cek("v22-w7: sw.js lolos node --check", swSyntaxOkW7);
-cek("v22-w7: nama cache SW terikat v22.2 (meranti-rising-v22.2)", swW7.indexOf("meranti-rising-v22.2") !== -1);
+cek("v22-w7: nama cache SW terikat v22.3 (meranti-rising-v22.3)", swW7.indexOf("meranti-rising-v22.3") !== -1);
 cek("v22-w7: SW hapus cache lama saat activate + skipWaiting + clients.claim", swW7.indexOf("skipWaiting") !== -1 && swW7.indexOf("clients.claim") !== -1 && swW7.indexOf("caches.delete") !== -1);
 cek("v22-w7: SW network-first untuk index.html, cache-first untuk aset", swW7.indexOf("index.html") !== -1 && swW7.indexOf("fetch") !== -1 && swW7.indexOf("caches.match") !== -1);
 const daftarCacheW7 = (swW7.match(/const DAFTAR_CACHE = \[([\s\S]*?)\];/) || ["", ""])[1].split("\n").map(s => (s.match(/"([^"]+)"/) || [])[1]).filter(Boolean);
@@ -4443,6 +4472,296 @@ cek("v22-w7: tombol instal & muat-ulang display:none secara default di index.htm
 const cityW7 = fs.readFileSync(ROOT_W7 + "/js/city.js", "utf8");
 cek("v22-w7: city.js punya wiring PWA (beforeinstallprompt, register sw.js, fullscreen, toast update)", cityW7.indexOf("beforeinstallprompt") !== -1 && cityW7.indexOf('register("sw.js")') !== -1 && cityW7.indexOf("requestFullscreen") !== -1 && cityW7.indexOf("Versi baru tersedia") !== -1);
 cek("v22-w7: city.js mendaftarkan SW hanya via https/localhost", cityW7.indexOf('location.protocol === "https:"') !== -1 && cityW7.indexOf('"localhost"') !== -1);
-cek("v22-w7: VERSI_GAME v22.2 (dinaikkan v22.2 — W7 tidak menyentuhnya)", C.VERSI_GAME === "v22.2");
+cek("v22-w7: VERSI_GAME v22.3 (dinaikkan v22.2 — W7 tidak menyentuhnya)", C.VERSI_GAME === "v22.3");
+
+// ---------------- v22.3-W1: Kendaraan Bergerak + Warga Berjalan ----------------
+// Cek live v22 (?v=40): 1 truk "parking" selamanya + 0 mobil warga +
+// panel "Warga berjalan: 0/1" selama ~15 jam game. Penyebab (reproduksi
+// headless, probe /tmp/probe22.js): (1) pilihTujuanAcakJalan min 3
+// petak tidak punya kandidat di kota awal (hanya 3 petak jalan) —
+// truk tidak pernah dapat tujuan; (2) warga target = rumah sendiri
+// (rute panjang 1 -> "tiba" tanpa bergerak); (3) mobil warga tidak
+// pernah di-spawn. Perbaikan: jarak tujuan mengecil (3->1->0),
+// tujuan bangunan dulu untuk mobil warga, spawn mobil warga, warga
+// berjalan di jalan (stroll, bukan "tiba" di rumah sendiri), plus
+// anti-deadlock (merangkak, mundur, filter "di depan") agar dua
+// kendaraan di jalan 3 petak tidak saling menunggu selamanya.
+C.aturKecepatan(1);
+C.mulaiGame(true);
+C.initKendaraan();
+const trukW1 = C.kendaraanVisual.find(k => k.tipe === "truk");
+const mobilW1 = C.kendaraanVisual.find(k => k.tipe === "mobil" && k.mobilWarga === true);
+// (c) mobil pribadi di-spawn pada kota awal (rumah selesai + jalan)
+cek("v22.3-W1 (c): >=1 mobil warga di-spawn pada kota awal (rumah selesai + jalan)", !!mobilW1, "kendaraan: " + C.kendaraanVisual.map(k => k.tipe + (k.mobilWarga ? "/warga" : "")).join(", "));
+// (a) truk ambient bergerak (bukan "parking" selamanya) + tetap di jalan;
+// mobil warga ikut bergerak. 3000 tick x dt 0,1 = 300 detik simulasi.
+let trukPindahMaksW1 = 0, trukBergerakW1 = 0, trukJarakMaksW1 = 0;
+const trukAwalW1 = trukW1 ? { x: trukW1.x, y: trukW1.y } : null;
+const mobilAwalW1 = mobilW1 ? { x: mobilW1.x, y: mobilW1.y } : null;
+let mobilPindahMaksW1 = 0;
+for (let i = 0; i < 3000; i++) {
+  C.perbaruiKendaraan(0.1);
+  if (trukW1) {
+    const d = Math.hypot(trukW1.x - trukAwalW1.x, trukW1.y - trukAwalW1.y);
+    if (d > trukPindahMaksW1) trukPindahMaksW1 = d;
+    if (trukW1.state === "accelerating" || trukW1.state === "cruising" || trukW1.state === "turning") trukBergerakW1++;
+    let dj = 1e9;
+    for (const j of C.S.jalan) dj = Math.min(dj, Math.hypot(trukW1.x - j.x, trukW1.y - j.y));
+    if (dj > trukJarakMaksW1) trukJarakMaksW1 = dj;
+  }
+  if (mobilW1) {
+    const d = Math.hypot(mobilW1.x - mobilAwalW1.x, mobilW1.y - mobilAwalW1.y);
+    if (d > mobilPindahMaksW1) mobilPindahMaksW1 = d;
+  }
+}
+cek("v22.3-W1 (a): truk ambient bergerak (pindah > 0,5 petak dari titik awal)", trukPindahMaksW1 > 0.5, "pindah maks " + trukPindahMaksW1.toFixed(2));
+cek("v22.3-W1 (a): truk ambient tidak 'parking' selamanya (pernah accelerating/cruising/turning)", trukBergerakW1 > 0, "tick bergerak " + trukBergerakW1 + "/3000");
+cek("v22.3-W1 (a): truk tetap di area jalan (<0,9 petak dari petak jalan)", trukJarakMaksW1 < 0.9, "jarak maks " + trukJarakMaksW1.toFixed(2));
+cek("v22.3-W1 (c): mobil warga ikut bergerak (pindah > 0,5 petak)", mobilPindahMaksW1 > 0.5, "pindah maks " + mobilPindahMaksW1.toFixed(2));
+// (b) warga berjalan di siang hari, tetap di atas petak jalan
+vm.runInContext("waktuGame = 12 * 60;", sandbox); // tengah hari
+C.sinkronWarga();
+const wargaW1 = C.wargaVisual[0];
+let wargaPindahMaksW1 = 0, wargaDiJalanW1 = true, wargaTileLuarW1 = "", wargaPernahBerjalanW1 = false;
+const wargaAwalW1 = wargaW1 ? { x: wargaW1.x, y: wargaW1.y } : null;
+const himpJalanW1 = new Set(C.S.jalan.map(j => j.x + "," + j.y));
+for (let i = 0; i < 3000; i++) {
+  C.perbaruiWarga(0.1);
+  // Panel dibaca berkala, bukan hanya di akhir: warga bersiklus
+  // berjalan -> tiba -> berjalan, jadi cuplikan satu instans bisa
+  // menangkap momen "tiba" padahal ia berjalan sepanjang sesi.
+  if (i % 100 === 0) { try { if (C.infoPejalanKaki().berjalan >= 1) wargaPernahBerjalanW1 = true; } catch (e) {} }
+  if (wargaW1) {
+    const d = Math.hypot(wargaW1.x - wargaAwalW1.x, wargaW1.y - wargaAwalW1.y);
+    if (d > wargaPindahMaksW1) wargaPindahMaksW1 = d;
+    // 50 tick pertama = warga berjalan dari petak rumah ke jalan.
+    if (i >= 50) {
+      const t = Math.round(wargaW1.x) + "," + Math.round(wargaW1.y);
+      if (!himpJalanW1.has(t)) { wargaDiJalanW1 = false; wargaTileLuarW1 = t; break; }
+    }
+  }
+}
+cek("v22.3-W1 (b): warga berjalan di siang hari (pindah > 0,5 petak)", wargaPindahMaksW1 > 0.5, "pindah maks " + wargaPindahMaksW1.toFixed(2));
+cek("v22.3-W1 (b): warga tetap di atas petak jalan (setelah keluar rumah)", wargaDiJalanW1, wargaTileLuarW1);
+cek("v22.3-W1 (b): panel jujur — infoPejalanKaki().berjalan >= 1 selama sesi", wargaPernahBerjalanW1, JSON.stringify((function () { try { return C.infoPejalanKaki(); } catch (e) { return null; } })()));
+
+// =====================================================================
+// v22.3 Worker 2 — sinkron profil/simpanan (cek live v22 ?v=40).
+// Skenario live: tab basi A = kota lama "Sukma" Hari 7 (2x, tanpa
+// interaksi) vs tab B = hapus profil -> permainan baru "Putri Ayu"
+// (Hari 1 07:00 Rp1.731.500, 7 jalan + 1 rumah) -> kembali ke menu ->
+// LANJUTKAN. Pra-perbaikan LANJUTKAN memuat Sukma Hari 8 Rp1.729.439
+// (profil Putri Ayu, simpanan Sukma). Reproduksi /tmp/probe-desinkron.js
+// membuktikan: varian A berperilaku build v21 mereproduksi persis
+// (gen 3 -> 4, LANJUTKAN = Sukma Hari 8); varian A idle build-saat-ini
+// TIDAK mereproduksi (autosave A diblokir pelindung idle simpan()),
+// TAPI denyut A yang idle tetap merebut lease B.
+// Perbaikan (js/city.js): (a) denyutLeaseTab() menghormati idle —
+// tab tanpa interaksi >30 detik JANGAN memperbarui/mengklaim lease
+// (guard sama dengan simpan()); (b) kembaliKeMenuUtama() TIDAK lagi
+// melepas lease — tab tetap mendenyut di layar mulai.
+// Catatan pemodelan tab basi build v21: simpan() v21 TIDAK punya
+// pelindung idle; pada build saat ini itu setara dengan A yang
+// timestamp interaksinya segar (cek idle di simpan() lolos — jalur kode
+// yang ditempuh identik). Probe membuktikan kesetaraan ini dengan
+// simpan() A yang diganti harfiah ke semantik v21 (hasil sama persis).
+// =====================================================================
+const HARI7_22_W2 = 6 * 1440 + 22 * 60; // Hari 7, 22:00
+const HARI8_22_W2 = 7 * 1440 + 22 * 60; // Hari 8, 22:00
+const HARI1_07_W2 = 0 * 1440 + 7 * 60;  // Hari 1, 07:00
+function muatRingkasW2(ctx) { const m = vm.runInContext("muat()", ctx); return m ? { pemimpin: m.pemimpin && m.pemimpin.nama, hari: m.hari, waktuGame: m.waktuGame, uang: m.uang, jalan: m.jalan.length, bangunan: m.bangunan.length, gen: m.generasiSimpan } : null; }
+function leasePemilikW2() { const l = bacaLeaseW6(); return l ? l.id : null; }
+// --- (a) TAB LAMA A: kota Sukma Hari 7 22:00 Rp1.732.274, jalan 2x, lalu idle.
+const sesiA2 = new Map();
+const tabA2 = buatKonteksW6(sesiA2);
+const A2 = tabA2.sb;
+const idA2 = vm.runInContext("tabIdSaya", A2);
+vm.runInContext("profilPemain = { nama: 'Sukma', gender: 'pria', avatar: 'x', tutorialSelesai: true, dibuat: new Date().toISOString() }; simpanProfil();", A2);
+vm.runInContext("mulaiGame(true);", A2);
+vm.runInContext("waktuGame = " + HARI7_22_W2 + "; S.uang = 1732274; S.penduduk.total = 4; aturKecepatan(2); simpan();", A2);
+cek("v22.3-w2: A menyimpan kota lama Sukma Hari 7 Rp1.732.274", (() => { const m = muatRingkasW2(A2); return !!m && m.pemimpin === "Sukma" && m.hari === 7 && m.uang === 1732274; })(), JSON.stringify(muatRingkasW2(A2)));
+vm.runInContext("waktuInteraksiTerakhir = Date.now() - 40000;", A2); // tab basi: tanpa interaksi >30 dtk
+// (a) denyut tab idle TIDAK boleh memperbarui lease miliknya yang kedaluwarsa.
+kedaluwarsakanLeaseW6();
+const leaseTsAgedW2 = bacaLeaseW6().ts;
+vm.runInContext("denyutLeaseTab();", A2);
+cek("v22.3-w2 (a): denyut tab idle >30 dtk TIDAK memperbarui lease (ts tetap)", bacaLeaseW6().ts === leaseTsAgedW2 && leasePemilikW2() === idA2, "ts=" + bacaLeaseW6().ts + " vs " + leaseTsAgedW2);
+// ...tapi setelah interaksi, denyut memperbarui lease lagi (tidak mati selamanya).
+vm.runInContext("catatInteraksi();", A2);
+vm.runInContext("denyutLeaseTab();", A2);
+cek("v22.3-w2 (a): setelah interaksi, denyut memperbarui lease lagi", leasePemilikW2() === idA2 && bacaLeaseW6().ts > leaseTsAgedW2);
+// --- (b) TAB BARU B: hapus profil -> Putri Ayu -> bangun -> kembali ke menu.
+const sesiB2 = new Map();
+const tabB2 = buatKonteksW6(sesiB2);
+const B2 = tabB2.sb;
+const idB2 = vm.runInContext("tabIdSaya", B2);
+cek("v22.3-w2: denyut layar mulai B tidak mencuri lease segar milik A", leasePemilikW2() === idA2);
+vm.runInContext("resetProfil();", B2);
+vm.runInContext("resetProfil();", B2);
+cek("v22.3-w2: hapus profil (2 ketuk) menghapus profil B", vm.runInContext("profilPemain", B2) === null && !store.has(C.CITY.PROFIL_KEY));
+vm.runInContext("profilPemain = { nama: 'Putri Ayu', gender: 'pria', avatar: 'y', tutorialSelesai: false, dibuat: new Date().toISOString() }; simpanProfil();", B2);
+// (c) mulaiGame(true) klaim lease SEBELUM muat + langsung menimpa simpanan lama.
+vm.runInContext("mulaiGame(true);", B2);
+cek("v22.3-w2 (c): mulaiGame(true) klaim lease SEBELUM muat (lease milik B)", leasePemilikW2() === idB2);
+cek("v22.3-w2 (c): permainan baru menimpa simpanan lama (Putri Ayu Hari 1)", (() => { const m = muatRingkasW2(B2); return !!m && m.pemimpin === "Putri Ayu" && m.hari === 1; })(), JSON.stringify(muatRingkasW2(B2)));
+const jalanAwalB2 = vm.runInContext("S.jalan.length", B2);
+const bangAwalB2 = vm.runInContext("S.bangunan.length", B2);
+const tambahB2 = vm.runInContext(`(() => {
+  let tambah = 0, maju = true;
+  while (tambah < 7 && maju) {
+    maju = false;
+    const jalanKini = S.jalan.slice();
+    outer: for (const j of jalanKini) for (const d of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      if (tambah >= 7) break outer;
+      const tx = j.x + d[0], ty = j.y + d[1];
+      const t = terrainDi(peta, tx, ty);
+      const def = t ? TERRAIN[t] : null;
+      const bisa = def && (def.bisaBangun !== undefined ? def.bisaBangun : def.bangun) && !def.butuhBuka;
+      if (bisa && t !== "pantai" && !adaBangunanDi(S, tx, ty) && !adaJalanDi(S, tx, ty)) {
+        S.jalan.push({ x: tx, y: ty, tipe: "jalan-tanah", kecamatan: null });
+        tambah++; maju = true;
+      }
+    }
+  }
+  return tambah;
+})()`, B2);
+cek("v22.3-w2: B membangun 7 petak Jalan Tanah", tambahB2 === 7, String(tambahB2));
+const rumahB2 = vm.runInContext(`(() => {
+  for (const j of S.jalan) for (const d of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const tx = j.x + d[0], ty = j.y + d[1];
+    const t = terrainDi(peta, tx, ty);
+    const def = t ? TERRAIN[t] : null;
+    const bisa = def && (def.bisaBangun !== undefined ? def.bisaBangun : def.bangun) && !def.butuhBuka;
+    if (bisa && t !== "pantai" && t !== "hutan" && !adaBangunanDi(S, tx, ty) && !adaJalanDi(S, tx, ty)) {
+      S.bangunan.push({ id: "rumah-sederhana", x: tx, y: ty, rot: 0, selesai: true, progres: 1, kecamatan: null });
+      return { x: tx, y: ty };
+    }
+  }
+  return null;
+})()`, B2);
+cek("v22.3-w2: B membangun 1 rumah di samping jalan", !!rumahB2, JSON.stringify(rumahB2));
+vm.runInContext("waktuGame = " + HARI1_07_W2 + "; S.uang = 1731500; simpan();", B2);
+cek("v22.3-w2: simpan manual B = Putri Ayu Hari 1 07:00 Rp1.731.500 + 7 jalan + 1 rumah", (() => { const m = muatRingkasW2(B2); return !!m && m.pemimpin === "Putri Ayu" && m.waktuGame === HARI1_07_W2 && m.uang === 1731500 && m.jalan === jalanAwalB2 + 7 && m.bangunan === bangAwalB2 + 1; })(), JSON.stringify(muatRingkasW2(B2)));
+// --- (b) Kembali ke menu: lease TIDAK dilepas; denyut menu melindungi simpanan.
+if (tabB2.listeners["click"]) tabB2.listeners["click"](); // klik "Kembali ke Menu" = interaksi
+vm.runInContext("kembaliKeMenuUtama();", B2);
+cek("v22.3-w2 (b): kembali ke menu TIDAK melepas lease (flag tetap false)", vm.runInContext("berhentiDenyutMenu", B2) === false);
+const genMenuW2 = muatRingkasW2(B2).gen;
+cek("v22.3-w2 (b): simpan di menu tetap Putri Ayu Hari 1 Rp1.731.500 (jeda)", (() => { const m = muatRingkasW2(B2); return !!m && m.pemimpin === "Putri Ayu" && m.uang === 1731500 && m.gen === genMenuW2; })(), JSON.stringify(muatRingkasW2(B2)));
+// Jendela menu: >3 detik berlalu (lease kedaluwarsa), denyut B menyegarkannya.
+kedaluwarsakanLeaseW6();
+const leaseTsMenuW2 = bacaLeaseW6().ts;
+vm.runInContext("denyutLeaseTab();", B2);
+cek("v22.3-w2 (b): denyut di menu menyegarkan lease kedaluwarsa milik sendiri", leasePemilikW2() === idB2 && bacaLeaseW6().ts > leaseTsMenuW2);
+// --- Tab basi A mencoba merebut: denyut idle tidak boleh menyentuh lease B.
+vm.runInContext("waktuInteraksiTerakhir = Date.now() - 40000;", A2); // A kembali idle
+vm.runInContext("denyutLeaseTab();", A2);
+cek("v22.3-w2 (a): denyut tab basi A (idle) tidak merebut lease segar milik B", leasePemilikW2() === idB2);
+// A berperilaku build v21 (tanpa pelindung idle di simpan): cek idle lolos,
+// kota lama maju Hari 7 -> Hari 8 — autosave-nya HARUS ditolak karena lease B segar.
+vm.runInContext("catatInteraksi();", A2);
+vm.runInContext("waktuGame = " + HARI8_22_W2 + "; S.uang = 1729439; S.penduduk.total = 4;", A2);
+const autosaveA2 = vm.runInContext("simpan(true);", A2);
+cek("v22.3-w2: autosave tab basi (model v21) DITOLAK saat B memegang lease segar", autosaveA2 === false, String(autosaveA2));
+cek("v22.3-w2: simpanan tidak tertimpa tab basi (masih Putri Ayu, generasi sama)", (() => { const m = muatRingkasW2(B2); return !!m && m.pemimpin === "Putri Ayu" && m.uang === 1731500 && m.gen === genMenuW2; })(), JSON.stringify(muatRingkasW2(B2)));
+// --- LANJUTKAN di B HARUS memuat kota Putri Ayu, bukan Sukma.
+if (tabB2.listeners["click"]) tabB2.listeners["click"](); // klik LANJUTKAN = interaksi
+vm.runInContext("mulaiGame(false);", B2);
+cek("v22.3-w2 (e): LANJUTKAN memuat Putri Ayu Hari 1 07:00 Rp1.731.500 (bukan Sukma Hari 8)", vm.runInContext("S.pemimpin.nama", B2) === "Putri Ayu" && vm.runInContext("S.hari", B2) === 1 && vm.runInContext("S.waktuGame", B2) === HARI1_07_W2 && vm.runInContext("S.uang", B2) === 1731500, vm.runInContext("S.pemimpin.nama", B2) + " H" + vm.runInContext("S.hari", B2) + " Rp" + vm.runInContext("S.uang", B2));
+cek("v22.3-w2 (e): 7 jalan + 1 rumah Putri Ayu tetap ada setelah LANJUTKAN", vm.runInContext("S.jalan.length", B2) === jalanAwalB2 + 7 && vm.runInContext("S.bangunan.length", B2) === bangAwalB2 + 1, vm.runInContext("S.jalan.length", B2) + " jalan / " + vm.runInContext("S.bangunan.length", B2) + " bangunan");
+cek("v22.3-w2 (e): lease dipegang B setelah LANJUTKAN", leasePemilikW2() === idB2);
+// Kembalikan lease ke tab utama agar tidak ada konteks uji yang menggantung.
+vm.runInContext("klaimLeaseTab();", sandbox);
+
+// ---- v22.3-W3 (d): konstruksi awal — kebun sagu pertama selesai <= 6 jam game ----
+// Akar masalah (cek live v22, direproduksi headless): kota awal 4 jiwa ->
+// angkatan 2, Dermaga awal (pekerja 2) menyerap keduanya -> menganggur 0
+// -> faktorPekerja lantai 0,25 -> kebun "4 jam" butuh 16 jam.
+C.mulaiGame(true);
+const tkAwalW3 = C.hitungTenagaKerja();
+cek("v22.3-w3 (d): kota awal menganggur 0 (angkatan 2, dermaga butuh 2)", tkAwalW3.angkatan === 2 && tkAwalW3.bekerja === 2 && tkAwalW3.menganggur === 0, JSON.stringify(tkAwalW3));
+cek("v22.3-w3 (d): durasi efektif kebun PERTAMA kota awal = 4 jam (faktor penuh)", C.durasiKonstruksiEfektif(C.BANGUNAN_MAP["kebun-sagu"], null) === 4, C.durasiKonstruksiEfektif(C.BANGUNAN_MAP["kebun-sagu"], null));
+function cariTileBangunW3(def) {
+  for (const j of C.S.jalan) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [-2, 0], [0, 2], [0, -2], [1, 1], [-1, -1], [1, -1], [-1, 1]]) {
+    const tx = j.x + dx, ty = j.y + dy;
+    if (C.cekBangun(def, tx, ty, 0).ok) return { x: tx, y: ty };
+  }
+  return null;
+}
+const tileKebun1W3 = cariTileBangunW3(C.BANGUNAN_MAP["kebun-sagu"]);
+cek("v22.3-w3 (d): ada petak valid untuk kebun pertama", !!tileKebun1W3);
+let jamKebun1W3 = -1;
+if (tileKebun1W3) {
+  C.bangunDi(C.BANGUNAN_MAP["kebun-sagu"], tileKebun1W3.x, tileKebun1W3.y, 0);
+  const kebun1W3 = C.S.bangunan.find(b => b.id === "kebun-sagu");
+  for (let jam = 1; jam <= 6; jam++) { C.majukanWaktu(60); if (kebun1W3 && kebun1W3.selesai) { jamKebun1W3 = jam; break; } }
+}
+cek("v22.3-w3 (d): kebun sagu pertama SELESAI dalam <=6 jam game (kota awal)", jamKebun1W3 > 0 && jamKebun1W3 <= 6, "selesai setelah " + jamKebun1W3 + " jam");
+// UI jujur: kebun KEDUA (sudah ada kebun selesai) tetap kena penalti pekerja
+// -> info + panel kanan menampilkan kekurangan pekerja secara eksplisit.
+const tileKebun2W3 = cariTileBangunW3(C.BANGUNAN_MAP["kebun-sagu"]);
+cek("v22.3-w3 (d): ada petak valid untuk kebun kedua", !!tileKebun2W3);
+if (tileKebun2W3) {
+  C.bangunDi(C.BANGUNAN_MAP["kebun-sagu"], tileKebun2W3.x, tileKebun2W3.y, 0);
+  const kebun2W3 = C.S.bangunan.filter(b => b.id === "kebun-sagu" && !b.selesai)[0];
+  const infoK2W3 = C.infoPekerjaKonstruksi(C.BANGUNAN_MAP["kebun-sagu"], kebun2W3);
+  cek("v22.3-w3 (d): kebun kedua: faktor 0,25, tersedia 0/3 menganggur", !!infoK2W3 && infoK2W3.faktor === 0.25 && infoK2W3.tersedia === 0 && infoK2W3.dibutuhkan === 3, JSON.stringify(infoK2W3));
+  cek("v22.3-w3 (d): durasi efektif kebun kedua = 16 jam (penalti tetap berlaku)", C.durasiKonstruksiEfektif(C.BANGUNAN_MAP["kebun-sagu"], kebun2W3) === 16, C.durasiKonstruksiEfektif(C.BANGUNAN_MAP["kebun-sagu"], kebun2W3));
+  const idxK2W3 = C.S.bangunan.indexOf(kebun2W3);
+  vm.runInContext("terpilih = { jenis: 'bangunan', idx: " + idxK2W3 + " };", sandbox);
+  C.renderPanelKanan();
+  const htmlKananW3 = vm.runInContext('document.getElementById("panelKanan").innerHTML', sandbox);
+  cek("v22.3-w3 (d): panel kanan konstruksi menampilkan 'Menunggu pekerja: 0/3'", htmlKananW3.includes("Menunggu pekerja: 0/3"), htmlKananW3.slice(0, 400));
+  vm.runInContext("terpilih = null;", sandbox);
+  C.renderPanelKanan();
+}
+
+// ---- v22.3-W3 (f): panel lalu lintas jujur saat 0 kendaraan aktif ----
+// Skenario: kota padat penduduk+bangunan sehingga rumus zona saja sudah
+// menaikkan skor kemacetan (panel lama: "225 kend/jam" + "Macet"), tapi
+// TIDAK ADA kendaraan sama sekali.
+C.mulaiGame(true);
+{
+  const j0W3 = C.S.jalan[0];
+  for (let i = 0; i < 8; i++) C.S.bangunan.push({ id: "rumah-sederhana", x: j0W3.x + 1 + (i % 3), y: j0W3.y + 1 + Math.floor(i / 3), rot: 0, selesai: true, progres: 1 });
+  C.S.bangunan.push({ id: "pasar", x: j0W3.x + 2, y: j0W3.y + 3, rot: 0, selesai: true, progres: 1 });
+}
+C.S.penduduk.total = 80;
+vm.runInContext("waktuGame = 480;", sandbox); // 08:00 = jam sibuk (faktor 1,5)
+vm.runInContext("kendaraanVisual.length = 0; wargaVisual.length = 0; daftarKendaraan.length = 0;", sandbox);
+C.hitungLalin();
+cek("v22.3-w3 (f): 0 kendaraan aktif tapi estimasi zona > 0", C.S.lalin.kendaraanAktif === 0 && C.S.lalin.volumeTotal > 0, "aktif=" + C.S.lalin.kendaraanAktif + " volume=" + C.S.lalin.volumeTotal);
+cek("v22.3-w3 (f): skenario bermakna — skor zona < 70 (panel lama akan klaim Padat/Macet)", C.S.lalin.skor < 70, "skor=" + C.S.lalin.skor);
+cek("v22.3-w3 (f): volumeEstimasi = volumeTotal (estimasi zona, bukan hitungan nyata)", C.S.lalin.volumeEstimasi === C.S.lalin.volumeTotal, C.S.lalin.volumeEstimasi + " vs " + C.S.lalin.volumeTotal);
+vm.runInContext('panelKiri = "lalin";', sandbox);
+C.renderPanelKiri();
+const htmlLalinW3 = vm.runInContext('document.getElementById("panelKiriIsi").innerHTML', sandbox);
+cek("v22.3-w3 (f): panel menampilkan kendaraan aktual 0 secara eksplisit", htmlLalinW3.includes("Kendaraan aktual di jalan") && htmlLalinW3.includes("0 bergerak"), htmlLalinW3.slice(0, 600));
+cek("v22.3-w3 (f): panel melabeli volume sebagai estimasi zona", htmlLalinW3.includes("Estimasi permintaan (zona)"), htmlLalinW3.slice(0, 600));
+cek("v22.3-w3 (f): panel TIDAK mengklaim 'Padat' saat jalan kosong", !htmlLalinW3.includes("Padat"), htmlLalinW3.slice(0, 900));
+cek("v22.3-w3 (f): panel TIDAK mengklaim 'Macet' saat jalan kosong", !htmlLalinW3.includes("Macet"), htmlLalinW3.slice(0, 900));
+cek("v22.3-w3 (f): panel menyatakan 'jalan kosong'", htmlLalinW3.includes("jalan kosong"), htmlLalinW3.slice(0, 900));
+vm.runInContext('panelKiri = "peta";', sandbox);
+
+// ---- v22.3-W3: verifikasi wiring PWA (kode saja — perilaku instal/fullscreen
+//      asli hanya bisa dibuktikan live di browser nyata) ----
+{
+  const adaListenerBipW3 = typeof listeners["beforeinstallprompt"] === "function";
+  cek("v22.3-w3 PWA: listener beforeinstallprompt terpasang (initPWA)", adaListenerBipW3);
+  if (adaListenerBipW3) {
+    const evPalsuW3 = { preventDefault() {}, prompt() { this.dipanggil = true; }, userChoice: Promise.resolve(), dipanggil: false };
+    listeners["beforeinstallprompt"](evPalsuW3);
+    cek("v22.3-w3 PWA: event beforeinstallprompt -> tombol instal tersedia", C.pwaPromptTersedia() === true);
+    const adaListenerInstalledW3 = typeof listeners["appinstalled"] === "function";
+    cek("v22.3-w3 PWA: listener appinstalled terpasang", adaListenerInstalledW3);
+    if (adaListenerInstalledW3) listeners["appinstalled"]();
+    cek("v22.3-w3 PWA: setelah appinstalled -> tombol instal disembunyikan", C.pwaPromptTersedia() === false);
+    vm.runInContext("pwaPromptInstal = null; pwaSudahTerinstal = false; perbaruiTombolInstal();", sandbox);
+  }
+  let fsTidakThrowW3 = true;
+  try { C.toggleFullscreenPWA(); } catch (e) { fsTidakThrowW3 = false; }
+  cek("v22.3-w3 PWA: toggleFullscreenPWA tanpa API fullscreen tidak throw (fallback toast)", fsTidakThrowW3);
+  cek("v22.3-w3 PWA: pwaBisaFullscreen() false di harness tanpa API (bukan klaim didukung)", C.pwaBisaFullscreen() === false);
+}
 
 console.log(gagal === 0 ? "TEST_V13_OK" : "TEST_V13_GAGAL:" + gagal + " dari " + (lulus + gagal));

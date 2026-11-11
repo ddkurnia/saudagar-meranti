@@ -6,6 +6,121 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v22.3 — Kendaraan Bergerak + Sinkron Profil/Simpanan (2026-11-12)
+
+Perbaikan atas dua kegagalan kritis cek live v22 (`?v=40`) plus
+konstruksi awal yang lambat dan panel lalu lintas yang tidak jujur.
+Tidak ada perubahan format simpanan (`SAVE_KEY` tetap
+`merantiRisingWorldV1`, `petaVersi` tetap 5), tidak ada aset baru,
+tidak ada perubahan peta/ekonomi/waktu kecuali yang disebut di sini.
+`VERSI_GAME "v22.3"`; refs `css?v=16`, `city.js?v=30`; nama cache SW
+`meranti-rising-v22.3`; precache SW diperbarui.
+
+### 1. Kendaraan bergerak & warga berjalan (W1)
+
+**Temuan live v22:** selama ~15 jam game hanya ada 1 truk logistik yang
+"parking" selamanya, 0 mobil warga, panel "Warga berjalan: 0/1".
+
+**Penyebab sebenarnya (reproduksi headless):** (1)
+`pilihTujuanAcakJalan(k, 3)` mengembalikan null — kota awal hanya punya
+3 petak jalan segaris sehingga jarak Manhattan maks hanya 2, di bawah
+syarat min 3, jadi truk tidak pernah mendapat tujuan; (2) warga
+menargetkan rumahnya sendiri → rute BFS panjang 1 → status "tiba"
+tanpa pernah bergerak; (3) mobil pribadi warga tidak pernah di-spawn
+(celah desain).
+
+**Perbaikan:** retry tujuan dengan 6 kandidat berjarak mengecil
+(3→1→0); mobil warga di-spawn begitu ada rumah selesai + jalan
+(`targetMobilWarga`, `sinkronMobilWarga`, dipanggil berkala dan saat
+`mulaiGame`); warga visual kota sebelumnya dibersihkan di `mulaiGame`
+(`wargaVisual = []`); warga berjalan-jalan di jalan (stroll), bukan
+"tiba" di rumah sendiri; anti-deadlock 3 lapis (merangkak, mundur,
+filter "di depan") agar dua kendaraan di jalan 3 petak tidak saling
+menunggu selamanya.
+
+### 2. Sinkron profil/simpanan (W2)
+
+**Temuan live v22:** hapus profil → permainan baru "Putri Ayu" (Hari 1,
+Rp1.731.500, 7 jalan + 1 rumah) → kembali ke menu → LANJUTKAN malah
+memuat kota lama "Sukma" Hari 8 Rp1.729.439 (profil Putri Ayu, simpanan
+Sukma).
+
+**Penyebab sebenarnya (reproduksi headless):** (1)
+`kembaliKeMenuUtama()` melepas lease, sehingga simpanan tidak
+terlindungi selama di layar mulai; (2) `denyutLeaseTab()` (heartbeat)
+tidak menghormati idle — tab basi tanpa interaksi tetap memperbarui /
+merebut lease; (3) tab basi build v21 tidak punya guard idle di
+`simpan()`, sehingga autosave-nya bisa menimpa simpanan tab baru.
+
+**Perbaikan:** heartbeat kini menghormati idle — tab tanpa interaksi
+>30 detik TIDAK memperbarui/mengklaim lease (guard yang sama dengan
+`simpan()`); kembali ke menu TIDAK lagi melepas lease — tab tetap
+mendenyut di layar mulai. Skenario Putri Ayu vs Sukma kini direproduksi
+headless end-to-end (22 cek): LANJUTKAN memuat Putri Ayu Hari 1 07:00
+Rp1.731.500 dengan 7 jalan + 1 rumah, dan autosave tab basi (model v21)
+ditolak saat tab aktif memegang lease segar.
+
+### 3. Konstruksi awal tidak lagi lambat (W3)
+
+**Temuan live v22:** Kebun Sagu "4 jam" belum selesai setelah ~10 jam
+game.
+
+**Penyebab sebenarnya:** Dermaga (butuh 2 pekerja) menyerap seluruh
+angkatan kerja kota awal (2 jiwa) → menganggur 0 → `faktorPekerja`
+jatuh ke lantai 0,25 → kebun 4 jam menjadi 16 jam.
+
+**Perbaikan + alasan:** bangunan PERTAMA tiap jenis berjalan dengan
+faktor penuh (`faktorPekerja = 1`) — bangunan pertama adalah gerbang
+awal permainan dan tidak boleh dihukum oleh kekurangan pekerja yang
+justru disebabkan bangunan awal itu sendiri; lantai 0,25
+DIPERTAHANKAN untuk bangunan kedua dan seterusnya supaya kekurangan
+pekerja tetap terasa sebagai tekanan ekonomi. Kebun pertama kota awal
+kini selesai dalam ≤6 jam game (diuji: 4 jam efektif); kebun kedua
+tetap 16 jam, kilang pertama 24 jam, kilang kedua 96 jam. Kekurangan
+pekerja kini DITAMPILKAN, bukan disembunyikan: toast jujur saat mulai
+membangun ("~16 jam, bukan 4 jam: kekurangan pekerja 0/3
+menganggur…") + panel kanan "Menunggu pekerja: 0/3".
+
+### 4. Panel lalu lintas jujur + PWA (W3)
+
+**Temuan live v22:** panel mengklaim "Volume 57–90 kend/jam" +
+"Kemacetan 41–62/100 · Padat" padahal 0 kendaraan aktif — angka itu
+rumus zona, bukan kendaraan nyata.
+
+**Perbaikan:** panel kini membedakan "Estimasi permintaan (zona)"
+(`volumeEstimasi = volumeTotal`, rumus zona) dari "Kendaraan aktual di
+jalan — 0 bergerak", menyatakan "jalan kosong", dan TIDAK mengklaim
+"Padat"/"Macet" saat jalan kosong.
+
+**PWA:** kode BENAR dan tidak diubah — fullscreen memakai
+`document.documentElement.requestFullscreen` + fallback toast bila API
+tidak tersedia; listener `beforeinstallprompt` terpasang di `initPWA`;
+6 cek headless (listener terpasang, `appinstalled` menyembunyikan
+tombol instal, toggle tanpa API tidak throw). Bukti instal/fullscreen
+di perangkat asli tetap harus dicek live (lihat Batas jujur).
+
+**Tes:** suite penuh 1215 cek (v22.2: 1164 → W1 +8, W2 +20 net, W3
++23 net); 54 cek berlabel v22.3 (W1 8, W2 22, W3 24 — selisih net vs
+gross 1 cek W3 karena satu cek menggantikan ekspektasi lama). Tes baru:
+(a) truk bergerak, (b) warga berjalan, (c) mobil di-spawn, (d) kebun
+≤6 jam, (e) skenario desinkron Putri Ayu, (f) panel jujur — semuanya
+lulus headless. 10 TEST wajib v22 (A*, lajur, lampu merah, bus,
+logistik, jalan buntu, kemacetan, hapus jalan, pedestrian, dua dermaga)
+tetap lulus (101 cek, 0 gagal).
+
+### Batas jujur v22.3
+
+| Batas | Keterangan |
+|---|---|
+| Cek z-order — DIPERBAIKI (bukan lagi batas) | Penyebab sebenarnya ketemu saat verifikasi push: stub ctx di `tests/test13.js` (`buatCtx`) tidak punya `rotate()` — mobil warga baru v22.3 digambar lewat `ctx.rotate()` (`gambarSatuKendaraan`, js/city.js:2323), melempar, dan pass depth-sorted di `gambarPeta` berhenti sebelum rumah digambar. Perbaikan: `rotate() {}` ditambahkan ke stub (audit: satu-satunya method canvas yang dipakai game tapi belum ada di stub) + uji z-order kini memaksa rumah selesai dulu (yang diuji urutan gambar, bukan konstruksi). Suite stabil **TEST_V13_OK 6/6 run** (1215 cek) setelah perbaikan. |
+| Jendela ~30 detik idle di menu | Tab yang kembali ke menu tetap memegang lease; tab basi v21 tanpa guard idle masih bisa menimpa simpanan dalam jendela ~30 detik sebelum guard idle bekerja. |
+| Kendaraan kadang bersentuhan | Saat dua kendaraan berpapasan di jalan sempit (3 petak), visual kadang bersentuhan sesaat meski tidak deadlock. |
+| Jarak dari jalan saat manuver mundur | Kendaraan bisa berada 0,54–0,69 petak dari petak jalan selama manuver mundur (di bawah ambang tes 0,9 petak, tapi terlihat keluar jalur sesaat). |
+| PWA instal/fullscreen | Instal + fullscreen asli hanya bisa dibuktikan live di perangkat (cek live v22: tombol fullscreen ada tapi browser cek melaporkan "tidak didukung"; tombol instal tidak muncul karena `beforeinstallprompt` tidak tiba). |
+| Toast pekerja di layar kecil | Toast durasi jujur (teks panjang) belum dicek tampilannya di layar kecil/tablet. |
+| Panel lalin jujur | Panel jujur belum dilihat live dengan kendaraan sungguhan di jalan — baru headless. |
+| Tint malam — LULUS (bukan batas) | Tint malam sudah terbukti live di v22 (panel debug "Kegelapan saat ini: 0.85", frame gambarPeta terus naik, peta menggelap + lampu menyala) — dipertahankan sebagai LULUS. |
+
 ## Yang baru di v22.2 — Logo layar mulai dibuat KECIL (2026-11-11)
 
 Penegasan pengguna ("logo di halaman masuk terlalu besar, harusnya dibuat

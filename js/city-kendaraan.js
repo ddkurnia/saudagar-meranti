@@ -110,6 +110,9 @@ const WARNA_MOBIL = ["#0984e3", "#e17055", "#fdcb6e", "#00b894", "#6c5ce7"];
 // ---------------- State runtime (TIDAK disimpan) ----------------
 // daftarKendaraan: semua kendaraan terdaftar (dikelola + dilacak).
 let daftarKendaraan = [];
+// Penghitung panggilan perbaruiSemuaKendaraan untuk sinkronisasi mobil
+// warga berkala (v22.3-W1): ~600 frame ≈ 10 detik pada 60 fps.
+let _hitungSinkronMobil = 0;
 
 // ---------------- VehicleManager: pendaftaran ----------------
 // Daftarkan kendaraan apa pun (buatan siapa pun) ke manager. Kendaraan
@@ -241,13 +244,35 @@ function lampuMerahAktif(k) {
 }
 
 // ---------------- Kendaraan di depan (jarak aman) ----------------
+// Arah gerak kendaraan (bukan arah hadap sesaat): menuju target lajur
+// aktif bila kendaraan sedang dalam perjalanan (status "menuju") —
+// arah hadap bisa tertinggal puluhan derajat saat kendaraan baru
+// belok, sehingga dua kendaraan SEARAH yang bersisian bisa saling
+// menganggap "di depan" (deadlock: keduanya berhenti, masing-masing
+// melihat yang lain di depannya — terbukti headless di kota awal:
+// truk (240.136,213.067, arah 1,471) & mobil (239.958,213.169, arah
+// 0,561) sama-sama waiting/menuju padahal rutenya SAMA [(240,213) ->
+// (240,214)]). Kendaraan parkir / tanpa rute memakai arah hadap
+// (targetnya basi — titik yang sudah dicapai). Fallback ke arah hadap
+// bila target belum ada (frame pertama setelah rute dibuat).
+function _arahGerak(k) {
+  if (k && k.status === "menuju" && typeof k.tx === "number" && typeof k.ty === "number") {
+    const dx = k.tx - k.x, dy = k.ty - k.y;
+    const m = Math.hypot(dx, dy);
+    if (m > 0.05) return { x: dx / m, y: dy / m };
+  }
+  const a = (k && typeof k.arah === "number") ? k.arah : 0;
+  return { x: Math.cos(a), y: Math.sin(a) };
+}
 // Kendaraan terdekat DI DEPAN `k` pada lajur yang sama: satu edge yang
-// sama, di depan sepanjang arah hadap (along > 0), dalam jangkauan jarak
-// aman + 0,5, dan selateral < 0,3 petak. Lajur berlawanan (lateral
-// ~0,39 petak) TIDAK dihitung — kendaraan dari arah berlawanan lewat
-// di lajurnya sendiri. Kendaraan diam tetap halangan bila segaris.
+// sama, di depan sepanjang arah GERAK (bukan arah hadap — lihat
+// _arahGerak), dalam jangkauan jarak aman + 0,5, dan selateral < 0,3
+// petak. Lajur berlawanan (lateral ~0,49 petak) TIDAK dihitung —
+// kendaraan dari arah berlawanan lewat di lajurnya sendiri. Kendaraan
+// diam tetap halangan bila segaris.
 function _kendaraanDiDepan(k) {
-  const hx = Math.cos(k.arah || 0), hy = Math.sin(k.arah || 0);
+  const hg = _arahGerak(k);
+  const hx = hg.x, hy = hg.y;
   const jAman = (typeof jarakAman === "function") ? jarakAman(k, null) : 1;
   let terbaik = null, jarakTerbaik = Infinity;
   for (const o of daftarKendaraan) {
@@ -261,11 +286,43 @@ function _kendaraanDiDepan(k) {
     const along = dx * hx + dy * hy;
     if (along <= 0 || along > jAman + 0.5) continue;
     const lat = Math.abs(-dx * hy + dy * hx);
+    // v22.3-W1: "di depan" berarti LEBIH ke depan daripada ke samping
+    // (along > lat). Dua kendaraan yang menumpuk bersebelahan (jarak
+    // 0,10, along ~0,00–0,01, lat 0,10 — sama-sama menuju titik lajur
+    // yang sama) saling menganggap "di depan" dan saling menunggu
+    // selamanya: masing-masing along-nya nyaris 0 (lawan di samping,
+    // bukan di depan). Tanpa ini deadlock searah itu tidak punya
+    // jalan keluar (timer mundur tidak jalan karena dot >= 0,3).
+    // Pengikut konvoi normal (along = celah 0,3–1,0, lat ~0) tetap
+    // terhitung halangan.
+    if (along <= lat) continue;
     if (lat > KENDARAAN_KONFIG.jarakLateralLajurBerlawanan) continue;
-    if (o.cepat > 0.05 && typeof o.arah === "number") {
-      const dot = hx * Math.cos(o.arah) + hy * Math.sin(o.arah);
-      if (dot < 0.3) continue; // arah berlawanan — bukan kendaraan di depan
-    }
+    // v22.3-W1: arah gerak kendaraan di depan DIPERIKSA JUGA bila ia
+    // diam (sebelumnya hanya bila bergerak). Dua kendaraan yang
+    // berpapasan lalu sama-sama berhenti — masing-masing melihat yang
+    // lain diam di depannya — saling menunggu SELAMANYA (deadlock
+    // head-on, terbukti headless: truk & mobil berhenti 1400+ tick).
+    // Kendaraan dari arah berlawanan (dot < 0,3) yang TIDAK tepat
+    // segaris (lateral > 0,05) BUKAN halangan; yang tepat segaris
+    // (lat <= 0,05) tetap halangan (ditambah pengaman merangkak di
+    // perbaruiSatuKendaraan).
+    const ho = _arahGerak(o);
+    const dot = hx * ho.x + hy * ho.y;
+    if (dot < 0.3 && lat > 0.05) continue; // arah berlawanan, lajur seberang
+    // v22.3-W1: SEARAH pun bisa deadlock — dua kendaraan searah yang
+    // sama-sama menuju titik lajur yang sama (mis. ujung jalan 3
+    // petak) saling melihat sebagai "di depan" (along nyaris > 0
+    // karena arah gerak diagonal ke titik lajur) padahal keduanya
+    // sudah bersebelahan (lat ~0,30, masing-masing di lajurnya):
+    // keduanya berhenti, keduanya diam, keduanya saling menunggu
+    // selamanya (timer _tungguLawanArah = 0 karena dot >= 0,3, jadi
+    // pengaman mundur/merangkak tidak pernah jalan). Kendaraan searah
+    // yang lateralnya > 0,25 (lebih dari setengah jarak antar lajur
+    // ~0,49 — sudah di lajur sebelah / sedang menyalip) BUKAN
+    // halangan; yang segaris (lat kecil, konvoi satu lajur) tetap
+    // halangan — uji W2 "pengikut di belakang pemimpin parkir"
+    // (lat ~0) tidak terpengaruh.
+    if (dot >= 0.3 && lat > 0.25) continue; // searah, lajur sebelah
     if (along < jarakTerbaik) { jarakTerbaik = along; terbaik = o; }
   }
   return terbaik;
@@ -273,32 +330,66 @@ function _kendaraanDiDepan(k) {
 
 // ---------------- Tujuan & rute ----------------
 // Pilih petak jalan acak sejauh >= `jarakMin` (Manhattan) dari `k`.
-function pilihTujuanAcakJalan(k, jarakMin) {
+// v22.3-W1: `kecuali` (Set "x,y", opsional) = petak yang sudah dicoba
+// & gagal dirutekan (mis. komponen terputus) — pemanggil boleh mencoba
+// kandidat lain. Petak kendaraan saat ini SELALU dikecualikan: tujuan
+// yang sama dengan posisi awal memberi rute panjang 1 -> status "tiba"
+// tanpa bergerak (jebakan yang sama dengan warga di bawah).
+function pilihTujuanAcakJalan(k, jarakMin, kecuali) {
   if (typeof S === "undefined" || !S || !S.jalan || !S.jalan.length) return null;
   const min = (jarakMin === undefined ? 3 : jarakMin);
-  const calon = S.jalan.filter(j => Math.abs(j.x - Math.round(k.x)) + Math.abs(j.y - Math.round(k.y)) >= min);
+  const kini = Math.round(k.x) + "," + Math.round(k.y);
+  const calon = S.jalan.filter(j => Math.abs(j.x - Math.round(k.x)) + Math.abs(j.y - Math.round(k.y)) >= min
+    && (j.x + "," + j.y) !== kini && !(kecuali && kecuali.has(j.x + "," + j.y)));
   if (!calon.length) return null;
   const t = calon[Math.floor(Math.random() * calon.length)];
   return { x: t.x, y: t.y };
 }
-// Beri tujuan baru (dipakai truk kota/ambient): rute A* ke petak jalan
-// acak; bila gagal (tak ada jalan terjangkau), parkir & coba lagi nanti.
+// Beri tujuan baru (dipakai truk kota/ambient & mobil warga): rute A*
+// ke tujuan; bila gagal (tak ada jalan terjangkau), parkir & coba lagi
+// nanti.
+//
+// v22.3-W1 (REPRODUKSI headless kota awal — 3 petak jalan-tanah segaris
+// (240,214)-(240,212), jarak Manhattan maks dari jalan[0] = 2):
+// pilihTujuanAcakJalan(k, 3) mengembalikan null SELAMANYA, jadi truk
+// ambient parkir 3000/3000 tick tanpa pernah bergerak — padahal A* &
+// state machine sendiri sehat (cariRute (240,214)->(240,212) = 3
+// waypoint; setelah jalan diperpanjang ke 9 petak, truk langsung
+// cruising & mencapai tujuan). Akar masalahnya BUKAN A* / graph basi /
+// posisi float, melainkan TIDAK ADA kandidat tujuan >= 3 petak di kota
+// awal. Perbaikan: (a) mobil warga -> tujuan BANGUNAN dulu (lihat
+// _beriTujuanMobil); (b) kandidat acak dicoba beberapa kali dengan
+// jarak minimum yang mengecil (3 -> 1 -> 0) dan petak yang rutenya
+// gagal dilewati (komponen jalan terputus tidak boleh membuat kendaraan
+// parkir selamanya). Parkir hanya bila benar-benar tidak ada satu pun
+// tujuan yang bisa dirutekan.
 function _beriTujuanBaru(k) {
-  const t = pilihTujuanAcakJalan(k, 3);
-  if (t && typeof buatRuteKendaraan === "function" && buatRuteKendaraan(k, t.x, t.y)) {
-    k.state = "accelerating"; k._target = null; k._antreBelok = [];
-  } else {
-    k.status = "parkir"; k.state = "parking"; k.stateTimer = 3;
+  if (k.mobilWarga && typeof _beriTujuanMobil === "function" && _beriTujuanMobil(k)) return;
+  const dicoba = new Set();
+  for (let percobaan = 0; percobaan < 6; percobaan++) {
+    const jarakMin = percobaan < 2 ? 3 : (percobaan < 4 ? 1 : 0);
+    const t = pilihTujuanAcakJalan(k, jarakMin, dicoba);
+    if (!t) continue;
+    dicoba.add(t.x + "," + t.y);
+    if (typeof buatRuteKendaraan === "function" && buatRuteKendaraan(k, t.x, t.y) && k.status === "menuju") {
+      k.state = "accelerating"; k._target = null; k._antreBelok = [];
+      return;
+    }
   }
+  k.status = "parkir"; k.state = "parking"; k.stateTimer = 3;
 }
 // Buat + daftarkan + (opsional) rutekan kendaraan jalan. Tanpa (tx,ty):
 // truk/mobil menjadi ambient (tujuan acak, parkir sejenak, berangkat
-// lagi). Mengembalikan kendaraan, atau null bila manager penuh / API W1
-// belum ada. Dipakai initKendaraan & W3 (truk logistik/ambulans).
-function buatKendaraanJalan(tipe, x, y, tx, ty) {
+// lagi). `opts.mobilWarga` (v22.3-W1) menandai mobil pribadi warga —
+// tujuannya dipilih dari BANGUNAN dulu (lihat _beriTujuanBaru /
+// _beriTujuanMobil), bukan koordinat acak. Mengembalikan kendaraan,
+// atau null bila manager penuh / API W1 belum ada. Dipakai
+// initKendaraan & W3 (truk logistik/ambulans).
+function buatKendaraanJalan(tipe, x, y, tx, ty, opts) {
   if (typeof buatKendaraan !== "function") return null;
   if (daftarKendaraan.length >= KENDARAAN_KONFIG.maksKendaraanAktif) return null;
   const k = buatKendaraan(tipe, x, y);
+  if (opts && opts.mobilWarga) { k.mobilWarga = true; k.rumah = opts.rumah || null; }
   daftarkanKendaraan(k, { kelola: true });
   k.cepat = 0; // mulai dari diam (buatKendaraan memberi cepat 1,2)
   if (tx !== undefined && ty !== undefined) {
@@ -309,6 +400,114 @@ function buatKendaraanJalan(tipe, x, y, tx, ty) {
     _beriTujuanBaru(k);
   }
   return k;
+}
+
+// ---------------- Mobil pribadi warga (v22.3-W1) ----------------
+// CELAH DESAIN (bukan bug A*): initKendaraan() hanya membuat 1 truk
+// ambient + kapal + perahu — TIDAK ADA mobil pribadi yang pernah
+// di-spawn, jadi jalanan kota awal selalu kosong. Mobil warga menutup
+// celah itu: begitu ada rumah selesai + jalan, mobil di-spawn dan
+// bergerak memakai VehicleManager + A* + lajur kiri yang sudah ada
+// (TIDAK ada sistem gerak kedua). Mobil bersifat runtime (tidak
+// disimpan), seperti truk ambient — dibangun ulang dari S saat
+// mulaiGame (initKendaraan) dan disinkronkan berkala saat rumah baru
+// selesai dibangun (perbaruiSemuaKendaraan).
+//
+// Tujuan mobil = BANGUNAN dulu (rumah -> pasar/kantor/dll): mobil
+// memilih bangunan selesai secara acak dan merutekan A* ke petak
+// bangunan itu (cariRute melakukan snap ke jalan terdekat). Tujuan
+// acak (ambient) HANYA dipakai bila tidak ada tujuan bangunan yang
+// valid — mis. kota awal yang bangunannya cuma rumah + dermaga dan
+// keduanya sudah di depan mata mobil (rute degenerat, lihat
+// _beriTujuanMobil) — dan itu TERCATAT di sini sebagai fallback,
+// bukan mekanisme utama.
+//
+// Jumlah mobil: 1 pada kota awal (4 jiwa), +1 tiap 8 jiwa, maks 12 —
+// di bawah maksKendaraanAktif (40) yang tetap menjadi batas global
+// manager. Mobil tidak menumpuk di satu petak: spawn memakai petak
+// jalan berbeda di dekat rumah, dan jarak aman antar kendaraan sudah
+// ditegakkan state machine (perbaruiSatuKendaraan).
+function _beriTujuanMobil(k) {
+  if (typeof S === "undefined" || !S || !Array.isArray(S.bangunan)) return false;
+  const selesai = S.bangunan.filter(b => b.selesai);
+  if (!selesai.length) return false;
+  const kini = { x: Math.round(k.x), y: Math.round(k.y) };
+  const acak = selesai.slice();
+  for (let i = acak.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const tmp = acak[i]; acak[i] = acak[j]; acak[j] = tmp; }
+  let percobaan = 0;
+  for (const b of acak) {
+    if (percobaan++ >= 5) break;
+    // Bangunan yang sudah di depan mata (<= 1 petak) bukan tujuan
+    // perjalanan: rutenya degenerat — snap ke petak jalan saat ini
+    // memberi rute panjang 1 -> status "tiba" tanpa bergerak.
+    // Lewati; mobil mengambil bangunan lain, atau fallback acak di
+    // _beriTujuanBaru bila semua bangunan sudah di depan mata.
+    if (Math.abs(b.x - kini.x) + Math.abs(b.y - kini.y) <= 1) continue;
+    if (typeof buatRuteKendaraan === "function" && buatRuteKendaraan(k, b.x, b.y) && k.status === "menuju") {
+      k.state = "accelerating"; k._target = null; k._antreBelok = [];
+      return true;
+    }
+  }
+  return false;
+}
+// Jumlah mobil warga yang seharusnya ada untuk populasi saat ini.
+function targetMobilWarga() {
+  const pop = (typeof S !== "undefined" && S && S.penduduk && typeof S.penduduk.total === "number") ? S.penduduk.total : 0;
+  return Math.max(1, Math.min(12, 1 + Math.floor(pop / 8)));
+}
+// Spawn SATU mobil warga di petak jalan dekat rumah selesai (bukan di
+// atas rumah). Petak spawn dipilih dari jalan dalam radius 3 petak
+// dari rumah, diutamakan yang belum dipakai mobil lain — agar 2 mobil
+// tidak menumpuk di satu petak. Mengembalikan mobil, atau null bila
+// tidak ada rumah/jalan atau manager penuh.
+function spawnMobilWarga(daftarRumah) {
+  if (typeof buatKendaraanJalan !== "function" || typeof S === "undefined" || !S) return null;
+  if (daftarKendaraan.length >= KENDARAAN_KONFIG.maksKendaraanAktif) return null;
+  const rumah = (Array.isArray(daftarRumah) && daftarRumah.length) ? daftarRumah
+    : (S.bangunan || []).filter(b => b.selesai && typeof BANGUNAN_MAP !== "undefined" && BANGUNAN_MAP[b.id] && BANGUNAN_MAP[b.id].rumah);
+  if (!rumah.length || !(S.jalan || []).length) return null;
+  // v22.3-W1: petak "dipakai" mencakup SEMUA kendaraan (bukan hanya mobil
+  // warga lain) — truk ambient juga menempati petak. Spawn di atas
+  // kendaraan lain (jarak 0) membuat dua kendaraan menumpuk di petak yang
+  // sama dengan rute yang sama, lalu saling blokir selamanya di jalan
+  // 3 petak kota awal. Bila tidak ada petak bebas, kembalikan null —
+  // sinkronMobilWarga berkala akan mencoba lagi saat ruang tersedia.
+  const dipakai = (j) => daftarKendaraan.some(k => k && Math.hypot((k.x || 0) - j.x, (k.y || 0) - j.y) < 0.8);
+  const kandidat = [];
+  for (const j of S.jalan) {
+    for (const r of rumah) {
+      if (Math.abs(j.x - r.x) + Math.abs(j.y - r.y) <= 3) { kandidat.push(j); break; }
+    }
+  }
+  const bebas = kandidat.filter(j => !dipakai(j));
+  if (!bebas.length) return null;
+  const pilihan = bebas[Math.floor(Math.random() * bebas.length)];
+  const r = rumah[Math.floor(Math.random() * rumah.length)];
+  return buatKendaraanJalan("mobil", pilihan.x, pilihan.y, undefined, undefined, { mobilWarga: true, rumah: { x: r.x, y: r.y } });
+}
+// Sinkronkan jumlah mobil warga dengan keadaan kota: tambah bila rumah
+// selesai / populasi bertambah, kurangi (yang parkir dulu) bila
+// populasi turun. Dipanggil initKendaraan (mulaiGame) dan berkala dari
+// perbaruiSemuaKendaraan — rumah yang selesai dibangun belakangan ikut
+// mendapat mobil tanpa perlu reload.
+function sinkronMobilWarga() {
+  if (typeof S === "undefined" || !S || !Array.isArray(S.bangunan) || !Array.isArray(S.jalan)) return;
+  if (!S.jalan.length) return;
+  const rumah = S.bangunan.filter(b => b.selesai && typeof BANGUNAN_MAP !== "undefined" && BANGUNAN_MAP[b.id] && BANGUNAN_MAP[b.id].rumah);
+  if (!rumah.length) return;
+  const target = targetMobilWarga();
+  let mobil = daftarKendaraan.filter(k => k && k.mobilWarga);
+  while (mobil.length > target) {
+    const korban = mobil.find(k => k.state === "parking") || mobil[mobil.length - 1];
+    if (typeof hapusKendaraan === "function") hapusKendaraan(korban.id);
+    else break;
+    mobil = daftarKendaraan.filter(k => k && k.mobilWarga);
+  }
+  let pengaman = 0;
+  while (mobil.length < target && pengaman++ < target + 2) {
+    if (!spawnMobilWarga(rumah)) break;
+    mobil = daftarKendaraan.filter(k => k && k.mobilWarga);
+  }
 }
 // Minta kendaraan kembali ke (x,y) SETELAH tiba di tujuan saat ini
 // (dipakai W3 untuk perjalanan pulang truk logistik). Bila kendaraan
@@ -384,6 +583,48 @@ function _sisaRuteValid(k) {
   return true;
 }
 
+// ---------------- Mundur (v22.3-W1, anti-deadlock head-on) ----------------
+// Titik untuk memundurkan kendaraan yang terjebak head-on: ~0,9 petak
+// KE BELAKANG sepanjang arah jalan (lawan arah gerak). PENGGANTI
+// tarik-ke-lajur lateral (dihapus): menarik ke lajur sendiri TIDAK
+// BISA bila lawan persis berada di antara kendaraan dan lajurnya —
+// jalurnya memotong posisi lawan, keduanya saling menembus (jarak
+// 0,10) lalu flag tarik tersangkut (timeout tidak pernah jalan saat
+// state waiting). Versi pertama mundur (berjalan mundur sepanjang
+// RUTE) juga gagal: rute berakhir di petak awal perjalanan, padahal
+// jalan berlanjut melewatinya — kendaraan di ujung jalan 3 petak
+// hanya mendapat ruang mundur 0,32–0,43 (< radiusTiba 0,4, jadi
+// gerakAgen langsung "tiba" tanpa bergerak). Karena itu titik mundur
+// dihitung GEOMETRIS dari arah gerak (bukan dari rute) dan
+// diverifikasi di atas petak jalan; setelah mundur, kendaraan
+// mendapat ~1 petak landasan untuk mencapai lajurnya sebelum bertemu
+// lawan lagi. Mengembalikan null bila tidak ada ruang mundur yang
+// cukup (jarak terpendek yang dicoba 0,55 — harus > radiusTiba 0,4)
+// atau arah gerak tidak diketahui.
+function _titikMundur(k) {
+  if (!k) return null;
+  if (typeof _arahGerak !== "function") return null;
+  const d = _arahGerak(k);
+  if (!d || (Math.abs(d.x) < 0.01 && Math.abs(d.y) < 0.01)) return null;
+  // Coba mundur 0,9 / 0,7 / 0,55 petak (harus > radiusTiba 0,4 agar
+  // gerakAgen benar-benar bergerak). Titik mundur harus di atas petak
+  // jalan — jalan di belakang kendaraan adalah jalan yang baru saja
+  // dilaluinya, kecuali di ujung jalan (mundur keluar jalan tidak
+  // diizinkan: jarak diperpendek sampai ketemu petak jalan).
+  for (const jarak of [0.9, 0.7, 0.55]) {
+    const p = { x: k.x - d.x * jarak, y: k.y - d.y * jarak };
+    const tx = Math.round(p.x), ty = Math.round(p.y);
+    let diJalan = false;
+    if (typeof graphJalan !== "undefined" && graphJalan && graphJalan.petakDi) {
+      diJalan = graphJalan.petakDi.has(tx + "," + ty);
+    } else if (typeof adaJalanDi === "function" && typeof S !== "undefined") {
+      try { diJalan = !!adaJalanDi(S, tx, ty); } catch (e) { diJalan = false; }
+    }
+    if (diJalan) return p;
+  }
+  return null;
+}
+
 // ---------------- State machine: satu kendaraan per frame ----------------
 // dt = detik nyata per frame. `gerakAgen` mengalikan `kecepatan` game
 // sendiri, jadi percepatan di sini memakai dt nyata (bukan dt game).
@@ -394,6 +635,15 @@ function perbaruiSatuKendaraan(k, dt) {
   if (typeof k.cepat !== "number") k.cepat = 0;
   if (typeof k.stateTimer !== "number") k.stateTimer = 0;
   if (!k.state) k.state = "parking";
+  // v22.3-W1: pengaman mundur — diakumulasi DI SINI (awal fungsi),
+  // bukan di seksi gerak, karena kendaraan yang menunggu (targetCepat
+  // 0) kembali lebih awal dan seksi gerak tidak pernah jalan: timeout
+  // yang diakumulasi di seksi gerak tidak pernah terpicu dan flag
+  // tersangkut selamanya.
+  if (k._mundur) {
+    k._mundurWaktu = (k._mundurWaktu || 0) + dt;
+    if (k._mundurWaktu > 8) { k._mundur = null; k._mundurWaktu = 0; }
+  }
   // --- loading / unloading (W3): diam, hitung mundur, lalu jalan lagi.
   if (k.state === "loading" || k.state === "unloading") {
     k.cepat = 0;
@@ -476,13 +726,51 @@ function perbaruiSatuKendaraan(k, dt) {
         if (T.darurat) {
           // Darurat lewat: abaikan jarak aman (aturan sederhana W2 —
           // kendaraan lain sudah diperintah menunggu di atas).
+          k._tungguLawanArah = 0;
         } else if (j < jAman * 0.6 || (depan.cepat || 0) <= 0.01) {
-          targetCepat = 0; // terlalu dekat / depan berhenti
+          // v22.3-W1: pengaman deadlock head-on — bila yang di depan
+          // BERHENTI dan datang dari arah BERLAWANAN (dot < 0,3;
+          // lajur seberang yang belum dicapai / tepat segaris),
+          // beri ia 3 detik untuk jalan sendiri (mis. parkir yang
+          // akan berangkat); setelah itu merangkak pelan (0,1
+          // petak/detik) sambil tetap mengemudi ke titik lajur
+          // sendiri — lateral terhadap lawan tumbuh sampai > 0,05
+          // dan keduanya lewat. Berhenti merangkak bila jarak sudah
+          // < 0,4 (jangan menempel). Kendaraan SEARAH yang berhenti
+          // di depan TIDAK memicu ini: kita berhenti penuh (tidak
+          // menabrak dari belakang) — timer di-nol-kan.
+          const hgDepan = _arahGerak(k), hoDepan = _arahGerak(depan);
+          const dotDepan = hgDepan.x * hoDepan.x + hgDepan.y * hoDepan.y;
+          if (dotDepan < 0.3 && (depan.cepat || 0) <= 0.01) {
+            k._tungguLawanArah = (k._tungguLawanArah || 0) + dt;
+            if (k._mundur) {
+              // Sedang mundur — terus bergerak pelan, KECUALI lawan
+              // sudah < 0,15 petak (jangan menempel).
+              targetCepat = (j > 0.15) ? Math.min(targetCepat, 0.3) : 0;
+            } else if (k._tungguLawanArah > 3 && j > 0.4) {
+              targetCepat = Math.min(targetCepat, 0.1); // merangkak maju (lawan masih jauh)
+            } else if (k._tungguLawanArah > 3 && j <= 0.4) {
+              // Terlalu dekat untuk merangkak maju — MUNDUR sepanjang
+              // lajur sendiri (menjauhi lawan), bukan menembus lawan.
+              // Setelah mundur, rute asli dilanjutkan tanpa diubah.
+              // Bila tidak ada ruang mundur, tetap berhenti (lawan
+              // mungkin bisa mundur — keduanya mencoba mandiri).
+              const p = (typeof _titikMundur === "function") ? _titikMundur(k) : null;
+              if (p) { k._mundur = p; k._mundurWaktu = 0; targetCepat = Math.min(targetCepat, 0.3); }
+              else targetCepat = 0;
+            } else {
+              targetCepat = 0;
+            }
+          } else {
+            k._tungguLawanArah = 0;
+            targetCepat = 0; // terlalu dekat / depan berhenti
+          }
         } else {
+          k._tungguLawanArah = 0;
           targetCepat = Math.min(targetCepat, (depan.cepat || 0) * 0.9); // ikuti dari belakang
         }
-      }
-    }
+      } else k._tungguLawanArah = 0;
+    } else k._tungguLawanArah = 0;
   }
   // --- percepatan / pengereman menuju kecepatan target ---
   if (k.cepat < targetCepat) {
@@ -499,14 +787,24 @@ function perbaruiSatuKendaraan(k, dt) {
   const sedangBelok = !!(k._antreBelok && k._antreBelok.length);
   if (sedangBelok && k.cepat > maks * 0.5) k.cepat = maks * 0.5;
   // --- gerak halus menuju target (lajur kiri / titik belok) ---
-  const target = _targetBerikut(k);
+  // v22.3-W1: mundur (k._mundur) diutamakan atas target rute —
+  // kendaraan memundurkan diri sepanjang lajurnya untuk melepas
+  // deadlock head-on. Tiba di titik mundur TIDAK memajukan waypoint
+  // (bukan tujuan rute); flag dibersihkan dan rute asli dilanjutkan.
+  // Pengaman timeout diakumulasi di awal perbaruiSatuKendaraan
+  // (bukan di sini) agar tetap jalan saat kendaraan menunggu.
+  let target = null, mundur = false;
+  if (k._mundur) {
+    target = k._mundur; mundur = true;
+  } else target = _targetBerikut(k);
   if (!target) {
     if (typeof lewatiWaypoint === "function") lewatiWaypoint(k);
     return;
   }
   k.tx = target.x; k.ty = target.y;
   if (typeof gerakAgen === "function" && gerakAgen(k, dt, KENDARAAN_KONFIG.putarMaks, KENDARAAN_KONFIG.radiusTiba)) {
-    _tibaDiTarget(k);
+    if (mundur) { k._mundur = null; k._mundurWaktu = 0; }
+    else _tibaDiTarget(k);
   }
   if (sedangBelok && k.cepat > 0.05) k.state = "turning";
 }
@@ -519,6 +817,13 @@ function perbaruiSatuKendaraan(k, dt) {
 function perbaruiSemuaKendaraan(dt) {
   if (typeof kecepatan !== "undefined" && kecepatan === 0) return;
   if (!dt || dt <= 0) return;
+  // v22.3-W1: mobil warga muncul saat rumah selesai dibangun belakangan
+  // (bukan hanya saat mulaiGame) — dicek ~10 detik sekali; sinkron
+  // sendiri murah & no-op bila jumlah mobil sudah sesuai target.
+  if (++_hitungSinkronMobil >= 600) {
+    _hitungSinkronMobil = 0;
+    try { sinkronMobilWarga(); } catch (e) {}
+  }
   if (typeof kendaraanVisual !== "undefined" && Array.isArray(kendaraanVisual)) {
     for (const v of kendaraanVisual) {
       if (!v || v.tipe === "kapal" || v.tipe === "perahu") continue;
@@ -557,12 +862,60 @@ function _langkahRutePejalanKaki(w) {
   else w.statusPerjalanan = "berjalan";
   return true;
 }
+// Satu langkah acak di jalan (trotoar): pilih tetangga JALAN (bobot 3,
+// +2 bila mendekati target zona; hindari kembali ke petak asal kecuali
+// buntu). Dipakai sebagai fallback bila tidak ada rute, dan sebagai
+// fase jalan-jalan warga yang baru tiba di tujuan (lihat
+// pilihLangkahWargaJalan). Mengembalikan true bila melangkah.
+function _langkahJalanAcak(w) {
+  const pil = [];
+  if (typeof S !== "undefined" && S && typeof peta !== "undefined" && peta) {
+    for (let d = 0; d < 4; d++) {
+      const nx = w.tileX + ARAH_TETANGGA[d][0], ny = w.tileY + ARAH_TETANGGA[d][1];
+      if (nx < 0 || ny < 0 || nx >= peta.W || ny >= peta.H) continue;
+      if (typeof adaJalanDi === "function" && adaJalanDi(S, nx, ny)) pil.push({ x: nx, y: ny, bobot: 3, jalan: true });
+    }
+  }
+  if (!pil.length) return false;
+  let cand = pil.filter(p => !(p.x === w.dariX && p.y === w.dariY));
+  if (!cand.length) cand = pil;
+  if (w.targetX !== null && w.targetX !== undefined) {
+    const jarakKini = Math.abs(w.tileX - w.targetX) + Math.abs(w.tileY - w.targetY);
+    for (const p of cand) {
+      const jarakBaru = Math.abs(p.x - w.targetX) + Math.abs(p.y - w.targetY);
+      if (jarakBaru < jarakKini) p.bobot += 2;
+    }
+  }
+  let total = 0; for (const p of cand) total += p.bobot;
+  let acak = Math.random() * total, pilih = cand[0];
+  for (const p of cand) { acak -= p.bobot; if (acak <= 0) { pilih = p; break; } }
+  w.dariX = w.tileX; w.dariY = w.tileY;
+  w.tileX = pilih.x; w.tileY = pilih.y;
+  const p = (typeof titikLajurTile === "function") ? titikLajurTile(w.dariX, w.dariY, pilih.x, pilih.y) : { x: pilih.x, y: pilih.y };
+  w.tx = p.x; w.ty = p.y;
+  // v22.3-W1: warga yang melangkah (fase jalan-jalan / tanpa rute)
+  // statusnya "berjalan" — BUKAN "tiba" basi dari rute sebelumnya.
+  // Tanpa ini panel Lalu Lintas tetap menampilkan "Warga berjalan:
+  // 0/1" padahal warga sudah terlihat berjalan di jalan.
+  w.statusPerjalanan = "berjalan";
+  return true;
+}
 function pilihLangkahWargaJalan(w) {
   // v22-W5 (J): rute berjalan kaki aktif -> ikuti waypoint berikut
   // (bukan mengembara). Rute dihitung BFS di atas jaringan pejalan kaki
   // (jalan/trotoar + taman + JPO); penyeberangan hanya di persimpangan
   // /JPO — lihat cariRutePejalanKaki di bawah.
   if (_langkahRutePejalanKaki(w)) return true;
+  // v22.3-W1: fase jalan-jalan (w._langkahJalan): setelah tiba di
+  // tujuan, warga berjalan santai beberapa langkah di jalan sebelum
+  // memilih tujuan baru — tanpa ini warga di kota kecil yang
+  // bangunannya berbagi satu petak akses hanya mondar-mandir 1-2 petak
+  // di depan bangunan yang sama (rute selalu menariknya kembali ke
+  // petak akses itu).
+  if (w._langkahJalan > 0) {
+    w._langkahJalan--;
+    if (_langkahJalanAcak(w)) return true;
+  } else w._langkahJalan = 0;
   if (w.targetX === undefined || w.targetX === null ||
       (w.targetX !== null && Math.abs(w.tileX - w.targetX) + Math.abs(w.tileY - w.targetY) <= 1)) {
     if (typeof pilihZonaWarga === "function") { try { pilihZonaWarga(w); } catch (e) {} }
@@ -574,36 +927,22 @@ function pilihLangkahWargaJalan(w) {
   if (w.targetX !== null && w.targetX !== undefined && w._ruteGagalKe !== (w.targetX + "," + w.targetY)) {
     if (typeof buatRutePejalanKaki === "function" && buatRutePejalanKaki(w, w.targetX, w.targetY)) {
       if (_langkahRutePejalanKaki(w)) return true;
-      if (w.statusPerjalanan === "tiba") return true; // sudah di tujuan
+      // v22.3-W1: status "tiba" di sini TIDAK BOLEH langsung `return
+      // true` tanpa menggerakkan warga — itulah jebakan yang membuat
+      // warga diam selamanya di kota awal: target warga = rumahnya
+      // sendiri (bangunan terdekat zona "rumah"), rutenya degenerat
+      // (akses rumah = akses tujuan), gerakAgen langsung "tiba" di
+      // tempat, lalu pilihLangkahWargaJalan dipanggil lagi dengan
+      // target yang sama — putaran tanpa satu langkah pun (terbukti
+      // headless: tileHist warga 3000/3000 di (239,214), "Warga
+      // berjalan: 0/1"). Warga yang tiba HARUS melangkah: mulai fase
+      // jalan-jalan (2-4 langkah acak di jalan) dan melangkah sekarang;
+      // target dipilih ulang (pilihZonaWarga) setelah fase itu habis.
+      w._langkahJalan = 2 + Math.floor(Math.random() * 3);
+      if (_langkahJalanAcak(w)) return true;
     }
   }
-  const pil = [];
-  if (typeof S !== "undefined" && S && typeof peta !== "undefined" && peta) {
-    for (let d = 0; d < 4; d++) {
-      const nx = w.tileX + ARAH_TETANGGA[d][0], ny = w.tileY + ARAH_TETANGGA[d][1];
-      if (nx < 0 || ny < 0 || nx >= peta.W || ny >= peta.H) continue;
-      if (typeof adaJalanDi === "function" && adaJalanDi(S, nx, ny)) pil.push({ x: nx, y: ny, bobot: 3, jalan: true });
-    }
-  }
-  if (pil.length) {
-    let cand = pil.filter(p => !(p.x === w.dariX && p.y === w.dariY));
-    if (!cand.length) cand = pil;
-    if (w.targetX !== null && w.targetX !== undefined) {
-      const jarakKini = Math.abs(w.tileX - w.targetX) + Math.abs(w.tileY - w.targetY);
-      for (const p of cand) {
-        const jarakBaru = Math.abs(p.x - w.targetX) + Math.abs(p.y - w.targetY);
-        if (jarakBaru < jarakKini) p.bobot += 2;
-      }
-    }
-    let total = 0; for (const p of cand) total += p.bobot;
-    let acak = Math.random() * total, pilih = cand[0];
-    for (const p of cand) { acak -= p.bobot; if (acak <= 0) { pilih = p; break; } }
-    w.dariX = w.tileX; w.dariY = w.tileY;
-    w.tileX = pilih.x; w.tileY = pilih.y;
-    const p = (typeof titikLajurTile === "function") ? titikLajurTile(w.dariX, w.dariY, pilih.x, pilih.y) : { x: pilih.x, y: pilih.y };
-    w.tx = p.x; w.ty = p.y;
-    return true;
-  }
+  if (_langkahJalanAcak(w)) return true;
   // Pemulihan: warga terdampar tanpa jalan di sekitarnya (mis. rumah
   // belum tersambung jalan) — melangkah SATU petak menuju jalan
   // terdekat (bukan berkeliaran di darat). Tanpa ini warga diam selamanya.
@@ -811,6 +1150,29 @@ function buatRutePejalanKaki(w, tx, ty) {
     return false;
   }
   if (rute.length === 1) {
+    // v22.3-W1: rute 1 petak = petak akses tujuan SAMA dengan petak
+    // akses posisi warga (mis. rumah & dermaga sama-sama diakses lewat
+    // (240,214)). Bila warga belum berdiri DI petak itu — ia masih di
+    // petak rumah sebelahnya — ia belum "tiba": ia harus MELANGKAH ke
+    // petak akses itu dulu. Kembalikan rute 2 langkah [petak kini,
+    // akses] dengan status "berjalan" (bukan "tiba" tanpa bergerak).
+    // Hanya bila warga SUDAH berdiri di petak akses itu statusnya
+    // "tiba". Bila akses > 1 petak dari warga (rumah tidak menempel
+    // jalan), rute ini tidak bisa diikuti — perlakukan sebagai tanpa
+    // rute agar pemulihan "melangkah ke jalan terdekat" di
+    // pilihLangkahWargaJalan yang bekerja.
+    if (rute[0].x !== w.tileX || rute[0].y !== w.tileY) {
+      if (Math.abs(rute[0].x - w.tileX) + Math.abs(rute[0].y - w.tileY) === 1) {
+        w.ruteJalan = [{ x: w.tileX, y: w.tileY }, { x: rute[0].x, y: rute[0].y }];
+        w.idxRute = 1;
+        w.tujuanX = Math.round(tx); w.tujuanY = Math.round(ty);
+        w.statusPerjalanan = "berjalan"; w._ruteGagalKe = null;
+        return true;
+      }
+      w.statusPerjalanan = "tanpa-rute";
+      w._ruteGagalKe = kunciTujuan;
+      return false;
+    }
     w.ruteJalan = null; w.idxRute = 0;
     w.statusPerjalanan = "tiba"; w._ruteGagalKe = null;
     return true;

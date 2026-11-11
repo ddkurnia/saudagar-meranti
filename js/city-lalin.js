@@ -181,7 +181,7 @@ function lalinDefault() {
     perPetak: {}, perPetakDiringkas: false,
     detailPetak: {}, // v22-W4: per ruas {jumlah, antrean, pejalanKaki, rasio, volume, kapasitas, status, kecepatanRata, waktuTempuh}
     skor: 100, kemacetan: 0,
-    volumeTotal: 0, volumeRata: 0,
+    volumeTotal: 0, volumeRata: 0, volumeEstimasi: 0, // v22.3-W3: volumeEstimasi = volumeTotal (estimasi zona, bukan kendaraan nyata)
     kendaraanAktif: 0, faktorKecepatan: 1,
     bus: { beroperasi: false, jumlahBus: 0, rute: [], penumpangPerJam: 0, pendapatanPerJam: 0, pengurangVolume: 0, terminal: null },
     taksi: { beroperasi: false, penumpangPerJam: 0, pendapatanPerJam: 0 },
@@ -195,9 +195,11 @@ function pastikanLalin() {
   const d = lalinDefault(), L = S.lalin;
   if (!L.perPetak || typeof L.perPetak !== "object" || Array.isArray(L.perPetak)) L.perPetak = {};
   if (!L.detailPetak || typeof L.detailPetak !== "object" || Array.isArray(L.detailPetak)) L.detailPetak = {};
-  for (const k of ["skor", "kemacetan", "volumeTotal", "volumeRata", "kendaraanAktif", "faktorKecepatan", "jam"]) {
+  for (const k of ["skor", "kemacetan", "volumeTotal", "volumeRata", "volumeEstimasi", "kendaraanAktif", "faktorKecepatan", "jam"]) {
     if (typeof L[k] !== "number") L[k] = d[k];
   }
+  // Migrasi simpanan lama: volumeEstimasi = volumeTotal (keduanya estimasi zona).
+  if (typeof L.volumeEstimasi !== "number") L.volumeEstimasi = (typeof L.volumeTotal === "number") ? L.volumeTotal : 0;
   if (typeof L.perPetakDiringkas !== "boolean") L.perPetakDiringkas = false;
   if (!L.bus || typeof L.bus !== "object") L.bus = d.bus;
   else for (const k of ["beroperasi", "jumlahBus", "penumpangPerJam", "pendapatanPerJam", "pengurangVolume"]) if (typeof L.bus[k] !== "number" && typeof L.bus[k] !== "boolean") L.bus[k] = d.bus[k];
@@ -492,6 +494,15 @@ function hitungLalin() {
   L.skor = clamp(skor, 0, 100);
   L.kemacetan = clamp(100 - L.skor, 0, 100);
   L.volumeTotal = _bulat1(volumeAkhirTotal);
+  // v22.3-W3: volumeTotal adalah ESTIMASI permintaan zona (rumus
+  // penduduk + bangunan dalam radius, per petak jalan) — BUKAN hitungan
+  // kendaraan nyata. Disimpan juga sebagai volumeEstimasi supaya panel
+  // (dan konsumen lain) melabelinya demikian dan tidak mengklaim
+  // "Padat"/"Macet" saat jalan kosong. Kendaraan NYATA ada di
+  // L.kendaraanAktif (di bawah) + infoKendaraan() (daftarKendaraan).
+  // skor/kemacetan/perPetak zona SENGAJA tidak diubah: dipakai skor
+  // kebahagiaan, overlay lalu lintas & invalidasi cache rute A* (v19).
+  L.volumeEstimasi = L.volumeTotal;
   L.volumeRata = nJalan > 0 ? _bulat1(volumeAkhirTotal / nJalan) : 0;
   L.kendaraanAktif = kendaraanAktif;
   L.faktorKecepatan = 1 - 0.5 * (L.kemacetan / 100);
@@ -711,7 +722,7 @@ function cakupanPemadam() { return _cakupanRumahLalin("pemadam"); }
 
 // ---------------- Status untuk Worker UI ----------------
 function statusLalin() {
-  if (!S) return { skor: 100, kemacetan: 0, volumeTotal: 0, volumeRata: 0, kendaraanAktif: 0, faktorKecepatan: 1, jumlahJalan: 0, petakLancar: 0, petakPadat: 0, petakMacet: 0, bus: lalinDefault().bus, taksi: lalinDefault().taksi, rekreasi: lalinDefault().rekreasi, jam: 6 };
+  if (!S) return { skor: 100, kemacetan: 0, volumeTotal: 0, volumeRata: 0, volumeEstimasi: 0, kendaraanAktif: 0, faktorKecepatan: 1, jumlahJalan: 0, petakLancar: 0, petakPadat: 0, petakMacet: 0, bus: lalinDefault().bus, taksi: lalinDefault().taksi, rekreasi: lalinDefault().rekreasi, jam: 6 };
   const L = pastikanLalin();
   let lancar = 0, padat = 0, macet = 0;
   for (const k of Object.keys(L.perPetak || {})) {
@@ -722,6 +733,7 @@ function statusLalin() {
   return {
     skor: L.skor, kemacetan: L.kemacetan,
     volumeTotal: L.volumeTotal, volumeRata: L.volumeRata,
+    volumeEstimasi: (typeof L.volumeEstimasi === "number") ? L.volumeEstimasi : L.volumeTotal, // v22.3-W3
     kendaraanAktif: L.kendaraanAktif, faktorKecepatan: L.faktorKecepatan,
     jumlahJalan: (S.jalan || []).length,
     petakLancar: lancar, petakPadat: padat, petakMacet: macet,
