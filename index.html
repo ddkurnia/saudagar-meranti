@@ -3,112 +3,118 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Saudagar Sagu Meranti — Game Simulasi Bisnis</title>
-<link rel="stylesheet" href="css/style.css?v=12">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+<title>Saudagar Sagu Meranti — City Builder</title>
+<link rel="stylesheet" href="css/city.css?v=1">
 </head>
 <body>
-<div id="game">
-  <!-- SPLASH / LAYAR MULAI (gambar referensi) -->
-  <div id="splash">
-    <div class="splash-kartu">
-      <h1>🌴 Saudagar Sagu Meranti</h1>
-      <p>Simulasi Bisnis Sagu dari Kepulauan Meranti</p>
-      <button id="tombolMulai" onclick="mulaiGame()">▶ MULAI BERMAIN</button>
-      <p class="splash-kecil">Dunia 3D dari aset asli • Bangunan, pohon & karakter asli beranimasi • Putar kamera bebas seperti melihat peta • Klik petak kebun untuk menanam • Klik bangunan untuk beraksi • Seret kiri: geser • Seret kanan / 🔄: putar • Roda: zoom • Q / E: putar • Spasi: beraksi</p>
+<!-- Layar mulai -->
+<div id="layarMulai">
+  <div class="kartuMulai">
+    <div class="logoMulai">🌴</div>
+    <h1>Saudagar Sagu Meranti</h1>
+    <p class="subMulai">Island City Builder · Simulasi Ekonomi · Peradaban Kepulauan Meranti</p>
+    <p class="desMulai">Mulailah dari pulau yang masih alami — hutan, sungai, dan pantai. Bangun rumah, jalan, kebun sagu, pasar, sekolah, dan pelabuhan, lalu kembangkan pulau menjadi Pusat Perdagangan Nusantara.</p>
+    <div class="tombolMulai">
+      <button id="btnLanjut" class="btnUtama">▶ Lanjutkan Permainan</button>
+      <button id="btnBaru" class="btnUtama sekunder">＋ Pulau Baru</button>
+    </div>
+    <p id="infoSave" class="infoSave"></p>
+    <div class="caraMain">
+      <b>Cara bermain:</b>
+      <span>🖱️ Seret peta untuk menggeser · roda mouse untuk zoom</span>
+      <span>🏠 Pilih bangunan di menu bawah, lalu klik lokasi di peta</span>
+      <span>🛣️ Bangunan butuh jalan di sampingnya · jembatan hanya di atas air</span>
+      <span>👷 Bangunan butuh pekerja — penduduk tumbuh bila ada rumah & layanan</span>
+      <span>⏭️ Spasi = hari berikutnya · P = jeda · Esc = batal</span>
     </div>
   </div>
+</div>
 
-  <!-- HEADER HUD ala referensi -->
-  <header id="hud">
-    <div class="profil">
-      <div class="avatar">🧑‍🌾</div>
-      <div class="profil-info">
-        <b>Lv. <span id="level">1</span> Saudagar Pemula</b>
-        <div class="expbar"><div id="expBar"></div></div>
-        <span id="expTeks">0 / 500</span>
-      </div>
+<!-- Aplikasi -->
+<div id="aplikasi" style="display:none">
+  <header id="barAtas">
+    <div class="judulGame">🌴 Saudagar Sagu <b>Meranti</b></div>
+    <div class="levelBox">
+      <span id="lvlTeks">Lv. 1 · Pulau Alam</span>
+      <div class="xpBarLuar"><div id="xpBar" class="xpBarDalam"></div></div>
+      <span id="xpTeks" class="xpTeks">0/150 XP</span>
     </div>
-    <div class="logo">
-      <div class="logo-pohon">🌴</div>
-      <div><b>Saudagar<br>Sagu Meranti</b><span>Simulasi Bisnis Sagu dari Kepulauan Meranti</span></div>
+    <div class="sumberDaya">
+      <span class="sd" title="Uang">💰 <b id="uangTeks" class="angka">Rp0</b></span>
+      <span class="sd" title="Kayu">🪵 <b id="kayuTeks">0</b></span>
+      <span class="sd" title="Batu">🪨 <b id="batuTeks">0</b></span>
+      <span class="sd" title="Besi">🔩 <b id="besiTeks">0</b></span>
+      <span class="sd" title="Penduduk">👥 <b id="pendudukTeks">0 jiwa</b></span>
+      <span class="sd" title="Kebahagiaan">😊 <b id="bahagiaTeks">0%</b></span>
     </div>
-    <div class="hud-tengah">
-      <div class="hud-chip">📅 <div><b>Hari <span id="hari">1</span></b><span id="namaHari">Selasa</span></div></div>
-      <div class="hud-chip">☀️ <div><b id="cuaca">Cerah</b><span id="suhu">32°C</span></div></div>
-      <div class="hud-chip">🕐 <div><b id="jam">06:00</b><span id="labelWaktu">Pagi</span></div></div>
+    <div class="waktuBox">
+      <span id="hariTeks">Hari 1</span> · <span id="jamTeks">06:00</span> · <span id="cuacaTeks">☀ Cerah</span>
     </div>
-    <div class="hud-kanan">
-      <div class="hud-chip uang">💵 <b id="uang">Rp0</b><button class="plus" onclick="bukaPanel('pasar')" title="Jual hasil">+</button></div>
-      <div class="hud-chip permata">💎 <b id="permata">0</b><button class="plus" onclick="bukaPanel('misi')" title="Misi">+</button></div>
-      <button class="hud-btn lonceng" onclick="bukaPanel('misi')" title="Notifikasi">🔔<i id="badgeLonceng">1</i></button>
-      <button class="hud-btn" id="tombolSuara" onclick="toggleSuara()" title="Suara">🔊</button>
-      <button class="hud-btn" onclick="resetGame()" title="Pengaturan / mulai ulang">⚙️</button>
+    <div class="tombolAtas">
+      <button id="btnToggleKiri" class="btnIkon" title="Panel kiri">☰</button>
+      <button id="btnToggleKanan" class="btnIkon" title="Panel info">ℹ️</button>
+      <button id="btnSimpan" class="btnIkon" title="Simpan">💾</button>
+      <button id="btnSuara" class="btnIkon" title="Suara">🔊</button>
     </div>
   </header>
 
-  <!-- AREA UTAMA -->
-  <main id="panggung">
-    <div id="dunia3d"></div>
-    <div id="toast"></div>
-
-    <!-- PANEL TARGET BISNIS (kanan, ala referensi) -->
-    <aside id="targetPanel">
-      <h3>🎯 Target Bisnis</h3>
-      <p>💵 Kumpulkan Rp5.000.000</p>
-      <div class="targetbar"><div id="targetUangBar"></div></div>
-      <span id="targetUangTeks">Rp0 / 5.000.000</span>
-      <p>🌾 Ekspor 100 kg tepung</p>
-      <div class="targetbar"><div id="targetEksporBar"></div></div>
-      <span id="targetEksporTeks">0 / 100 kg</span>
-      <p class="target-musim">⭐ Reputasi <b id="reputasi">0</b> • <span id="musim">Musim Panen</span></p>
+  <div id="tengah">
+    <aside id="panelKiri">
+      <div id="panelKiriTab">
+        <button data-tab="misi" class="aktif">Misi</button>
+        <button data-tab="ekonomi">Ekonomi</button>
+        <button data-tab="penduduk">Penduduk</button>
+        <button data-tab="riset">Penelitian</button>
+        <button data-tab="peradaban">Peradaban</button>
+      </div>
+      <div id="panelKiriIsi"></div>
+      <div class="logJudul">Catatan Pulau</div>
+      <div id="log"></div>
     </aside>
 
-    <!-- SIDEBAR KIRI -->
-    <nav id="sidebar">
-      <button onclick="bukaPanel('misi')" title="Misi Harian">📋<span>Misi Harian</span><i class="badge" id="badgeMisi"></i></button>
-      <button onclick="bukaPanel('kontrak')" title="Kontrak Ekspor">🚢<span>Kontrak Ekspor</span></button>
-      <button onclick="bukaPanel('pekerja')" title="Pekerja">👷<span>Pekerja</span><i class="badge" id="badgePekerja"></i></button>
-      <button onclick="bukaPanel('upgrade')" title="Upgrade">📈<span>Upgrade</span></button>
-      <button onclick="bukaPanel('catatan')" title="Catatan">📝<span>Catatan</span></button>
-    </nav>
-
-    <!-- PANEL MENGAMBANG -->
-    <div id="panel" class="tersembunyi">
-      <div class="panel-kepala">
-        <b id="panelJudul">Panel</b>
-        <button onclick="tutupPanel()" title="Tutup">✕</button>
+    <section id="panggung">
+      <canvas id="peta"></canvas>
+      <div id="kontrolKamera">
+        <button id="btnZoomIn" title="Perbesar">＋</button>
+        <button id="btnZoomOut" title="Perkecil">－</button>
+        <button id="btnPusat" title="Pusatkan peta">◎</button>
       </div>
-      <div id="panelIsi"></div>
-    </div>
+      <div id="kontrolWaktu">
+        <button id="btnKec0" title="Jeda">⏸</button>
+        <button id="btnKec1" class="aktif" title="Kecepatan 1x">1×</button>
+        <button id="btnKec2" title="Kecepatan 2x">2×</button>
+        <button id="btnKec3" title="Kecepatan 3x">3×</button>
+        <button id="btnHari" title="Hari berikutnya">⏭ Hari Berikutnya</button>
+      </div>
+      <div id="modeChip" style="display:none">
+        <span id="modeChipTeks"></span>
+        <button id="btnBatalMode">✕ Batal</button>
+      </div>
+      <div id="toast" class="toast"></div>
+    </section>
 
-    <div id="lokasi">📍 Selatpanjang,<br>Kepulauan Meranti</div>
+    <aside id="panelKanan"></aside>
+  </div>
 
-    <!-- KONTROL KAMERA ORBIT 3D -->
-    <div id="kontrolKamera">
-      <button onclick="putarKamera(-45)" title="Putar kamera kiri 45°">⟲</button>
-      <button onclick="putarKamera(45)" title="Putar kamera kanan 45°">⟳</button>
-      <button id="tombolModePutar" onclick="toggleModePutar()" title="Mode seret: Geser / Putar">🔄 <span id="modePutarTeks">Geser</span></button>
-      <button onclick="zoomKamera(-0.3)" title="Zoom in (mendekat)">＋</button>
-      <button onclick="zoomKamera(0.3)" title="Zoom out (menjauh)">－</button>
-      <span id="kompas" title="Arah kamera">➤</span>
-    </div>
-    <div id="menang" style="display:none">🏆 Kamu sudah menjadi Saudagar Sagu Meranti!</div>
-  </main>
-
-  <!-- NAV BAWAH -->
-  <nav id="navbawah">
-    <button class="aktif" onclick="fokusBangunan('kebun')">🌱<span>Kebun</span></button>
-    <button onclick="fokusBangunan('kilang')">🏭<span>Kilang</span></button>
-    <button onclick="fokusBangunan('pasar')">🛒<span>Pasar</span></button>
-    <button onclick="fokusBangunan('pelabuhan')">🚢<span>Ekspor</span></button>
-    <button onclick="fokusBangunan('kedai')">☕<span>Kedai Kopi</span></button>
-    <button onclick="bukaPanel('produksi')">🍚<span>Produksi</span></button>
-  </nav>
-
-  <!-- TOMBOL HARI BERIKUTNYA (lingkaran hijau, ala referensi) -->
-  <button id="tombolHari" onclick="hariBerikutnya()" title="Hari Berikutnya">▶<span>Hari Berikutnya</span></button>
+  <footer id="menuBangun">
+    <div id="katBangun"></div>
+    <div id="itemBangun"></div>
+  </footer>
 </div>
-<script src="js/game.js?v=17"></script>
+
+<!-- Modal naik level -->
+<div id="modalLevel" style="display:none">
+  <div class="kartuModal">
+    <div class="logoMulai">🏆</div>
+    <h2 id="levelJudul">Level 2</h2>
+    <p id="levelDes"></p>
+    <p id="levelHadiah" class="hadiah"></p>
+    <button id="btnLevelTutup" class="btnUtama">Lanjutkan Membangun</button>
+  </div>
+</div>
+
+<script src="js/city-data.js?v=1"></script>
+<script src="js/city-map.js?v=1"></script>
+<script src="js/city.js?v=1"></script>
 </body>
 </html>

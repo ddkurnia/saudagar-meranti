@@ -1,13 +1,81 @@
 # Saudagar Sagu Meranti
 
-Game simulasi bisnis (Tycoon / Farming & Management) dari Selatpanjang,
-Kepulauan Meranti — salah satu sentra penghasil sagu terbesar di Indonesia.
+Island City Builder + Simulasi Ekonomi + Peradaban dari Kepulauan
+Meranti — pemain mengembangkan sebuah pulau yang masih alami menjadi
+pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
+sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
+dimainkan.
 
-Pemain memulai sebagai petani rumbia kecil, lalu berkembang menjadi
-saudagar sagu: menebang rumbia, memotong tual sagu, mengolahnya di kilang,
-memproduksi Mie Sagu dan Kue Bangkit Sagu, mengekspor tepung sagu ke pasar
-internasional, dan mengembangkan Kedai Kopi Liberika Meranti sebagai
-bisnis sampingan.
+## Yang baru di v13 — PEROMBAKAN TOTAL: Island City Builder (2026-11-11)
+
+Game lama (v1–v12, saudagar sagu 3D) diganti sepenuhnya dengan **City
+Builder + Simulasi Ekonomi + Peradaban** di atas peta pulau Kepulauan
+Meranti. File game lama (`js/game.js`, `js/world25.js`, `css/style.css`)
+tetap tersimpan di repo sebagai arsip; game yang live sekarang adalah
+versi city builder di bawah ini.
+
+**World Engine (Fase 1)**
+- Peta pulau 40×30 tile, isometrik 2D Canvas: laut, pantai, sungai,
+  hutan tropis, rawa gambut, lahan rumput — dihasilkan deterministik
+  dari seed (peta yang sama setiap dibuka).
+- Kamera: geser (seret), zoom roda mouse/tombol/pinch (0,45–2,6×),
+  pusatkan peta; siang/malam, cuaca (Cerah/Berawan/Hujan), awan & hujan.
+- Setiap tile bisa diklik untuk info lahan; bangunan punya posisi
+  permanen di grid.
+
+**Construction Engine (Fase 2)**
+- Katalog data-driven 46 bangunan dalam 8 kategori (permukiman,
+  infrastruktur, pendidikan, kesehatan, ekonomi, perkebunan, industri,
+  sosial) + 3 jenis jalan + 2 jembatan — semua di `js/city-data.js`.
+- Placement nyata: cek lahan, biaya (uang/kayu/batu/besi), akses jalan,
+  jembatan hanya di atas air, dermaga/pelabuhan hanya di pesisir,
+  tebang hutan memberi kayu, level & teknologi sebagai syarat.
+- Konstruksi bertahap: perancah + progress bar selama N hari, baru
+  beroperasi. Bangunan bisa dipindah, diputar, dan dihapus (refund 50%).
+- Visual: bangunan utama memakai aset sprite asli (kilang, pasar,
+  pelabuhan, gudang, kebun, pohon kelapa); sisanya digambar vektor
+  isometrik konsisten (atap pelana/limas/kubah/datar, menara, salib,
+  cerobong berasap, taman, stadion, sawah, kandang).
+
+**Simulation Engine (Fase 3)**
+- Penduduk: kapasitas rumah, pertumbuhan bila ada rumah kosong &
+  kebahagiaan ≥ 50%, layanan pendidikan/kesehatan (radius & kapasitas),
+  kebahagiaan, pengangguran, tunawisma.
+- Pekerja: angkatan kerja 55% penduduk, alokasi proporsional ke
+  bangunan; kekurangan pekerja = efisiensi produksi turun.
+- Ekonomi: pajak per jiwa, penjualan pasar lokal, ekspor pelabuhan
+  (+20%, bonus kantor dagang/logistik/industri), wisata, bunga bank;
+  pengeluaran upkeep + gaji; rantai produksi sagu utuh
+  (kebun → tual → kilang → tepung → mie/kue) + kelapa, pinang, karet,
+  kopi, padi, ikan; gudang menambah kapasitas simpan.
+
+**Civilization Engine (Fase 4)**
+- 6 level peradaban (Pulau Alam → Pusat Perdagangan Nusantara) dengan
+  syarat penduduk/bangunan/layanan/industri/ekspor/XP + hadiah uang.
+- 12 misi (bangun, produksi, penduduk, ekspor, jembatan, universitas)
+  dengan hadiah uang & XP.
+- 6 teknologi penelitian (olah sagu, pertanian modern, konstruksi
+  beton, transportasi, industri makanan, pendidikan tinggi) yang
+  membuka bangunan & jalan baru.
+
+**Teknis**
+- Arsitektur: `js/city-data.js` (data), `js/city-map.js` (peta & kamera),
+  `js/city.js` (state, simulasi, render, UI). HUD glassmorphism modern:
+  bar atas (level/XP, uang, kayu, batu, besi, penduduk, kebahagiaan,
+  hari/cuaca/jam), sidebar kiri (Misi/Ekonomi/Penduduk/Penelitian/
+  Peradaban + catatan), panel kanan kontekstual, menu bangun bawah,
+  kontrol kecepatan (jeda/1×/2×/3×) + Hari Berikutnya (Spasi).
+- Save: `localStorage` kunci `saudagarSaguMerantiCityV1` (autosave tiap
+  hari + tombol Simpan); terrain dari seed + daftar tile yang ditebang,
+  jadi simpanan tahan reload. Migrasi: uang save lama (v1–v12) menjadi
+  modal awal (maks Rp1.000.000), kunci lama tidak disentuh.
+- Warga berjalan di jalan, truk & kapal bergerak; rotasi kamera belum
+  ada di dunia 2D isometrik (opsional menurut brief).
+- Uji headless 38/38 lolos (`TEST_V13_OK`): peta deterministik,
+  placement & validasi, rantai sagu, riset, level, save/load, render.
+- Catatan jujur: bangunan non-sprite digambar vektor (bukan ilustrasi
+  foto); produksi sprite ilustrasi baru untuk semua bangunan adalah
+  pekerjaan Fase 5 (pipeline contact-sheet yang sama seperti v9/v10).
 
 ## Yang baru di v12.3 — Tampilan HD: Supersampling 2x Selalu
 
