@@ -30,7 +30,7 @@ let frame = 0;
 function stateBaru(petaBaru) {
   const st = {
     versi: CITY.VERSI_SAVE, seed: CITY.SEED, hari: 1, cuaca: "Cerah",
-    uang: 750000, kayu: 60, batu: 40, besi: 10, xp: 0, level: 1,
+    uang: 750000, kayu: 60, batu: 40, besi: 10, xp: 0, level: 1, akumulasi: 0,
     komoditas: {}, bangunan: [], jalan: [], jembatan: [],
     teknologi: {}, riset: null,
     misiSelesai: {}, statistik: { dibangun: {}, dibangunKat: {}, jalan: 0, jembatan: 0, produksi: {}, ekspor: 0, pendudukMax: 4, pendapatanHari: 0, pengeluaranHari: 0 },
@@ -1612,6 +1612,7 @@ function loop(waktu) {
 setInterval(() => {
   if (!S || kecepatan === 0) return;
   akumulasiHari += 500 * kecepatan;
+  S.akumulasi = akumulasiHari; // jam dalam hari ikut tersimpan
   jamVisual = 6 + (akumulasiHari / 12000) * 24;
   const jam = Math.floor(jamVisual) % 24, menit = Math.floor((jamVisual % 1) * 60);
   const el = $("jamTeks");
@@ -1633,6 +1634,9 @@ function mulaiGame(baru) {
     S.log.unshift("Permainan dilanjutkan — Hari " + S.hari + ".");
   }
   kameraPusatkan(peta);
+  // Pulihkan jam dalam hari dari simpanan (jangan reset ke 06:00)
+  akumulasiHari = S.akumulasi || 0;
+  jamVisual = 6 + (akumulasiHari / 12000) * 24;
   hitungTenagaKerja();
   sinkronWarga();
   initKendaraan();

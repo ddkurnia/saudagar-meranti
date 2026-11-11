@@ -76,6 +76,8 @@ versi city builder di bawah ini.
 - Catatan jujur: bangunan non-sprite digambar vektor (bukan ilustrasi
   foto); produksi sprite ilustrasi baru untuk semua bangunan adalah
   pekerjaan Fase 5 (pipeline contact-sheet yang sama seperti v9/v10).
+- v13.1 (perbaikan kecil, 2026-11-11): jam dalam hari kini ikut
+  tersimpan — setelah reload, jam tidak lagi kembali ke 06:00.
 
 ## Yang baru di v12.3 — Tampilan HD: Supersampling 2x Selalu
 
