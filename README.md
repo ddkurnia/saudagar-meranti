@@ -39,6 +39,9 @@ pulau memenuhi layar, semua panel melayang di atas peta.
   contoh, bukan angka simpanan pemain.
 - Uji headless lolos (`TEST_V13_OK`, 76 cek): 10 tab, 4 bangunan
   dekorasi, minimap, berita, ghost, renderHUD/menu/panel v14.
+  (v14.1: nama kartu bangunan boleh 2 baris agar tidak terpotong
+  elipsis; kotak area layar di minimap diberi isi transparan agar
+  terbaca sebagai wilayah, bukan dua garis.)
 
 ## Yang baru di v13.3 — Jalan & Jembatan Tersambung, Lalu Lintas Seperti Nyata (2026-11-11)
 

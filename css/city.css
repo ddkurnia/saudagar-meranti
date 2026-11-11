@@ -251,7 +251,7 @@ button { font-family: inherit; cursor: pointer; }
 .geser:hover { background: rgba(255,255,255,.18); }
 #itemBangun { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; flex: 1; }
 .kartuBangun {
-  flex: none; width: 118px; background: rgba(255,255,255,.07);
+  flex: none; width: 124px; background: rgba(255,255,255,.07);
   border: 1px solid rgba(255,255,255,.13); border-radius: 12px;
   padding: 6px; cursor: pointer; text-align: center;
 }
@@ -260,7 +260,7 @@ button { font-family: inherit; cursor: pointer; }
 .kartuBangun.terkunci { opacity: .55; }
 .kartuBangun canvas { width: 100%; height: 56px; border-radius: 8px; background: rgba(255,255,255,.05); }
 .kartuInfo { min-width: 0; margin-top: 4px; }
-.kartuNama { font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kartuNama { font-size: 12px; font-weight: 700; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 30px; }
 .kartuDes { font-size: 10.5px; color: #cbd5e1; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 26px; }
 .kartuHarga { font-size: 11px; color: #fde68a; margin-top: 2px; }
 .kartuKunci { font-size: 10.5px; color: #ff7675; }
