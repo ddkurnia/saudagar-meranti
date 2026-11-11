@@ -7,6 +7,7 @@ function buatCtx() {
   return {
     setTransform() {}, clearRect() {}, fillRect() {}, beginPath() {}, moveTo() {}, lineTo() {},
     closePath() {}, fill() {}, stroke() {}, strokeRect() {}, arc() {}, ellipse() {},
+    quadraticCurveTo() {}, bezierCurveTo() {},
     fillText() {}, measureText() { return { width: 0 }; }, drawImage() {}, save() {}, restore() {},
     translate() {}, scale() {}, setLineDash() {},
     fillStyle: "", strokeStyle: "", lineWidth: 1, font: "", textAlign: "", textBaseline: "", globalAlpha: 1,
@@ -218,7 +219,7 @@ cek("akumulasi dipulihkan (8000)", C.akumulasiHari === 8000, C.akumulasiHari);
 
 // v13.2: semua bangunan punya sprite ilustrasi & file-nya ada di disk
 const ROOT = '/home/hatch/workspace/saudagar-meranti';
-cek("katalog 54 bangunan", C.BANGUNAN.length === 54, C.BANGUNAN.length);
+cek("katalog 55 bangunan (54 v13.2 + terminal-feri v15)", C.BANGUNAN.length === 55, C.BANGUNAN.length);
 const tanpaGambar = C.BANGUNAN.filter(b => !b.gambar);
 cek("semua bangunan punya gambar", tanpaGambar.length === 0, tanpaGambar.map(b => b.id).join(','));
 const hilang = C.BANGUNAN.filter(b => b.gambar && !fs.existsSync(path.join(ROOT, b.gambar)));
@@ -362,5 +363,107 @@ const tC2 = vm.runInContext('tileTengahDunia(25, 11)', sandbox);
 const sC2 = vm.runInContext('duniaKeLayar(' + tC2.x + ', ' + tC2.y + ', 800, 600)', sandbox);
 const klik2 = vm.runInContext('pointerKeTile({ clientX: ' + sC2.x + ', clientY: ' + sC2.y + ' })', sandbox);
 cek("klik di tengah tile (25,11) memilih tile itu", klik2.x === 25 && klik2.y === 11, JSON.stringify(klik2));
+
+// v15: kepulauan 25 pulau
+cek("peta kepulauan 96x72", C.peta.W === 96 && C.peta.H === 72, C.peta.W + "x" + C.peta.H);
+cek("25 pulau terdaftar", C.peta.pulau.length === 25, C.peta.pulau.length);
+const daratPerPulau = {};
+for (let y = 0; y < C.peta.H; y++) for (let x = 0; x < C.peta.W; x++) { const id = C.peta.pulauDi[y][x]; if (id >= 0) daratPerPulau[id] = (daratPerPulau[id] || 0) + 1; }
+cek("semua 25 pulau punya daratan", Object.keys(daratPerPulau).length === 25, Object.keys(daratPerPulau).length);
+const lama15 = C.generatePetaPulauUtama(20261111);
+let beda15 = 0;
+for (let y = 0; y < 30; y++) for (let x = 0; x < 40; x++) if (C.peta.terrain[y + 21][x + 28] !== lama15.terrain[y][x]) beda15++;
+cek("terrain pulau utama sama persis dengan peta lama", beda15 === 0, beda15 + " tile beda");
+cek("state baru: petaVersi 2 + pulau + ruteFeri", C.S.petaVersi === 2 && !!C.S.pulau && Array.isArray(C.S.ruteFeri));
+cek("pulau utama terhubung sejak awal", C.S.pulau["tebing-tinggi"].terhubung === true);
+cek("terminal-feri terdaftar (ekonomi, pantai, level 2)", !!C.BANGUNAN_MAP["terminal-feri"] && C.BANGUNAN_MAP["terminal-feri"].kat === "ekonomi" && C.BANGUNAN_MAP["terminal-feri"].pantai === true && C.BANGUNAN_MAP["terminal-feri"].level === 2);
+cek("55 bangunan di katalog", C.BANGUNAN.length === 55, C.BANGUNAN.length);
+cek("jembatan-gantung terdaftar (multi, level 3, tech transportasi)", !!C.JEMBATAN["jembatan-gantung"] && C.JEMBATAN["jembatan-gantung"].multi === true && C.JEMBATAN["jembatan-gantung"].level === 3);
+cek("4 aset v15 ada di disk", ["assets/buildings/building-terminal-feri.png", "assets/buildings/building-jembatan-gantung.png", "assets/vehicles/kapal-feri.png", "assets/vehicles/perahu-penyeberangan.png"].every(p => fs.existsSync(path.join(ROOT, p))));
+// Migrasi save lama (40x30) -> kepulauan
+const saveLama = { versi: 1, seed: 20261111, hari: 10, uang: 500000, kayu: 10, batu: 5, besi: 0, xp: 0, level: 1, akumulasi: 0,
+  komoditas: {}, bangunan: [{ id: "rumah-sederhana", x: 10, y: 10, rot: 0, selesai: true, progres: 1 }], jalan: [{ x: 10, y: 11, tipe: "jalan-tanah" }],
+  jembatan: [{ x: 25, y: 11, tipe: "jembatan-kecil" }], teknologi: {}, riset: null, misiSelesai: {},
+  statistik: { dibangun: {}, dibangunKat: {}, jalan: 1, jembatan: 1, produksi: {}, ekspor: 0, pendudukMax: 4, pendapatanHari: 0, pengeluaranHari: 0 },
+  bersih: [{ x: 5, y: 5 }], penduduk: { total: 4, bahagia: 60, bekerja: 0, menganggur: 0, cakupanPendidikan: 0, cakupanKesehatan: 0 }, log: [] };
+C.migrasiKepulauan(saveLama);
+cek("migrasi: bangunan digeser (+28,+21)", saveLama.bangunan[0].x === 38 && saveLama.bangunan[0].y === 31, JSON.stringify(saveLama.bangunan[0]));
+cek("migrasi: jalan & jembatan digeser", saveLama.jalan[0].x === 38 && saveLama.jembatan[0].x === 53 && saveLama.jembatan[0].y === 32);
+cek("migrasi: hutan ditebang digeser", saveLama.bersih[0].x === 33 && saveLama.bersih[0].y === 26);
+cek("migrasi: petaVersi 2, pulau & ruteFeri dibuat", saveLama.petaVersi === 2 && !!saveLama.pulau && Array.isArray(saveLama.ruteFeri));
+// Jembatan Gantung: cari celah air nyata di peta (2 daratan sebaris, 2-8 petak air di antaranya)
+function cariCelahAir() {
+  for (let y = 1; y < C.peta.H - 1; y++) for (let x = 1; x < C.peta.W - 9; x++) {
+    const darat = t => t !== "laut" && t !== "sungai" && t !== "rawa";
+    if (!darat(C.terrainDi(C.peta, x, y))) continue;
+    for (let j = 3; j <= 9; j++) {
+      const x1 = x + j;
+      if (!darat(C.terrainDi(C.peta, x1, y))) continue;
+      let airSemua = true;
+      for (let i = 1; i < j; i++) { const t = C.terrainDi(C.peta, x + i, y); if (t !== "laut" && t !== "sungai") airSemua = false; }
+      if (airSemua) return { x0: x, y0: y, x1: x1, y1: y, n: j - 1 };
+    }
+  }
+  return null;
+}
+const celah = cariCelahAir();
+cek("ditemukan celah air untuk jembatan gantung", !!celah, celah ? JSON.stringify(celah) : "");
+if (celah) {
+  C.S.level = 3; C.S.teknologi["transportasi"] = true; C.S.uang = 1000000; C.S.besi = 100; C.S.kayu = 100;
+  const cekDiag = C.cekJembatanGantung(celah.x0, celah.y0, celah.x0 + 1, celah.y0 + 1);
+  cek("jembatan gantung diagonal = ditolak", !cekDiag.ok, cekDiag.alasan);
+  const cekOk = C.cekJembatanGantung(celah.x0, celah.y0, celah.x1, celah.y1);
+  cek("jembatan gantung di celah air = ok", cekOk.ok, cekOk.alasan);
+  const uangG = C.S.uang, besiG = C.S.besi;
+  const okG = C.bangunJembatanGantung(celah.x0, celah.y0, celah.x1, celah.y1);
+  cek("bangun jembatan gantung berhasil", okG === true);
+  cek("biaya jembatan gantung per petak", C.S.uang === uangG - 50000 * celah.n && C.S.besi === besiG - 5 * celah.n, C.S.uang + "/" + C.S.besi);
+  cek("tile jembatan gantung tercatat", C.S.jembatan.filter(j => j.tipe === "jembatan-gantung").length === celah.n);
+  const rent = C.rentangJembatanGantung(celah.x0 + 1, celah.y0);
+  cek("rentang jembatan gantung ditemukan", rent.n === celah.n && rent.x0 === celah.x0 + 1 && rent.x1 === celah.x1 - 1, JSON.stringify(rent));
+  try { C.gambarPeta(); cek("render peta + jembatan gantung (tanpa error)", true); } catch (e) { cek("render peta + jembatan gantung (tanpa error)", false, e.message); }
+}
+// Rute feri: terminal di pulau utama + dermaga di pulau lain
+function cariPantai(pulauIdx) {
+  for (let y = 1; y < C.peta.H - 1; y++) for (let x = 1; x < C.peta.W - 2; x++) {
+    if (C.peta.pulauDi[y][x] !== pulauIdx) continue;
+    if (C.terrainDi(C.peta, x, y) === "pantai" && C.terrainDi(C.peta, x + 1, y) === "pantai" && !C.adaBangunanDi(C.S, x, y) && !C.adaBangunanDi(C.S, x + 1, y)) return { x: x, y: y };
+  }
+  return null;
+}
+const pantaiUtama = cariPantai(0), pantaiRangsang = cariPantai(1);
+cek("ditemukan pantai di pulau utama & Rangsang", !!pantaiUtama && !!pantaiRangsang, JSON.stringify(pantaiUtama) + " / " + JSON.stringify(pantaiRangsang));
+if (pantaiUtama && pantaiRangsang) {
+  C.S.bangunan.push({ id: "terminal-feri", x: pantaiUtama.x, y: pantaiUtama.y, rot: 0, selesai: true, progres: 1 });
+  C.S.bangunan.push({ id: "dermaga", x: pantaiRangsang.x, y: pantaiRangsang.y, rot: 0, selesai: true, progres: 1 });
+  const uangR = C.S.uang;
+  const okR = C.bukaRuteFeri("rangsang");
+  cek("buka rute feri ke Rangsang berhasil", okR === true);
+  cek("biaya buka rute Rp50.000", C.S.uang === uangR - 50000, C.S.uang);
+  cek("Rangsang terhubung", C.S.pulau["rangsang"].terhubung === true);
+  cek("rute feri tercatat", C.S.ruteFeri.length === 1 && C.S.ruteFeri[0].pulauId === "rangsang");
+  cek("buka rute yang sama ditolak", C.bukaRuteFeri("rangsang") === false);
+  cek("perdagangan Rangsang (besar) = Rp25.000/hari", C.perdaganganRute(C.peta.pulau[1]) === 25000, C.perdaganganRute(C.peta.pulau[1]));
+  const uangK = C.S.uang;
+  const okK = C.jalinKerjasama("rangsang");
+  cek("jalin kerjasama berhasil (Rp100.000)", okK === true && C.S.uang === uangK - 100000);
+  cek("kerjasama level 1 -> perdagangan +50%", C.perdaganganRute(C.peta.pulau[1]) === 37500, C.perdaganganRute(C.peta.pulau[1]));
+  const kopraSebelum = C.S.komoditas.kopra || 0;
+  C.hariBerikutnya();
+  cek("perdagangan masuk rincian harian", (C.S.statistik.rincianHari.perdagangan || 0) === 37500, C.S.statistik.rincianHari.perdagangan);
+  cek("kiriman kopra dari Rangsang (+6)", (C.S.komoditas.kopra || 0) === kopraSebelum + 6, C.S.komoditas.kopra);
+  // Feri bergerak bolak-balik
+  vm.runInContext('kecepatan = 1;', sandbox);
+  const tAwal = C.S.ruteFeri[0].t;
+  C.perbaruiFeri(1);
+  cek("feri bergerak (t bertambah)", C.S.ruteFeri[0].t > tAwal, C.S.ruteFeri[0].t);
+  C.S.ruteFeri[0].t = 0.99; C.S.ruteFeri[0].arah = 1;
+  C.perbaruiFeri(1);
+  cek("feri berbalik arah di ujung (t=1, arah=-1)", C.S.ruteFeri[0].t === 1 && C.S.ruteFeri[0].arah === -1, C.S.ruteFeri[0].t + "/" + C.S.ruteFeri[0].arah);
+  try { C.gambarFeri(800, 600); cek("gambar feri (tanpa error)", true); } catch (e) { cek("gambar feri (tanpa error)", false, e.message); }
+  try { C.gambarPeta(); cek("render peta + feri berlayar (tanpa error)", true); } catch (e) { cek("render peta + feri berlayar (tanpa error)", false, e.message); }
+  try { vm.runInContext('panelKiri = "pulau";', sandbox); C.renderPanelKiri(); cek("panel Pulau dirender (tanpa error)", true); } catch (e) { cek("panel Pulau dirender (tanpa error)", false, e.message); }
+  try { C.renderMenuBangun(); cek("menu bangun + kartu jembatan gantung (tanpa error)", true); } catch (e) { cek("menu bangun + kartu jembatan gantung (tanpa error)", false, e.message); }
+}
 
 console.log(gagal === 0 ? "TEST_V13_OK" : "TEST_V13_GAGAL:" + gagal + " dari " + (lulus + gagal));

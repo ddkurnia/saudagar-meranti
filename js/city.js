@@ -12,7 +12,8 @@ function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 // ---------------- State ----------------
 let peta = null;
 let S = null;             // state permainan
-let mode = { jenis: "pilih", id: null }; // pilih | bangun | jalan | jembatan | pindah
+let mode = { jenis: "pilih", id: null }; // pilih | bangun | jalan | jembatan | jembatan-gantung | pindah
+let jembatanMulai = null; // titik awal Jembatan Gantung (dua klik)
 let hover = null;         // {x, y} tile di bawah kursor
 let terpilih = null;      // {jenis:"bangunan", idx} | {jenis:"tile", x, y}
 let sedangPindah = null;  // bangunan yang sedang dipindah
@@ -37,6 +38,9 @@ function stateBaru(petaBaru) {
     bersih: [], // tile hutan yang sudah ditebang (agar peta sama setelah reload)
     penduduk: { total: 4, bahagia: 60, bekerja: 0, menganggur: 0, cakupanPendidikan: 0, cakupanKesehatan: 0 },
     log: [],
+    petaVersi: 2, // v15: kepulauan 96x72, 25 pulau
+    pulau: pulauStateBaru(),
+    ruteFeri: [], // { id, pulauId, dari:{x,y}, ke:{x,y}, t, arah }
   };
   for (const k of Object.keys(KOMODITAS)) st.komoditas[k] = 0;
   // Migrasi dari game lama (v1-v12): modal awal dari usaha sagu lama
@@ -69,6 +73,26 @@ function stateBaru(petaBaru) {
   }
   st.log.unshift("Selamat datang di Kepulauan Meranti! Bangun rumah, kebun, dan jalan untuk mengembangkan pulau.");
   return st;
+}
+// ---------------- Kepulauan (v15): status pulau & migrasi save ----------------
+function pulauStateBaru() {
+  const ps = {};
+  for (const d of PULAU_DEFS) ps[d.id] = { terhubung: d.id === "tebing-tinggi", kerjasama: 0, perdagangan: 0 };
+  return ps;
+}
+// Migrasi simpanan lama (peta 40x30) ke kepulauan 96x72: pulau utama
+// disalin persis ke tengah peta baru, jadi semua bangunan/jalan/jembatan
+// dan hutan yang ditebang digeser dengan offset yang sama.
+function migrasiKepulauan(st) {
+  const OX = CITY.PULAU_UTAMA_X, OY = CITY.PULAU_UTAMA_Y;
+  for (const b of st.bangunan) { b.x += OX; b.y += OY; }
+  for (const j of st.jalan) { j.x += OX; j.y += OY; }
+  for (const j of st.jembatan) { j.x += OX; j.y += OY; }
+  st.bersih = (st.bersih || []).map(c => ({ x: c.x + OX, y: c.y + OY }));
+  st.petaVersi = 2;
+  st.pulau = pulauStateBaru();
+  st.ruteFeri = [];
+  st.log.unshift("Kepulauan Meranti kini terdiri dari 25 pulau — bangun Terminal Feri untuk membuka rute penyeberangan!");
 }
 function adaBangunanDi(st, x, y) {
   for (const b of st.bangunan) {
@@ -205,6 +229,10 @@ function muatSemuaGambar() {
   paths.add("assets/vehicles/truk-pengangkut.png");
   paths.add("assets/vehicles/kapal-kargo.png");
   paths.add("assets/vehicles/perahu-kecil.png");
+  // v15: kapal feri + jembatan gantung
+  paths.add("assets/vehicles/kapal-feri.png");
+  paths.add("assets/vehicles/perahu-penyeberangan.png");
+  for (const id of Object.keys(JEMBATAN)) if (JEMBATAN[id].gambar) paths.add(JEMBATAN[id].gambar);
   for (const k of ["player", "petani", "pedagang", "pelanggan", "sopir", "pekerja-pelabuhan", "barista", "pekerja-kilang"]) {
     paths.add("assets/characters/" + k + "/idle.png");
     paths.add("assets/characters/" + k + "/walk-strip.png");
@@ -367,6 +395,58 @@ function bangunJembatanDi(tipe, x, y) {
   simpan(); renderHUD();
   return true;
 }
+// ---------------- Jembatan Gantung (v15): membentang lurus 2-8 petak air ----------------
+function adaJembatanGantung(x, y) {
+  return S.jembatan.some(j => j.x === x && j.y === y && j.tipe === "jembatan-gantung");
+}
+// Ujung-ujung runtunan jembatan gantung lurus yang memuat (x,y)
+function rentangJembatanGantung(x, y) {
+  const hor = adaJembatanGantung(x + 1, y) || adaJembatanGantung(x - 1, y);
+  const dx = hor ? 1 : 0, dy = hor ? 0 : 1;
+  let x0 = x, y0 = y;
+  while (adaJembatanGantung(x0 - dx, y0 - dy)) { x0 -= dx; y0 -= dy; }
+  let x1 = x, y1 = y;
+  while (adaJembatanGantung(x1 + dx, y1 + dy)) { x1 += dx; y1 += dy; }
+  return { x0: x0, y0: y0, x1: x1, y1: y1, dx: dx, dy: dy, n: Math.abs(x1 - x0) + Math.abs(y1 - y0) + 1 };
+}
+function cekJembatanGantung(x0, y0, x1, y1) {
+  const def = JEMBATAN["jembatan-gantung"];
+  if ((def.level || 1) > S.level) return { ok: false, alasan: "Butuh peradaban level " + def.level + " (saat ini level " + S.level + ")." };
+  if (def.tech && !S.teknologi[def.tech]) return { ok: false, alasan: "Butuh penelitian: " + TEKNOLOGI_MAP[def.tech].nama + "." };
+  const darat = t => t !== "laut" && t !== "sungai" && t !== "rawa";
+  if (!darat(terrainDi(peta, x0, y0))) return { ok: false, alasan: "Titik awal harus di daratan." };
+  if (!darat(terrainDi(peta, x1, y1))) return { ok: false, alasan: "Titik akhir harus di daratan." };
+  const dx = Math.sign(x1 - x0), dy = Math.sign(y1 - y0);
+  if (dx !== 0 && dy !== 0) return { ok: false, alasan: "Jembatan Gantung harus lurus (satu baris atau satu kolom)." };
+  if (dx === 0 && dy === 0) return { ok: false, alasan: "Pilih dua titik yang berbeda." };
+  const jarak = Math.abs(x1 - x0) + Math.abs(y1 - y0);
+  if (jarak < 3 || jarak > 9) return { ok: false, alasan: "Jembatan Gantung membentang 2–8 petak air (jarak darat 3–9 petak)." };
+  const tiles = [];
+  for (let i = 1; i < jarak; i++) {
+    const tx = x0 + dx * i, ty = y0 + dy * i;
+    const t = terrainDi(peta, tx, ty);
+    if (t !== "laut" && t !== "sungai") return { ok: false, alasan: "Jalur harus seluruhnya di atas air (petak " + (tx + 1) + "," + (ty + 1) + " adalah " + TERRAIN[t].nama + ")." };
+    if (adaJalanDi(S, tx, ty)) return { ok: false, alasan: "Sudah ada jalan/jembatan di petak " + (tx + 1) + "," + (ty + 1) + "." };
+    if (adaBangunanDi(S, tx, ty)) return { ok: false, alasan: "Sudah ada bangunan di petak " + (tx + 1) + "," + (ty + 1) + "." };
+    tiles.push({ x: tx, y: ty });
+  }
+  const n = tiles.length;
+  const biaya = { uang: def.harga.uang * n, besi: (def.harga.besi || 0) * n, kayu: (def.harga.kayu || 0) * n };
+  if (!cukupBiaya(biaya)) return { ok: false, alasan: "Biaya tidak cukup: " + hargaTeks(biaya) + " (" + n + " petak)." };
+  return { ok: true, tiles: tiles, biaya: biaya, n: n };
+}
+function bangunJembatanGantung(x0, y0, x1, y1) {
+  const cek = cekJembatanGantung(x0, y0, x1, y1);
+  if (!cek.ok) { toast(cek.alasan, "gagal"); bunyiGagal(); return false; }
+  bayarBiaya(cek.biaya);
+  for (const t of cek.tiles) S.jembatan.push({ x: t.x, y: t.y, tipe: "jembatan-gantung" });
+  S.statistik.jembatan += cek.n;
+  bunyiSukses();
+  toast("Jembatan Gantung dibangun (" + cek.n + " petak) — dua tepi kini terhubung!", "ok");
+  log("Jembatan Gantung selesai (" + cek.n + " petak).");
+  simpan(); renderHUD();
+  return true;
+}
 function catatDibangun(def) {
   S.statistik.dibangun[def.id] = (S.statistik.dibangun[def.id] || 0) + 1;
   S.statistik.dibangunKat[def.kat] = (S.statistik.dibangunKat[def.kat] || 0) + 1;
@@ -511,7 +591,7 @@ function bonusEkspor() {
 function hariBerikutnya() {
   if (!S) return;
   S.penduduk.kemarin = S.penduduk.total; // untuk "+N/hari" di kartu statistik
-  const rincian = { pajak: 0, penjualan: 0, ekspor: 0, wisata: 0, bunga: 0, upkeep: 0, gaji: 0 };
+  const rincian = { pajak: 0, penjualan: 0, ekspor: 0, wisata: 0, bunga: 0, perdagangan: 0, upkeep: 0, gaji: 0 };
   // 1. Konstruksi
   for (const b of S.bangunan) {
     if (b.selesai) continue;
@@ -600,6 +680,21 @@ function hariBerikutnya() {
       sisaEkspor -= jual;
     }
   }
+  // 5b. Perdagangan antar pulau (rute feri): pemasukan + kiriman komoditas
+  for (const rute of S.ruteFeri) {
+    const p = peta.pulau.find(pp => pp.id === rute.pulauId);
+    if (!p) continue;
+    const pemasukan = perdaganganRute(p);
+    rincian.perdagangan += pemasukan;
+    const ps = S.pulau[p.id];
+    if (ps) ps.perdagangan += pemasukan;
+    const jml = jumlahKiriman(p);
+    const k = p.komoditas;
+    if (k === "kayu") S.kayu += jml;
+    else if (k === "batu") S.batu += jml;
+    else if (k === "besi") S.besi += jml;
+    else S.komoditas[k] = Math.min(kapSimpan, (S.komoditas[k] || 0) + jml);
+  }
   // 6. Pendapatan lain: pajak, wisata, bunga bank
   rincian.pajak = S.penduduk.total * PAJAK_PER_JIWA;
   for (const b of bangunanSelesai()) {
@@ -613,7 +708,7 @@ function hariBerikutnya() {
     rincian.upkeep += d.upkeep || 0;
     rincian.gaji += (b.staf || 0) * GAJI_PER_PEKERJA;
   }
-  const masukTotal = rincian.pajak + rincian.penjualan + rincian.ekspor + rincian.wisata + rincian.bunga;
+  const masukTotal = rincian.pajak + rincian.penjualan + rincian.ekspor + rincian.wisata + rincian.bunga + rincian.perdagangan;
   const keluarTotal = rincian.upkeep + rincian.gaji;
   S.uang += masukTotal - keluarTotal;
   S.statistik.pendapatanHari = masukTotal;
@@ -1036,9 +1131,9 @@ function gambarPeta() {
       // --- Jembatan: dek per ruas yang tersambung, sedikit terangkat ---
       const cyD = cy - 2 * z;
       const gelap = naungi(def.warna, -32);
-      const pagarTerang = naungi(def.warna, 38); // pagar kontras terhadap dek
-      const pagarGelap = naungi(def.warna, -48);
-      const hw = 9 * z; // setengah lebar dek (lebih ramping dari petak)
+      const pagarTerang = tipe === "jembatan-gantung" ? "#d5dbdb" : naungi(def.warna, 38); // pagar kontras terhadap dek
+      const pagarGelap = tipe === "jembatan-gantung" ? "#2c3e50" : naungi(def.warna, -48);
+      const hw = (tipe === "jembatan-gantung" ? 11 : 9) * z; // gantung: dek baja lebih lebar
       for (let d = 0; d < 4; d++) {
         if (!ada(d)) continue;
         const [px2, py2] = pt(d);
@@ -1075,6 +1170,39 @@ function gambarPeta() {
       ctx.strokeStyle = "rgba(30,40,50,0.6)"; ctx.lineWidth = 2.5 * z;
       ctx.beginPath(); ctx.moveTo(cx - 6 * z, cyD + hw * 0.7); ctx.lineTo(cx - 6 * z, cyD + hw * 0.7 + 9 * z); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(cx + 6 * z, cyD + hw * 0.7); ctx.lineTo(cx + 6 * z, cyD + hw * 0.7 + 9 * z); ctx.stroke();
+      // Jembatan Gantung: menara di kedua ujung + kabel gantung + penggantung
+      // (digambar sekali, di petak ujung awal runtunan)
+      if (tipe === "jembatan-gantung") {
+        const rent = rentangJembatanGantung(x, y);
+        if (x === rent.x0 && y === rent.y0 && rent.n >= 2) {
+          const tinggiMenara = 42 * z;
+          const titikDek = (tx, ty) => {
+            const w2 = tileTengahDunia(tx, ty);
+            const s2 = duniaKeLayar(w2.x, w2.y, lebar, tinggi);
+            return { x: s2.x, y: s2.y - 2 * z };
+          };
+          const A = titikDek(rent.x0, rent.y0), B = titikDek(rent.x1, rent.y1);
+          const p0 = { x: A.x, y: A.y - tinggiMenara }, p1 = { x: B.x, y: B.y - tinggiMenara };
+          const tengah = { x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 };
+          ctx.strokeStyle = "#34495e"; ctx.lineWidth = 3 * z;
+          for (const P of [A, B]) {
+            ctx.beginPath(); ctx.moveTo(P.x, P.y); ctx.lineTo(P.x, P.y - tinggiMenara); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(P.x - 7 * z, P.y - tinggiMenara); ctx.lineTo(P.x + 7 * z, P.y - tinggiMenara); ctx.stroke();
+          }
+          ctx.strokeStyle = "#2c3e50"; ctx.lineWidth = 2 * z;
+          ctx.beginPath(); ctx.moveTo(p0.x, p0.y);
+          ctx.quadraticCurveTo(tengah.x, tengah.y, p1.x, p1.y);
+          ctx.stroke();
+          ctx.lineWidth = 1.2 * z;
+          for (let i = 0; i < rent.n; i++) {
+            const f = rent.n === 1 ? 0.5 : i / (rent.n - 1);
+            const D = titikDek(rent.x0 + rent.dx * i, rent.y0 + rent.dy * i);
+            const bx = (1 - f) * (1 - f) * p0.x + 2 * (1 - f) * f * tengah.x + f * f * p1.x;
+            const by = (1 - f) * (1 - f) * p0.y + 2 * (1 - f) * f * tengah.y + f * f * p1.y;
+            ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(D.x, D.y); ctx.stroke();
+          }
+        }
+      }
       return;
     }
     // --- Jalan: permukaan penuh tile, tepi (curb) hanya di sisi yang
@@ -1166,6 +1294,7 @@ function gambarPeta() {
   }
   // 4. Kendaraan & warga
   gambarKendaraan(lebar, tinggi);
+  gambarFeri(lebar, tinggi);
   for (const w of wargaVisual) {
     const t = tileTengahDunia(w.x, w.y);
     const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
@@ -1278,6 +1407,20 @@ function gambarGhost(lebar, tinggi) {
   } else if (mode.jenis === "jembatan") {
     const cek = cekJembatan(mode.id, hover.x, hover.y);
     ok = cek.ok; alasan = cek.alasan || "";
+  } else if (mode.jenis === "jembatan-gantung") {
+    // Dua klik: titik awal di darat, lalu titik akhir di darat seberang.
+    if (!jembatanMulai) {
+      const darat = t => t !== "laut" && t !== "sungai" && t !== "rawa";
+      ok = darat(terrainDi(peta, hover.x, hover.y));
+      alasan = ok ? "Klik daratan seberang untuk membentangkan jembatan." : "Titik awal harus di daratan.";
+    } else {
+      const cek = cekJembatanGantung(jembatanMulai.x, jembatanMulai.y, hover.x, hover.y);
+      ok = cek.ok; alasan = cek.alasan || "";
+      footprint = [];
+      const dx = Math.sign(hover.x - jembatanMulai.x), dy = Math.sign(hover.y - jembatanMulai.y);
+      const jarak = Math.abs(hover.x - jembatanMulai.x) + Math.abs(hover.y - jembatanMulai.y);
+      for (let i = 0; i <= jarak; i++) footprint.push([jembatanMulai.x + dx * i, jembatanMulai.y + dy * i]);
+    }
   } else if (mode.jenis === "pindah" && sedangPindah != null) {
     const b = S.bangunan[sedangPindah];
     if (b) {
@@ -1377,6 +1520,118 @@ function perbaruiKendaraan(dt) {
   }
 }
 
+// ---------------- Feri antar pulau (v15) ----------------
+function cariTerminalFeri() {
+  for (const b of S.bangunan) if (b.id === "terminal-feri" && b.selesai) return b;
+  return null;
+}
+function cariDermagaPulau(pulauIdx) {
+  for (const b of S.bangunan) {
+    if (b.id !== "dermaga" || !b.selesai) continue;
+    if (pulauDiTile(peta, b.x, b.y) === pulauIdx) return b;
+  }
+  return null;
+}
+function pulauTerhubung(pulauId) {
+  return !!(S.pulau && S.pulau[pulauId] && S.pulau[pulauId].terhubung);
+}
+function bukaRuteFeri(pulauId) {
+  if (!S || !peta) return false;
+  const idx = peta.pulau.findIndex(p => p.id === pulauId);
+  if (idx < 0) { toast("Pulau tidak ditemukan.", "gagal"); return false; }
+  if (pulauTerhubung(pulauId)) { toast("Rute ke pulau ini sudah dibuka.", "gagal"); return false; }
+  const terminal = cariTerminalFeri();
+  if (!terminal) { toast("Bangun Terminal Feri dulu di Pulau Tebing Tinggi.", "gagal"); bunyiGagal(); return false; }
+  const dermaga = cariDermagaPulau(idx);
+  if (!dermaga) { toast("Bangun Dermaga di pantai pulau tujuan dulu.", "gagal"); bunyiGagal(); return false; }
+  const BIAYA_RUTE = 50000;
+  if (S.uang < BIAYA_RUTE) { toast("Biaya membuka rute: Rp50.000.", "gagal"); bunyiGagal(); return false; }
+  S.uang -= BIAYA_RUTE;
+  const p = peta.pulau[idx];
+  S.ruteFeri.push({ id: "rute-" + pulauId, pulauId: pulauId, dari: { x: terminal.x, y: terminal.y }, ke: { x: dermaga.x, y: dermaga.y }, t: 0, arah: 1 });
+  S.pulau[pulauId].terhubung = true;
+  log("Rute feri ke " + p.nama + " dibuka — kapal feri mulai berlayar!");
+  toast("Rute feri ke " + p.nama + " dibuka!", "ok");
+  bunyiSukses();
+  simpan(); renderHUD(); renderPanelKiri(); renderPanelKanan();
+  return true;
+}
+function jalinKerjasama(pulauId) {
+  if (!S || !peta) return false;
+  const ps = S.pulau[pulauId];
+  if (!ps || !ps.terhubung) { toast("Pulau harus terhubung dulu (buka rute feri).", "gagal"); return false; }
+  if (ps.kerjasama >= 3) { toast("Kerjasama sudah level maksimal (3).", "gagal"); return false; }
+  const biaya = 100000 * (ps.kerjasama + 1);
+  if (S.uang < biaya) { toast("Biaya kerjasama level " + (ps.kerjasama + 1) + ": " + rp(biaya) + ".", "gagal"); bunyiGagal(); return false; }
+  S.uang -= biaya;
+  ps.kerjasama++;
+  const p = peta.pulau.find(pp => pp.id === pulauId);
+  log("Kerjasama ekonomi dengan " + (p ? p.nama : pulauId) + " naik ke level " + ps.kerjasama + " — perdagangan +50%.");
+  toast("Kerjasama ekonomi level " + ps.kerjasama + "!", "ok");
+  bunyiSukses();
+  simpan(); renderHUD(); renderPanelKiri();
+  return true;
+}
+// Pendapatan & kiriman komoditas per rute per hari
+function perdaganganRute(p) {
+  const ps = S.pulau[p.id];
+  const dasar = p.ukuran === "besar" ? 25000 : p.ukuran === "sedang" ? 15000 : 8000;
+  const pengali = 1 + 0.5 * (ps ? ps.kerjasama : 0);
+  return Math.round(dasar * pengali);
+}
+function jumlahKiriman(p) {
+  return p.ukuran === "besar" ? 6 : p.ukuran === "sedang" ? 4 : 2;
+}
+function pusatkanPulau(pulauId) {
+  if (!peta) return;
+  const p = peta.pulau.find(pp => pp.id === pulauId);
+  if (!p) return;
+  const w = tileTengahDunia(Math.round(p.cx), Math.round(p.cy));
+  kamera.cx = w.x; kamera.cy = w.y;
+  kamera.zoom = p.ukuran === "besar" ? 0.7 : p.ukuran === "sedang" ? 1 : 1.3;
+  bunyiKlik();
+}
+// Gerakkan kapal feri bolak-balik (dipanggil dari loop utama)
+function perbaruiFeri(dt) {
+  if (!S || kecepatan === 0) return;
+  for (const rute of S.ruteFeri) {
+    if (rute.t === undefined) rute.t = 0;
+    if (rute.arah === undefined) rute.arah = 1;
+    rute.t += (rute.arah * dt) / 25; // sekali seberang ~25 detik
+    if (rute.t >= 1) { rute.t = 1; rute.arah = -1; }
+    else if (rute.t <= 0) { rute.t = 0; rute.arah = 1; }
+  }
+}
+// Gambar kapal feri di laut (dipanggil dari gambarPeta)
+function gambarFeri(lebar, tinggi) {
+  if (!S || !peta || !S.ruteFeri.length) return;
+  const z = kamera.zoom;
+  for (const rute of S.ruteFeri) {
+    const p = peta.pulau.find(pp => pp.id === rute.pulauId);
+    if (!p) continue;
+    const a = tileTengahDunia(rute.dari.x, rute.dari.y);
+    const b = tileTengahDunia(rute.ke.x, rute.ke.y);
+    const t = rute.t || 0;
+    const wx = a.x + (b.x - a.x) * t, wy = a.y + (b.y - a.y) * t;
+    const s = duniaKeLayar(wx, wy, lebar, tinggi);
+    const bob = Math.sin(frame / 30 + t * 6) * 2 * z;
+    const besar = p.ukuran !== "kecil";
+    const img = gambarAset[besar ? "assets/vehicles/kapal-feri.png" : "assets/vehicles/perahu-penyeberangan.png"]
+      || gambarAset["assets/vehicles/kapal-kargo.png"];
+    const hadapKiri = (b.x - a.x) * (rute.arah || 1) < 0;
+    ctx.save();
+    if (img && img.complete && img.naturalWidth) {
+      const w = (besar ? 90 : 60) * z, h = w * (img.naturalHeight / img.naturalWidth);
+      if (hadapKiri) { ctx.translate(s.x, 0); ctx.scale(-1, 1); ctx.drawImage(img, -w / 2, s.y - h + bob, w, h); }
+      else ctx.drawImage(img, s.x - w / 2, s.y - h + bob, w, h);
+    } else {
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath(); ctx.ellipse(s.x, s.y + bob, 30 * z, 10 * z, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
 // =====================================================================
 // BAGIAN 4 — UI/HUD, INPUT, LOOP, INIT.
 // =====================================================================
@@ -1460,6 +1715,7 @@ function renderHUD() {
       if (mode.jenis === "bangun") label = "Membangun: " + BANGUNAN_MAP[mode.id].nama;
       else if (mode.jenis === "jalan") label = "Membangun: " + JALAN[mode.id].nama + " (seret untuk menggambar)";
       else if (mode.jenis === "jembatan") label = "Membangun: " + JEMBATAN[mode.id].nama;
+      else if (mode.jenis === "jembatan-gantung") label = jembatanMulai ? "Jembatan Gantung: klik daratan seberang" : "Jembatan Gantung: klik daratan awal";
       else if (mode.jenis === "pindah") label = "Memindahkan bangunan — klik lokasi baru";
       $("modeChipTeks").textContent = label + " · klik kanan atau Esc untuk batal";
     }
@@ -1603,12 +1859,29 @@ function renderMenuBangun() {
       const alasan = (j.level || 1) > S.level ? "Butuh level " + j.level : (j.tech ? "Butuh penelitian: " + TEKNOLOGI_MAP[j.tech].nama : "");
       const c = document.createElement("canvas"); c.width = 104; c.height = 56;
       const cx = c.getContext("2d");
-      cx.fillStyle = "#3d9bd6";
-      cx.beginPath(); cx.moveTo(52, 6); cx.lineTo(98, 28); cx.lineTo(52, 50); cx.lineTo(6, 28); cx.closePath(); cx.fill();
-      cx.fillStyle = j.warna; cx.fillRect(22, 22, 60, 12);
-      cx.strokeStyle = "rgba(0,0,0,0.35)"; cx.lineWidth = 1.5;
-      for (const px of [34, 52, 70]) { cx.beginPath(); cx.moveTo(px, 22); cx.lineTo(px, 34); cx.stroke(); }
-      tambahKartu(j.nama, "Hanya di atas sungai atau laut.", hargaTeks(j.harga), kunci, alasan, () => { mode = { jenis: "jembatan", id: id }; terpilih = null; bunyiKlik(); renderHUD(); renderMenuBangun(); }, c);
+      const imgJembatan = j.gambar ? gambarAset[j.gambar] : null;
+      if (imgJembatan && imgJembatan.complete && imgJembatan.naturalWidth) {
+        const h = 52, w = h * (imgJembatan.naturalWidth / imgJembatan.naturalHeight);
+        cx.drawImage(imgJembatan, (104 - w) / 2, 2, w, h);
+      } else {
+        cx.fillStyle = "#3d9bd6";
+        cx.beginPath(); cx.moveTo(52, 6); cx.lineTo(98, 28); cx.lineTo(52, 50); cx.lineTo(6, 28); cx.closePath(); cx.fill();
+        cx.fillStyle = j.warna; cx.fillRect(22, 22, 60, 12);
+        cx.strokeStyle = "rgba(0,0,0,0.35)"; cx.lineWidth = 1.5;
+        for (const px of [34, 52, 70]) { cx.beginPath(); cx.moveTo(px, 22); cx.lineTo(px, 34); cx.stroke(); }
+        if (id === "jembatan-gantung") {
+          // Menara + kabel mini di kartu
+          cx.strokeStyle = "#34495e"; cx.lineWidth = 2;
+          for (const px of [24, 80]) { cx.beginPath(); cx.moveTo(px, 22); cx.lineTo(px, 8); cx.stroke(); }
+          cx.beginPath(); cx.moveTo(24, 8); cx.quadraticCurveTo(52, 30, 80, 8); cx.stroke();
+        }
+      }
+      const desJembatan = id === "jembatan-gantung" ? "Klik daratan, lalu daratan seberang — membentang 2–8 petak air. Harga per petak." : "Hanya di atas sungai atau laut.";
+      tambahKartu(j.nama, desJembatan, hargaTeks(j.harga) + (id === "jembatan-gantung" ? " /petak" : ""), kunci, alasan, () => {
+        if (id === "jembatan-gantung") { mode = { jenis: "jembatan-gantung", id: id }; jembatanMulai = null; }
+        else mode = { jenis: "jembatan", id: id };
+        terpilih = null; bunyiKlik(); renderHUD(); renderMenuBangun();
+      }, c);
     }
   }
   // Bangunan: Dekorasi = sosial berflag dekorasi; Sosial = sosial lainnya
@@ -1657,6 +1930,7 @@ function renderPanelKiri() {
     html += "<div class='barisStat kecil'><span>Pajak (" + S.penduduk.total + " jiwa)</span><span>" + rp(r.pajak) + "</span></div>";
     html += "<div class='barisStat kecil'><span>Penjualan pasar</span><span>" + rp(r.penjualan) + "</span></div>";
     html += "<div class='barisStat kecil'><span>Ekspor pelabuhan</span><span>" + rp(r.ekspor) + "</span></div>";
+    html += "<div class='barisStat kecil'><span>Perdagangan antar pulau</span><span>" + rp(r.perdagangan || 0) + "</span></div>";
     html += "<div class='barisStat kecil'><span>Wisata</span><span>" + rp(r.wisata) + "</span></div>";
     html += "<div class='barisStat kecil'><span>Bunga bank</span><span>" + rp(r.bunga) + "</span></div>";
     html += "<div class='barisStat'><span>Pengeluaran kemarin</span><b class='merah'>" + rp(keluar) + "</b></div>";
@@ -1721,6 +1995,32 @@ function renderPanelKiri() {
       html += "<div class='misiDes'>Puncak peradaban tercapai — Pusat Perdagangan Nusantara!</div>";
     }
     isi.innerHTML = html;
+  } else if (panelKiri === "pulau") {
+    let html = "<div class='judulPanel'>Kepulauan Meranti</div>";
+    const terhubung = peta.pulau.filter(p => pulauTerhubung(p.id));
+    let totalDagang = 0;
+    for (const p of terhubung) totalDagang += perdaganganRute(p);
+    html += "<div class='misiDes'>" + terhubung.length + " dari " + peta.pulau.length + " pulau terhubung · perdagangan " + rp(totalDagang) + "/hari.</div>";
+    html += "<div class='misiDes'>Bangun <b>Terminal Feri</b> di Tebing Tinggi dan <b>Dermaga</b> di pantai pulau tujuan, lalu buka rutenya dari panel Terminal Feri. Pulau terhubung mengirim hasil unggulannya setiap hari.</div>";
+    const urut = [...peta.pulau].sort((a, b) => {
+      const ta = pulauTerhubung(a.id) ? 0 : 1, tb = pulauTerhubung(b.id) ? 0 : 1;
+      if (ta !== tb) return ta - tb;
+      const uk = { besar: 0, sedang: 1, kecil: 2 };
+      return uk[a.ukuran] - uk[b.ukuran];
+    });
+    for (const p of urut) {
+      const idx = peta.pulau.indexOf(p);
+      const ps = S.pulau[p.id] || { terhubung: false, kerjasama: 0, perdagangan: 0 };
+      const adaDermaga = !!cariDermagaPulau(idx);
+      const namaKom = p.komoditas === "kayu" ? "Kayu" : p.komoditas === "batu" ? "Batu" : p.komoditas === "besi" ? "Besi" : KOMODITAS[p.komoditas].nama;
+      html += "<div class='barisMisi" + (ps.terhubung ? " selesai" : "") + "'><div class='misiNama'>" + (ps.terhubung ? "⛴ " : "🏝️ ") + p.nama + "</div>" +
+        "<div class='misiDes'>" + p.ukuran + " · hasil: " + namaKom + " · " + (ps.terhubung ? "terhubung" : (adaDermaga ? "ada dermaga — buka rute di Terminal Feri" : "belum terhubung")) + "</div>" +
+        (ps.terhubung ? "<div class='misiProg'>Perdagangan " + rp(perdaganganRute(p)) + "/hari · total " + rp(ps.perdagangan) + " · kerjasama Lv " + ps.kerjasama + "/3</div>" : "") +
+        "<div class='barisAksi'><button class='btnKecil' onclick='pusatkanPulau(\"" + p.id + "\")'>Pusatkan</button>" +
+        (ps.terhubung && ps.kerjasama < 3 ? "<button class='btnKecil' onclick='jalinKerjasama(\"" + p.id + "\")'>Kerjasama Lv " + (ps.kerjasama + 1) + " — " + rp(100000 * (ps.kerjasama + 1)) + "</button>" : "") +
+        "</div></div>";
+    }
+    isi.innerHTML = html;
   } else if (panelKiri === "berita") {
     let html = "<div class='judulPanel'>Berita Pulau</div>";
     const items = (S.log || []).slice(0, 12);
@@ -1777,6 +2077,28 @@ function renderPanelKanan() {
   if (def.jual) html += "<div class='barisStat'><span>Menjual</span><span>maks " + def.jual.maks + " unit/hari</span></div>";
   if (def.wisata) html += "<div class='barisStat'><span>Wisata</span><span>+" + rp(def.wisata) + "/hari</span></div>";
   html += "<div class='barisStat'><span>Biaya operasional</span><span>" + rp(def.upkeep || 0) + "/hari</span></div>";
+  // Terminal Feri: daftar pulau yang bisa dibuka rutenya
+  if (def.id === "terminal-feri" && b.selesai) {
+    const tujuan = [];
+    for (let i = 1; i < peta.pulau.length; i++) {
+      const p = peta.pulau[i];
+      if (pulauTerhubung(p.id)) continue;
+      if (cariDermagaPulau(i)) tujuan.push(p);
+    }
+    html += "<div class='judulPanel' style='margin-top:10px'>Rute Penyeberangan</div>";
+    if (!tujuan.length) {
+      html += "<div class='misiDes'>Belum ada pulau tujuan yang siap — bangun Dermaga di pantai pulau lain dulu, lalu kembali ke sini.</div>";
+    } else {
+      for (const p of tujuan) {
+        html += "<div class='barisStat kecil'><span>⛴ " + p.nama + " (" + p.ukuran + ")</span><button class='btnKecil' onclick='bukaRuteFeri(\"" + p.id + "\")'>Buka Rute — Rp50.000</button></div>";
+      }
+    }
+    const ruteSaya = S.ruteFeri.filter(r => r.dari.x === b.x && r.dari.y === b.y);
+    for (const r of ruteSaya) {
+      const p = peta.pulau.find(pp => pp.id === r.pulauId);
+      if (p) html += "<div class='barisStat kecil'><span>✓ " + p.nama + "</span><span>" + rp(perdaganganRute(p)) + "/hari</span></div>";
+    }
+  }
   html += "<div class='barisAksi'><button class='btnKecil' onclick='aksiPindah()'>Pindah</button><button class='btnKecil' onclick='aksiPutar()'>Putar</button><button class='btnKecil bahaya' onclick='aksiHapus()'>Hapus</button><button class='btnKecil' onclick='tutupPanelKanan()'>Tutup</button></div>";
   el.innerHTML = html;
 }
@@ -1879,6 +2201,18 @@ function pasangInput() {
       bangunDi(BANGUNAN_MAP[mode.id], t.x, t.y, 0);
     } else if (mode.jenis === "jembatan") {
       bangunJembatanDi(mode.id, t.x, t.y);
+    } else if (mode.jenis === "jembatan-gantung") {
+      // Dua klik: pertama titik awal di darat, kedua daratan seberang.
+      const darat = tt => tt !== "laut" && tt !== "sungai" && tt !== "rawa";
+      if (!jembatanMulai) {
+        if (darat(terrainDi(peta, t.x, t.y))) {
+          jembatanMulai = { x: t.x, y: t.y };
+          toast("Titik awal dipilih — klik daratan seberang dalam satu garis lurus.", "ok");
+          bunyiKlik();
+        } else { toast("Titik awal Jembatan Gantung harus di daratan.", "gagal"); bunyiGagal(); }
+      } else {
+        if (bangunJembatanGantung(jembatanMulai.x, jembatanMulai.y, t.x, t.y)) jembatanMulai = null;
+      }
     } else if (mode.jenis === "pindah") {
       pindahBangunanSelesai(t.x, t.y);
     }
@@ -1903,7 +2237,7 @@ function pasangInput() {
     else if (e.key === "-") kameraZoomTombol(1 / 1.15, kanvas.clientWidth, kanvas.clientHeight);
     else if (e.key === " ") { e.preventDefault(); hariBerikutnya(); }
     else if (e.key === "p" || e.key === "P") { aturKecepatan(kecepatan === 0 ? 1 : 0); }
-    else if (e.key === "Escape") { mode = { jenis: "pilih", id: null }; sedangPindah = null; terpilih = null; renderHUD(); renderMenuBangun(); renderPanelKanan(); }
+    else if (e.key === "Escape") { mode = { jenis: "pilih", id: null }; jembatanMulai = null; sedangPindah = null; terpilih = null; renderHUD(); renderMenuBangun(); renderPanelKanan(); }
   });
 }
 function aturKecepatan(k) {
@@ -1921,7 +2255,7 @@ function pasangTombol() {
   $("btnHari").onclick = () => { hariBerikutnya(); bunyiKlik(); };
   $("btnSimpan").onclick = () => { simpan(); toast("Permainan disimpan.", "ok"); bunyiSukses(); };
   $("btnSuara").onclick = () => { bunyiAktif = !bunyiAktif; $("btnSuara").textContent = bunyiAktif ? "🔊" : "🔇"; if (bunyiAktif) bunyiKlik(); };
-  $("btnBatalMode").onclick = () => { mode = { jenis: "pilih", id: null }; sedangPindah = null; renderHUD(); renderMenuBangun(); };
+  $("btnBatalMode").onclick = () => { mode = { jenis: "pilih", id: null }; jembatanMulai = null; sedangPindah = null; renderHUD(); renderMenuBangun(); };
   $("btnToggleKiri").onclick = () => { $("panelKiri").classList.toggle("tersembunyi"); bunyiKlik(); };
   $("btnToggleKanan").onclick = () => { $("panelKanan").classList.toggle("tersembunyi"); bunyiKlik(); };
   if (window.innerWidth <= 820) { $("panelKiri").classList.add("tersembunyi"); $("panelKanan").classList.add("tersembunyi"); }
@@ -1966,6 +2300,7 @@ function loop(waktu) {
   frame++;
   perbaruiWarga(dt);
   perbaruiKendaraan(dt);
+  perbaruiFeri(dt);
   for (const a of awanVisual) { a.x += a.cepat * dt; if (a.x > 900) a.x = -600; }
   if (S && S.cuaca === "Hujan") {
     for (const t of hujanTetes) {
@@ -1997,6 +2332,9 @@ function mulaiGame(baru) {
     const simpanan = muat();
     if (!simpanan) { toast("Tidak ada simpanan.", "gagal"); return; }
     S = simpanan;
+    if (S.petaVersi !== 2) migrasiKepulauan(S);
+    if (!S.pulau) S.pulau = pulauStateBaru();
+    if (!S.ruteFeri) S.ruteFeri = [];
     peta = generatePeta(S.seed || CITY.SEED);
     for (const c of (S.bersih || [])) { if (peta.terrain[c.y] && peta.terrain[c.y][c.x]) peta.terrain[c.y][c.x] = "rumput"; }
     S.log.unshift("Permainan dilanjutkan — Hari " + S.hari + ".");

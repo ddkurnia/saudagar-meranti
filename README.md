@@ -6,6 +6,46 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v15 — Kepulauan Meranti: 25 Pulau (2026-11-11)
+
+Peta kini satu kepulauan 96×72 dengan **25 pulau** yang ukurannya dan
+bentuknya tidak sama: Tebing Tinggi (pulau utama), Rangsang, Padang,
+Merbau, Topang, Mendol, Rangsang Barat, Ketam, Cawan, dan 16 pulau
+kecil — masing-masing punya hasil unggulan sendiri (sagu, kopra,
+karet, kayu, pinang, batu, besi).
+
+- **Simpanan lama aman:** pulau utama disalin persis (terrain 40×30
+  lama sama 100%, terverifikasi) ke tengah peta baru; semua bangunan,
+  jalan, jembatan, dan hutan yang ditebang ikut bergeser — pemain
+  lama melanjutkan dari tempat yang sama.
+- **Terminal Feri** (bangunan baru, Ekonomi, level 2, di pesisir):
+  bangun di Tebing Tinggi + **Dermaga** di pantai pulau tujuan, lalu
+  buka rute dari panel Terminal Feri (Rp50.000/rute). **Kapal feri
+  benar-benar berlayar** bolak-balik di laut (kapal besar untuk pulau
+  sedang/besar, perahu kecil untuk pulau kecil) — sekali seberang
+  ~25 detik.
+- **Pulau terhubung = berdagang:** setiap rute memberi pemasukan
+  harian (kecil Rp8.000, sedang Rp15.000, besar Rp25.000) + kiriman
+  hasil unggulan pulau itu setiap hari (2/4/6 unit).
+- **Kerjasama Ekonomi** (panel Pulau): per pulau terhubung, level 1–3,
+  biaya Rp100.000 × level — tiap level +50% pemasukan perdagangan.
+- **Panel Pulau** (ikon 🏝️ di rel kiri): daftar 25 pulau (nama,
+  ukuran, hasil, status terhubung/dermaga, perdagangan/hari,
+  kerjasama), tombol Pusatkan dan Tingkatkan Kerjasama.
+- **Jembatan Gantung** (tab Jembatan, level 3 + riset Transportasi):
+  klik daratan, lalu klik daratan seberang dalam satu garis lurus —
+  membentang 2–8 petak air (Rp50.000 + 5 besi + 5 kayu per petak).
+  Dek baja merah yang lebar, **menara di kedua ujung + kabel gantung
+  dan penggantung** (digambar sekali per runtunan), dan bisa dilalui
+  warga & truk lewat jaringan jalan — pulau jadi terhubung darat.
+- **Aset baru (4):** Terminal Feri, Kapal Feri, Jembatan Gantung,
+  Perahu Penyeberangan — ilustrasi isometrik senada aset v13.2,
+  manifest v12 (136 file).
+- Uji headless lolos (`TEST_V13_OK`, 118 cek): 25 pulau (semua punya
+  daratan), terrain pulau utama identik, migrasi save lama, celah air
+  & biaya jembatan gantung, rute feri + kerjasama + kiriman komoditas,
+  feri bergerak & berbalik arah.
+
 ## Yang baru di v14 — Tampilan Persis Referensi (2026-11-11)
 
 Tata letak mengikuti gambar referensi yang dilampirkan pengguna:

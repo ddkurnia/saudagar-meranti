@@ -9,12 +9,46 @@ const CITY = {
   VERSI_SAVE: 1,
   SAVE_KEY: "saudagarSaguMerantiCityV1",
   SAVE_LAMA: "saudagarSaguMerantiV1",
-  GRID_W: 40,
-  GRID_H: 30,
+  GRID_W: 96,
+  GRID_H: 72,
   TILE_W: 64,
   TILE_H: 32,
   SEED: 20261111,
+  // Posisi pulau utama 40x30 di dalam peta kepulauan 96x72 (tengah).
+  PULAU_UTAMA_X: 28,
+  PULAU_UTAMA_Y: 21,
 };
+
+// ---------------- Kepulauan (v15: 25 pulau) ----------------
+// Pulau 0 = Tebing Tinggi (pulau utama, tempat permukiman pemain).
+// komoditas = hasil unggulan pulau itu (dikirim lewat rute feri).
+const PULAU_DEFS = [
+  { id: "tebing-tinggi",  nama: "Tebing Tinggi",  ukuran: "besar", komoditas: "tual" },
+  { id: "rangsang",       nama: "Rangsang",       ukuran: "besar", komoditas: "kopra" },
+  { id: "padang",         nama: "Padang",         ukuran: "besar", komoditas: "karet" },
+  { id: "merbau",         nama: "Merbau",         ukuran: "sedang", komoditas: "kayu" },
+  { id: "topang",         nama: "Topang",         ukuran: "sedang", komoditas: "pinang" },
+  { id: "mendol",         nama: "Mendol",         ukuran: "sedang", komoditas: "kopra" },
+  { id: "rangsang-barat", nama: "Rangsang Barat", ukuran: "sedang", komoditas: "karet" },
+  { id: "ketam",          nama: "Ketam",          ukuran: "sedang", komoditas: "kayu" },
+  { id: "cawan",          nama: "Cawan",          ukuran: "sedang", komoditas: "batu" },
+  { id: "sagu",           nama: "Pulau Sagu",     ukuran: "kecil", komoditas: "tual" },
+  { id: "nipah",          nama: "Pulau Nipah",    ukuran: "kecil", komoditas: "pinang" },
+  { id: "rumbia",         nama: "Pulau Rumbia",   ukuran: "kecil", komoditas: "kayu" },
+  { id: "kelapa",         nama: "Pulau Kelapa",   ukuran: "kecil", komoditas: "kopra" },
+  { id: "pinang",         nama: "Pulau Pinang",   ukuran: "kecil", komoditas: "pinang" },
+  { id: "bakau",          nama: "Pulau Bakau",    ukuran: "kecil", komoditas: "kayu" },
+  { id: "pasir",          nama: "Pulau Pasir",    ukuran: "kecil", komoditas: "batu" },
+  { id: "karang",         nama: "Pulau Karang",   ukuran: "kecil", komoditas: "besi" },
+  { id: "tanjung",        nama: "Tanjung",        ukuran: "kecil", komoditas: "karet" },
+  { id: "selat",          nama: "Pulau Selat",    ukuran: "kecil", komoditas: "kopra" },
+  { id: "akar",           nama: "Pulau Akar",     ukuran: "kecil", komoditas: "kayu" },
+  { id: "bunga",          nama: "Pulau Bunga",    ukuran: "kecil", komoditas: "karet" },
+  { id: "damar",          nama: "Pulau Damar",    ukuran: "kecil", komoditas: "kayu" },
+  { id: "jati",           nama: "Pulau Jati",     ukuran: "kecil", komoditas: "kayu" },
+  { id: "padi",           nama: "Pulau Padi",     ukuran: "kecil", komoditas: "tual" },
+  { id: "mutiara",        nama: "Pulau Mutiara",  ukuran: "kecil", komoditas: "kopra" },
+];
 
 // ---------------- Terrain ----------------
 const TERRAIN = {
@@ -56,6 +90,9 @@ const JALAN = {
 const JEMBATAN = {
   "jembatan-kecil": { nama: "Jembatan Kecil", harga: { uang: 15000, kayu: 5 }, warna: "#8d6e63" },
   "jembatan-besar": { nama: "Jembatan Besar", harga: { uang: 40000, batu: 5, besi: 2 }, warna: "#90a4ae", level: 3, tech: "transportasi" },
+  // Jembatan Gantung (v15): multi-petak, membentang lurus melintasi selat.
+  // Harga per petak; panjang 2-8 petak; butuh level 3 + riset transportasi.
+  "jembatan-gantung": { nama: "Jembatan Gantung", harga: { uang: 50000, besi: 5, kayu: 5 }, warna: "#b03a2e", level: 3, tech: "transportasi", multi: true, gambar: "assets/buildings/building-jembatan-gantung.png" },
 };
 
 // ---------------- Kategori bangunan ----------------
@@ -132,6 +169,7 @@ const BANGUNAN = [
   { id: "kantor-dagang", nama: "Kantor Perdagangan", kat: "ekonomi", harga: { uang: 250000, batu: 15, besi: 5 }, waktu: 3, pekerja: 6, upkeep: 7000, kerja: 6, bahagia: 2, level: 3, kaki: { w: 2, h: 1 }, gambar: "assets/buildings/building-kantor-dagang.png", vektor: { dinding: "#ffffff", atap: "#636e72", jenisAtap: "datar", lantai: 2 }, eksporBonus: 0.1, des: "Kantor dagang — harga ekspor +10%." },
   { id: "kawasan-industri", nama: "Kawasan Industri", kat: "ekonomi", harga: { uang: 800000, batu: 50, besi: 20 }, waktu: 5, pekerja: 15, upkeep: 20000, kerja: 15, level: 4, kaki: { w: 3, h: 2 }, gambar: "assets/buildings/building-kawasan-industri.png", vektor: { dinding: "#b2bec3", atap: "#636e72", jenisAtap: "datar", lantai: 2, detail: "cerobong" }, des: "Kawasan industri — industri di sekitarnya lebih produktif." },
   { id: "pusat-logistik", nama: "Pusat Logistik", kat: "ekonomi", harga: { uang: 500000, batu: 30, besi: 15 }, waktu: 4, pekerja: 10, upkeep: 12000, kerja: 10, level: 4, kaki: { w: 2, h: 2 }, gambar: "assets/buildings/building-pusat-logistik.png", vektor: { dinding: "#fdcb6e", atap: "#e17055", jenisAtap: "datar", lantai: 2 }, eksporBonus: 0.15, des: "Pusat logistik — harga ekspor +15% & angkutan lancar." },
+  { id: "terminal-feri", nama: "Terminal Feri", kat: "ekonomi", harga: { uang: 200000, kayu: 20, batu: 10 }, waktu: 3, pekerja: 4, upkeep: 5000, kerja: 4, bahagia: 2, level: 2, pantai: true, kaki: { w: 2, h: 2 }, gambar: "assets/buildings/building-terminal-feri.png", vektor: { dinding: "#74b9ff", atap: "#0984e3", jenisAtap: "datar", lantai: 2 }, des: "Terminal feri — membuka rute penyeberangan ke pulau lain." },
   { id: "kedai-liberika", nama: "Kedai Kopi Liberika", kat: "ekonomi", harga: { uang: 150000, kayu: 10 }, waktu: 2, pekerja: 4, upkeep: 4000, kerja: 4, bahagia: 3, kaki: { w: 2, h: 2 }, gambar: "assets/buildings/building-kedai-liberika.png", jual: { jenis: "lokal", maks: 8 }, wisata: 3000, des: "Kedai Kopi Liberika Meranti — menjual kopi dan menarik wisatawan." },
   // ---- PERKEBUNAN ----
   { id: "kebun-sagu", nama: "Kebun Sagu", kat: "perkebunan", harga: { uang: 50000, kayu: 2 }, waktu: 1, pekerja: 3, upkeep: 1000, kerja: 3, kaki: { w: 2, h: 2 }, gambar: "assets/buildings/building-kebun.png", produksi: { keluar: { tual: 3 } }, des: "Kebun rumbia — menghasilkan 3 tual sagu per hari." },
