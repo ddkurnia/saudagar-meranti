@@ -6,6 +6,210 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v20 — Complete UI/UX Modernization: Premium 2026 City Builder Interface (2026-11-11)
+
+**Total redesign tampilan & pengalaman pengguna (BUKAN membuat ulang
+game).** Seluruh sistem dipertahankan apa adanya — World Map Engine,
+kamera/zoom, placement, katalog 118 bangunan, ekonomi, penduduk,
+pekerja, misi, waktu real-time, kecepatan simulasi, save game, profil
+pemain, seluruh data. Yang berubah hanya cara semuanya ditampilkan dan
+dipakai: arah desain premium modern (SimCity modern, Cities:
+Skylines), minimalis, clean, immersive, elegan, glassmorphism
+secukupnya, HUD gelap translusen, sudut membulat proporsional,
+tipografi modern, ikon SVG konsisten (BUKAN emoji untuk navigasi
+utama), animasi 150–250 ms; peta menempati 80–90% layar. Transisi
+masuk game memakai fade 250 ms (`.memudar`). Tidak ada logika gameplay
+yang diubah di v20. Headless: **759 cek, `TEST_V13_OK`**
+(`tests/test13.js`; 630 cek di v19 + 129 cek baru v20).
+
+- **Top HUD (3 zona, ringkas).** Kiri: avatar/nama pemimpin/level/XP;
+  tengah: uang/material/penduduk/kebahagiaan; kanan: jam & kalender
+  game, cuaca, notifikasi (Berita Pulau), simpan, suara, dan
+  Pengaturan (⚙️, tombol baru `#btnPengaturan`). Pill listrik kini
+  jujur: total jaringan (dipakai/kapasitas) **plus jumlah bangunan
+  padam bila ada**, mis. `117/100 kW · 3 padam` — sebelumnya pill
+  hanya menampilkan total jaringan sementara panel bangunan
+  menampilkan "Padam" per bangunan, dua metrik yang tampak
+  bertentangan (temuan cek live v19, lihat bawah).
+- **World view.** Peta full-bleed; `#tglCuaca` dan `#kartuStatistik`
+  lama disembunyikan via CSS (tetap di DOM — JS tetap menulis ke
+  sana, isinya ditampilkan ulang di panel Statistik).
+- **Nav kiri (8 tombol SVG).** Overview, Misi, Penduduk, Ekonomi,
+  Infrastruktur, Pemerintahan, Penelitian, Statistik
+  (`data-tab: peta/misi/penduduk/ekonomi/infrastruktur/peradaban/riset/statistik`)
+  dengan tooltip; panel hanya muncul bila dipilih, ketuk ikon yang
+  sama lagi menutup panel (pola HP). Dua pintasan wilayah di bawah
+  rel: Kepulauan & Kecamatan (`#pintasanWilayah`).
+- **Panel kanan kontekstual.** Ringkasan kota saat tidak ada yang
+  dipilih; detail bangunan terpilih (termasuk status Listrik & Air
+  per bangunan) saat ada pilihan. Tidak ada sistem upgrade di game,
+  jadi panel kanan hanya menampilkan info — bukan tombol upgrade.
+- **Build drawer bawah (19 kategori).** Katalog bisa dilipat lewat
+  `#btnLipatKatalog` / `#barisKatalog`; bila satu kategori kosong
+  atau semua bangunannya terkunci, drawer menampilkan pesan
+  `#pesanKatalog` ("Semua bangunan di kategori … masih terkunci…").
+  Di level 1: Keamanan (3/3) dan Hiburan (11/11) terkunci penuh;
+  Perikanan justru sudah terbuka sejak level 1. Semua tab memakai
+  ikon SVG inline (field `ikon` di `TAB_BANGUN`, viewBox 24, stroke
+  `currentColor` 1.8); begitu pula tombol utama — Mode Bangun
+  (kunci-inggris), Berita (lonceng), Simpan (disquete), Suara
+  (speaker, berubah bila dimatikan), Jeda (pause), Pengaturan (gir),
+  Mulai Narasi, Profil, Hapus (tempat sampah), logo modal level
+  (piala). Emoji dipertahankan HANYA sebagai indikator/konten
+  (`#ikonFase`, pill sumber daya, teks panel).
+- **Misi.** Misi utama ditampilkan menonjol; drawer misi compact (1
+  misi utama + sampingan).
+- **Minimap.** Ringkas di kartu "Peta Meranti" dengan tombol
+  perbesar `#btnPetaBesar` (kartu membesar menempel tepi kanan);
+  kotak area layar tetap kotak sungguhan, mengecil saat zoom dan
+  berpindah mengikuti kamera.
+- **Statistik.** Panel khusus (cabang `statistik` di
+  `renderPanelKiri`): penduduk & pertumbuhan, kebahagiaan,
+  pengangguran/bekerja, ekonomi rata-rata per jam hari ini + netto
+  kemarin, peradaban, kemacetan, layanan publik, lingkungan, kualitas
+  hidup, bangunan/jalan/jembatan — dihitung dari state live dengan
+  rumus yang sama seperti `renderHUD`.
+- **Kontrol waktu.** Compact di drawer bawah (Jeda / 0,5× / 1× / 2×);
+  tombol "Hari Berikutnya" tetap tidak ada (dihapus sejak v18).
+- **Main menu.** Ramping ala game PC/console modern (background
+  panorama, logo, tagline, Lanjutkan/Baru/Profil/Pengaturan,
+  transisi halus); tombol "Kembali ke Menu Utama" di panel
+  Pengaturan menyimpan dulu lalu kembali tanpa reload (simulasi
+  dijeda selama di menu).
+
+### Tabel pemetaan 19 kategori menu bangun (v20)
+
+`kat` simulasi tetap 15 nilai (`KATEGORI`) — pemecahan kategori
+tampilan HANYA di `TAB_BANGUN`, lewat 4 deskriptor per tab: `kat`
+(semua bangunan yang kat-nya ada di daftar), `ids` (daftar id
+eksplisit, untuk pecahan kat), `jalan: true` (jenis jalan + bangunan
+kat "jalan"), `jembatan: true` (kartu JEMBATAN), `dekorasi: true`
+(semua bangunan berflag `dekorasi`).
+
+| # | Kategori | Isi | Kartu |
+|---|---|---|---|
+| 1 | Permukiman | kat permukiman | 6 |
+| 2 | Komersial | ids pecahan kat perkantoran: pasar-tradisional, pasar-modern, toko, supermarket, bank, kantor-dagang, kedai-liberika | 7 |
+| 3 | Perkantoran | ids pecahan kat perkantoran: kantor-pemerintah, kantor-bupati, kantor-kecamatan, kantor-desa, gedung-dprd, kantor-dinas, mal-pelayanan, kantor-pos, perkantoran-swasta, gedung-perusahaan | 10 |
+| 4 | Jalan | JALAN 9 jenis + kat jalan: traffic-light, bundaran, jpo | 9 + 3 |
+| 5 | Jembatan | JEMBATAN: kecil, besar, gantung | 3 |
+| 6 | Listrik | kat listrik | 6 |
+| 7 | Air dan PDAM | kat air | 6 |
+| 8 | Drainase | kat drainase | 8 |
+| 9 | Pendidikan | kat pendidikan | 8 |
+| 10 | Kesehatan | kat kesehatan | 6 |
+| 11 | Keamanan | kat keamanan | 3 |
+| 12 | Rekreasi | kat rekreasi | 17 |
+| 13 | Hiburan | kat hiburan | 11 |
+| 14 | Industri | kat industri | 8 |
+| 15 | Pertanian | ids pecahan kat lahan: kebun-sagu, kebun-kelapa, kebun-pinang, kebun-karet, kebun-kopi, pertanian, peternakan | 7 |
+| 16 | Perikanan | ids pecahan kat lahan: perikanan | 1 |
+| 17 | Transportasi | kat transportasi | 8 |
+| 18 | Lingkungan | kat lingkungan | 3 |
+| 19 | Dekorasi | flag dekorasi: taman, taman-bermain, lapangan, stadion, taman-wisata, waterfront, pantai-wisata, jogging-track | 8 |
+
+Total **118 bangunan**; tiap bangunan muncul di ≥1 tab, tiap tab ≥1
+kartu; 118 bangunan unik di 18 tab utama (tanpa Dekorasi) — tab
+Dekorasi berisi duplikat dari kategori utamanya, by design. Tutorial
+langkah 6 kini memakai tab **Pertanian** (bukan "lahan" v19):
+`bukaMenuBangunUntuk("pertanian", "bangun", "kebun-sagu")`.
+
+### Perbandingan sebelum/sesudah per area (v19 → v20)
+
+| Area | v19 | v20 |
+|---|---|---|
+| Menu bangun | 15 tab (jembatan digabung ke tab Jalan, dekorasi dihapus) | 19 tab (Jembatan & Dekorasi kembali sebagai tab sendiri; Komersial/Perkantoran pecahan kat perkantoran; Pertanian/Perikanan pecahan kat lahan) |
+| Ikon | Emoji / teks | SVG inline konsisten di 19 tab + tombol utama; emoji hanya indikator/konten |
+| Nav kiri | Tombol teks/emoji, panel selalu terbuka | 8 tombol SVG + tooltip, panel hanya bila dipilih, ketuk ulang menutup |
+| Top HUD | Bar atas penuh, pill listrik total saja | 3 zona ringkas; pill listrik + "N padam"; tombol Pengaturan |
+| Panel kiri | 9 cabang (peta/misi/ekonomi/penduduk/pulau/kecamatan/riset/peradaban/berita) | 12 cabang (+ infrastruktur utilitas live, statistik, pengaturan) |
+| Panel kanan | Ringkasan + detail bangunan | Sama, kontekstual; tetap info saja (tanpa upgrade) |
+| Minimap | Tetap di kartu kanan | Sama + tombol perbesar |
+| Katalog | Selalu terbuka | Bisa dilipat; pesan bila kategori kosong/terkunci penuh |
+| Main menu | Layar mulai lama | Ramping + "Kembali ke Menu Utama" (simpan dulu, tanpa reload) |
+| Responsif | ≤820px: panel disembunyikan default | Sama + drawer menempel tepi (left 322px/right 270px desktop; 284/246 ≤1100px), tombol Mode Bangun & kontrol waktu bergeser via `:has()` saat drawer terbuka/terlipat, layar mulai bisa di-scroll, toast digeser bila tutorial tampil |
+
+### Temuan cek live v19 yang dilipat ke v20 (2026-11-11)
+
+- **Legenda "[object Object]".** `TERRAIN.rawa/gambut.butuhBuka`
+  adalah objek `{uang: 10000}` / `{uang: 15000}`, dan legenda
+  melakukan `" · " + t.butuhBuka`. Kini legenda memakai
+  `" · buka lahan " + hargaTeks(t.butuhBuka)` → "Rawa — … · buka
+  lahan Rp10.000", "Lahan Gambut — … · buka lahan Rp15.000".
+  `cekBangun()` memakai objek dengan benar (`bb.uang`), tidak diubah.
+  Diuji headless: legenda tanpa "[object Object]" + menyebut
+  Rp10.000/Rp15.000.
+- **Tidak ada manajemen profil di UI.** Modal Profil hanya "Tutup";
+  tidak ada Pengaturan di layar mulai — formulir identitas +
+  tutorial tidak pernah muncul lagi setelah profil dibuat. Kini panel
+  Pengaturan berisi: ubah nama pemimpin
+  (`ubahNamaPemimpin()` — validasi kosong, update profil + `S.pemimpin`
+  + `#namaPemimpin`, `simpanProfil()`), ubah gender/karakter
+  (`ubahGenderPemimpin()` — gender/avatar + `#avatarPemain`), dan
+  hapus profil dua-ketuk (`resetProfil()` — ketuk 1 label "Yakin
+  hapus profil?" + timeout 5 detik; ketuk 2 `removeItem(PROFIL_KEY)`,
+  `profilPemain = null`, kembali ke menu utama sehingga formulir
+  identitas muncul lagi). Fakta: `tutorialSelesai` tersimpan di profil
+  (`merantiRisingProfilV1`), bukan di save — jadi reset profil
+  mengaktifkan tutorial lagi. **Simpanan game TIDAK terhapus saat
+  reset profil.** Diuji headless: ubah nama/gender, reset dua-ketuk
+  (profil hilang, save tetap ada, tutorial aktif lagi di game baru).
+- **Overlay: 2 cacat + visibilitas.** (1) Cache basi — kunci lama
+  hanya jam + jumlah bangunan/jalan/zona, sehingga konstruksi
+  selesai, bangunan dipindah, atau status berlistrik/berair yang
+  berubah dalam satu jam tidak membangun ulang cache; kunci baru
+  ikut menghitung jumlah selesai, berlistrik, berair, petak banjir,
+  dan jumlah+nilai `perPetak` lalin. (2) Bangunan dalam konstruksi
+  dikecualikan — cabang listrik & air kini mengiterasi `S.bangunan`,
+  bukan hanya `bangunanSelesai()`. Visibilitas: berlian overlay kini
+  juga di-stroke garis tepi (alpha tepi ~0,7) supaya tetap terbaca di
+  zoom kecil / di atas sprite. Urutan gambar benar: bangunan
+  (langkah 3) → overlay (3b) → feri/ghost/awan → tint (7). Diuji
+  headless: `bangunCacheOverlay("listrik")` untuk rumah padam HARUS
+  merah, overlay traffic untuk jalan macet HARUS merah/kuning;
+  cache dibangun ulang setelah PLTD; rumah dalam konstruksi ikut
+  diwarnai.
+- **Tint malam (HIPOTESIS, bukan perbaikan terbukti).** Penyebab kode
+  TIDAK ditemukan: `faseSiangMalam` benar (19–05 → kegelapan 0,85),
+  `jamDesimal()` dibaca live, tint langkah 7 dijamin tercapai (di
+  luar try/catch langkah 1–6, `loop()` try/finally), dan tes regresi
+  headless 19:47 lulus (fillRect gelap + 7 lampu di atas tint, tidak
+  ada tint 12:00). Hipotesis terkuat: **rAF dijeda/dithrottle saat tab
+  di-background-kan** — label fase + jam HUD jalan via setInterval
+  500 ms, sementara kanvas membeku di frame siang; peta baru
+  menggelap setelah 00:00 saat checker kembali ke tab. Mitigasi v20
+  (bukan klaim perbaikan): `tickInterval500()` kini menggambar ulang
+  peta bila tidak ada frame rAF selama > 1 detik
+  (`waktuFrameTerakhir` dicatat di `loop()`). **Cek live v20 harus
+  menjaga tab di depan dan mengamati jam 20:00** untuk memastikan
+  tint benar-benar muncul; bila peta tetap terang dengan tab di
+  depan, hipotesis ini gugur dan akar masalah ada di tempat lain.
+- **Pill listrik "N padam".** Pill kini menampilkan jumlah padam
+  yang dihitung langsung dari bendera `berlistrik` (bangunan selesai
+  yang butuh listrik tapi tidak menyala), mis. `5/100 kW · 1 padam`;
+  tooltip menjelaskan total jaringan vs status per-bangunan. Diuji
+  headless: pill menampilkan "N padam" saat blackout, tanpa "padam"
+  saat jaringan normal.
+
+### Batas jujur v20
+
+- Belum terverifikasi live di tablet/HP sungguhan (cek live v20
+  belum dilakukan); semua klaim v20 di atas diuji headless (759 cek,
+  `TEST_V13_OK`) dan dari kode.
+- `:has()` butuh Chrome 105+ / Safari 15.4+ — posisi tombol Mode
+  Bangun & kontrol waktu saat drawer terbuka/terlipat tidak bergeser
+  di browser yang lebih lama.
+- Grid toggle TIDAK diimplementasikan: tidak ada mekanisme grid di
+  Mode Bangun (tidak ada yang bisa di-toggle).
+- Tidak ada sistem upgrade, sehingga panel kanan hanya menampilkan
+  info bangunan — bukan tombol upgrade.
+- Overlay butuh kamera diarahkan ke petak yang diuji (overlay hanya
+  digambar untuk petak dalam viewport).
+- Tint malam belum terbukti (lihat hipotesis di atas) — butuh cek live
+  v20 dengan tab di depan pada jam 20:00.
+- Masih 2D isometrik (bukan model poligon 3D); tanpa offline
+  progress; NPC berbasis zona; jalan/jembatan tetap instan.
+
 ## Yang baru di v19 — Complete City Simulation Engine (2026-11-11)
 
 Kota kini benar-benar **disimulasikan ala SimCity beridentitas

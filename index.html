@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>MERANTI RISING — Ayo Membangun Meranti!</title>
-<link rel="stylesheet" href="css/city.css?v=10">
+<link rel="stylesheet" href="css/city.css?v=12">
 </head>
 <body>
-<!-- Layar mulai: pembuka sinematik MERANTI RISING -->
+<!-- Layar mulai: pembuka sinematik MERANTI RISING (v20: main menu ala game PC/console) -->
 <div id="layarMulai">
   <div class="latarSinematik"><img src="assets/images/pembuka-meranti.webp" alt="Kepulauan Meranti yang masih alami"></div>
   <div class="awanSinematik awan1"></div>
@@ -15,7 +15,7 @@
   <div class="ombakSinematik"></div>
   <!-- Tahap 1: sinematik -->
   <div id="tahapSinematik" class="kartuMulai">
-    <div class="logoMulai">🌴</div>
+    <div class="logoMulai" aria-hidden="true"><svg viewBox="0 0 64 64" width="56" height="56"><circle cx="32" cy="26" r="13" fill="#fbbf24"/><path d="M6 44c8-6 16-6 26 0s18 6 26 0" stroke="#4ade80" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M10 54c8-5 14-5 22 0s16 5 22 0" stroke="#22c55e" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M32 13V6M20 18 15 13M44 18l5-5" stroke="#fde68a" stroke-width="3" stroke-linecap="round"/></svg></div>
     <h1 class="judulLogo">MERANTI <span>RISING</span></h1>
     <p class="tagline">AYO MEMBANGUN MERANTI!</p>
     <p class="subMulai">Island City Builder · Simulasi Ekonomi · Peradaban Kepulauan Meranti</p>
@@ -24,19 +24,19 @@
       <button id="btnMulai" class="btnUtama">▶ MULAI PERMAINAN</button>
       <button id="btnLanjut" class="btnUtama">▶ LANJUTKAN PERMAINAN</button>
       <button id="btnBaru" class="btnUtama sekunder">＋ PERMAINAN BARU</button>
-      <button id="btnProfil" class="btnUtama sekunder">👤 PROFIL PEMAIN</button>
+      <button id="btnProfil" class="btnUtama sekunder"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.5 3.5-5 7-5s6.2 1.5 7 5"/></svg> PROFIL PEMAIN</button>
     </div>
     <p id="infoSave" class="infoSave"></p>
-    <div class="caraMain">
-      <b>Cara bermain:</b>
+    <details class="caraMain">
+      <summary>Cara bermain</summary>
       <span>🖱️ Seret peta untuk menggeser · roda mouse untuk zoom</span>
       <span>👆 Di HP/tablet: seret 1 jari untuk menggeser · cubit 2 jari untuk zoom · geser 2 jari untuk menggeser saat zoom</span>
       <span>🏠 Pilih bangunan di menu bawah, lalu ketuk lokasi di peta (ketuk 2× untuk membangun — ketukan pertama hanya pratinjau)</span>
       <span>🛣️ Bangunan butuh jalan di sampingnya · jembatan hanya di atas air</span>
-      <span>👷 Bangunan butuh pekerja — penduduk tumbuh bila ada rumah & layanan</span>
-      <span>⏱️ 1 hari game = 48 menit nyata · tombol ⏸ / 0.5× / 1× / 2× di kanan bawah untuk jeda & percepat waktu</span>
+      <span>👷 Bangunan butuh pekerja — penduduk tumbuh bila ada rumah &amp; layanan</span>
+      <span>⏱️ 1 hari game = 48 menit nyata · tombol ⏸ / 0.5× / 1× / 2× di kanan bawah untuk jeda &amp; percepat waktu</span>
       <span>⏸️ Spasi / P = jeda · Esc = batal</span>
-    </div>
+    </details>
   </div>
   <!-- Tahap 2: identitas pemain -->
   <div id="tahapIdentitas" class="kartuMulai" style="display:none">
@@ -46,8 +46,8 @@
     <input id="inputNama" class="inputNama" type="text" maxlength="20" placeholder="Contoh: Sukma Dewi" autocomplete="off">
     <p class="labelForm">Pilih karakter</p>
     <div class="pilihKarakter">
-      <button type="button" class="kartuKarakter" data-gender="pria"><img src="assets/characters/player/idle.png" alt="Karakter pria"><span>👨 Pria</span></button>
-      <button type="button" class="kartuKarakter" data-gender="wanita"><img src="assets/characters/pelanggan/idle.png" alt="Karakter wanita"><span>👩 Wanita</span></button>
+      <button type="button" class="kartuKarakter" data-gender="pria"><img src="assets/characters/player/idle.png" alt="Karakter pria"><span>Pria</span></button>
+      <button type="button" class="kartuKarakter" data-gender="wanita"><img src="assets/characters/pelanggan/idle.png" alt="Karakter wanita"><span>Wanita</span></button>
     </div>
     <div class="tombolMulai">
       <button id="btnSimpanProfil" class="btnUtama">✓ MULAI MEMBANGUN</button>
@@ -60,7 +60,7 @@
     <h2>Selamat datang di Kepulauan Meranti</h2>
     <p class="narasi">Selamat datang di Kepulauan Meranti. Kamu telah dipercaya menjadi pemimpin pembangunan. Sebuah wilayah dengan kekayaan alam yang luar biasa kini menantikan perubahan. Bangun permukiman, ciptakan lapangan pekerjaan, kembangkan ekonomi, bangun infrastruktur, dan wujudkan masa depan yang lebih baik.</p>
     <div class="tombolMulai">
-      <button id="btnMulaiNarasi" class="btnUtama">🏝️ MULAI MEMBANGUN MERANTI</button>
+      <button id="btnMulaiNarasi" class="btnUtama"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><circle cx="12" cy="8" r="3.5"/><path d="M3 15c2.5-1.8 5-1.8 7.5 0s5 1.8 7.5 0"/><path d="M4.5 19c2.5-1.8 5-1.8 7.5 0s5 1.8 7.5 0"/></svg> MULAI MEMBANGUN MERANTI</button>
     </div>
   </div>
   <!-- Tahap profil pemain -->
@@ -104,12 +104,12 @@
     </div>
   </section>
 
-  <!-- Bar atas: identitas + sumber daya + ikon -->
+  <!-- Bar atas v20: 3 zona — identitas | sumber daya | jam + aksi -->
   <header id="barAtas">
     <div class="identitas">
       <img id="avatarPemain" src="assets/characters/player/idle.png" alt="Pengelola Pulau">
       <div class="judulBlok">
-        <div class="judulGame">🌴 MERANTI <b>RISING</b></div>
+        <div class="judulGame">MERANTI <b>RISING</b></div>
         <div id="namaPemimpin" class="namaPemimpin">Pemimpin: —</div>
         <div class="levelBox">
           <span id="lvlTeks">Lv. 1 · Pulau Alam</span>
@@ -119,18 +119,17 @@
       </div>
     </div>
     <div class="sumberDaya">
-      <span class="sd" title="Uang">💰 <b id="uangTeks" class="angka">Rp0</b></span>
+      <span class="sd utama" title="Uang">💰 <b id="uangTeks" class="angka">Rp0</b></span>
       <span class="sd" title="Kayu">🪵 <b id="kayuTeks">0</b></span>
       <span class="sd" title="Batu">🪨 <b id="batuTeks">0</b></span>
       <span class="sd" title="Besi">🔩 <b id="besiTeks">0</b></span>
       <span class="sd" title="Tual Sagu">🌿 <b id="tualTeks">0</b></span>
       <span class="sd" title="Penduduk">👥 <b id="pendudukTeks">0 jiwa</b></span>
       <span class="sd" title="Kebahagiaan">😊 <b id="bahagiaTeks">0%</b></span>
-      <span class="sd sekunder" title="Listrik dipakai / kapasitas">⚡ <b id="listrikTeks">0/0 kW</b></span>
+      <span class="sd sekunder" title="Listrik jaringan: total dipakai / kapasitas — status tiap bangunan (Menyala/Padam) ada di panel Infrastruktur">⚡ <b id="listrikTeks">0/0 kW</b></span>
       <span class="sd sekunder" title="Air dipakai / kapasitas">💧 <b id="airTeks">0/0 L</b></span>
     </div>
-    <!-- Jam + kalender game di bar atas (v18-D): #ikonFase dipindah ke sini
-         dari kartu #tglCuaca agar jam selalu terlihat; #tglCuaca tetap ada -->
+    <!-- Jam + kalender game di bar atas (v18-D) -->
     <div id="jamAtas" class="jamAtas" title="Waktu game">
       <span id="ikonFase" class="ikonFase" title="Fase siang/malam">☀️</span>
       <span id="jamAtasHari" class="jamHari">Rabu | 11 November</span>
@@ -139,48 +138,63 @@
       <span id="jamAtasCuaca" class="jamCuaca">Cerah | 31°C</span>
     </div>
     <div class="tombolAtas">
-      <button id="btnBerita" class="btnIkon" title="Berita Pulau">🔔</button>
-      <button id="btnSimpan" class="btnIkon" title="Simpan">💾</button>
-      <button id="btnSuara" class="btnIkon" title="Suara">🔊</button>
+      <button id="btnBerita" class="btnIkon" title="Berita Pulau"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 9a6 6 0 1 0-12 0c0 6-2.5 7-2.5 7h17S18 15 18 9"/><path d="M10 20a2.2 2.2 0 0 0 4 0"/></svg></button>
+      <button id="btnSimpan" class="btnIkon" title="Simpan"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l3 3v15H5V3Z"/><path d="M8 3v5h7V3"/><path d="M8 21v-7h8v7"/></svg></button>
+      <button id="btnSuara" class="btnIkon" title="Suara"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg></button>
+      <button id="btnPengaturan" class="btnIkon" title="Pengaturan"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.7M12 18.5v2.7M2.8 12h2.7M18.5 12h2.7M5.2 5.2l1.9 1.9M16.9 16.9l1.9 1.9M18.8 5.2l-1.9 1.9M7.1 16.9l-1.9 1.9"/></svg></button>
       <button id="btnToggleKiri" class="btnIkon" title="Panel kiri">☰</button>
-      <button id="btnToggleKanan" class="btnIkon" title="Panel info">ℹ️</button>
+      <button id="btnToggleKanan" class="btnIkon" title="Panel info">ℹ</button>
     </div>
   </header>
 
-  <!-- Kolom kiri: tanggal/cuaca, rel ikon, panel isi -->
+  <!-- Kolom kiri v20: rel nav SVG + panel (satu panel dalam satu waktu).
+       #tglCuaca TETAP di DOM (JS menulis #hariTeks/#tglTeks/#jamTeks/
+       #cuacaTeks/#suhuTeks) tetapi disembunyikan via CSS — jam/tanggal/
+       cuaca sudah ada di top HUD. -->
   <div id="kolomKiri">
-    <div id="tglCuaca" class="kartuKaca">
+    <div id="tglCuaca" class="kartuKaca" aria-hidden="true">
       <div class="tglIkon">📅</div>
       <div class="tglTeks"><b id="hariTeks">Hari 1</b><span id="tglTeks">—</span></div>
       <div class="cuacaTeks"><span id="jamTeks">06:00</span> WIB<br><span id="cuacaTeks">☀ Cerah</span> · <span id="suhuTeks">31°C</span></div>
     </div>
     <div id="barisKiri">
-      <div id="relKiri">
-        <button data-tab="peta" title="Peta">🗺️</button>
-        <button data-tab="misi" class="aktif" title="Misi">🎯</button>
-        <button data-tab="ekonomi" title="Ekonomi & APBD">💰</button>
-        <button data-tab="penduduk" title="Penduduk">👥</button>
-        <button data-tab="pulau" title="Kepulauan">🏝️</button>
-        <button data-tab="kecamatan" title="Kecamatan">🏘️</button>
-        <button data-tab="riset" title="Penelitian">🧪</button>
-        <button data-tab="peradaban" title="Pemerintahan & Peradaban">🏛️</button>
-        <button data-tab="berita" title="Berita Pulau">📰</button>
-      </div>
+      <nav id="relKiri" aria-label="Navigasi utama">
+        <button data-tab="peta" aria-label="Overview" title="Overview"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg><span class="navTip">Overview</span></button>
+        <button data-tab="misi" class="aktif" aria-label="Misi" title="Misi"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg><span class="navTip">Misi</span></button>
+        <button data-tab="penduduk" aria-label="Penduduk" title="Penduduk"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.6c2.6.3 4.4 1.9 5 4.4"/></svg><span class="navTip">Penduduk</span></button>
+        <button data-tab="ekonomi" aria-label="Ekonomi" title="Ekonomi"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-8M21 20H3"/></svg><span class="navTip">Ekonomi</span></button>
+        <button data-tab="infrastruktur" aria-label="Infrastruktur" title="Infrastruktur"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 0 0-5.6 5L3 17.4V21h3.6l5.9-5.9a4 4 0 0 0 5-5.6L14 12.9l-2.4-2.4 2.9-4Z"/></svg><span class="navTip">Infrastruktur</span></button>
+        <button data-tab="peradaban" aria-label="Pemerintahan" title="Pemerintahan"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-6 9 6M4 9v11M20 9v11M8 12v5M12 12v5M16 12v5M2 20h20"/></svg><span class="navTip">Pemerintahan</span></button>
+        <button data-tab="riset" aria-label="Penelitian" title="Penelitian"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v5.5L4.5 18a2 2 0 0 0 1.8 3h11.4a2 2 0 0 0 1.8-3L14 8.5V3"/><path d="M7.5 14h9"/></svg><span class="navTip">Penelitian</span></button>
+        <button data-tab="statistik" aria-label="Statistik" title="Statistik"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20V4"/><path d="M4 20h16"/><path d="M8 16v-5M12 16V8M16 16v-3"/></svg><span class="navTip">Statistik</span></button>
+      </nav>
       <aside id="panelKiri" class="kartuKaca">
         <div id="panelKiriIsi"></div>
       </aside>
     </div>
+    <!-- Pintasan wilayah (v20): pulau & kecamatan tetap bisa dibuka.
+         Isi panelnya dari renderPanelKiri (cabang pulau/kecamatan sudah ada).
+         Worker 2: pasang handler seperti #relKiri —
+         document.querySelectorAll("#pintasanWilayah button").forEach(b =>
+         b.onclick = () => bukaTabKiri(b.dataset.tab)); -->
+    <div id="pintasanWilayah">
+      <button data-tab="pulau" title="Kepulauan"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.2-6-10a6 6 0 0 1 12 0c0 4.8-6 10-6 10Z"/><circle cx="12" cy="11" r="2.2"/></svg>Kepulauan</button>
+      <button data-tab="kecamatan" title="Kecamatan"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 4l9 7"/><path d="M5 10v10M19 10v10M9 20v-6h6v6"/></svg>Kecamatan</button>
+    </div>
     <div id="aksiBangunan" style="display:none">
       <button id="btnAksiPindah" class="btnAksi">✥ Pindah</button>
       <button id="btnAksiPutar" class="btnAksi">↻ Putar</button>
-      <button id="btnAksiHapus" class="btnAksi bahaya">🗑 Hapus</button>
+      <button id="btnAksiHapus" class="btnAksi bahaya"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="M6.5 7l1 13h9l1-13"/><path d="M10 11v6M14 11v6"/></svg> Hapus</button>
     </div>
   </div>
 
-  <!-- Kolom kanan: minimap, statistik, info pilihan -->
+  <!-- Kolom kanan v20: minimap ringkas di atas, panel kontekstual di bawah.
+       #kartuStatistik TETAP di DOM (JS menulis ID stat-*) tetapi
+       disembunyikan via CSS — isinya pindah ke panel Statistik baru
+       (data-tab="statistik", cabang renderPanelKiri oleh Worker 2). -->
   <div id="kolomKanan">
     <div id="kartuPeta" class="kartuKaca">
-      <div class="kartuJudul">Peta Meranti <span class="kompas">🧭</span></div>
+      <div class="kartuJudul"><span>Peta Meranti</span><span class="kartuJudulAksi"><button id="btnPetaBesar" title="Perbesar minimap" aria-label="Perbesar minimap">⤢</button><span class="kompas">🧭</span></span></div>
       <canvas id="minimap" width="220" height="132"></canvas>
       <div class="miniKontrol">
         <button id="btnZoomIn" title="Perbesar">＋</button>
@@ -188,7 +202,7 @@
         <button id="btnPusat" title="Pusatkan peta">◎</button>
       </div>
     </div>
-    <div id="kartuStatistik" class="kartuKaca">
+    <div id="kartuStatistik" class="kartuKaca" aria-hidden="true">
       <div class="statBaris">
         <span class="statIkon">👥</span>
         <div class="statIsi"><div class="statLabel">Penduduk</div><div class="statNilai"><b id="statPenduduk">0 jiwa</b> <span id="statPendudukTumbuh" class="hijau"></span></div></div>
@@ -228,20 +242,30 @@
     <aside id="panelKanan" class="kartuKaca" style="display:none"></aside>
   </div>
 
-  <!-- Mode Bangun -->
-  <button id="btnModeBangun" title="Mode Bangun">🛠️<span>Mode<br>Bangun</span></button>
+  <!-- Mode Bangun v20: tombol compact (bukan lingkaran 76px) -->
+  <button id="btnModeBangun" title="Mode Bangun"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 0 0-5.6 5L3 17.4V21h3.6l5.9-5.9a4 4 0 0 0 5-5.6L14 12.9l-2.4-2.4 2.9-4Z"/></svg><span>Mode Bangun</span></button>
 
-  <!-- Kontrol kecepatan (v18-A: pause / 0.5x / 1x / 2x; tombol Hari Berikutnya dihapus) -->
+  <!-- Kontrol kecepatan v20 (KEPUTUSAN: tetap di kanan bawah, dibuat compact —
+       tidak dipindah ke top HUD agar bar atas tetap ringkas di tablet) -->
   <div id="kontrolWaktu">
-    <button id="btnKec0" title="Jeda">⏸</button>
+    <button id="btnKec0" title="Jeda"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 5v14M15 5v14"/></svg></button>
     <button id="btnKec05" title="Kecepatan 0.5x">0.5×</button>
     <button id="btnKec1" class="aktif" title="Kecepatan 1x">1×</button>
     <button id="btnKec2" title="Kecepatan 2x">2×</button>
   </div>
 
-  <!-- Menu bangun bawah -->
+  <!-- Menu bangun bawah v20: bottom build drawer.
+       #katBangun = bar kategori (selalu terlihat saat Mode Bangun aktif);
+       katalog (#itemBangunWrap) bisa dilipat via #btnLipatKatalog
+       (Worker 2: toggle class "terlipat" pada #menuBangun).
+       19 kategori: wadah + CSS sudah siap digulir horizontal. -->
   <footer id="menuBangun" class="kartuKaca">
     <div id="katBangun"></div>
+    <div id="barisKatalog">
+      <span class="labelKatalog">Katalog Bangunan</span>
+      <button id="btnLipatKatalog" title="Buka / tutup katalog" aria-label="Buka atau tutup katalog">▾</button>
+    </div>
+    <div id="pesanKatalog" class="pesanKatalog" style="display:none"></div>
     <div id="itemBangunWrap">
       <button id="btnGeserKiri" class="geser">‹</button>
       <div id="itemBangun"></div>
@@ -250,13 +274,13 @@
   </footer>
 
   <!-- Berita Pulau -->
-  <div id="beritaPulau"><span class="beritaLabel">📈 Berita Pulau</span><div class="beritaJalan"><span id="beritaTeks"></span></div></div>
+  <div id="beritaPulau"><span class="beritaLabel"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M4 20V10M10 20V4M16 20v-8M21 20H3"/></svg> Berita Pulau</span><div class="beritaJalan"><span id="beritaTeks"></span></div></div>
 </div>
 
 <!-- Modal naik level -->
 <div id="modalLevel" style="display:none">
   <div class="kartuModal">
-    <div class="logoMulai">🏆</div>
+    <div class="logoMulai"><svg viewBox="0 0 24 24" width="52" height="52" fill="none" stroke="#fbbf24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M7 5H4a3 3 0 0 0 3.2 5M17 5h3a3 3 0 0 1-3.2 5"/><path d="M12 14v3.5"/><path d="M8.5 21h7M10 17.5h4"/></svg></div>
     <h2 id="levelJudul">Level 2</h2>
     <p id="levelDes"></p>
     <p id="levelHadiah" class="hadiah"></p>
@@ -264,11 +288,11 @@
   </div>
 </div>
 
-<script src="js/city-data.js?v=7"></script>
+<script src="js/city-data.js?v=9"></script>
 <script src="js/city-map.js?v=4"></script>
 <script src="js/city-utilitas.js?v=1"></script>
 <script src="js/city-bahagia.js?v=1"></script>
 <script src="js/city-lalin.js?v=1"></script>
-<script src="js/city.js?v=20"></script>
+<script src="js/city.js?v=22"></script>
 </body>
 </html>

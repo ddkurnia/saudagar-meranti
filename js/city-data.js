@@ -159,33 +159,76 @@ const KATEGORI = [
   { id: "lahan",       nama: "Lahan" },
 ];
 
-// ---------------- Tab menu bangun (tampilan referensi) ----------------
-// Tab "Dekorasi" menampilkan bangunan sosial berflag dekorasi; kat data
-// tetap "sosial" agar misi & syarat level tidak berubah.
-// v19: 15 tab. Tab "jembatan" & "dekorasi"/"sosial" DIHAPUS dari menu —
-// cabang renderMenuBangun untuk ketiganya di city.js kini dead code.
-// KONSEKUENSI SEMENTARA: kartu JEMBATAN tidak bisa dibuka dari menu
-// sampai Worker UI memasang ulang kartu jembatan (mis. gabung ke tab
-// Jalan). JEMBATAN & misi jembatan-pertama sendiri tidak diubah.
-// Tutorial city.js:31 masih memanggil bukaMenuBangunUntuk("perkebunan")
-// — harus diganti "lahan" (1 kata) oleh Worker UI; mode bangun kebun
-// tetap terpasang walau menu menampilkan tab yang salah.
+// ---------------- Tab menu bangun (v20: 19 kategori sesuai daftar pengguna) ----------------
+// DESAIN PEMETAAN (v20, Worker 2): field `kat` bangunan TIDAK diubah —
+// `kat` adalah data simulasi (dipakai zona, misi bangunKat, pengali
+// cuaca, cekLevel) dan tetap 15 nilai (KATEGORI). Pemecahan kategori
+// tampilan HANYA di TAB_BANGUN, lewat 4 macam deskriptor per tab:
+//   kat: [..]   -> semua bangunan yang kat-nya ada di daftar;
+//   ids: [..]   -> daftar id bangunan eksplisit (untuk pecahan kat);
+//   jalan: true -> jenis jalan (JALAN) + bangunan kat "jalan";
+//   jembatan: true -> kartu JEMBATAN (kecil/besar/gantung);
+//   dekorasi: true -> semua bangunan berflag dekorasi: true.
+// TABEL PEMETAAN 19 KATEGORI (jumlah = kartu bangunan di tab itu;
+// JALAN/JEMBATAN adalah kartu non-bangunan — lihat kolom "kartu"):
+//  1. Permukiman  (kat permukiman) ......................... 6 bangunan
+//  2. Komersial    (ids pecahan kat perkantoran: pasar-tradisional,
+//                  pasar-modern, toko, supermarket, bank,
+//                  kantor-dagang, kedai-liberika) ......... 7 bangunan
+//  3. Perkantoran  (ids pecahan kat perkantoran: kantor-pemerintah,
+//                  kantor-bupati, kantor-kecamatan, kantor-desa,
+//                  gedung-dprd, kantor-dinas, mal-pelayanan,
+//                  kantor-pos, perkantoran-swasta,
+//                  gedung-perusahaan) ..................... 10 bangunan
+//  4. Jalan       (JALAN 9 jenis + kat jalan: traffic-light,
+//                  bundaran, jpo) ......................... 9 kartu jalan + 3 bangunan
+//  5. Jembatan    (JEMBATAN: kecil, besar, gantung) ........ 3 kartu jembatan
+//  6. Listrik     (kat listrik) ............................ 6 bangunan
+//  7. Air dan PDAM (kat air) ............................... 6 bangunan
+//  8. Drainase    (kat drainase) ........................... 8 bangunan
+//  9. Pendidikan  (kat pendidikan) ......................... 8 bangunan
+// 10. Kesehatan   (kat kesehatan) .......................... 6 bangunan
+// 11. Keamanan    (kat keamanan) ........................... 3 bangunan
+// 12. Rekreasi    (kat rekreasi) ........................... 17 bangunan
+// 13. Hiburan     (kat hiburan) ............................ 11 bangunan
+// 14. Industri    (kat industri) ........................... 8 bangunan
+// 15. Pertanian   (ids pecahan kat lahan: kebun-sagu, kebun-kelapa,
+//                  kebun-pinang, kebun-karet, kebun-kopi,
+//                  pertanian, peternakan) ................. 7 bangunan
+// 16. Perikanan   (ids pecahan kat lahan: perikanan) ........ 1 bangunan
+// 17. Transportasi (kat transportasi) ...................... 8 bangunan
+// 18. Lingkungan  (kat lingkungan) ......................... 3 bangunan
+// 19. Dekorasi    (flag dekorasi: taman, taman-bermain, lapangan,
+//                  stadion, taman-wisata, waterfront,
+//                  pantai-wisata, jogging-track) .......... 8 bangunan
+//                  (duplikat dari kategori utamanya — bangunan TETAP
+//                  ada di kategori utamanya juga)
+// TOTAL kartu bangunan di 18 tab utama (tanpa Dekorasi): 118 —
+// setiap bangunan muncul tepat 1x di kategori utamanya.
+// v19: 15 tab; tab "jembatan" & "dekorasi" sempat dihapus lalu
+// jembatan digabung ke tab Jalan — v20 mengembalikan keduanya
+// sebagai tab sendiri. Tutorial city.js:31 memakai
+// bukaMenuBangunUntuk("pertanian") untuk kebun sagu.
 const TAB_BANGUN = [
-  { id: "permukiman",  nama: "Permukiman",   ikon: "🏠" },
-  { id: "jalan",       nama: "Jalan",        ikon: "🛣️" },
-  { id: "transportasi", nama: "Transportasi", ikon: "🚌" },
-  { id: "listrik",     nama: "Listrik",      ikon: "⚡" },
-  { id: "air",         nama: "Air",          ikon: "💧" },
-  { id: "drainase",    nama: "Drainase",     ikon: "🌊" },
-  { id: "pendidikan",  nama: "Pendidikan",   ikon: "🎓" },
-  { id: "kesehatan",   nama: "Kesehatan",    ikon: "🏥" },
-  { id: "keamanan",    nama: "Keamanan",     ikon: "🛡️" },
-  { id: "rekreasi",    nama: "Rekreasi",     ikon: "🌳" },
-  { id: "hiburan",     nama: "Hiburan",      ikon: "🎭" },
-  { id: "perkantoran", nama: "Perkantoran",  ikon: "🏢" },
-  { id: "industri",    nama: "Industri",     ikon: "🏭" },
-  { id: "lingkungan",  nama: "Lingkungan",   ikon: "🌿" },
-  { id: "lahan",       nama: "Lahan",        ikon: "🌱" },
+  { id: "permukiman",  nama: "Permukiman",   ikon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/></svg>', kat: ["permukiman"] },
+  { id: "komersial",   nama: "Komersial",    ikon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12l-1.2 12H7.2L6 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>', ids: ["pasar-tradisional", "pasar-modern", "toko", "supermarket", "bank", "kantor-dagang", "kedai-liberika"] },
+  { id: "perkantoran", nama: "Perkantoran",  ikon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v17"/><path d="M15 9h3a1 1 0 0 1 1 1v11"/><path d="M3 21h18"/><path d="M8.5 7H11M8.5 11H11M8.5 15H11"/></svg>', ids: ["kantor-pemerintah", "kantor-bupati", "kantor-kecamatan", "kantor-desa", "gedung-dprd", "kantor-dinas", "mal-pelayanan", "kantor-pos", "perkantoran-swasta", "gedung-perusahaan"] },
+  { id: "jalan",       nama: "Jalan",        ikon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3l2.5 18M16 3l-2.5 18"/><path d="M12 5v2.5M12 10.5v2.5M12 16v2.5"/></svg>', jalan: true },
+  { id: "jembatan",    nama: "Jembatan",     ikon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18h20"/><path d="M5 18V9M19 18V9"/><path d="M5 9c2-3.5 12-3.5 14 0"/><path d="M12 8v10"/></svg>', jembatan: true },
+  { id: "listrik",     nama: "Listrik",      ikon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4.5 13.5H11l-1 8.5L18.5 10H12l1-8Z"/></svg>', kat: ["listrik"] },
+  { id: "air",         nama: "Air dan PDAM", ikon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.8 6 11a6 6 0 0 1-12 0c0-4.2 6-11 6-11Z"/></svg>', kat: ["air"] },
+  { id: "drainase",    nama: "Drainase",     ikon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9c2.2-1.8 4.3-1.8 6.5 0s4.3 1.8 6.5 0 2.8-1.4 5-.6"/><path d="M3 15c2.2-1.8 4.3-1.8 6.5 0s4.3 1.8 6.5 0 2.8-1.4 5-.6"/></svg>', kat: ["drainase"] },
+  { id: "pendidikan",  nama: "Pendidikan",   ikon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 9 12 4l9.5 5L12 14 2.5 9Z"/><path d="M6.5 11.5V16c0 1.6 2.5 3 5.5 3s5.5-1.4 5.5-3v-4.5"/><path d="M21.5 9V15"/></svg>', kat: ["pendidikan"] },
+  { id: "kesehatan",   nama: "Kesehatan",    ikon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>', kat: ["kesehatan"] },
+  { id: "keamanan",    nama: "Keamanan",     ikon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3Z"/><path d="M9 12l2 2 4-4"/></svg>', kat: ["keamanan"] },
+  { id: "rekreasi",    nama: "Rekreasi",     ikon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l4.5 6.5h-3L18 16H6l4.5-6.5h-3L12 3Z"/><path d="M12 16v5"/></svg>', kat: ["rekreasi"] },
+  { id: "hiburan",     nama: "Hiburan",      ikon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v6.5c0 4.2-3.6 7.5-8 7.5s-8-3.3-8-7.5V5Z"/><path d="M8 9.5h2M14 9.5h2"/><path d="M9 14.5c1 1 5 1 6 0"/></svg>', kat: ["hiburan"] },
+  { id: "industri",    nama: "Industri",     ikon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V10l6 3.5V10l6 3.5V6h2.5V21H3Z"/><path d="M6.5 17.5h.01M11 17.5h.01M15.5 17.5h.01"/></svg>', kat: ["industri"] },
+  { id: "pertanian",   nama: "Pertanian",    ikon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V8"/><path d="M12 8C8 8 6 6 6 3c3.5 0 5.5 1.5 6 3.5"/><path d="M12 8c4 0 6-2 6-5-3.5 0-5.5 1.5-6 3.5"/><path d="M12 8V3"/></svg>', ids: ["kebun-sagu", "kebun-kelapa", "kebun-pinang", "kebun-karet", "kebun-kopi", "pertanian", "peternakan"] },
+  { id: "perikanan",   nama: "Perikanan",    ikon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 12c2.3-3.4 5.8-5 9-5 2.4 0 4.6 1.9 6 5-1.4 3.1-3.6 5-6 5-3.2 0-6.7-1.6-9-5Z"/><path d="M6.5 12 2.5 8.8v6.4L6.5 12Z"/><circle cx="17" cy="11" r="1" fill="currentColor" stroke="none"/></svg>', ids: ["perikanan"] },
+  { id: "transportasi", nama: "Transportasi", ikon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="12" rx="2"/><path d="M4 11h16"/><path d="M8 4v7M16 4v7"/><circle cx="8" cy="18" r="1.8"/><circle cx="16" cy="18" r="1.8"/></svg>', kat: ["transportasi"] },
+  { id: "lingkungan",  nama: "Lingkungan",   ikon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19C5 9.5 11.5 4 20 4c0 8.5-5.5 15-15 15Z"/><path d="M5 19c3-4.5 7-8.5 11.5-11"/></svg>', kat: ["lingkungan"] },
+  { id: "dekorasi",    nama: "Dekorasi",     ikon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4L12 3Z"/></svg>', dekorasi: true },
 ];
 
 
@@ -223,6 +266,11 @@ const TAB_BANGUN = [
 // kapasitasLayanan & radiusLayanan (perkantoran) — efekKeamanan /
 // efekPemadam 0-1 dalam radiusLayanan (keamanan).
 // --- PEMETAAN KAT LAMA -> BARU (v19, 15 kat = TAB_BANGUN) ---
+// v20: `kat` TIDAK berubah (tetap 15 nilai, KATEGORI) — 19 tab tampilan
+// dipetakan di TAB_BANGUN (kat/ids/jalan/jembatan/dekorasi); lihat
+// tabel pemetaan lengkap di atas TAB_BANGUN. Tab "lahan" v19 dipecah
+// menjadi "pertanian" + "perikanan"; kat "perkantoran" dipecah
+// menjadi tab "komersial" + "perkantoran" lewat daftar ids.
 // infrastruktur -> transportasi (dermaga, pelabuhan, bandara);
 // ekonomi -> perkantoran (pasar, toko, supermarket, bank, kantor
 // dagang, kedai) | transportasi (terminal feri, pusat logistik) |
@@ -332,13 +380,13 @@ const BANGUNAN = [
   { id: "halte", nama: "Halte", kat: "transportasi", harga: { uang: 15000, kayu: 2 }, waktu: 2, pekerja: 0, upkeep: 300, kapasitasPenumpang: 20, radiusHalte: 4, listrik: 0, air: 0, kaki: { w: 1, h: 1 }, gambar: "assets/buildings/building-halte.png", vektor: { dinding: "#74b9ff", atap: "#0984e3", jenisAtap: "datar", lantai: 1 }, des: "Halte — tempat menunggu bus/angkot, melayani warga dalam radius 4 petak." },
   { id: "taksi-stand", nama: "Pangkalan Taksi", kat: "transportasi", harga: { uang: 30000, kayu: 3 }, waktu: 4, pekerja: 1, upkeep: 800, kerja: 1, kapasitasPenumpang: 30, radiusHalte: 3, listrik: 1, air: 10, kaki: { w: 1, h: 1 }, gambar: "assets/buildings/building-taksi-stand.png", vektor: { dinding: "#fdcb6e", atap: "#2d3436", jenisAtap: "datar", lantai: 1 }, des: "Pangkalan Taksi — taksi mangkal di sini, melayani 30 penumpang." },
   // ---- REKREASI (v19) ----
-  { id: "taman-bermain", nama: "Taman Bermain Anak", kat: "rekreasi", harga: { uang: 50000, kayu: 4 }, waktu: 4, pekerja: 1, upkeep: 1500, kerja: 1, kapasitasPengunjung: 40, radiusLayanan: 4, pendapatanTiket: 0, bahagia: 4, listrik: 1, air: 20, kaki: { w: 1, h: 1 }, gambar: "assets/buildings/building-taman-bermain.png", vektor: { dinding: "#00b894", atap: "#00b894", jenisAtap: "taman", lantai: 1 }, des: "Taman Bermain Anak — ayunan & perosotan gratis untuk anak-anak." },
+  { id: "taman-bermain", dekorasi: true, nama: "Taman Bermain Anak", kat: "rekreasi", harga: { uang: 50000, kayu: 4 }, waktu: 4, pekerja: 1, upkeep: 1500, kerja: 1, kapasitasPengunjung: 40, radiusLayanan: 4, pendapatanTiket: 0, bahagia: 4, listrik: 1, air: 20, kaki: { w: 1, h: 1 }, gambar: "assets/buildings/building-taman-bermain.png", vektor: { dinding: "#00b894", atap: "#00b894", jenisAtap: "taman", lantai: 1 }, des: "Taman Bermain Anak — ayunan & perosotan gratis untuk anak-anak." },
   { id: "pasar-malam", nama: "Pasar Malam", kat: "rekreasi", harga: { uang: 120000, kayu: 8 }, waktu: 8, pekerja: 4, upkeep: 3000, kerja: 4, kapasitasPengunjung: 150, radiusLayanan: 6, pendapatanTiket: 2000, bahagia: 4, listrik: 10, air: 40, level: 2, kaki: { w: 2, h: 1 }, gambar: "assets/buildings/building-pasar-malam.png", vektor: { dinding: "#e17055", atap: "#fdcb6e", jenisAtap: "pelana", lantai: 1 }, des: "Pasar Malam — kuliner & wahana malam, tiket Rp2.000/pengunjung/jam." },
   { id: "outbound", nama: "Area Outbound", kat: "rekreasi", harga: { uang: 180000, kayu: 10 }, waktu: 12, pekerja: 3, upkeep: 4000, kerja: 3, kapasitasPengunjung: 80, radiusLayanan: 6, pendapatanTiket: 5000, bahagia: 5, listrik: 2, air: 30, level: 2, kaki: { w: 2, h: 2 }, gambar: "assets/buildings/building-outbound.png", vektor: { dinding: "#00b894", atap: "#6c5ce7", jenisAtap: "datar", lantai: 1 }, des: "Area Outbound — flying fox & panjat tebing, tiket Rp5.000/pengunjung/jam." },
   { id: "kolam-renang", nama: "Kolam Renang", kat: "rekreasi", harga: { uang: 200000, batu: 15 }, waktu: 24, pekerja: 4, upkeep: 5000, kerja: 4, kapasitasPengunjung: 100, radiusLayanan: 6, pendapatanTiket: 5000, bahagia: 5, listrik: 10, air: 500, level: 2, kaki: { w: 2, h: 2 }, gambar: "assets/buildings/building-kolam-renang.png", vektor: { dinding: "#3d9bd6", atap: "#3d9bd6", jenisAtap: "datar", lantai: 1 }, des: "Kolam Renang — renang & rekreasi air, tiket Rp5.000/pengunjung/jam." },
   { id: "waterpark", nama: "Waterpark", kat: "rekreasi", harga: { uang: 900000, batu: 50, besi: 15 }, waktu: 120, pekerja: 12, upkeep: 20000, kerja: 12, kapasitasPengunjung: 400, radiusLayanan: 10, pendapatanTiket: 10000, bahagia: 8, listrik: 40, air: 800, level: 4, kaki: { w: 3, h: 3 }, gambar: "assets/buildings/building-waterpark.png", vektor: { dinding: "#00cec9", atap: "#0984e3", jenisAtap: "datar", lantai: 1 }, des: "Waterpark — seluncuran & kolam ombak, tiket Rp10.000/pengunjung/jam." },
-  { id: "waterfront", nama: "Waterfront", kat: "rekreasi", harga: { uang: 500000, batu: 30 }, waktu: 72, pekerja: 6, upkeep: 10000, kerja: 6, kapasitasPengunjung: 300, radiusLayanan: 8, pendapatanTiket: 0, bahagia: 6, listrik: 10, air: 50, level: 3, pantai: true, kaki: { w: 3, h: 1 }, gambar: "assets/buildings/building-waterfront.png", vektor: { dinding: "#dfe6e9", atap: "#0984e3", jenisAtap: "datar", lantai: 1 }, des: "Waterfront — kawasan pejalan kaki tepi laut dengan kuliner & pemandangan." },
-  { id: "pantai-wisata", nama: "Pantai Wisata", kat: "rekreasi", harga: { uang: 150000, kayu: 8 }, waktu: 12, pekerja: 4, upkeep: 3000, kerja: 4, kapasitasPengunjung: 200, radiusLayanan: 8, pendapatanTiket: 2000, bahagia: 6, listrik: 5, air: 40, level: 2, pantai: true, kaki: { w: 2, h: 2 }, gambar: "assets/buildings/building-pantai-wisata.png", vektor: { dinding: "#e8d8a0", atap: "#00cec9", jenisAtap: "taman", lantai: 1 }, des: "Pantai Wisata — pantai dikelola dengan gazebo & penyewaan, tiket Rp2.000/pengunjung/jam." },
+  { id: "waterfront", dekorasi: true, nama: "Waterfront", kat: "rekreasi", harga: { uang: 500000, batu: 30 }, waktu: 72, pekerja: 6, upkeep: 10000, kerja: 6, kapasitasPengunjung: 300, radiusLayanan: 8, pendapatanTiket: 0, bahagia: 6, listrik: 10, air: 50, level: 3, pantai: true, kaki: { w: 3, h: 1 }, gambar: "assets/buildings/building-waterfront.png", vektor: { dinding: "#dfe6e9", atap: "#0984e3", jenisAtap: "datar", lantai: 1 }, des: "Waterfront — kawasan pejalan kaki tepi laut dengan kuliner & pemandangan." },
+  { id: "pantai-wisata", dekorasi: true, nama: "Pantai Wisata", kat: "rekreasi", harga: { uang: 150000, kayu: 8 }, waktu: 12, pekerja: 4, upkeep: 3000, kerja: 4, kapasitasPengunjung: 200, radiusLayanan: 8, pendapatanTiket: 2000, bahagia: 6, listrik: 5, air: 40, level: 2, pantai: true, kaki: { w: 2, h: 2 }, gambar: "assets/buildings/building-pantai-wisata.png", vektor: { dinding: "#e8d8a0", atap: "#00cec9", jenisAtap: "taman", lantai: 1 }, des: "Pantai Wisata — pantai dikelola dengan gazebo & penyewaan, tiket Rp2.000/pengunjung/jam." },
   { id: "resort", nama: "Resort", kat: "rekreasi", harga: { uang: 1200000, batu: 60, besi: 20 }, waktu: 168, pekerja: 15, upkeep: 25000, kerja: 15, kapasitasPengunjung: 150, radiusLayanan: 10, pendapatanTiket: 25000, bahagia: 7, listrik: 60, air: 600, level: 4, pantai: true, kaki: { w: 3, h: 2 }, gambar: "assets/buildings/building-resort.png", vektor: { dinding: "#ffeaa7", atap: "#e17055", jenisAtap: "limas", lantai: 2 }, des: "Resort — penginapan tepi pantai untuk wisatawan, Rp25.000/pengunjung/jam." },
   { id: "marina", nama: "Marina", kat: "rekreasi", harga: { uang: 800000, batu: 40, besi: 20 }, waktu: 120, pekerja: 8, upkeep: 18000, kerja: 8, kapasitasPengunjung: 100, radiusLayanan: 8, pendapatanTiket: 15000, bahagia: 6, listrik: 30, air: 100, level: 4, pantai: true, kaki: { w: 2, h: 2 }, gambar: "assets/buildings/building-marina.png", vektor: { dinding: "#74b9ff", atap: "#0984e3", jenisAtap: "datar", lantai: 1 }, des: "Marina — dermaga kapal pesiar & wisata bahari, Rp15.000/pengunjung/jam." },
   // ---- HIBURAN (v19) ----
@@ -356,7 +404,7 @@ const BANGUNAN = [
   { id: "lapangan-bola", nama: "Lapangan Sepak Bola", kat: "rekreasi", harga: { uang: 200000, batu: 5 }, waktu: 12, pekerja: 2, upkeep: 4000, kerja: 2, kapasitasPengunjung: 300, radiusLayanan: 8, pendapatanTiket: 0, bahagia: 5, listrik: 10, air: 100, level: 2, kaki: { w: 3, h: 2 }, gambar: "assets/buildings/building-lapangan-bola.png", vektor: { dinding: "#00b894", atap: "#00b894", jenisAtap: "lapangan", lantai: 1 }, des: "Lapangan Sepak Bola — rumput hijau untuk pertandingan warga, gratis." },
   { id: "lapangan-basket", nama: "Lapangan Basket", kat: "rekreasi", harga: { uang: 80000 }, waktu: 8, pekerja: 1, upkeep: 2000, kerja: 1, kapasitasPengunjung: 60, radiusLayanan: 5, pendapatanTiket: 0, bahagia: 4, listrik: 5, air: 20, kaki: { w: 2, h: 1 }, gambar: "assets/buildings/building-lapangan-basket.png", vektor: { dinding: "#e17055", atap: "#e17055", jenisAtap: "lapangan", lantai: 1 }, des: "Lapangan Basket — basket 3 lawan 3 untuk warga, gratis." },
   { id: "lapangan-badminton", nama: "Lapangan Badminton", kat: "rekreasi", harga: { uang: 60000 }, waktu: 4, pekerja: 1, upkeep: 1500, kerja: 1, kapasitasPengunjung: 30, radiusLayanan: 4, pendapatanTiket: 0, bahagia: 3, listrik: 3, air: 10, kaki: { w: 1, h: 1 }, gambar: "assets/buildings/building-lapangan-badminton.png", vektor: { dinding: "#00b894", atap: "#00b894", jenisAtap: "lapangan", lantai: 1 }, des: "Lapangan Badminton — bulu tangkis untuk warga, gratis." },
-  { id: "jogging-track", nama: "Jogging Track", kat: "rekreasi", harga: { uang: 70000, batu: 5 }, waktu: 8, pekerja: 0, upkeep: 1000, kapasitasPengunjung: 100, radiusLayanan: 6, pendapatanTiket: 0, bahagia: 4, listrik: 2, air: 30, kaki: { w: 2, h: 1 }, gambar: "assets/buildings/building-jogging-track.png", vektor: { dinding: "#e17055", atap: "#e17055", jenisAtap: "lapangan", lantai: 1 }, des: "Jogging Track — lintasan lari & jalan santai di ruang hijau, gratis." },
+  { id: "jogging-track", dekorasi: true, nama: "Jogging Track", kat: "rekreasi", harga: { uang: 70000, batu: 5 }, waktu: 8, pekerja: 0, upkeep: 1000, kapasitasPengunjung: 100, radiusLayanan: 6, pendapatanTiket: 0, bahagia: 4, listrik: 2, air: 30, kaki: { w: 2, h: 1 }, gambar: "assets/buildings/building-jogging-track.png", vektor: { dinding: "#e17055", atap: "#e17055", jenisAtap: "lapangan", lantai: 1 }, des: "Jogging Track — lintasan lari & jalan santai di ruang hijau, gratis." },
   { id: "pusat-kebugaran", nama: "Pusat Kebugaran", kat: "rekreasi", harga: { uang: 250000, batu: 15, besi: 5 }, waktu: 24, pekerja: 5, upkeep: 7000, kerja: 5, kapasitasPengunjung: 120, radiusLayanan: 6, pendapatanTiket: 8000, bahagia: 5, listrik: 20, air: 150, level: 2, kaki: { w: 2, h: 1 }, gambar: "assets/buildings/building-pusat-kebugaran.png", vektor: { dinding: "#74b9ff", atap: "#0984e3", jenisAtap: "datar", lantai: 1 }, des: "Pusat Kebugaran — gym & senam untuk warga, Rp8.000/pengunjung/jam." },
   { id: "gelanggang", nama: "Gelanggang Olahraga", kat: "rekreasi", harga: { uang: 700000, batu: 50, besi: 15 }, waktu: 96, pekerja: 10, upkeep: 18000, kerja: 10, kapasitasPengunjung: 800, radiusLayanan: 10, pendapatanTiket: 5000, bahagia: 7, listrik: 40, air: 200, level: 4, kaki: { w: 3, h: 2 }, gambar: "assets/buildings/building-gelanggang.png", vektor: { dinding: "#dfe6e9", atap: "#0984e3", jenisAtap: "datar", lantai: 2 }, des: "Gelanggang Olahraga — GOR serbaguna untuk turnamen, tiket Rp5.000/pengunjung/jam." },
   // ---- PEMERINTAHAN & PERKANTORAN (v19, kat "perkantoran") ----

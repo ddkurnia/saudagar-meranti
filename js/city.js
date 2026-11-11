@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v19"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v20"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -28,7 +28,7 @@ const TUTORIAL = [
   { judul: "Bangun rumah pertama", des: "Buka menu bangun, pilih Rumah Sederhana (Rp25.000 + 4 kayu), lalu ketuk lahan kosong di samping jalan.", aksi: { label: "🏠 Buka menu bangun", fn: () => bukaMenuBangunUntuk("permukiman") } },
   { judul: "Buka jalan pertama", des: "Pilih Jalan Tanah di menu Jalan, lalu seret di peta untuk menggambar jalan. Bangunan butuh jalan di sampingnya.", aksi: { label: "🛣️ Pilih Jalan Tanah", fn: () => bukaMenuBangunUntuk("jalan", "jalan", "jalan-tanah") } },
   { judul: "Rekrut pekerja", des: "Penduduk yang tinggal di rumahmu siap bekerja. Biarkan waktu berjalan — atau percepat ke 2× — dan lihat pekerja dipekerjakan di dermaga.", aksi: { label: "⏩ Percepat ke 2×", fn: () => aturKecepatan(2) } },
-  { judul: "Bangun kebun sagu", des: "Buka menu Lahan, pilih Kebun Sagu (Rp50.000 + 2 kayu), lalu bangun di lahan kosong. Kebun menghasilkan 3 tual sagu per hari.", aksi: { label: "🌱 Pilih Kebun Sagu", fn: () => bukaMenuBangunUntuk("lahan", "bangun", "kebun-sagu") } },
+  { judul: "Bangun kebun sagu", des: "Buka menu Pertanian, pilih Kebun Sagu (Rp50.000 + 2 kayu), lalu bangun di lahan kosong. Kebun menghasilkan 3 tual sagu per hari.", aksi: { label: "🌱 Pilih Kebun Sagu", fn: () => bukaMenuBangunUntuk("pertanian", "bangun", "kebun-sagu") } },
   { judul: "Kembangkan permukiman", des: "Bangun satu bangunan lagi (apa saja) atau tunggu penduduk bertambah sampai 10 jiwa. Permukimanmu sudah berjalan — lanjutkan sampai menjadi kota!" },
 ];
 let tutorialKameraAwal = null, tutorialJalanAwal = 0, tutorialBangunanAwal = 0, tutorialRumahAwal = 0, tutorialWaktuAwal = 0;
@@ -411,6 +411,21 @@ function gambarLampuMalam(lebar, tinggi, gelap) {
   }
 }
 let bunyiAktif = true;
+// v20 Worker 3: ikon suara SVG (set yang sama dengan nav kiri) —
+// toggleSuara() mengganti innerHTML, bukan textContent emoji.
+const SVG_SUARA_AKTIF = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>';
+const SVG_SUARA_MATI = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5"/></svg>';
+function aturIkonSuara() {
+  const b = $("btnSuara");
+  if (b) b.innerHTML = bunyiAktif ? SVG_SUARA_AKTIF : SVG_SUARA_MATI;
+}
+// v20: toggle suara — dipakai tombol di bar atas & panel Pengaturan.
+function toggleSuara() {
+  bunyiAktif = !bunyiAktif;
+  aturIkonSuara();
+  if (bunyiAktif) bunyiKlik();
+  if (panelKiri === "pengaturan") renderPanelKiri();
+}
 let panelKiri = "misi";   // tab sidebar kiri
 let kategoriBangun = "permukiman";
 let wargaVisual = [];     // pejalan kaki (visual)
@@ -1112,6 +1127,14 @@ function toast(pesan, jenis) {
   const t = $("toast");
   if (!t) return;
   t.textContent = pesan;
+  // v20 Worker 3: toast tidak boleh menutupi kartu tutorial — bila
+  // tutorial sedang tampil, geser toast ke bawah kartu tutorial.
+  const kt = $("kartuTutorial");
+  if (kt && kt.style.display !== "none" && typeof kt.offsetTop === "number" && typeof kt.offsetHeight === "number") {
+    t.style.top = (kt.offsetTop + kt.offsetHeight + 12) + "px";
+  } else {
+    t.style.top = "";
+  }
   t.className = "toast tampil " + (jenis || "info");
   clearTimeout(t._timer);
   t._timer = setTimeout(() => { t.className = "toast"; }, 3200);
@@ -2614,20 +2637,41 @@ function heksaKeRgba(hex, alpha) {
 }
 let overlayCache = null, overlayCacheKunci = "";
 function bangunCacheOverlay() {
-  const kunci = (overlayAktif || "tidak-ada") + "|" + Math.floor(waktuGame / 60) + "|" + S.bangunan.length + "|" + S.jalan.length + "|" + Object.keys(S.zona || {}).length;
+  // v20 Worker 3 (temuan cek live v19): kunci lama hanya memakai jam +
+  // jumlah bangunan/jalan/zona — perubahan DALAM satu jam game TIDAK
+  // membangun ulang cache: konstruksi selesai (selesai false->true),
+  // bangunan dipindah, atau status berlistrik/berair berubah. Akibatnya
+  // overlay menampilkan warna basi sampai jam berikutnya / toggle ulang.
+  // Kunci baru ikut menghitung jumlah selesai, berlistrik, berair,
+  // petak banjir, dan jumlah nilai perPetak lalin (murah: ~ratusan
+  // operasi/frame untuk ~100 bangunan).
+  const perPetakLalin = (S.lalin && S.lalin.perPetak) || {};
+  let jumlahNilaiLalin = 0;
+  for (const k of Object.keys(perPetakLalin)) jumlahNilaiLalin += perPetakLalin[k] || 0;
+  const kunci = (overlayAktif || "tidak-ada") + "|" + Math.floor(waktuGame / 60) + "|" + S.bangunan.length + "|" + S.jalan.length + "|" + Object.keys(S.zona || {}).length
+    + "|" + S.bangunan.filter(b => b.selesai).length
+    + "|" + S.bangunan.filter(b => b.berlistrik).length
+    + "|" + S.bangunan.filter(b => b.berair).length
+    + "|" + ((S.utilitas && S.utilitas.banjir) || []).length
+    + "|" + Object.keys(perPetakLalin).length + ":" + jumlahNilaiLalin;
   if (overlayCache && overlayCacheKunci === kunci) return overlayCache;
   const petaWarna = new Map();
   const tandai = (x, y, warna) => { if (x >= 0 && y >= 0 && x < peta.W && y < peta.H) petaWarna.set(x + "," + y, warna); };
   const jejak = (b, warna) => { if (typeof petakBangunan === "function") { for (const t of petakBangunan(b)) tandai(t.x, t.y, warna); } else tandai(b.x, b.y, warna); };
   const selesai = (typeof bangunanSelesai === "function") ? bangunanSelesai() : S.bangunan.filter(b => b.selesai);
   if (overlayAktif === "listrik") {
-    for (const b of selesai) {
+    // v20 Worker 3: SEMUA bangunan (bukan hanya yang selesai) —
+    // hitungUtilitas sudah menghitung berlistrik untuk bangunan dalam
+    // konstruksi, dan panel kanan menampilkan "Padam" untuknya; overlay
+    // harus konsisten dengan panel (rumah dalam konstruksi yang padam
+    // sebelumnya tidak berwarna sama sekali).
+    for (const b of S.bangunan) {
       const d = BANGUNAN_MAP[b.id]; if (!d) continue;
       if (d.listrikProduksi) jejak(b, "rgba(251,191,36,0.4)");
       else if ((d.listrik || 0) > 0) jejak(b, b.berlistrik ? "rgba(34,197,94,0.35)" : "rgba(231,76,60,0.45)");
     }
   } else if (overlayAktif === "air") {
-    for (const b of selesai) {
+    for (const b of S.bangunan) {
       const d = BANGUNAN_MAP[b.id]; if (!d) continue;
       if (d.airProduksi) jejak(b, "rgba(6,182,212,0.45)");
       else if ((d.air || 0) > 0) jejak(b, b.berair ? "rgba(9,132,227,0.4)" : "rgba(231,76,60,0.45)");
@@ -2692,9 +2736,18 @@ function gambarOverlay(lebar, tinggi, minX, maxX, minY, maxY) {
     if (!warna) continue;
     const w = tileKeDunia(x, y);
     const s = duniaKeLayar(w.x, w.y, lebar, tinggi);
+    const titik = [[s.x, s.y], [s.x + 32 * z, s.y + 16 * z], [s.x, s.y + 32 * z], [s.x - 32 * z, s.y + 16 * z]];
     ctx.fillStyle = warna;
-    poly([[s.x, s.y], [s.x + 32 * z, s.y + 16 * z], [s.x, s.y + 32 * z], [s.x - 32 * z, s.y + 16 * z]]);
+    poly(titik);
     ctx.fill();
+    // v20 Worker 3 (temuan cek live v19): isi saja terlalu samar — di
+    // zoom kecil / di atas sprite bangunan, berlian 0.35-0.45 alpha
+    // hampir tak terlihat. Garis tepi warna sama menumpuk di atas isi
+    // (alpha efektif tepi ~0.7) supaya petak berwarna tetap terbaca.
+    ctx.strokeStyle = warna;
+    ctx.lineWidth = Math.max(1.5, 2 * z);
+    poly(titik);
+    ctx.stroke();
   }
 }
 // Pilih zona dari panel Peta (Worker 5): membungkus aturModeZona
@@ -2810,6 +2863,20 @@ function bar(persen, warna) {
 }
 
 // ---------------- HUD atas ----------------
+// v20: netto ekonomi satu rincian harian (dipakai renderHUD & panel
+// Statistik) — rumus sama dengan yang dipakai renderHUD sebelumnya:
+// semua kunci pemasukan dikurangi upkeep + gaji.
+function netRincian(r) {
+  r = r || {};
+  return ((r.pajak || 0) + (r.pajakProperti || 0) + (r.penjualan || 0) + (r.ekspor || 0) + (r.wisata || 0) + (r.bunga || 0) + (r.perdagangan || 0) + (r.daurUlang || 0) + (r.tiketBus || 0) + (r.tiketRekreasi || 0)) - ((r.upkeep || 0) + (r.gaji || 0));
+}
+// Pemasukan & pengeluaran total satu rincian (untuk rata-rata per jam).
+function totalRincian(r) {
+  r = r || {};
+  const masuk = (r.pajak || 0) + (r.pajakProperti || 0) + (r.penjualan || 0) + (r.ekspor || 0) + (r.wisata || 0) + (r.bunga || 0) + (r.perdagangan || 0) + (r.daurUlang || 0) + (r.tiketBus || 0) + (r.tiketRekreasi || 0);
+  const keluar = (r.upkeep || 0) + (r.gaji || 0);
+  return { masuk: masuk, keluar: keluar };
+}
 // Penghitung pemanggilan renderHUD (v19 Worker 5, untuk tes regresi
 // refresh HUD: harus naik tiap tick interval 500 ms).
 let jumlahRenderHUD = 0;
@@ -2836,8 +2903,22 @@ function renderHUD() {
   const nilaiBahagiaHUD = (S.bahagia && typeof S.bahagia.nilai === "number") ? S.bahagia.nilai : S.penduduk.bahagia;
   $("bahagiaTeks").textContent = nilaiBahagiaHUD + "%";
   // v19 Worker 5: pill listrik/air di bar atas (dari status Worker 2).
+  // v20 Worker 3 (temuan cek live v19): pill ini TOTAL jaringan
+  // (dipakai/kapasitas), sedangkan panel bangunan menampilkan status
+  // PER-BANGUNAN ("Padam") — dua metrik berbeda. Supaya tidak
+  // menyesatkan, tampilkan jumlah bangunan padam di pill bila ada.
   const lsEl = $("listrikTeks");
-  if (lsEl && typeof statusListrik === "function") { const st = statusListrik(); lsEl.textContent = st.dipakaiKW + "/" + st.kapasitasKW + " kW"; }
+  if (lsEl && typeof statusListrik === "function") {
+    const st = statusListrik();
+    // v20 Worker 3: st.padam HANYA menghitung bangunan TERHUBUNG yang
+    // kebagian pemadaman bergilir (kapasitas habis) — bangunan DI LUAR
+    // jaringan tidak masuk hitungan itu (hanya rumahTanpaListrik).
+    // Hitung langsung dari bendera berlistrik supaya pill jujur:
+    // semua bangunan selesai yang butuh listrik tapi tidak menyala.
+    let jmlPadam = 0;
+    if (S && S.bangunan) for (const b of S.bangunan) { if (!b.selesai) continue; const d = BANGUNAN_MAP[b.id]; if (d && (d.listrik || 0) > 0 && b.berlistrik === false) jmlPadam++; }
+    lsEl.textContent = st.dipakaiKW + "/" + st.kapasitasKW + " kW" + (jmlPadam > 0 ? " · " + jmlPadam + " padam" : "");
+  }
   const airEl = $("airTeks");
   if (airEl && typeof statusAir === "function") { const st = statusAir(); airEl.textContent = st.dipakaiL + "/" + st.kapasitasL + " L"; }
   $("hariTeks").textContent = "Hari " + S.hari;
@@ -2873,11 +2954,7 @@ function renderHUD() {
   if (sbb) sbb.style.width = nilaiBahagiaHUD + "%";
   const se = $("statEkonomi");
   if (se) {
-    // v19 Worker 5: net memakai SEMUA kunci rincian (termasuk pajak
-    // properti, perdagangan, tiket) — sebelumnya perdagangan & tiket
-    // tidak dihitung sehingga net "/hari" salah.
-    const r = S.statistik.rincianHari || {};
-    const net = ((r.pajak || 0) + (r.pajakProperti || 0) + (r.penjualan || 0) + (r.ekspor || 0) + (r.wisata || 0) + (r.bunga || 0) + (r.perdagangan || 0) + (r.daurUlang || 0) + (r.tiketBus || 0) + (r.tiketRekreasi || 0)) - ((r.upkeep || 0) + (r.gaji || 0));
+    const net = netRincian(S.statistik.rincianHari || {});
     se.textContent = (net >= 0 ? "" : "−") + rp(Math.abs(net)) + "/hari";
   }
   const spr = $("statPeradaban");
@@ -2979,9 +3056,10 @@ function gambarMinimap() {
   for (const j of S.jalan) cx.fillRect(j.x * sx, j.y * sy, Math.ceil(sx), Math.ceil(sy));
   cx.fillStyle = "#8d6e63";
   for (const j of S.jembatan) cx.fillRect(j.x * sx, j.y * sy, Math.ceil(sx), Math.ceil(sy));
-  // v19 Worker 5: warna minimap untuk SEMUA 15 kat v19 (sebelumnya hanya
-  // 8 kat lama — kat baru jatuh ke putih). Warna lama dipertahankan.
-  const WARNA_KAT = { permukiman: "#fdcb6e", jalan: "#5a5a5a", transportasi: "#74b9ff", listrik: "#f1c40f", air: "#0984e3", drainase: "#00cec9", pendidikan: "#6c5ce7", kesehatan: "#00b894", keamanan: "#e74c3c", rekreasi: "#27ae60", hiburan: "#fd79a8", perkantoran: "#e17055", industri: "#636e72", lingkungan: "#55efc4", lahan: "#a3e635", infrastruktur: "#dfe6e9", ekonomi: "#e17055", perkebunan: "#55efc4", sosial: "#fd79a8" };
+  // v20: warna minimap untuk SEMUA 19 tab TAB_BANGUN (sebelumnya hanya
+  // 15 kat v19 — tab baru jatuh ke putih). Warna lama dipertahankan;
+  // alias tab: komersial = perkantoran, pertanian/perikanan = lahan.
+  const WARNA_KAT = { permukiman: "#fdcb6e", jalan: "#5a5a5a", transportasi: "#74b9ff", listrik: "#f1c40f", air: "#0984e3", drainase: "#00cec9", pendidikan: "#6c5ce7", kesehatan: "#00b894", keamanan: "#e74c3c", rekreasi: "#27ae60", hiburan: "#fd79a8", perkantoran: "#e17055", industri: "#636e72", lingkungan: "#55efc4", lahan: "#a3e635", komersial: "#e17055", jembatan: "#8d6e63", pertanian: "#a3e635", perikanan: "#0984e3", dekorasi: "#55efc4", infrastruktur: "#dfe6e9", ekonomi: "#e17055", perkebunan: "#55efc4", sosial: "#fd79a8" };
   for (const b of S.bangunan) {
     const def = BANGUNAN_MAP[b.id]; if (!def) continue;
     cx.fillStyle = WARNA_KAT[def.kat] || "#ffffff";
@@ -3064,88 +3142,118 @@ function renderMenuBangun() {
   for (const k of TAB_BANGUN) {
     const b = document.createElement("button");
     b.className = "katTab" + (kategoriBangun === k.id ? " aktif" : "");
-    b.textContent = k.ikon + " " + k.nama;
+    // v20 Worker 3: ikon tab adalah SVG inline (field `ikon` di
+    // TAB_BANGUN), bukan emoji — dirender via innerHTML.
+    b.innerHTML = k.ikon + "<span>" + k.nama + "</span>";
     b.onclick = () => { kategoriBangun = k.id; bunyiKlik(); renderMenuBangun(); };
     katEl.appendChild(b);
   }
   const itemEl = $("itemBangun");
   itemEl.innerHTML = "";
-  const tambahKartu = (nama, des, harga, kunci, kunciAlasan, onKlik, preview) => {
+  // v20 Worker 3: hitung kartu untuk pesan katalog (kategori kosong /
+  // semua terkunci) — pesan ditulis ke #pesanKatalog, BUKAN appendChild
+  // ke #itemBangun, supaya hitungan kartu di tes headless tidak berubah.
+  let jmlKartu = 0, jmlTerkunci = 0;
+  // Kartu: gambar aset + nama + harga + meta singkat (pekerja/waktu).
+  // Deskripsi panjang TIDAK di kartu — tampil di panel kanan saat
+  // bangunan dipilih (renderPanelKanan menampilkan def.des).
+  const tambahKartu = (nama, meta, harga, kunci, kunciAlasan, onKlik, preview, dipilih) => {
+    jmlKartu++;
+    if (kunci) jmlTerkunci++;
     const kartu = document.createElement("div");
-    kartu.className = "kartuBangun" + (kunci ? " terkunci" : "");
+    kartu.className = "kartuBangun" + (kunci ? " terkunci" : "") + (dipilih ? " dipilih" : "");
     if (preview) kartu.appendChild(preview);
     const info = document.createElement("div");
     info.className = "kartuInfo";
-    info.innerHTML = "<div class='kartuNama'>" + nama + "</div><div class='kartuDes'>" + des + "</div><div class='kartuHarga'>" + harga + "</div>" + (kunci ? "<div class='kartuKunci'>" + kunciAlasan + "</div>" : "");
+    info.innerHTML = "<div class='kartuNama'>" + nama + "</div><div class='kartuDes'>" + meta + "</div><div class='kartuHarga'>" + harga + "</div>" + (kunci ? "<div class='kartuKunci'>" + kunciAlasan + "</div>" : "");
     kartu.appendChild(info);
     kartu.onclick = () => { if (kunci) { toast(kunciAlasan, "gagal"); bunyiGagal(); return; } onKlik(); };
     itemEl.appendChild(kartu);
   };
-  // Tab Jalan — jalan + jembatan (v19 Worker 5: TAB_BANGUN tidak punya
-  // tab "jembatan" lagi, jadi kartu jembatan digabung ke tab Jalan di
-  // bawah kartu jalan; alur 2-klik Jembatan Gantung & misi jembatan
-  // tetap jalan seperti sebelumnya).
-  if (kategoriBangun === "jalan") {
-    for (const id of Object.keys(JALAN)) {
-      const j = JALAN[id];
-      const kunci = ((j.level || 1) > S.level) || (id === "jalan-raya" && !S.teknologi["konstruksi-beton"]);
-      const alasan = alasanKunci({ level: j.level, tech: (id === "jalan-raya" ? "konstruksi-beton" : null) }, "Butuh level ");
-      const c = document.createElement("canvas"); c.width = 104; c.height = 56;
-      const cx = c.getContext("2d");
-      cx.fillStyle = j.warna;
-      cx.beginPath(); cx.moveTo(52, 8); cx.lineTo(96, 28); cx.lineTo(52, 48); cx.lineTo(8, 28); cx.closePath(); cx.fill();
-      if (id !== "jalan-tanah") {
-        cx.strokeStyle = id === "jalan-raya" ? "#f1c40f" : "rgba(255,255,255,0.85)"; cx.lineWidth = 2;
-        cx.setLineDash([7, 6]);
-        cx.beginPath(); cx.moveTo(16, 28); cx.lineTo(88, 28); cx.stroke();
-        cx.setLineDash([]);
-      }
-      tambahKartu(j.nama, "Seret di peta untuk menggambar jalan.", hargaTeks(j.harga), kunci, alasan, () => { mode = { jenis: "jalan", id: id }; tilePratinjau = null; terpilih = null; bunyiKlik(); renderHUD(); renderMenuBangun(); }, c);
-    }
-    for (const id of Object.keys(JEMBATAN)) {
-      const j = JEMBATAN[id];
-      const kunci = ((j.level || 1) > S.level) || (j.tech && !S.teknologi[j.tech]);
-      const alasan = alasanKunci(j, "Butuh level ");
-      const c = document.createElement("canvas"); c.width = 104; c.height = 56;
-      const cx = c.getContext("2d");
-      const imgJembatan = j.gambar ? gambarAset[j.gambar] : null;
-      if (imgJembatan && imgJembatan.complete && imgJembatan.naturalWidth) {
-        const h = 52, w = h * (imgJembatan.naturalWidth / imgJembatan.naturalHeight);
-        cx.drawImage(imgJembatan, (104 - w) / 2, 2, w, h);
-      } else {
-        cx.fillStyle = "#3d9bd6";
-        cx.beginPath(); cx.moveTo(52, 6); cx.lineTo(98, 28); cx.lineTo(52, 50); cx.lineTo(6, 28); cx.closePath(); cx.fill();
-        cx.fillStyle = j.warna; cx.fillRect(22, 22, 60, 12);
-        cx.strokeStyle = "rgba(0,0,0,0.35)"; cx.lineWidth = 1.5;
-        for (const px of [34, 52, 70]) { cx.beginPath(); cx.moveTo(px, 22); cx.lineTo(px, 34); cx.stroke(); }
-        if (id === "jembatan-gantung") {
-          // Menara + kabel mini di kartu
-          cx.strokeStyle = "#34495e"; cx.lineWidth = 2;
-          for (const px of [24, 80]) { cx.beginPath(); cx.moveTo(px, 22); cx.lineTo(px, 8); cx.stroke(); }
-          cx.beginPath(); cx.moveTo(24, 8); cx.quadraticCurveTo(52, 30, 80, 8); cx.stroke();
-        }
-      }
-      const desJembatan = id === "jembatan-gantung" ? "Klik daratan, lalu daratan seberang — membentang 2–8 petak air. Harga per petak." : "Hanya di atas sungai atau laut.";
-      tambahKartu(j.nama, desJembatan, hargaTeks(j.harga) + (id === "jembatan-gantung" ? " /petak" : ""), kunci, alasan, () => {
-        if (id === "jembatan-gantung") { mode = { jenis: "jembatan-gantung", id: id }; jembatanMulai = null; }
-        else mode = { jenis: "jembatan", id: id };
-        tilePratinjau = null; terpilih = null; bunyiKlik(); renderHUD(); renderMenuBangun();
-      }, c);
-    }
-  }
-  // Bangunan: Dekorasi = sosial berflag dekorasi; Sosial = sosial lainnya
-  for (const def of BANGUNAN) {
-    if (kategoriBangun === "dekorasi") { if (!(def.kat === "sosial" && def.dekorasi)) continue; }
-    else if (kategoriBangun === "sosial") { if (!(def.kat === "sosial" && !def.dekorasi)) continue; }
-    else if (def.kat !== kategoriBangun) continue;
+  // Kartu bangunan: meta = pekerja + waktu konstruksi.
+  const tambahKartuBangunan = (def) => {
     const kunci = ((def.level || 1) > S.level) || (def.tech && !S.teknologi[def.tech]);
     const alasan = alasanKunci(def, "Butuh peradaban level ");
-    const aktif = mode.jenis === "bangun" && mode.id === def.id;
-    tambahKartu(def.nama, def.des, hargaTeks(def.harga) + " · " + teksDurasi(def.waktu), kunci, alasan, () => {
+    const meta = (def.pekerja ? "👷 " + def.pekerja + " pekerja · " : "") + "⏱ " + teksDurasi(def.waktu);
+    tambahKartu(def.nama, meta, hargaTeks(def.harga), kunci, alasan, () => {
       mode = { jenis: "bangun", id: def.id }; tilePratinjau = null; terpilih = null; bunyiKlik(); renderHUD(); renderMenuBangun(); renderPanelKanan();
-    }, previewBangunan(def));
-    const kartuTerakhir = itemEl.lastElementChild;
-    if (aktif) kartuTerakhir.classList.add("dipilih");
+    }, previewBangunan(def), mode.jenis === "bangun" && mode.id === def.id);
+  };
+  // Kartu jalan (pratinjau wajik warna jalan).
+  const tambahKartuJalan = (id) => {
+    const j = JALAN[id];
+    const kunci = ((j.level || 1) > S.level) || (id === "jalan-raya" && !S.teknologi["konstruksi-beton"]);
+    const alasan = alasanKunci({ level: j.level, tech: (id === "jalan-raya" ? "konstruksi-beton" : null) }, "Butuh level ");
+    const c = document.createElement("canvas"); c.width = 104; c.height = 56;
+    const cx = c.getContext("2d");
+    cx.fillStyle = j.warna;
+    cx.beginPath(); cx.moveTo(52, 8); cx.lineTo(96, 28); cx.lineTo(52, 48); cx.lineTo(8, 28); cx.closePath(); cx.fill();
+    if (id !== "jalan-tanah") {
+      cx.strokeStyle = id === "jalan-raya" ? "#f1c40f" : "rgba(255,255,255,0.85)"; cx.lineWidth = 2;
+      cx.setLineDash([7, 6]);
+      cx.beginPath(); cx.moveTo(16, 28); cx.lineTo(88, 28); cx.stroke();
+      cx.setLineDash([]);
+    }
+    tambahKartu(j.nama, "⏱ " + teksDurasi(j.waktu) + " · kapasitas " + j.kapasitas, hargaTeks(j.harga), kunci, alasan, () => { mode = { jenis: "jalan", id: id }; tilePratinjau = null; terpilih = null; bunyiKlik(); renderHUD(); renderMenuBangun(); }, c, mode.jenis === "jalan" && mode.id === id);
+  };
+  // Kartu jembatan (v20: tab Jembatan sendiri, dipisah dari tab Jalan).
+  const tambahKartuJembatan = (id) => {
+    const j = JEMBATAN[id];
+    const kunci = ((j.level || 1) > S.level) || (j.tech && !S.teknologi[j.tech]);
+    const alasan = alasanKunci(j, "Butuh level ");
+    const c = document.createElement("canvas"); c.width = 104; c.height = 56;
+    const cx = c.getContext("2d");
+    const imgJembatan = j.gambar ? gambarAset[j.gambar] : null;
+    if (imgJembatan && imgJembatan.complete && imgJembatan.naturalWidth) {
+      const h = 52, w = h * (imgJembatan.naturalWidth / imgJembatan.naturalHeight);
+      cx.drawImage(imgJembatan, (104 - w) / 2, 2, w, h);
+    } else {
+      cx.fillStyle = "#3d9bd6";
+      cx.beginPath(); cx.moveTo(52, 6); cx.lineTo(98, 28); cx.lineTo(52, 50); cx.lineTo(6, 28); cx.closePath(); cx.fill();
+      cx.fillStyle = j.warna; cx.fillRect(22, 22, 60, 12);
+      cx.strokeStyle = "rgba(0,0,0,0.35)"; cx.lineWidth = 1.5;
+      for (const px of [34, 52, 70]) { cx.beginPath(); cx.moveTo(px, 22); cx.lineTo(px, 34); cx.stroke(); }
+      if (id === "jembatan-gantung") {
+        // Menara + kabel mini di kartu
+        cx.strokeStyle = "#34495e"; cx.lineWidth = 2;
+        for (const px of [24, 80]) { cx.beginPath(); cx.moveTo(px, 22); cx.lineTo(px, 8); cx.stroke(); }
+        cx.beginPath(); cx.moveTo(24, 8); cx.quadraticCurveTo(52, 30, 80, 8); cx.stroke();
+      }
+    }
+    const metaJembatan = id === "jembatan-gantung" ? "⏱ " + teksDurasi(j.waktu) + " · 2–8 petak air · harga/petak" : "⏱ " + teksDurasi(j.waktu) + " · hanya di atas air";
+    tambahKartu(j.nama, metaJembatan, hargaTeks(j.harga) + (id === "jembatan-gantung" ? " /petak" : ""), kunci, alasan, () => {
+      if (id === "jembatan-gantung") { mode = { jenis: "jembatan-gantung", id: id }; jembatanMulai = null; }
+      else mode = { jenis: "jembatan", id: id };
+      tilePratinjau = null; terpilih = null; bunyiKlik(); renderHUD(); renderMenuBangun();
+    }, c, (mode.jenis === "jembatan" && mode.id === id) || (mode.jenis === "jembatan-gantung" && id === "jembatan-gantung"));
+  };
+  // ---- Isi katalog menurut tab aktif (v20: 19 kategori, TAB_BANGUN) ----
+  const tab = TAB_BANGUN.find(t => t.id === kategoriBangun) || TAB_BANGUN[0];
+  if (tab.id !== kategoriBangun) kategoriBangun = tab.id;
+  if (tab.jalan) {
+    // Tab Jalan: jenis jalan (JALAN) + bangunan kat "jalan".
+    for (const id of Object.keys(JALAN)) tambahKartuJalan(id);
+    for (const def of BANGUNAN) if (def.kat === "jalan") tambahKartuBangunan(def);
+  } else if (tab.jembatan) {
+    for (const id of Object.keys(JEMBATAN)) tambahKartuJembatan(id);
+  } else {
+    // Tab bangunan: saring lewat deskriptor tab (kat / ids / dekorasi).
+    for (const def of BANGUNAN) {
+      if (tab.dekorasi) { if (!def.dekorasi) continue; }
+      else if (tab.ids) { if (!tab.ids.includes(def.id)) continue; }
+      else if (tab.kat) { if (!tab.kat.includes(def.kat)) continue; }
+      else continue;
+      tambahKartuBangunan(def);
+    }
+  }
+  // v20 Worker 3: pesan katalog — kategori kosong, atau semua
+  // bangunannya terkunci (di level 1: Keamanan & Hiburan terkunci
+  // penuh; Perikanan justru sudah terbuka sejak level 1).
+  const pk = $("pesanKatalog");
+  if (pk) {
+    if (jmlKartu === 0) { pk.style.display = "block"; pk.textContent = "Belum ada bangunan di kategori " + tab.nama + "."; }
+    else if (jmlTerkunci === jmlKartu) { pk.style.display = "block"; pk.textContent = "Semua bangunan di kategori " + tab.nama + " masih terkunci — naikkan level peradaban atau teliti teknologi yang dibutuhkan untuk membukanya."; }
+    else { pk.style.display = "none"; pk.textContent = ""; }
   }
 }
 
@@ -3161,7 +3269,10 @@ function renderPanelKiri() {
     for (const kode of Object.keys(TERRAIN)) {
       const t = TERRAIN[kode];
       const ket = t.bisaBangun ? "bisa dibangun" : "tidak bisa dibangun";
-      const tambahan = t.butuhBuka ? " · " + t.butuhBuka : "";
+      // v20 Worker 3 (bug cek live v19): butuhBuka adalah OBJEK
+      // {uang: 10000}, bukan string — " · " + objek mencetak
+      // "[object Object]". Format lewat hargaTeks().
+      const tambahan = t.butuhBuka ? " · buka lahan " + hargaTeks(t.butuhBuka) : "";
       html += "<div class='barisStat kecil'><span><span style='display:inline-block;width:12px;height:12px;border-radius:3px;background:" + t.warna + ";vertical-align:-1px;margin-right:6px'></span>" + t.nama + "</span><span>" + ket + tambahan + "</span></div>";
     }
     html += "<button class='btnKecil' style='margin-top:8px' onclick='kameraPusatkan(peta);bunyiKlik();toast(\"Peta dipusatkan.\",\"ok\")'>◎ Pusatkan Peta</button>";
@@ -3345,6 +3456,111 @@ function renderPanelKiri() {
     const items = (S.log || []).slice(0, 12);
     if (!items.length) html += "<div class='misiDes'>Belum ada berita — mulailah membangun!</div>";
     for (const l of items) html += "<div class='beritaItem'>" + l + "</div>";
+    isi.innerHTML = html;
+  } else if (panelKiri === "infrastruktur") {
+    // v20: ringkasan utilitas live — dibaca dari status utilitas yang
+    // sudah ada (statusListrik/statusAir/statusDrainase/statusSampah),
+    // TIDAK dihitung ulang dengan rumus baru.
+    let html = "<div class='judulPanel'>Infrastruktur — Utilitas</div>";
+    const ls = (typeof statusListrik === "function") ? statusListrik() : null;
+    html += "<div class='judulPanel' style='margin-top:6px'>⚡ Listrik</div>";
+    if (ls) {
+      html += "<div class='barisStat'><span>Dipakai / kapasitas</span><b>" + ls.dipakaiKW + " / " + ls.kapasitasKW + " kW</b></div>";
+      html += "<div class='barisStat'><span>Permintaan</span><span>" + ls.permintaanKW + " kW</span></div>";
+      html += bar(ls.persen || 0, (ls.persen || 0) >= 100 ? "#e74c3c" : "#f1c40f");
+      html += "<div class='barisStat'><span>Status jaringan</span><span>" + (ls.padam > 0 ? "⚠️ " + ls.padam + " bangunan padam (bergilir)" : "✅ Normal") + "</span></div>";
+      if (ls.rumahTanpaListrik > 0) html += "<div class='barisStat'><span>Rumah tanpa listrik</span><span>" + ls.rumahTanpaListrik + "</span></div>";
+    } else html += "<div class='misiDes'>Status listrik belum tersedia.</div>";
+    const pembangkit = bangunanSelesai().filter(b => (BANGUNAN_MAP[b.id].listrikProduksi || 0) > 0);
+    html += "<div class='barisStat'><span>Pembangkit beroperasi</span><span>" + pembangkit.length + "</span></div>";
+    for (const b of pembangkit) {
+      const d = BANGUNAN_MAP[b.id];
+      html += "<div class='barisStat kecil'><span>" + d.nama + "</span><span>" + (d.listrikProduksi / 1000) + " MW" + (d.hanyaSiang ? " (siang)" : "") + "</span></div>";
+    }
+    if (!pembangkit.length) html += "<div class='misiDes'>Belum ada pembangkit — bangunan di sekitar titik awal memakai generator virtual (100 kW, radius 8 petak). Bangun PLTD / PLT Biomassa / PLT Surya dari tab Listrik.</div>";
+    const ar = (typeof statusAir === "function") ? statusAir() : null;
+    html += "<div class='judulPanel' style='margin-top:10px'>💧 Air & PDAM</div>";
+    if (ar) {
+      html += "<div class='barisStat'><span>Dipakai / kapasitas</span><b>" + ar.dipakaiL + " / " + ar.kapasitasL + " L/jam</b></div>";
+      html += "<div class='barisStat'><span>Permintaan</span><span>" + ar.permintaanL + " L/jam</span></div>";
+      html += bar(ar.persen || 0, "#0984e3");
+      html += "<div class='barisStat'><span>Kualitas air</span><span>" + (ar.kualitas || 0) + "/100</span></div>";
+      html += "<div class='barisStat'><span>Kehilangan jaringan</span><span>" + Math.round((ar.kehilangan || 0) * 100) + "%</span></div>";
+    } else html += "<div class='misiDes'>Status air belum tersedia.</div>";
+    const dr = (typeof statusDrainase === "function") ? statusDrainase() : null;
+    const sm = (typeof statusSampah === "function") ? statusSampah() : null;
+    html += "<div class='judulPanel' style='margin-top:10px'>🌊 Drainase & Sampah</div>";
+    if (dr) {
+      html += "<div class='barisStat'><span>Petak banjir saat ini</span><b class='" + (dr.petakBanjir > 0 ? "merah" : "") + "'>" + dr.petakBanjir + " petak</b></div>";
+      html += "<div class='barisStat'><span>Bangunan terdampak</span><span>" + dr.bangunanTerdampak + "</span></div>";
+    }
+    if (sm) {
+      html += "<div class='barisStat'><span>Sampah diproduksi</span><span>" + Math.round(sm.produksiKgHari) + " kg/hari</span></div>";
+      html += "<div class='barisStat'><span>Kapasitas TPS/TPA</span><span>" + sm.kapasitasKgHari + " kg/hari</span></div>";
+      html += "<div class='barisStat'><span>Kebersihan</span><span>" + Math.round(sm.kebersihan) + "%</span></div>" + bar(sm.kebersihan, sm.kebersihan >= 70 ? "#00b894" : sm.kebersihan >= 40 ? "#fdcb6e" : "#e74c3c");
+      if (sm.tumpukanKg > 0) html += "<div class='barisStat'><span>Tumpukan sampah</span><span>" + Math.round(sm.tumpukanKg) + " kg</span></div>";
+    }
+    html += "<div class='misiDes'>Buka overlay Listrik / Air / Drainase dari panel Peta untuk melihat jaringan di peta.</div>";
+    isi.innerHTML = html;
+  } else if (panelKiri === "statistik") {
+    // v20: isi #kartuStatistik (yang disembunyikan CSS) ditampilkan ulang
+    // di sini dari state live — rumus sama dengan renderHUD.
+    const lvlStat = LEVEL_PERADABAN[S.level - 1];
+    const nilaiBahagia = (S.bahagia && typeof S.bahagia.nilai === "number") ? S.bahagia.nilai : S.penduduk.bahagia;
+    const tk = hitungTenagaKerja();
+    let html = "<div class='judulPanel'>Statistik Kota</div>";
+    html += "<div class='barisStat'><span>Penduduk</span><b>" + S.penduduk.total + " jiwa</b></div>";
+    if (S.penduduk.kemarin !== undefined && S.penduduk.kemarin !== S.penduduk.total) {
+      const d = S.penduduk.total - S.penduduk.kemarin;
+      html += "<div class='barisStat kecil'><span>Pertumbuhan</span><span>" + (d > 0 ? "+" : "") + d + " jiwa/hari</span></div>";
+    }
+    html += "<div class='barisStat'><span>Kebahagiaan</span><b>" + nilaiBahagia + "%</b></div>" + bar(nilaiBahagia, nilaiBahagia >= 60 ? "#00b894" : nilaiBahagia >= 40 ? "#fdcb6e" : "#e74c3c");
+    html += "<div class='barisStat'><span>Pengangguran</span><span>" + tk.menganggur + " dari " + tk.angkatan + " angkatan kerja</span></div>";
+    html += "<div class='barisStat'><span>Bekerja</span><span>" + tk.bekerja + " orang</span></div>";
+    const rbTot = totalRincian(S.rincianBerjalan || {});
+    const jamHariIni = Math.max(1, jamDesimal());
+    html += "<div class='judulPanel' style='margin-top:10px'>Ekonomi — Hari " + S.hari + "</div>";
+    html += "<div class='barisStat'><span>Pendapatan (rata-rata/jam hari ini)</span><b class='hijau'>" + rp(rbTot.masuk / jamHariIni) + "</b></div>";
+    html += "<div class='barisStat'><span>Pengeluaran (rata-rata/jam hari ini)</span><b class='merah'>" + rp(rbTot.keluar / jamHariIni) + "</b></div>";
+    const netKemarin = netRincian(S.statistik.rincianHari || {});
+    html += "<div class='barisStat'><span>Netto kemarin</span><b class='" + (netKemarin >= 0 ? "hijau" : "merah") + "'>" + (netKemarin >= 0 ? "" : "−") + rp(Math.abs(netKemarin)) + "/hari</b></div>";
+    html += "<div class='judulPanel' style='margin-top:10px'>Kota</div>";
+    html += "<div class='barisStat'><span>Peradaban</span><b>Level " + S.level + " (" + lvlStat.nama + ")</b></div>";
+    html += "<div class='barisStat'><span>Kemacetan</span><span>" + ((S.lalin && typeof S.lalin.skor === "number") ? S.lalin.skor + "/100 · " + (S.lalin.skor >= 70 ? "Lancar" : S.lalin.skor >= 40 ? "Padat" : "Macet") : "—") + "</span></div>";
+    html += "<div class='barisStat'><span>Layanan publik</span><span>" + S.penduduk.cakupanPendidikan + "% pend. · " + S.penduduk.cakupanKesehatan + "% kes.</span></div>";
+    let lingStat = null;
+    if (typeof statusLingkungan === "function") { try { lingStat = statusLingkungan(); } catch (e) { lingStat = null; } }
+    html += "<div class='barisStat'><span>Lingkungan</span><span>" + (lingStat ? ("Polusi " + (lingStat.polusi || 0) + " · Mangrove " + (lingStat.mangroveSehat || 0) + "%") : "—") + "</span></div>";
+    const polStat = lingStat ? (lingStat.polusi || 0) : 0;
+    const berStat = (S.utilitas && S.utilitas.sampah) ? (S.utilitas.sampah.kebersihan || 100) : 100;
+    html += "<div class='barisStat'><span>Kualitas hidup</span><b>" + Math.round((nilaiBahagia + (100 - polStat) + berStat) / 3) + "%</b></div>";
+    html += "<div class='barisStat'><span>Bangunan selesai</span><span>" + bangunanSelesai().length + " · " + S.jalan.length + " petak jalan · " + S.jembatan.length + " jembatan</span></div>";
+    isi.innerHTML = html;
+  } else if (panelKiri === "pengaturan") {
+    // v20: panel Pengaturan (dibuka tombol ⚙️ di bar atas).
+    let html = "<div class='judulPanel'>Pengaturan</div>";
+    html += "<div class='barisStat'><span>Suara</span><button class='btnKecil' onclick='toggleSuara()'>" + (bunyiAktif ? "Aktif" : "Mati") + "</button></div>";
+    html += "<div class='misiDes'>Suara efek klik & notifikasi.</div>";
+    html += "<div class='barisStat'><span>Kecepatan simulasi</span><span>" + (kecepatan === 0 ? "Jeda" : kecepatan + "×") + "</span></div>";
+    html += "<div class='barisAksi'><button class='btnKecil' onclick='aturKecepatan(0)'>Jeda</button><button class='btnKecil' onclick='aturKecepatan(0.5)'>0.5×</button><button class='btnKecil' onclick='aturKecepatan(1)'>1×</button><button class='btnKecil' onclick='aturKecepatan(2)'>2×</button></div>";
+    html += "<div class='judulPanel' style='margin-top:10px'>Permainan</div>";
+    html += "<div class='barisAksi'><button class='btnKecil' onclick='kembaliKeMenuUtama()'>Kembali ke Menu Utama</button></div>";
+    html += "<div class='misiDes'>Progres disimpan dulu, lalu kembali ke menu utama (tanpa reload). Permainan dijeda selama di menu — lanjutkan dari menu untuk bermain lagi.</div>";
+    html += "<div class='barisStat'><span>Pemimpin</span><span>" + (S.pemimpin ? S.pemimpin.nama : "—") + "</span></div>";
+    // v20 Worker 3 (temuan cek live v19): manajemen profil — sebelumnya
+    // TIDAK ADA cara mengubah/menghapus profil dari UI (profil tersimpan
+    // terpisah dari simpanan; "Permainan Baru" hanya menghapus simpanan),
+    // sehingga formulir identitas + tutorial tidak pernah muncul lagi.
+    // Dipilih panel Pengaturan (bukan modal Profil yang hanya tampil).
+    html += "<div class='judulPanel' style='margin-top:10px'>Profil Pemain</div>";
+    html += "<div class='barisStat'><span>Nama pemimpin</span><span>" + (profilPemain ? profilPemain.nama : "—") + "</span></div>";
+    html += "<div class='barisAksi'><input id='inputNamaPemimpin' type='text' maxlength='20' placeholder='Nama pemimpin baru' value=\"" + (profilPemain ? String(profilPemain.nama).replace(/\"/g, "&quot;") : "") + "\" style='flex:1;min-width:110px;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.35);background:rgba(0,0,0,.3);color:#fff;font-family:inherit;font-size:13px'><button class='btnKecil' onclick='ubahNamaPemimpin(document.getElementById(\"inputNamaPemimpin\").value)'>Simpan Nama</button></div>";
+    html += "<div class='barisStat'><span>Karakter</span><span>" + (profilPemain ? (profilPemain.gender === "wanita" ? "Wanita" : "Pria") : "—") + "</span></div>";
+    html += "<div class='barisAksi'><button class='btnKecil" + (profilPemain && profilPemain.gender === "pria" ? " aktif" : "") + "' onclick='ubahGenderPemimpin(\"pria\")'>Pria</button><button class='btnKecil" + (profilPemain && profilPemain.gender === "wanita" ? " aktif" : "") + "' onclick='ubahGenderPemimpin(\"wanita\")'>Wanita</button></div>";
+    html += "<div class='misiDes'>Mengubah nama/karakter memperbarui profil & pemimpin di permainan ini. Simpanan game tidak dihapus.</div>";
+    html += "<div class='barisAksi'><button class='btnKecil bahaya' onclick='resetProfil()'>" + (konfirmasiResetProfil ? "Yakin hapus profil?" : "Hapus Profil") + "</button></div>";
+    html += "<div class='misiDes'>Hapus profil mengembalikan layar mulai ke formulir identitas — tutorial muncul lagi di permainan baru (tutorialSelesai tersimpan di profil, ikut ter-reset). Simpanan game TIDAK dihapus; buat profil baru lewat MULAI untuk memunculkan lagi tombol Lanjutkan.</div>";
+    html += "<div class='barisStat'><span>Versi game</span><b>" + VERSI_GAME + "</b></div>";
     isi.innerHTML = html;
   }
 }
@@ -3687,21 +3903,36 @@ function pasangTombol() {
   $("btnKec1").onclick = () => aturKecepatan(1);
   $("btnKec2").onclick = () => aturKecepatan(2);
   $("btnSimpan").onclick = () => { simpan(); toast("Permainan disimpan.", "ok"); bunyiSukses(); };
-  $("btnSuara").onclick = () => { bunyiAktif = !bunyiAktif; $("btnSuara").textContent = bunyiAktif ? "🔊" : "🔇"; if (bunyiAktif) bunyiKlik(); };
+  $("btnSuara").onclick = () => toggleSuara();
   $("btnBatalMode").onclick = () => { mode = { jenis: "pilih", id: null }; jembatanMulai = null; tilePratinjau = null; sedangPindah = null; renderHUD(); renderMenuBangun(); };
   $("btnToggleKiri").onclick = () => { $("panelKiri").classList.toggle("tersembunyi"); bunyiKlik(); };
   $("btnToggleKanan").onclick = () => { $("panelKanan").classList.toggle("tersembunyi"); bunyiKlik(); };
   if (window.innerWidth <= 820) { $("panelKiri").classList.add("tersembunyi"); $("panelKanan").classList.add("tersembunyi"); }
   $("btnLevelTutup").onclick = () => { $("modalLevel").style.display = "none"; renderHUD(); renderMenuBangun(); renderPanelKiri(); };
-  // Rel kiri (Peta / Misi / Ekonomi / Penduduk / Kepulauan / Kecamatan /
-  // Riset / Pemerintahan & Peradaban / Berita) — ketuk ikon membuka
-  // panelnya; ketuk ikon yang sama lagi menutupnya (pola HP).
+  // Rel kiri v20 (8 tombol SVG: Overview / Misi / Penduduk / Ekonomi /
+  // Infrastruktur / Pemerintahan / Penelitian / Statistik) — ketuk ikon
+  // membuka panelnya; ketuk ikon yang sama lagi menutupnya (pola HP).
   document.querySelectorAll("#relKiri button").forEach(b => {
     b.onclick = () => {
       const tab = b.dataset.tab;
       bukaTabKiri(tab);
     };
   });
+  // v20 (Worker 2): tombol baru — lipat katalog, perbesar minimap,
+  // pintasan wilayah, pengaturan. Semua dipasang di sini, di tempat
+  // yang sama dengan handler lama, supaya tidak ada tombol baru yang mati.
+  const toggleKatalog = () => { const mb = $("menuBangun"); if (mb) mb.classList.toggle("terlipat"); bunyiKlik(); };
+  const bk = $("btnLipatKatalog");
+  if (bk) bk.onclick = (e) => { if (e && e.stopPropagation) e.stopPropagation(); toggleKatalog(); };
+  const brk = $("barisKatalog");
+  if (brk) brk.onclick = () => toggleKatalog();
+  const pb = $("btnPetaBesar");
+  if (pb) pb.onclick = () => { const kp = $("kartuPeta"); if (kp) kp.classList.toggle("diperbesar"); bunyiKlik(); };
+  document.querySelectorAll("#pintasanWilayah button").forEach(b => {
+    b.onclick = () => bukaTabKiri(b.dataset.tab);
+  });
+  const bp = $("btnPengaturan");
+  if (bp) bp.onclick = () => bukaTabKiri("pengaturan");
   // Tombol "›" di kartu statistik membuka tab kiri yang sesuai
   document.querySelectorAll("#kartuStatistik .statBuka").forEach(b => {
     b.onclick = () => bukaTabKiri(b.dataset.tab);
@@ -3728,15 +3959,15 @@ function pasangTombol() {
 
 // ---------------- Loop utama ----------------
 let waktuTerakhir = 0;
-// v19 Worker 5: satu frame yang melempar TIDAK BOLEH membunuh loop —
-// requestAnimationFrame HARUS selalu dijadwalkan ulang (finally), kalau
-// tidak peta membeku di frame terakhir (siang) sementara HUD (interval
-// 500 ms, DOM) tetap jalan — persis gejala bug tint cek live v18.
+// v20 Worker 3 (temuan cek live v19): jam dinding frame terakhir, untuk
+// mendeteksi rAF yang dijeda/dithrottle (lihat tickInterval500).
+let waktuFrameTerakhir = 0;
 let loopErrorDilaporkan = false;
 function loop(waktu) {
   try {
   const dt = Math.min(0.05, (waktu - waktuTerakhir) / 1000 || 0.016);
   waktuTerakhir = waktu;
+  waktuFrameTerakhir = Date.now();
   frame++;
   perbaruiWarga(dt);
   perbaruiKendaraan(dt);
@@ -3785,6 +4016,22 @@ function tickInterval500() {
   }
   // HUD disegarkan tiap tick — termasuk saat pause (angka tetap benar).
   renderHUD();
+  // v20 Worker 3 (temuan cek live v19 — tint malam "baru muncul setelah
+  // 00:00"): jalur tint di gambarPeta sudah BENAR (faseSiangMalam memberi
+  // kegelapan 0,85 pada 19–05; tes headless 19:47 lulus). Gejala yang
+  // diamati checker — label fase & ikon bulan berubah, jam HUD jalan,
+  // TAPI peta tetap terang 19:23–23:54 lalu gelap setelah 00:00 — paling
+  // cocok dengan rAF yang dijeda/dithrottle saat jendela browser
+  // tertutup/di-background-kan: rAF berhenti (kanvas membeku di frame
+  // siang terakhir) sementara setInterval 500 ms tetap jalan (jam HUD
+  // maju; saat checker kembali ke tab ~00:00, rAF jalan lagi & tint
+  // muncul). BUKAN bug logika waktu/fase — logika itu TIDAK diubah.
+  // Mitigasi (lapisan render saja): bila tidak ada frame rAF selama
+  // >1 detik, gambar ulang peta sekali dari interval ini. Bila rAF
+  // sehat, penjaga ini tidak pernah memicu (biaya tambahan NOL).
+  if (S && typeof gambarPeta === "function" && Date.now() - waktuFrameTerakhir > 1000) {
+    try { gambarPeta(); } catch (e) {}
+  }
 }
 setInterval(tickInterval500, 500);
 
@@ -3874,7 +4121,15 @@ function mulaiGame(baru) {
     $("avatarPemain").src = S.pemimpin.avatar;
     $("namaPemimpin").textContent = "Pemimpin: " + S.pemimpin.nama;
   }
-  $("layarMulai").style.display = "none";
+  // v20: fade masuk game — tambah class "memudar" (transisi CSS 250ms),
+  // lalu sembunyikan #layarMulai; fallback langsung bila classList tak ada.
+  const lm = $("layarMulai");
+  if (lm && lm.classList && typeof lm.classList.add === "function") {
+    lm.classList.add("memudar");
+    setTimeout(() => { lm.style.display = "none"; }, 250);
+  } else if (lm) {
+    lm.style.display = "none";
+  }
   $("aplikasi").style.display = "flex";
   aturUkuranKanvas();
   renderHUD(); renderMenuBangun(); renderPanelKiri(); renderPanelKanan(); renderBerita();
@@ -3922,7 +4177,7 @@ window.addEventListener("DOMContentLoaded", () => {
     // ketuk sekali = minta konfirmasi, ketuk kedua = jalankan.
     if (adaSave() && !konfirmasiBaru) {
       konfirmasiBaru = true;
-      $("btnBaru").textContent = "⚠️ Yakin? Simpanan lama dihapus";
+      $("btnBaru").textContent = "Yakin? Simpanan lama dihapus";
       toast("Ketuk ＋ Permainan Baru lagi untuk mengonfirmasi.", "ok");
       setTimeout(() => { konfirmasiBaru = false; $("btnBaru").textContent = "＋ PERMAINAN BARU"; }, 5000);
       return;
@@ -3947,6 +4202,71 @@ function tampilkanTahap(nama) {
     $("tahap" + t.charAt(0).toUpperCase() + t.slice(1)).style.display = (t === nama) ? "block" : "none";
   }
   if (nama === "sinematik") aturLayarMulai();
+}
+// v20: kembali ke menu utama — simpan dulu, sembunyikan aplikasi,
+// tampilkan layar mulai (tanpa location.reload). Permainan dijeda
+// selama di menu (kecepatan 0 di memori saja, TIDAK disimpan —
+// simpanan tetap menyimpan kecepatan terakhir, jadi "Lanjutkan"
+// memulihkan kecepatan seperti semula).
+function kembaliKeMenuUtama() {
+  if (S) simpan();
+  kecepatan = 0;
+  if (S) S.kecepatan = 0;
+  const ap = $("aplikasi");
+  if (ap) ap.style.display = "none";
+  const lm = $("layarMulai");
+  if (lm) { if (lm.classList) lm.classList.remove("memudar"); lm.style.display = "block"; }
+  aturLayarMulai();
+  const info = $("infoSave");
+  if (info) info.textContent = (adaSave() ? "Simpanan ditemukan — lanjutkan pembangunan pulau Anda." : "Belum ada simpanan — mulai pulau baru.") + " · Versi " + VERSI_GAME;
+  bunyiKlik();
+}
+// ---------------- Manajemen profil (v20 Worker 3) ----------------
+// Profil (nama, gender, avatar, tutorialSelesai, dibuat) tersimpan
+// TERPISAH dari simpanan game di CITY.PROFIL_KEY. Mengubah profil di
+// sini memperbarui profilPemain + S.pemimpin sesi ini; menghapus profil
+// TIDAK menghapus simpanan game (tombol Lanjutkan muncul lagi setelah
+// profil baru dibuat lewat MULAI).
+function ubahNamaPemimpin(nama) {
+  const bersih = String(nama || "").trim();
+  if (!bersih) { toast("Isi nama pemimpin dulu.", "gagal"); bunyiGagal(); return; }
+  if (!profilPemain) { toast("Belum ada profil.", "gagal"); return; }
+  profilPemain.nama = bersih;
+  if (S && S.pemimpin) S.pemimpin.nama = bersih;
+  const el = $("namaPemimpin");
+  if (el) el.textContent = "Pemimpin: " + bersih;
+  simpanProfil();
+  bunyiSukses(); toast("Nama pemimpin diubah.", "ok");
+  if (panelKiri === "pengaturan") renderPanelKiri();
+}
+function ubahGenderPemimpin(gender) {
+  if (!profilPemain) { toast("Belum ada profil.", "gagal"); return; }
+  if (gender !== "pria" && gender !== "wanita") return;
+  profilPemain.gender = gender;
+  profilPemain.avatar = AVATAR_KARAKTER[gender];
+  if (S && S.pemimpin) { S.pemimpin.gender = gender; S.pemimpin.avatar = AVATAR_KARAKTER[gender]; }
+  const av = $("avatarPemain");
+  if (av) av.src = AVATAR_KARAKTER[gender];
+  simpanProfil();
+  bunyiSukses(); toast("Karakter diubah menjadi " + (gender === "wanita" ? "Wanita" : "Pria") + ".", "ok");
+  if (panelKiri === "pengaturan") renderPanelKiri();
+}
+let konfirmasiResetProfil = false; // hapus profil: ketuk dua kali (tanpa dialog confirm)
+function resetProfil() {
+  if (!konfirmasiResetProfil) {
+    konfirmasiResetProfil = true;
+    bunyiKlik();
+    if (panelKiri === "pengaturan") renderPanelKiri();
+    setTimeout(() => { konfirmasiResetProfil = false; if (panelKiri === "pengaturan") renderPanelKiri(); }, 5000);
+    return;
+  }
+  konfirmasiResetProfil = false;
+  try { localStorage.removeItem(CITY.PROFIL_KEY); } catch (e) {}
+  profilPemain = null;
+  // tutorialSelesai ikut terhapus bersama profil (tersimpan di profil,
+  // bukan di save) — permainan baru menampilkan formulir identitas +
+  // tutorial lagi. Simpanan game TIDAK dihapus.
+  kembaliKeMenuUtama();
 }
 // Atur tombol layar mulai sesuai profil & simpanan (profil tidak ditanya ulang)
 function aturLayarMulai() {

@@ -391,10 +391,11 @@ catch (e) { cek("render peta + jalan/jembatan baru (tanpa error)", false, e.mess
 C.S.jalan = jalanLama; C.S.jembatan = jembLama;
 
 
-// v14: tampilan referensi — 15 tab bangun v19, minimap, berita, ghost
-// (v19: tab jembatan/dekorasi/sosial dihapus; jembatan menunggu Worker UI)
-cek("TAB_BANGUN 15 tab (v19)", C.TAB_BANGUN.length === 15, C.TAB_BANGUN.length);
-cek("v19: tidak ada lagi tab jembatan/dekorasi/sosial/infrastruktur/ekonomi/perkebunan", !["jembatan", "dekorasi", "sosial", "infrastruktur", "ekonomi", "perkebunan"].some(id => C.TAB_BANGUN.some(t => t.id === id)));
+// v14: tampilan referensi — 19 tab bangun v20, minimap, berita, ghost
+// (v19: tab jembatan/dekorasi/sosial dihapus; jembatan menunggu Worker UI;
+// v20: jembatan & dekorasi kembali sebagai tab sendiri)
+cek("TAB_BANGUN 19 tab (v20)", C.TAB_BANGUN.length === 19, C.TAB_BANGUN.length);
+cek("v20: tab jembatan & dekorasi ADA; sosial/infrastruktur/ekonomi/perkebunan tetap tidak ada", ["jembatan", "dekorasi"].every(id => C.TAB_BANGUN.some(t => t.id === id)) && !["sosial", "infrastruktur", "ekonomi", "perkebunan"].some(id => C.TAB_BANGUN.some(t => t.id === id)));
 cek("v19: tidak ada lagi kat sosial/ekonomi/perkebunan/infrastruktur", !C.BANGUNAN.some(b => ["sosial", "ekonomi", "perkebunan", "infrastruktur"].includes(b.kat)));
 cek("v19: taman & taman-wisata di lingkungan, lapangan & stadion di rekreasi", C.BANGUNAN_MAP["taman"].kat === "lingkungan" && C.BANGUNAN_MAP["taman-wisata"].kat === "lingkungan" && C.BANGUNAN_MAP["lapangan"].kat === "rekreasi" && C.BANGUNAN_MAP["stadion"].kat === "rekreasi");
 cek("v19: museum & pasar-budaya di hiburan", C.BANGUNAN_MAP["museum"].kat === "hiburan" && C.BANGUNAN_MAP["pasar-budaya"].kat === "hiburan");
@@ -406,7 +407,7 @@ vm.runInContext('mode = { jenis: "bangun", id: "rumah-sederhana" }; hover = { x:
 try { C.gambarPeta(); cek("ghost 'Bangun di Sini' (tanpa error)", true); } catch (e) { cek("ghost 'Bangun di Sini' (tanpa error)", false, e.message); }
 vm.runInContext('mode = { jenis: "pilih", id: null }; hover = null;', sandbox);
 try { C.renderHUD(); cek("renderHUD v14 (tanpa error)", true); } catch (e) { cek("renderHUD v14 (tanpa error)", false, e.message); }
-try { C.renderMenuBangun(); cek("renderMenuBangun 15 tab v19 (tanpa error)", true); } catch (e) { cek("renderMenuBangun 15 tab v19 (tanpa error)", false, e.message); }
+try { C.renderMenuBangun(); cek("renderMenuBangun 19 tab v20 (tanpa error)", true); } catch (e) { cek("renderMenuBangun 19 tab v20 (tanpa error)", false, e.message); }
 try { C.renderPanelKiri(); C.renderPanelKanan(); cek("panel kiri/kanan v14 (tanpa error)", true); } catch (e) { cek("panel kiri/kanan v14 (tanpa error)", false, e.message); }
 
 
@@ -793,7 +794,7 @@ cek("simpanan lama: tutorial dianggap selesai", C.S.tutorial && C.S.tutorial.sel
 // Tab Transportasi (v19, pengganti Infrastruktur) memuat 8 bangunan:
 // dermaga, pelabuhan, bandara, terminal-feri, pusat-logistik,
 // terminal-bus, halte, taksi-stand.
-cek("TAB_BANGUN 15 tab termasuk Transportasi (v19)", C.TAB_BANGUN.length === 15 && C.TAB_BANGUN.some(t => t.id === "transportasi"), C.TAB_BANGUN.map(t => t.id).join(","));
+cek("TAB_BANGUN 19 tab termasuk Transportasi (v20)", C.TAB_BANGUN.length === 19 && C.TAB_BANGUN.some(t => t.id === "transportasi"), C.TAB_BANGUN.map(t => t.id).join(","));
 const infraBangunan = C.BANGUNAN.filter(b => b.kat === "transportasi").map(b => b.id);
 cek("kategori transportasi berisi dermaga, pelabuhan, bandara, terminal-feri", infraBangunan.includes("dermaga") && infraBangunan.includes("pelabuhan") && infraBangunan.includes("bandara") && infraBangunan.includes("terminal-feri"), infraBangunan.join(","));
 vm.runInContext('kategoriBangun = "transportasi";', sandbox);
@@ -849,8 +850,8 @@ const kecHarap = ["tebing-tinggi-barat", "tebing-tinggi", "tebing-tinggi-timur",
 // (a) konstanta, ukuran peta & cakupan kecamatan
 cek("CITY 480x320, seed 20261111", C.CITY.GRID_W === 480 && C.CITY.GRID_H === 320 && C.CITY.SEED === 20261111, C.CITY.GRID_W + "x" + C.CITY.GRID_H + " seed " + C.CITY.SEED);
 cek("CITY SAVE_KEY/SAVE_LAMA/PROFIL_KEY v17", C.CITY.SAVE_KEY === "merantiRisingWorldV1" && C.CITY.SAVE_LAMA === "saudagarSaguMerantiCityV1" && C.CITY.PROFIL_KEY === "merantiRisingProfilV1", C.CITY.SAVE_KEY + " / " + C.CITY.SAVE_LAMA + " / " + C.CITY.PROFIL_KEY);
-cek("VERSI_GAME v19", versiGame17 === "v19", versiGame17);
-cek("index.html memakai ?v=10/7/4/1/20", idxHtml.includes("css/city.css?v=10") && idxHtml.includes("js/city-data.js?v=7") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city.js?v=20"));
+cek("VERSI_GAME v20", versiGame17 === "v20", versiGame17);
+cek("index.html memakai ?v=12/9/4/1/22 (v20)", idxHtml.includes("css/city.css?v=12") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=1") && idxHtml.includes("js/city.js?v=22"));
 cek("PULAU_DEFS 27 pulau", !!pulauDefs17 && pulauDefs17.length === 27, pulauDefs17 ? pulauDefs17.length : "tidak ada");
 cek("KECAMATAN_DEFS 9 kecamatan", kecIds.length === 9, kecIds.length);
 cek("9 id kecamatan sesuai kontrak", kecHarap.every(id => kecIds.includes(id)), kecIds.join(","));
@@ -1157,7 +1158,7 @@ cek("v17.1: helper cariTileKebunSagu ada", srcCityA.includes("function cariTileK
 cek("v17.1: panel legenda terrain ada", srcCityA.includes("Peta — Legenda Terrain"));
 cek("v17.1: auto-pan tutorial langkah 6 memakai cariTileKebunSagu", srcCityA.includes("cariTileKebunSagu()"));
 cek("v18-A: kontrol waktu baru di index.html (btnKec05, tanpa btnHari/btnKec3)", idxHtml.includes('id="btnKec05"') && !idxHtml.includes('id="btnHari"') && !idxHtml.includes('id="btnKec3"'));
-cek("v18-D: VERSI_GAME naik ke v19 (modul akhir)", C.VERSI_GAME === "v19", C.VERSI_GAME);
+cek("v18-D: VERSI_GAME naik ke v20 (modul akhir)", C.VERSI_GAME === "v20", C.VERSI_GAME);
 // Kembalikan ke permainan baru yang bersih setelah semua uji waktu
 C.mulaiGame(true);
 cek("v18-A: permainan baru mulai 06:00 hari ke-0", C.waktuGame === 360 && C.hariGame() === 0 && C.jamGame() === 6, C.waktuGame);
@@ -1415,7 +1416,7 @@ cek("v18-C: riset tetap harian (olah-sagu 2 hari, konstruksi-beton 3 hari)", C.T
 cek("v18-C: prosesPergantianHari tetap memajukan riset per hari", srcCityB.includes("S.riset.sisa--"));
 cek("v18-C: tidak ada lagi progres konstruksi harian (b.progres += 1 / d.waktu)", !srcCityB.includes("b.progres += 1 / d.waktu"));
 cek("v18-C: loop utama tidak lagi memanggil perbaruiFeri(dt)", !srcCityB.includes("perbaruiFeri(dt);"));
-cek("v18-D: VERSI_GAME v19 (modul akhir)", C.VERSI_GAME === "v19", C.VERSI_GAME);
+cek("v18-D: VERSI_GAME v20 (modul akhir)", C.VERSI_GAME === "v20", C.VERSI_GAME);
 let mangroveC = 0;
 for (const baris of C.peta.terrain) for (const t of baris) if (t === "mangrove") mangroveC++;
 cek("v18-C: v17.1 mangrove > 1000 petak", mangroveC > 1000, mangroveC);
@@ -1424,8 +1425,8 @@ cek("v18-C: v17.1 cariTileKebunSagu menemukan petak valid", !!tkSaguC && C.cekBa
 cek("v18-C: v17.1 legenda terrain masih ada", srcCityB.includes("Peta — Legenda Terrain"));
 // ---- v18-D: UI jam/kalender bar atas + tutorial langkah 4 baru + hapus hariBerikutnya ----
 // (a) versi & refs di index.html (dibaca dari disk; harness sudah memakai fs)
-cek("v18-D: VERSI_GAME v19", C.VERSI_GAME === "v19", C.VERSI_GAME);
-cek("v18-D: index.html refs v19 (css v=10, city-data v=7, city-map v=4, city-utilitas v=1, city v=20) + city-lalin v=1", idxHtml.includes("css/city.css?v=10") && idxHtml.includes("js/city-data.js?v=7") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city.js?v=20") && idxHtml.includes("js/city-lalin.js?v=1"));
+cek("v18-D: VERSI_GAME v20", C.VERSI_GAME === "v20", C.VERSI_GAME);
+cek("v18-D: index.html refs v20 (css v=12, city-data v=9, city-map v=4, city-utilitas v=1, city v=22) + city-bahagia v=1 + city-lalin v=1", idxHtml.includes("css/city.css?v=12") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city.js?v=22") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=1"));
 cek("v18-D: #jamAtas ada di bar atas (jam, hari, fase, cuaca)", idxHtml.includes('id="jamAtas"') && idxHtml.includes('id="jamAtasJam"') && idxHtml.includes('id="jamAtasHari"') && idxHtml.includes('id="jamAtasFase"') && idxHtml.includes('id="jamAtasCuaca"'));
 cek("v18-D: #ikonFase hanya satu (dipindah ke #jamAtas, tidak duplikat)", (idxHtml.match(/id="ikonFase"/g) || []).length === 1);
 cek("v18-D: tidak ada tombol Hari Berikutnya di index.html", !idxHtml.includes('id="btnHari"') && !idxHtml.includes('id="btnKec3"') && !/<button[^>]*>[^<]*Hari Berikutnya/.test(idxHtml) && !idxHtml.includes("⏭ Hari Berikutnya"));
@@ -1485,7 +1486,22 @@ cek("v19: 63 bangunan baru terdaftar", ID_BARU_V19.every(id => !!C.BANGUNAN_MAP[
 cek("v19: gambar bangunan baru berpola assets/buildings/building-<id>.png", ID_BARU_V19.every(id => C.BANGUNAN_MAP[id].gambar === "assets/buildings/building-" + id + ".png"));
 cek("v19: semua bangunan punya harga/waktu/kaki valid", C.BANGUNAN.every(b => b.harga && typeof b.harga.uang === "number" && b.harga.uang > 0 && typeof b.waktu === "number" && b.waktu > 0 && b.kaki && b.kaki.w >= 1 && b.kaki.h >= 1), C.BANGUNAN.filter(b => !(b.harga && b.harga.uang > 0 && b.waktu > 0 && b.kaki && b.kaki.w >= 1 && b.kaki.h >= 1)).map(b => b.id).join(","));
 cek("v19: semua bangunan punya listrik & air (angka >= 0)", C.BANGUNAN.every(b => typeof b.listrik === "number" && b.listrik >= 0 && typeof b.air === "number" && b.air >= 0), C.BANGUNAN.filter(b => !(typeof b.listrik === "number" && b.listrik >= 0 && typeof b.air === "number" && b.air >= 0)).map(b => b.id).join(","));
-cek("v19: semua kat bangunan ada di TAB_BANGUN", C.BANGUNAN.every(b => C.TAB_BANGUN.some(t => t.id === b.kat)), [...new Set(C.BANGUNAN.map(b => b.kat))].filter(k => !C.TAB_BANGUN.some(t => t.id === k)).join(","));
+// v20: kat simulasi tetap 15 nilai, tapi tab tampilan 19 — kat "lahan"
+// dipecah jadi tab Pertanian/Perikanan (ids), kat "jalan" tampil lewat
+// tab Jalan (jalan:true), dekorasi lewat flag (dekorasi:true). Yang
+// diuji: setiap bangunan terwakili lewat salah satu deskriptor tab.
+function tabDariDefV20(def) {
+  return C.TAB_BANGUN.filter(t => {
+    if (t.jalan) return def.kat === "jalan";
+    if (t.jembatan) return false;
+    if (t.dekorasi) return !!def.dekorasi;
+    if (t.ids) return t.ids.includes(def.id);
+    if (t.kat) return t.kat.includes(def.kat);
+    return false;
+  }).map(t => t.id);
+}
+cek("v20: semua kat bangunan terwakili di TAB_BANGUN (kat/ids/jalan/dekorasi)", C.BANGUNAN.every(b => tabDariDefV20(b).length > 0), C.BANGUNAN.filter(b => tabDariDefV20(b).length === 0).map(b => b.id).join(","));
+cek("v20: kat lahan tidak punya tab sendiri; bangunannya di Pertanian/Perikanan (ids)", !C.TAB_BANGUN.some(t => t.id === "lahan") && C.BANGUNAN.filter(b => b.kat === "lahan").every(b => ["pertanian", "perikanan"].some(tid => { const t = C.TAB_BANGUN.find(x => x.id === tid); return t && t.ids && t.ids.includes(b.id); })), C.BANGUNAN.filter(b => b.kat === "lahan").map(b => b.id).join(","));
 cek("v19: semua kat bangunan ada di KATEGORI", C.BANGUNAN.every(b => C.KATEGORI.some(k => k.id === b.kat)));
 cek("v19: konsumsi contoh — rumah-sederhana 2 kW/20 L, bandara 120 kW/600 L, RS 60 kW/400 L", C.BANGUNAN_MAP["rumah-sederhana"].listrik === 2 && C.BANGUNAN_MAP["rumah-sederhana"].air === 20 && C.BANGUNAN_MAP["bandara"].listrik === 120 && C.BANGUNAN_MAP["bandara"].air === 600 && C.BANGUNAN_MAP["rumah-sakit"].listrik === 60 && C.BANGUNAN_MAP["rumah-sakit"].air === 400);
 // Listrik
@@ -2437,34 +2453,34 @@ cek("v19-w5: HUD — saat pause, HUD tetap refresh tapi waktu berhenti", vm.runI
 C.aturKecepatan(1);
 
 // --- (7/8) index.html: pill & stat & tombol rel baru ada di markup ---
-cek("v19-w5: index.html punya pill listrik/air + 4 stat baru + tombol Ekonomi/Penduduk", idxHtml.includes('id="listrikTeks"') && idxHtml.includes('id="airTeks"') && idxHtml.includes('id="statMacet"') && idxHtml.includes('id="statLayanan"') && idxHtml.includes('id="statLingkungan"') && idxHtml.includes('id="statKualitas"') && idxHtml.includes('data-tab="ekonomi"') && idxHtml.includes('data-tab="penduduk"') && idxHtml.includes('title="Pemerintahan & Peradaban"'));
+cek("v20: index.html punya pill listrik/air + 4 stat baru + tombol Ekonomi/Penduduk", idxHtml.includes('id="listrikTeks"') && idxHtml.includes('id="airTeks"') && idxHtml.includes('id="statMacet"') && idxHtml.includes('id="statLayanan"') && idxHtml.includes('id="statLingkungan"') && idxHtml.includes('id="statKualitas"') && idxHtml.includes('data-tab="ekonomi"') && idxHtml.includes('data-tab="penduduk"') && idxHtml.includes('title="Pemerintahan"'));
 
-// --- (5c/8/9) WARNA_KAT minimap: semua 15 kat v19 punya warna (bukan putih) ---
+// --- (5c/8/9) WARNA_KAT minimap: semua 19 tab v20 punya warna (bukan putih) ---
 const mKatW5 = srcCityD.match(/const WARNA_KAT = \{([^}]*)\}/);
 cek("v19-w5: WARNA_KAT ditemukan di city.js", !!mKatW5);
 if (mKatW5) {
   const semuaKatAda = C.TAB_BANGUN.every(t => mKatW5[1].includes(t.id + ":"));
-  cek("v19-w5: WARNA_KAT mencakup semua 15 kat TAB_BANGUN", semuaKatAda, C.TAB_BANGUN.map(t => t.id).join(","));
+  cek("v20: WARNA_KAT mencakup semua 19 tab TAB_BANGUN", semuaKatAda, C.TAB_BANGUN.map(t => t.id).join(","));
   cek("v19-w5: WARNA_KAT tidak ada yang putih (#ffffff)", !mKatW5[1].includes("#ffffff") && !mKatW5[1].includes("#fff"));
 }
 
-// --- (5b) kartu jembatan di tab Jalan + render semua tab tanpa error ---
-cek("v19-w5: kartu jembatan dirender di cabang tab Jalan (Object.keys(JEMBATAN))", srcCityD.indexOf("Object.keys(JEMBATAN)", srcCityD.indexOf('kategoriBangun === "jalan"')) > 0);
-cek("v19-w5: cabang dead-code tab jembatan sudah dihapus", !srcCityD.includes('kategoriBangun === "jembatan"'));
+// --- (5b) kartu jembatan di tab Jembatan sendiri (v20, dipisah dari tab Jalan) ---
+cek("v20: kartu jembatan dirender di cabang tab Jembatan (tab.jembatan + Object.keys(JEMBATAN))", srcCityD.indexOf("Object.keys(JEMBATAN)", srcCityD.indexOf("tab.jembatan")) > 0);
+cek("v20: cabang tab Jalan TIDAK lagi merender kartu jembatan", (() => { const a = srcCityD.indexOf("if (tab.jalan)"); const b = srcCityD.indexOf("} else if (tab.jembatan)"); return a > 0 && b > a && !srcCityD.slice(a, b).includes("JEMBATAN"); })());
 let renderMenuOkW5 = true;
 for (const t of C.TAB_BANGUN) {
   vm.runInContext("kategoriBangun = '" + t.id + "';", sandbox);
   try { C.renderMenuBangun(); } catch (e) { renderMenuOkW5 = false; console.log("renderMenuBangun gagal di tab", t.id, e.message); }
 }
-cek("v19-w5: renderMenuBangun semua 15 tab tanpa error", renderMenuOkW5);
+cek("v20: renderMenuBangun semua 19 tab tanpa error", renderMenuOkW5);
 
 // --- (7/8/9) render semua cabang panel kiri + overlay + zona UI ---
 let renderPanelOkW5 = true;
-for (const tab of ["peta", "misi", "ekonomi", "penduduk", "pulau", "kecamatan", "riset", "peradaban", "berita"]) {
+for (const tab of ["peta", "misi", "ekonomi", "penduduk", "pulau", "kecamatan", "riset", "peradaban", "berita", "infrastruktur", "statistik", "pengaturan"]) {
   vm.runInContext("panelKiri = '" + tab + "';", sandbox);
   try { C.renderPanelKiri(); } catch (e) { renderPanelOkW5 = false; console.log("renderPanelKiri gagal di", tab, e.message); }
 }
-cek("v19-w5: renderPanelKiri semua 9 cabang tanpa error", renderPanelOkW5);
+cek("v20: renderPanelKiri semua 12 cabang tanpa error", renderPanelOkW5);
 vm.runInContext("panelKiri = 'peta';", sandbox);
 C.renderPanelKiri();
 cek("v19-w5: panel Peta memuat pemilih overlay + zona", C.document.getElementById("panelKiriIsi").innerHTML.includes("Overlay Peta") && C.document.getElementById("panelKiriIsi").innerHTML.includes("Tanpa Overlay") && C.document.getElementById("panelKiriIsi").innerHTML.includes("Zona"));
@@ -2488,8 +2504,298 @@ cek("v19-w5: panel kanan bangunan menampilkan status Listrik & Air", C.document.
 vm.runInContext("terpilih = null;", sandbox);
 C.renderPanelKanan();
 
-// --- (5a) tutorial langkah 6 membuka tab Lahan (bukan Perkebunan) ---
-cek("v19-w5: tutorial langkah 6 memakai bukaMenuBangunUntuk('lahan', 'bangun', 'kebun-sagu')", srcCityD.includes('bukaMenuBangunUntuk("lahan", "bangun", "kebun-sagu")') && !srcCityD.includes('bukaMenuBangunUntuk("perkebunan"'));
+// --- (5a) tutorial langkah 6 membuka tab Pertanian (bukan Lahan/Perkebunan) ---
+cek("v20: tutorial langkah 6 memakai bukaMenuBangunUntuk('pertanian', 'bangun', 'kebun-sagu')", srcCityD.includes('bukaMenuBangunUntuk("pertanian", "bangun", "kebun-sagu")') && !srcCityD.includes('bukaMenuBangunUntuk("lahan"') && !srcCityD.includes('bukaMenuBangunUntuk("perkebunan"'));
+
+// ============ v20: Complete UI/UX Modernization ============
+// (a) TAB_BANGUN 19 kategori — urutan & id sesuai brief v20
+const ID_TAB_V20 = ["permukiman", "komersial", "perkantoran", "jalan", "jembatan", "listrik", "air", "drainase", "pendidikan", "kesehatan", "keamanan", "rekreasi", "hiburan", "industri", "pertanian", "perikanan", "transportasi", "lingkungan", "dekorasi"];
+cek("v20-tab: 19 kategori, urutan & id sesuai brief", JSON.stringify(C.TAB_BANGUN.map(t => t.id)) === JSON.stringify(ID_TAB_V20), C.TAB_BANGUN.map(t => t.id).join(","));
+cek("v20-tab: semua kategori punya nama", C.TAB_BANGUN.every(t => typeof t.nama === "string" && t.nama.length > 0));
+// Jumlah kartu per tab (render nyata via renderMenuBangun; kartu yang
+// terkunci di level 1 tetap dirender, jadi hitungan berlaku di level 1).
+const HARAP_KARTU_V20 = { permukiman: 6, komersial: 7, perkantoran: 10, jalan: 12, jembatan: 3, listrik: 6, air: 6, drainase: 8, pendidikan: 8, kesehatan: 6, keamanan: 3, rekreasi: 17, hiburan: 11, industri: 8, pertanian: 7, perikanan: 1, transportasi: 8, lingkungan: 3, dekorasi: 8 };
+const itemElV20 = vm.runInContext('$("itemBangun")', sandbox);
+let kartuV20 = 0;
+const appendAsliV20 = itemElV20.appendChild;
+itemElV20.appendChild = function(c) { kartuV20++; return appendAsliV20.call(this, c); };
+let hitungKartuOkV20 = true;
+const rincianKartuV20 = [];
+for (const t of C.TAB_BANGUN) {
+  vm.runInContext("kategoriBangun = '" + t.id + "';", sandbox);
+  kartuV20 = 0;
+  try { C.renderMenuBangun(); } catch (e) { hitungKartuOkV20 = false; console.log("renderMenuBangun gagal di tab", t.id, e.message); }
+  rincianKartuV20.push(t.id + "=" + kartuV20);
+  if (kartuV20 !== HARAP_KARTU_V20[t.id]) hitungKartuOkV20 = false;
+}
+itemElV20.appendChild = appendAsliV20;
+cek("v20-tab: tiap kategori punya >=1 kartu", C.TAB_BANGUN.every(t => HARAP_KARTU_V20[t.id] >= 1));
+cek("v20-tab: jumlah kartu per tab sesuai tabel pemetaan 19 kategori", hitungKartuOkV20, rincianKartuV20.join(" "));
+cek("v20-tab: total kartu 138 (118 bangunan utama + 8 dekorasi duplikat + 9 jalan + 3 jembatan)", Object.values(HARAP_KARTU_V20).reduce((a, b) => a + b, 0) === 138);
+// (b) pemetaan kategori -> bangunan konsisten (data, bukan render)
+const tanpaTabV20 = C.BANGUNAN.filter(b => tabDariDefV20(b).length === 0);
+cek("v20-tab: 118/118 bangunan muncul di >=1 tab", tanpaTabV20.length === 0, tanpaTabV20.map(b => b.id).join(","));
+const utamaV20 = new Set();
+for (const b of C.BANGUNAN) for (const tid of tabDariDefV20(b)) if (tid !== "dekorasi") utamaV20.add(b.id);
+cek("v20-tab: 118 bangunan unik di 18 tab utama (tanpa Dekorasi)", utamaV20.size === 118, utamaV20.size);
+cek("v20-tab: tidak ada id tak dikenal di daftar ids tab", C.TAB_BANGUN.every(t => !t.ids || t.ids.every(id => !!C.BANGUNAN_MAP[id])), C.TAB_BANGUN.filter(t => t.ids).flatMap(t => t.ids).filter(id => !C.BANGUNAN_MAP[id]).join(","));
+const semuaIdsV20 = C.TAB_BANGUN.filter(t => t.ids).flatMap(t => t.ids);
+cek("v20-tab: daftar ids antar-tab tidak tumpang tindih", new Set(semuaIdsV20).size === semuaIdsV20.length, semuaIdsV20.length + " vs unik " + new Set(semuaIdsV20).size);
+cek("v20-tab: kat lahan = 8 bangunan (7 Pertanian + 1 Perikanan)", C.BANGUNAN.filter(b => b.kat === "lahan").length === 8 && C.TAB_BANGUN.find(t => t.id === "pertanian").ids.length === 7 && C.TAB_BANGUN.find(t => t.id === "perikanan").ids.length === 1);
+cek("v20-tab: tab Dekorasi = 8 bangunan berflag dekorasi", C.BANGUNAN.filter(b => b.dekorasi).length === 8 && C.BANGUNAN.filter(b => b.dekorasi).every(b => tabDariDefV20(b).includes("dekorasi")));
+cek("v20-tab: tab Jalan = 9 jenis jalan + 3 bangunan kat jalan", Object.keys(C.JALAN).length === 9 && C.BANGUNAN.filter(b => b.kat === "jalan").length === 3);
+cek("v20-tab: tab Jembatan = 3 kartu jembatan", Object.keys(C.JEMBATAN).length === 3);
+// (m) ikon SVG: ke-19 `ikon` TAB_BANGUN adalah string SVG
+cek("v20-ikon: ke-19 ikon TAB_BANGUN adalah string SVG (viewBox 24, stroke currentColor)", C.TAB_BANGUN.every(t => typeof t.ikon === "string" && t.ikon.includes("<svg") && t.ikon.includes('viewBox="0 0 24 24"') && t.ikon.includes('stroke="currentColor"')));
+const katElV20 = vm.runInContext('$("katBangun")', sandbox);
+const tombolTabV20 = [];
+const appendKatAsliV20 = katElV20.appendChild;
+katElV20.appendChild = function(c) { tombolTabV20.push(c); return appendKatAsliV20.call(this, c); };
+try {
+  C.renderMenuBangun();
+  cek("v20-ikon: renderMenuBangun merender 19 tombol tab berikon SVG tanpa error", tombolTabV20.length === 19 && tombolTabV20.every(b => (b.innerHTML || "").includes("<svg") && (b.innerHTML || "").includes("<span>")), tombolTabV20.length + " tombol");
+} catch (e) { cek("v20-ikon: renderMenuBangun merender 19 tombol tab berikon SVG tanpa error", false, e.message); }
+katElV20.appendChild = appendKatAsliV20;
+// (c) smoke test render: HUD + menu + semua cabang panel kiri + panel kanan
+try {
+  C.renderHUD(); C.renderMenuBangun(); C.renderPanelKanan();
+  cek("v20-render: renderHUD + renderMenuBangun + renderPanelKanan tanpa error", true);
+} catch (e) { cek("v20-render: renderHUD + renderMenuBangun + renderPanelKanan tanpa error", false, e.message); }
+let panelOkV20 = true;
+for (const tab of ["peta", "misi", "ekonomi", "penduduk", "riset", "peradaban", "pulau", "kecamatan", "berita", "infrastruktur", "statistik", "pengaturan"]) {
+  vm.runInContext("panelKiri = '" + tab + "';", sandbox);
+  try { C.renderPanelKiri(); } catch (e) { panelOkV20 = false; console.log("renderPanelKiri v20 gagal di", tab, e.message); }
+}
+cek("v20-render: renderPanelKiri 12 cabang (incl. infrastruktur/statistik/pengaturan) tanpa error", panelOkV20);
+vm.runInContext('panelKiri = "infrastruktur";', sandbox);
+C.renderPanelKiri();
+cek("v20-render: panel Infrastruktur memuat status Listrik & Air", C.document.getElementById("panelKiriIsi").innerHTML.includes("Listrik") && C.document.getElementById("panelKiriIsi").innerHTML.includes("Air"));
+vm.runInContext('panelKiri = "statistik";', sandbox);
+C.renderPanelKiri();
+cek("v20-render: panel Statistik memuat Statistik Kota & Kemacetan", C.document.getElementById("panelKiriIsi").innerHTML.includes("Statistik Kota") && C.document.getElementById("panelKiriIsi").innerHTML.includes("Kemacetan"));
+vm.runInContext('panelKiri = "pengaturan";', sandbox);
+C.renderPanelKiri();
+cek("v20-render: panel Pengaturan memuat Pengaturan & Hapus Profil", C.document.getElementById("panelKiriIsi").innerHTML.includes("Pengaturan") && C.document.getElementById("panelKiriIsi").innerHTML.includes("Hapus Profil"));
+vm.runInContext("terpilih = { jenis: 'bangunan', idx: S.bangunan.findIndex(b=>b.id==='rumah-sederhana') };", sandbox);
+try { C.renderPanelKanan(); cek("v20-render: renderPanelKanan bangunan terpilih memuat Listrik & Air", C.document.getElementById("panelKanan").innerHTML.includes("Listrik") && C.document.getElementById("panelKanan").innerHTML.includes("Air")); } catch (e) { cek("v20-render: renderPanelKanan bangunan terpilih memuat Listrik & Air", false, e.message); }
+vm.runInContext("terpilih = null;", sandbox);
+C.renderPanelKanan();
+// (d) semua fungsi yang dipanggil tombol UI baru ada
+for (const fn of ["bukaTabKiri", "aturKecepatan", "kameraPusatkan", "toggleSuara", "aturIkonSuara", "kembaliKeMenuUtama", "ubahNamaPemimpin", "ubahGenderPemimpin", "resetProfil", "aturOverlay", "aturModeZonaUI", "bukaMenuBangunUntuk", "cariTileKebunSagu", "statusListrik", "statusAir", "bangunCacheOverlay", "gambarOverlay", "hargaTeks", "simpanProfil", "muatProfil", "aturLayarMulai", "renderMenuBangun", "renderPanelKiri", "renderPanelKanan", "renderHUD", "gambarPeta", "gambarMinimap", "majukanWaktu", "tickWaktuGame", "tickInterval500", "hitungUtilitas", "hitungKebahagiaan", "hitungLalin", "faseSiangMalam", "kegelapanSaatIni"]) {
+  cek("v20-fungsi: " + fn + " ada", typeof C[fn] === "function");
+}
+const bunyiAwalV20 = vm.runInContext("bunyiAktif", sandbox);
+C.toggleSuara();
+cek("v20-fungsi: toggleSuara membalik bunyiAktif + ikon suara tetap SVG", vm.runInContext("bunyiAktif", sandbox) === !bunyiAwalV20 && (C.document.getElementById("btnSuara").innerHTML || "").includes("<svg"), "bunyiAktif=" + vm.runInContext("bunyiAktif", sandbox));
+C.toggleSuara();
+cek("v20-fungsi: toggleSuara kedua mengembalikan bunyiAktif", vm.runInContext("bunyiAktif", sandbox) === bunyiAwalV20);
+// (n) tombol-tombol utama punya handler (spot-check) + klik memanggil fungsinya
+for (const id of ["btnPengaturan", "btnLipatKatalog", "btnPetaBesar", "btnModeBangun", "btnKec0", "btnKec05", "btnKec1", "btnKec2", "btnBerita", "btnSimpan", "btnSuara"]) {
+  cek("v20-tombol: #" + id + " punya handler onclick", typeof C.document.getElementById(id).onclick === "function");
+}
+cek("v20-tombol: rel kiri 8 tombol (peta/misi/penduduk/ekonomi/infrastruktur/peradaban/riset/statistik)", ["peta", "misi", "penduduk", "ekonomi", "infrastruktur", "peradaban", "riset", "statistik"].every(t => idxHtml.includes('data-tab="' + t + '"')));
+cek("v20-tombol: pintasan wilayah Kepulauan & Kecamatan ada", idxHtml.includes('data-tab="pulau"') && idxHtml.includes('data-tab="kecamatan"') && idxHtml.includes('id="pintasanWilayah"'));
+cek("v20-tombol: id baru v20 ada di index.html (#btnPengaturan, #btnLipatKatalog, #btnPetaBesar, #barisKatalog)", idxHtml.includes('id="btnPengaturan"') && idxHtml.includes('id="btnLipatKatalog"') && idxHtml.includes('id="btnPetaBesar"') && idxHtml.includes('id="barisKatalog"'));
+vm.runInContext('panelKiri = "misi";', sandbox);
+C.document.getElementById("panelKiri").classList.remove("tersembunyi");
+C.document.getElementById("btnPengaturan").onclick();
+cek("v20-tombol: klik #btnPengaturan membuka panel Pengaturan", vm.runInContext("panelKiri", sandbox) === "pengaturan");
+const mbV20 = C.document.getElementById("menuBangun");
+C.document.getElementById("btnLipatKatalog").onclick();
+cek("v20-tombol: klik #btnLipatKatalog melipat katalog", mbV20.classList.contains("terlipat"));
+C.document.getElementById("btnLipatKatalog").onclick();
+cek("v20-tombol: klik #btnLipatKatalog kedua membuka katalog lagi", !mbV20.classList.contains("terlipat"));
+const kpV20 = C.document.getElementById("kartuPeta");
+C.document.getElementById("btnPetaBesar").onclick();
+cek("v20-tombol: klik #btnPetaBesar memperbesar minimap", kpV20.classList.contains("diperbesar"));
+C.document.getElementById("btnPetaBesar").onclick();
+cek("v20-tombol: klik #btnPetaBesar kedua mengembalikan minimap", !kpV20.classList.contains("diperbesar"));
+C.document.getElementById("btnKec0").onclick();
+cek("v20-tombol: klik #btnKec0 menjeda simulasi", C.kecepatan === 0);
+C.document.getElementById("btnKec1").onclick();
+cek("v20-tombol: klik #btnKec1 kembali ke 1x", C.kecepatan === 1);
+const mbModeV20 = C.document.getElementById("menuBangun");
+mbModeV20.classList.remove("tersembunyi");
+C.document.getElementById("btnModeBangun").onclick();
+cek("v20-tombol: klik #btnModeBangun menyembunyikan drawer bangun", mbModeV20.classList.contains("tersembunyi"));
+C.document.getElementById("btnModeBangun").onclick();
+cek("v20-tombol: klik #btnModeBangun kedua menampilkan drawer lagi", !mbModeV20.classList.contains("tersembunyi"));
+// (h) legenda terrain (temuan cek live v19): tanpa "[object Object]", menyebut harga buka lahan
+vm.runInContext('panelKiri = "peta";', sandbox);
+C.renderPanelKiri();
+const htmlLegendaV20 = C.document.getElementById("panelKiriIsi").innerHTML;
+cek("v20-legenda: legenda tanpa '[object Object]'", !htmlLegendaV20.includes("[object Object]"));
+cek("v20-legenda: Rawa menyebut buka lahan Rp10.000", htmlLegendaV20.includes("Rawa") && htmlLegendaV20.includes("buka lahan Rp10.000"));
+cek("v20-legenda: Lahan Gambut menyebut buka lahan Rp15.000", htmlLegendaV20.includes("Lahan Gambut") && htmlLegendaV20.includes("buka lahan Rp15.000"));
+
+// (i) overlay: rumah padam HARUS merah, jalan macet HARUS merah/kuning
+// Skenario blackout (v19-util Game B): RS 60 kW + banyak rumah > 100 kW generator.
+C.mulaiGame(true);
+C.aturKecepatan(1);
+vm.runInContext("waktuGame = 360;", sandbox);
+C.S.cuaca = "Cerah";
+const L4V20 = C.peta.landing;
+const rsPosV20 = cariTileBebasDekat(L4V20, 7, 2, 2);
+if (rsPosV20) tambahBangunanTes("rumah-sakit", rsPosV20.x, rsPosV20.y);
+let nRumahV20 = 0;
+for (let i = 0; i < 40 && nRumahV20 < 25; i++) {
+  const p = cariTileBebasDekat(L4V20, 7, 1, 1);
+  if (!p) break;
+  tambahBangunanTes("rumah-sederhana", p.x, p.y);
+  nRumahV20++;
+}
+C.hitungUtilitas();
+const rumahPadamV20 = C.S.bangunan.find(b => b.id === "rumah-sederhana" && b.selesai && (C.BANGUNAN_MAP[b.id].listrik || 0) > 0 && b.berlistrik === false);
+const rumahNyalaV20 = C.S.bangunan.find(b => b.id === "rumah-sederhana" && b.selesai && b.berlistrik === true);
+cek("v20-overlay: skenario blackout — ada rumah padam & ada rumah menyala", !!rumahPadamV20 && !!rumahNyalaV20, "padam=" + C.S.utilitas.listrik.padam.length + " rumah=" + nRumahV20);
+C.aturOverlay("listrik");
+const cacheListrikV20 = C.bangunCacheOverlay();
+cek("v20-overlay: rumah padam HARUS merah di overlay listrik", !!rumahPadamV20 && cacheListrikV20.get(rumahPadamV20.x + "," + rumahPadamV20.y) === "rgba(231,76,60,0.45)", rumahPadamV20 ? cacheListrikV20.get(rumahPadamV20.x + "," + rumahPadamV20.y) : "tidak ada rumah padam");
+cek("v20-overlay: rumah berlistrik HARUS hijau di overlay listrik", !!rumahNyalaV20 && cacheListrikV20.get(rumahNyalaV20.x + "," + rumahNyalaV20.y) === "rgba(34,197,94,0.35)", rumahNyalaV20 ? cacheListrikV20.get(rumahNyalaV20.x + "," + rumahNyalaV20.y) : "tidak ada rumah menyala");
+// (k) pill listrik menampilkan jumlah padam (temuan cek live v19)
+C.renderHUD();
+const teksListrikV20 = C.document.getElementById("listrikTeks").textContent;
+const jmlPadamV20 = C.S.bangunan.filter(b => b.selesai && (C.BANGUNAN_MAP[b.id].listrik || 0) > 0 && b.berlistrik === false).length;
+cek("v20-pill: pill listrik menampilkan 'N padam' saat ada bangunan padam", jmlPadamV20 > 0 && teksListrikV20.includes("· " + jmlPadamV20 + " padam"), teksListrikV20 + " (padam=" + jmlPadamV20 + ")");
+// Bangunan dalam konstruksi ikut diwarnai (temuan v19: sebelumnya dikecualikan dari overlay)
+const tileKonstruksiV20 = cariTileBebasDekat(L4V20, 12, 1, 1);
+if (tileKonstruksiV20) {
+  C.S.bangunan.push({ id: "rumah-sederhana", x: tileKonstruksiV20.x, y: tileKonstruksiV20.y, rot: 0, selesai: false, progres: 0.5, kecamatan: C.kecamatanDiPeta(C.peta, tileKonstruksiV20.x, tileKonstruksiV20.y) });
+  C.hitungUtilitas();
+  const cacheKonstruksiV20 = C.bangunCacheOverlay();
+  cek("v20-overlay: rumah dalam konstruksi ikut diwarnai (tidak dikecualikan)", cacheKonstruksiV20.has(tileKonstruksiV20.x + "," + tileKonstruksiV20.y), cacheKonstruksiV20.get(tileKonstruksiV20.x + "," + tileKonstruksiV20.y));
+} else cek("v20-overlay: rumah dalam konstruksi ikut diwarnai (tidak dikecualikan)", false, "tidak ada tile bebas");
+// Cache dibangun ulang saat status berlistrik berubah (temuan v19: cache basi)
+const pltdPosV20 = cariTileBebasDekat(L4V20, 8, 3, 3) || { x: 150, y: 150 };
+tambahBangunanTes("pltd", pltdPosV20.x, pltdPosV20.y);
+C.hitungUtilitas();
+const cacheListrik2V20 = C.bangunCacheOverlay();
+cek("v20-overlay: cache dibangun ulang setelah PLTD (objek cache baru)", cacheListrik2V20 !== cacheListrikV20);
+cek("v20-overlay: rumah yang tadinya padam kini hijau setelah PLTD", !!rumahPadamV20 && cacheListrik2V20.get(rumahPadamV20.x + "," + rumahPadamV20.y) === "rgba(34,197,94,0.35)", rumahPadamV20 ? cacheListrik2V20.get(rumahPadamV20.x + "," + rumahPadamV20.y) : "tidak ada rumah padam");
+cek("v20-overlay: PLTD diwarnai kuning (pembangkit)", cacheListrik2V20.get(pltdPosV20.x + "," + pltdPosV20.y) === "rgba(251,191,36,0.4)", cacheListrik2V20.get(pltdPosV20.x + "," + pltdPosV20.y));
+C.aturOverlay(null);
+// Pill normal tanpa padam setelah jaringan pulih
+C.mulaiGame(true);
+C.renderHUD();
+cek("v20-pill: pill listrik tanpa 'padam' saat jaringan normal", C.document.getElementById("listrikTeks").textContent.includes("kW") && !C.document.getElementById("listrikTeks").textContent.includes("padam"), C.document.getElementById("listrikTeks").textContent);
+// Overlay lalu lintas: macet merah, padat kuning, lancar hijau
+C.mulaiGame(true);
+C.aturKecepatan(1);
+vm.runInContext("waktuGame = 360;", sandbox);
+C.S.cuaca = "Cerah";
+C.S.penduduk.total = 400;
+C.hitungLalin();
+C.aturOverlay("traffic");
+const cacheMacetV20 = C.bangunCacheOverlay();
+const kunciJalanV20 = Object.keys(C.S.lalin.perPetak);
+cek("v20-overlay: populasi 400 -> semua petak jalan macet (status 2)", kunciJalanV20.length > 0 && kunciJalanV20.every(k => C.S.lalin.perPetak[k] === 2), kunciJalanV20.length + " petak");
+cek("v20-overlay: overlay traffic untuk jalan macet HARUS merah", kunciJalanV20.length > 0 && kunciJalanV20.every(k => cacheMacetV20.get(k) === "rgba(231,76,60,0.5)"), kunciJalanV20.slice(0, 3).map(k => k + "=" + cacheMacetV20.get(k)).join(" "));
+C.S.penduduk.total = 10;
+C.hitungLalin();
+const cachePadatV20 = C.bangunCacheOverlay();
+cek("v20-overlay: populasi 10 -> ada petak padat kuning", Object.keys(C.S.lalin.perPetak).some(k => C.S.lalin.perPetak[k] === 1 && cachePadatV20.get(k) === "rgba(241,196,15,0.45)"), JSON.stringify(C.S.lalin.perPetak));
+C.S.penduduk.total = 4;
+C.hitungLalin();
+const cacheLancarV20 = C.bangunCacheOverlay();
+cek("v20-overlay: populasi 4 -> ada petak lancar hijau", Object.keys(C.S.lalin.perPetak).some(k => C.S.lalin.perPetak[k] === 0 && cacheLancarV20.get(k) === "rgba(34,197,94,0.35)"), JSON.stringify(C.S.lalin.perPetak));
+C.aturOverlay(null);
+
+// (e) v19 tetap jalan: waktuGame, listrik, air, kebahagiaan, zoning, APBD, konstruksi 4 jam
+C.mulaiGame(true);
+C.aturKecepatan(1);
+vm.runInContext("waktuGame = 360;", sandbox);
+C.S.cuaca = "Cerah";
+C.majukanWaktu(60);
+cek("v20-v19: waktuGame maju 60 menit", C.waktuGame === 420, C.waktuGame);
+cek("v20-v19: listrik awal 100 kW (generator)", C.S.utilitas.listrik.kapasitasKW === 100, C.S.utilitas.listrik.kapasitasKW);
+cek("v20-v19: air awal 1000 L/jam (sumur)", C.S.utilitas.air.kapasitasL === 1000, C.S.utilitas.air.kapasitasL);
+C.hitungKebahagiaan();
+cek("v20-v19: kebahagiaan 20 indikator terisi", Object.keys(C.S.bahagia.rincian).length === 20 && typeof C.S.bahagia.nilai === "number");
+const tileZonaV20 = cariTileRumah();
+if (tileZonaV20) {
+  C.tetapkanZona(tileZonaV20.x, tileZonaV20.y, "industrial");
+  cek("v20-v19: zoning — rumah di zona industrial ditolak", !C.cekBangun(C.BANGUNAN_MAP["rumah-sederhana"], tileZonaV20.x, tileZonaV20.y, 0).ok);
+  C.tetapkanZona(tileZonaV20.x, tileZonaV20.y, "residential");
+  cek("v20-v19: zoning — rumah di zona residential diterima", C.cekBangun(C.BANGUNAN_MAP["rumah-sederhana"], tileZonaV20.x, tileZonaV20.y, 0).ok);
+} else {
+  cek("v20-v19: zoning — rumah di zona industrial ditolak", false, "tidak ada tile rumah");
+  cek("v20-v19: zoning — rumah di zona residential diterima", false, "tidak ada tile rumah");
+}
+cek("v20-v19: APBD tarif default 10% & efek netral", C.S.tarifPajakProperti === 10 && C.efekPajakPropertiBahagia() === 0);
+C.aturTarifPajak(20);
+cek("v20-v19: APBD tarif 20% -> efek -3 bahagia", C.S.tarifPajakProperti === 20 && C.efekPajakPropertiBahagia() === -3);
+C.aturTarifPajak(10);
+const tRumahV20b = cariTileRumah();
+if (tRumahV20b) {
+  C.bangunDi(C.BANGUNAN_MAP["rumah-sederhana"], tRumahV20b.x, tRumahV20b.y, 0);
+  const rmV20 = C.S.bangunan.find(b => b.id === "rumah-sederhana" && b.x === tRumahV20b.x && b.y === tRumahV20b.y);
+  C.majukanWaktu(240);
+  cek("v20-v19: konstruksi rumah 4 jam selesai", !!rmV20 && rmV20.selesai === true, rmV20 && rmV20.progres);
+} else cek("v20-v19: konstruksi rumah 4 jam selesai", false, "tidak ada tile rumah");
+// (f) v17.1 tetap jalan: legenda, mangrove, cariTileKebunSagu
+cek("v20-v171: legenda terrain masih ada", srcCityD.includes("Peta — Legenda Terrain"));
+let mangroveV20 = 0;
+for (const baris of C.peta.terrain) for (const t of baris) if (t === "mangrove") mangroveV20++;
+cek("v20-v171: mangrove > 1000 petak", mangroveV20 > 1000, mangroveV20);
+const tkSaguV20 = C.cariTileKebunSagu();
+cek("v20-v171: cariTileKebunSagu menemukan petak valid", !!tkSaguV20 && C.cekBangun(C.BANGUNAN_MAP["kebun-sagu"], tkSaguV20.x, tkSaguV20.y, 0).ok, JSON.stringify(tkSaguV20));
+// (g) gambarPeta render smoke test
+try { C.gambarPeta(); cek("v20-render: gambarPeta smoke test tanpa error", true); } catch (e) { cek("v20-render: gambarPeta smoke test tanpa error", false, e.message); }
+try {
+  const mmV20 = C.document.getElementById("minimap");
+  mmV20.width = 220; mmV20.height = 132;
+  mmV20.getContext = () => buatCtx();
+  C.gambarMinimap();
+  cek("v20-render: gambarMinimap smoke test tanpa error", true);
+} catch (e) { cek("v20-render: gambarMinimap smoke test tanpa error", false, e.message); }
+// (l) regresi tint malam 19:47 + lampu, dan 12:00 tanpa tint (temuan cek live v18/v19)
+C.mulaiGame(true);
+vm.runInContext("(()=>{const t=tileTengahDunia(peta.landing.x, peta.landing.y); kamera.cx=t.x; kamera.cy=t.y; kamera.zoom=1;})()", sandbox);
+vm.runInContext("waktuGame = 1187;", sandbox); // 19:47
+cek("v20-tint: kegelapan 19:47 = 0,85", C.kegelapanSaatIni() === 0.85, C.kegelapanSaatIni());
+sandbox.__recV20 = ctxRekamW5();
+vm.runInContext("ctx = __recV20;", sandbox);
+panggilanTint.length = 0;
+let gambarMalamV20 = true;
+try { C.gambarPeta(); } catch (e) { gambarMalamV20 = false; }
+cek("v20-tint: gambarPeta 19:47 tanpa error", gambarMalamV20);
+const idxTintV20 = panggilanTint.findIndex(c => c[0] === "fillRect" && typeof c[1] === "string" && c[1].startsWith("rgba(10,20,60"));
+cek("v20-tint: fillRect gelap rgba(10,20,60,0.383) dipanggil 19:47", idxTintV20 >= 0 && panggilanTint[idxTintV20][1] === "rgba(10,20,60,0.383)", idxTintV20 >= 0 ? panggilanTint[idxTintV20][1] : "tidak ada");
+const lampuV20 = panggilanTint.slice(idxTintV20 + 1).filter(c => c[0] === "fill" && typeof c[1] === "string" && c[1].startsWith("rgba(255,214,110")).length;
+cek("v20-tint: lampu tergambar DI ATAS tint (7 lampu setelah fillRect gelap)", lampuV20 === 7, lampuV20);
+vm.runInContext("waktuGame = 720;", sandbox); // 12:00 siang
+panggilanTint.length = 0;
+C.gambarPeta();
+cek("v20-tint: TIDAK ada fillRect gelap pada 12:00 siang", !panggilanTint.some(c => c[0] === "fillRect" && typeof c[1] === "string" && c[1].startsWith("rgba(10,20,60")));
+vm.runInContext("ctx = kanvas.getContext('2d');", sandbox); // kembalikan ctx stub
+// (j) alur profil: ubah nama/gender, reset dua-ketuk (profil hilang, save tetap, tutorial aktif lagi)
+vm.runInContext('profilPemain = { nama: "Sukma", gender: "wanita", avatar: AVATAR_KARAKTER.wanita, tutorialSelesai: true, dibuat: "2026-11-11T00:00:00.000Z" }; simpanProfil();', sandbox);
+C.mulaiGame(true);
+cek("v20-profil: profil awal Sukma/wanita, pemimpin di bar atas", C.profilPemain && C.profilPemain.nama === "Sukma" && C.S.pemimpin.nama === "Sukma" && vm.runInContext('$("namaPemimpin").textContent', sandbox) === "Pemimpin: Sukma");
+C.ubahNamaPemimpin("Rani");
+cek("v20-profil: ubah nama -> profil + pemimpin + bar atas + localStorage", C.profilPemain.nama === "Rani" && C.S.pemimpin.nama === "Rani" && vm.runInContext('$("namaPemimpin").textContent', sandbox) === "Pemimpin: Rani" && JSON.parse(store.get(C.CITY.PROFIL_KEY)).nama === "Rani");
+C.ubahNamaPemimpin("   ");
+cek("v20-profil: ubah nama kosong ditolak (nama tetap Rani)", C.profilPemain.nama === "Rani");
+C.ubahGenderPemimpin("pria");
+cek("v20-profil: ubah gender -> pria + avatar pria", C.profilPemain.gender === "pria" && C.profilPemain.avatar === vm.runInContext("AVATAR_KARAKTER.pria", sandbox) && C.S.pemimpin.gender === "pria" && vm.runInContext('$("avatarPemain").src', sandbox) === vm.runInContext("AVATAR_KARAKTER.pria", sandbox));
+C.ubahGenderPemimpin("wanita");
+cek("v20-profil: ubah gender kembali -> wanita", C.profilPemain.gender === "wanita" && C.profilPemain.avatar === vm.runInContext("AVATAR_KARAKTER.wanita", sandbox));
+vm.runInContext('panelKiri = "pengaturan";', sandbox);
+C.renderPanelKiri();
+C.resetProfil();
+cek("v20-profil: reset ketuk 1 — konfirmasi aktif, profil BELUM hilang", vm.runInContext("konfirmasiResetProfil", sandbox) === true && !!C.profilPemain && store.has(C.CITY.PROFIL_KEY));
+cek("v20-profil: reset ketuk 1 — panel menampilkan 'Yakin hapus profil?'", C.document.getElementById("panelKiriIsi").innerHTML.includes("Yakin hapus profil?"));
+const adaSaveSblmResetV20 = store.has(C.CITY.SAVE_KEY);
+C.resetProfil();
+cek("v20-profil: reset ketuk 2 — profil hilang (localStorage + memori)", !store.has(C.CITY.PROFIL_KEY) && C.profilPemain === null);
+cek("v20-profil: reset profil TIDAK menghapus simpanan game", adaSaveSblmResetV20 && store.has(C.CITY.SAVE_KEY) && C.adaSave());
+cek("v20-profil: setelah reset, layar mulai menampilkan MULAI (formulir identitas)", vm.runInContext('$("btnMulai").style.display', sandbox) === "inline-block");
+C.mulaiGame(true);
+cek("v20-profil: permainan baru tanpa profil — tutorial aktif lagi (langkah 0)", C.S.tutorial.aktif === true && C.S.tutorial.selesai === false && C.S.tutorial.langkah === 0, JSON.stringify(C.S.tutorial));
+// Kembalikan profil Sukma agar keadaan akhir bersih
+vm.runInContext('profilPemain = { nama: "Sukma", gender: "wanita", avatar: AVATAR_KARAKTER.wanita, tutorialSelesai: true, dibuat: "2026-11-11T00:00:00.000Z" }; simpanProfil();', sandbox);
+C.mulaiGame(true);
+cek("v20-profil: profil Sukma dipulihkan (keadaan akhir bersih)", C.profilPemain && C.profilPemain.nama === "Sukma" && C.S.pemimpin.nama === "Sukma");
 
 // Kembalikan ke keadaan bersih
 vm.runInContext("waktuGame = 360;", sandbox);
