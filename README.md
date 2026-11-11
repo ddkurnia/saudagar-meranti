@@ -6,6 +6,28 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v13.2 — Semua Bangunan Kini Punya Sprite Ilustrasi (2026-11-11)
+
+- **46 sprite ilustrasi isometrik baru** untuk semua bangunan yang
+  sebelumnya digambar vektor (rumah, sekolah, rumah sakit, pasar,
+  pabrik, masjid, taman, stadion, bandara, dermaga, kebun, dan
+  lainnya) — gaya modern yang konsisten dengan aset asli: perspektif
+  isometrik 2.5D yang sama, warna natural cerah, latar transparan,
+  tanpa teks. Diproduksi sebagai 8 contact sheet (2×3 dan 2×2),
+  dipotong dengan `assets/tools/split_sheet_auto.py` yang mendeteksi
+  celah putih antar bangunan per kolom (bukan grid kaku) supaya atap
+  gedung tinggi tidak terpotong, lalu latar dihapus dengan rembg
+  (u2net). Total aset bangunan kini 53 file PNG.
+- **2 bangunan kembali dari game lama:** Kedai Kopi Liberika dan
+  Rumah Pekerja (memakai sprite aslinya) kini ada di katalog —
+  total **54 bangunan** dalam 8 kategori. Data vektor lama tetap
+  tersimpan di `js/city-data.js` sebagai cadangan, render memakai
+  gambar.
+- `assets/manifest.json` v11 (135 file) dan `assets/preview.html`
+  v11 diperbarui; `js/city-data.js?v=2`.
+- Uji headless lolos (`TEST_V13_OK` + cek aset): 54 bangunan,
+  semua `gambar` ada filenya, kedai & rumah pekerja terdaftar.
+
 ## Yang baru di v13 — PEROMBAKAN TOTAL: Island City Builder (2026-11-11)
 
 Game lama (v1–v12, saudagar sagu 3D) diganti sepenuhnya dengan **City
@@ -24,7 +46,7 @@ versi city builder di bawah ini.
   permanen di grid.
 
 **Construction Engine (Fase 2)**
-- Katalog data-driven 46 bangunan dalam 8 kategori (permukiman,
+- Katalog data-driven 54 bangunan dalam 8 kategori (permukiman,
   infrastruktur, pendidikan, kesehatan, ekonomi, perkebunan, industri,
   sosial) + 3 jenis jalan + 2 jembatan — semua di `js/city-data.js`.
 - Placement nyata: cek lahan, biaya (uang/kayu/batu/besi), akses jalan,
@@ -32,10 +54,10 @@ versi city builder di bawah ini.
   tebang hutan memberi kayu, level & teknologi sebagai syarat.
 - Konstruksi bertahap: perancah + progress bar selama N hari, baru
   beroperasi. Bangunan bisa dipindah, diputar, dan dihapus (refund 50%).
-- Visual: bangunan utama memakai aset sprite asli (kilang, pasar,
-  pelabuhan, gudang, kebun, pohon kelapa); sisanya digambar vektor
-  isometrik konsisten (atap pelana/limas/kubah/datar, menara, salib,
-  cerobong berasap, taman, stadion, sawah, kandang).
+- Visual: semua 54 bangunan memakai sprite ilustrasi isometrik
+  (7 aset asli + 46 ilustrasi baru v13.2 + kedai & rumah pekerja);
+  data vektor lama tetap tersimpan sebagai cadangan. Bangunan yang
+  gambarnya belum termuat tampil sebagai prisma abu-abu sementara.
 
 **Simulation Engine (Fase 3)**
 - Penduduk: kapasitas rumah, pertumbuhan bila ada rumah kosong &
@@ -73,11 +95,10 @@ versi city builder di bawah ini.
   ada di dunia 2D isometrik (opsional menurut brief).
 - Uji headless 38/38 lolos (`TEST_V13_OK`): peta deterministik,
   placement & validasi, rantai sagu, riset, level, save/load, render.
-- Catatan jujur: bangunan non-sprite digambar vektor (bukan ilustrasi
-  foto); produksi sprite ilustrasi baru untuk semua bangunan adalah
-  pekerjaan Fase 5 (pipeline contact-sheet yang sama seperti v9/v10).
 - v13.1 (perbaikan kecil, 2026-11-11): jam dalam hari kini ikut
   tersimpan — setelah reload, jam tidak lagi kembali ke 06:00.
+- v13.2 (2026-11-11): semua bangunan kini punya sprite ilustrasi
+  (lihat bagian atas) — pekerjaan Fase 5 selesai.
 
 ## Yang baru di v12.3 — Tampilan HD: Supersampling 2x Selalu
 
