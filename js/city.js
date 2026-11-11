@@ -1503,9 +1503,9 @@ function gambarMinimap() {
     const t0 = duniaKeTile(sudut[0].x, sudut[0].y), t1 = duniaKeTile(sudut[1].x, sudut[1].y);
     const x0 = Math.max(0, Math.min(t0.x, t1.x) * sx), y0 = Math.max(0, Math.min(t0.y, t1.y) * sy);
     const x1 = Math.min(W, Math.max(t0.x, t1.x) * sx), y1 = Math.min(H, Math.max(t0.y, t1.y) * sy);
-    cx.fillStyle = "rgba(255,255,255,0.10)";
+    cx.fillStyle = "rgba(255,255,255,0.18)";
     cx.fillRect(x0, y0, Math.max(4, x1 - x0), Math.max(4, y1 - y0));
-    cx.strokeStyle = "rgba(255,255,255,0.9)"; cx.lineWidth = 1.5;
+    cx.strokeStyle = "#fbbf24"; cx.lineWidth = 2;
     cx.strokeRect(x0, y0, Math.max(4, x1 - x0), Math.max(4, y1 - y0));
   }
 }
