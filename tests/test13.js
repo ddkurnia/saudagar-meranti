@@ -327,4 +327,28 @@ try { C.renderHUD(); cek("renderHUD v14 (tanpa error)", true); } catch (e) { cek
 try { C.renderMenuBangun(); cek("renderMenuBangun 10 tab (tanpa error)", true); } catch (e) { cek("renderMenuBangun 10 tab (tanpa error)", false, e.message); }
 try { C.renderPanelKiri(); C.renderPanelKanan(); cek("panel kiri/kanan v14 (tanpa error)", true); } catch (e) { cek("panel kiri/kanan v14 (tanpa error)", false, e.message); }
 
+
+// v14.3: kotak area layar minimap — kotak sungguhan, mengecil saat zoom, berpindah saat geser
+const mmEl2 = C.document.getElementById("minimap");
+mmEl2.width = 220; mmEl2.height = 132;
+const rekam = { isi: [] };
+const ctxRekam = {
+  fillStyle: "", strokeStyle: "", lineWidth: 1,
+  fillRect: function (x, y, w, h) { rekam.isi.push(["fill", x, y, w, h]); },
+  strokeRect: function (x, y, w, h) { rekam.isi.push(["stroke", x, y, w, h]); },
+};
+mmEl2.getContext = () => ctxRekam;
+const tengahMini = vm.runInContext("tileTengahDunia(20, 15)", sandbox);
+C.kamera.cx = tengahMini.x; C.kamera.cy = tengahMini.y; C.kamera.zoom = 2;
+C.gambarMinimap();
+const kotak1 = rekam.isi.filter(r => r[0] === "stroke").pop();
+cek("kotak minimap berbentuk kotak (lebar & tinggi < peta)", !!kotak1 && kotak1[3] < 220 && kotak1[4] < 132 && kotak1[3] > 10 && kotak1[4] > 10, kotak1 ? kotak1.slice(1).map(v => Math.round(v)).join(",") : "tidak ada");
+const tengahMini2 = vm.runInContext("tileTengahDunia(10, 10)", sandbox);
+C.kamera.cx = tengahMini2.x; C.kamera.cy = tengahMini2.y;
+rekam.isi = [];
+C.gambarMinimap();
+const kotak2 = rekam.isi.filter(r => r[0] === "stroke").pop();
+cek("kotak minimap berpindah mengikuti kamera", !!kotak2 && (Math.abs(kotak2[1] - kotak1[1]) > 2 || Math.abs(kotak2[2] - kotak1[2]) > 2), kotak2 ? kotak2.slice(1).map(v => Math.round(v)).join(",") : "tidak ada");
+C.kamera.zoom = 1; C.kamera.cx = tengahMini.x; C.kamera.cy = tengahMini.y;
+
 console.log(gagal === 0 ? "TEST_V13_OK" : "TEST_V13_GAGAL:" + gagal + " dari " + (lulus + gagal));

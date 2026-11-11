@@ -1499,10 +1499,13 @@ function gambarMinimap() {
   }
   if (kanvas) {
     const lebar = kanvas.clientWidth, tinggi = kanvas.clientHeight;
-    const sudut = [layarKeDunia(0, 0, lebar, tinggi), layarKeDunia(lebar, tinggi, lebar, tinggi)];
-    const t0 = duniaKeTile(sudut[0].x, sudut[0].y), t1 = duniaKeTile(sudut[1].x, sudut[1].y);
-    const x0 = Math.max(0, Math.min(t0.x, t1.x) * sx), y0 = Math.max(0, Math.min(t0.y, t1.y) * sy);
-    const x1 = Math.min(W, Math.max(t0.x, t1.x) * sx), y1 = Math.min(H, Math.max(t0.y, t1.y) * sy);
+    // Keempat sudut layar (bukan hanya diagonal) — proyeksi isometrik
+    // membuat dua sudut diagonal hampir satu baris tile, sehingga kotak
+    // jadi pita tipis. Dengan keempat sudut, kotaknya benar-benar kotak.
+    const sudut = [layarKeDunia(0, 0, lebar, tinggi), layarKeDunia(lebar, 0, lebar, tinggi), layarKeDunia(0, tinggi, lebar, tinggi), layarKeDunia(lebar, tinggi, lebar, tinggi)];
+    const tileSudut = sudut.map(p => duniaKeTile(p.x, p.y));
+    const x0 = Math.max(0, Math.min(...tileSudut.map(t => t.x)) * sx), y0 = Math.max(0, Math.min(...tileSudut.map(t => t.y)) * sy);
+    const x1 = Math.min(W, Math.max(...tileSudut.map(t => t.x)) * sx), y1 = Math.min(H, Math.max(...tileSudut.map(t => t.y)) * sy);
     cx.fillStyle = "rgba(255,255,255,0.18)";
     cx.fillRect(x0, y0, Math.max(4, x1 - x0), Math.max(4, y1 - y0));
     cx.strokeStyle = "#fbbf24"; cx.lineWidth = 2;
