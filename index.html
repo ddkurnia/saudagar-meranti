@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Saudagar Sagu Meranti — Game Simulasi Bisnis</title>
-<link rel="stylesheet" href="css/style.css?v=11">
+<link rel="stylesheet" href="css/style.css?v=12">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
 </head>
 <body>
@@ -15,7 +15,7 @@
       <h1>🌴 Saudagar Sagu Meranti</h1>
       <p>Simulasi Bisnis Sagu dari Kepulauan Meranti</p>
       <button id="tombolMulai" onclick="mulaiGame()">▶ MULAI BERMAIN</button>
-      <p class="splash-kecil">Dunia 2.5D dengan aset sprite asli • Klik petak kebun untuk menanam • Klik bangunan untuk beraksi • Seret untuk menggeser kamera</p>
+      <p class="splash-kecil">Dunia 3D • Putar kamera bebas seperti melihat peta • Klik petak kebun untuk menanam • Klik bangunan untuk beraksi • Seret kiri: geser • Seret kanan / 🔄: putar • Roda: zoom • Q / E: putar • Spasi: beraksi</p>
     </div>
   </div>
 
@@ -83,6 +83,16 @@
     </div>
 
     <div id="lokasi">📍 Selatpanjang,<br>Kepulauan Meranti</div>
+
+    <!-- KONTROL KAMERA ORBIT 3D -->
+    <div id="kontrolKamera">
+      <button onclick="putarKamera(-45)" title="Putar kamera kiri 45°">⟲</button>
+      <button onclick="putarKamera(45)" title="Putar kamera kanan 45°">⟳</button>
+      <button id="tombolModePutar" onclick="toggleModePutar()" title="Mode seret: Geser / Putar">🔄 <span id="modePutarTeks">Geser</span></button>
+      <button onclick="zoomKamera(-0.3)" title="Zoom in (mendekat)">＋</button>
+      <button onclick="zoomKamera(0.3)" title="Zoom out (menjauh)">－</button>
+      <span id="kompas" title="Arah kamera">➤</span>
+    </div>
     <div id="menang" style="display:none">🏆 Kamu sudah menjadi Saudagar Sagu Meranti!</div>
   </main>
 
@@ -99,7 +109,6 @@
   <!-- TOMBOL HARI BERIKUTNYA (lingkaran hijau, ala referensi) -->
   <button id="tombolHari" onclick="hariBerikutnya()" title="Hari Berikutnya">▶<span>Hari Berikutnya</span></button>
 </div>
-<script src="js/world25.js?v=4"></script>
-<script src="js/game.js?v=12"></script>
+<script src="js/game.js?v=13"></script>
 </body>
 </html>

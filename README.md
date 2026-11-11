@@ -9,6 +9,30 @@ memproduksi Mie Sagu dan Kue Bangkit Sagu, mengekspor tepung sagu ke pasar
 internasional, dan mengembangkan Kedai Kopi Liberika Meranti sebagai
 bisnis sampingan.
 
+## Yang baru di v11 — Dunia 3D Kembali + Kamera Orbit Putar & Zoom
+
+- **Dunia kembali 3D penuh (Three.js):** kebun rumbia, kilang dengan silo
+  dan forklift, pasar berawning merah-putih, kedai kopi, pelabuhan dengan
+  kapal kargo besar dan crane, jembatan kayu, laut berombak, dan karakter
+  3D — seperti v6–v8. Dunia sprite 2.5D (v9–v10) tidak lagi dipakai di
+  tampilan utama; file `js/world25.js` dan 68 aset sprite tetap tersimpan
+  di repo dan bisa diaktifkan lagi bila diinginkan.
+- **Kamera orbit bebas seperti melihat peta:**
+  - **Putar:** seret dengan tombol kanan mouse, tahan Q / E, ketuk tombol
+    ⟲ / ⟳ (45°), atau aktifkan mode 🔄 Putar lalu seret satu jari.
+  - **Zoom in / out:** roda mouse, tombol ＋ / －, atau seret kanan
+    vertikal. Jarak 0,6 (dekat sekali) sampai 3,2 (seluruh pulau).
+  - **Geser:** seret kiri / satu jari; arah geser mengikuti sudut kamera.
+  - Kompas ➤ kecil menunjukkan arah kamera.
+  - Semua gerakan kamera dihaluskan (lerp) — tidak ada lompatan.
+- **Animasi halus:** pemain dan NPC mengakselerasi & mengerem bertahap
+  (tidak berhenti mendadak), ayunan kaki mereda halus saat berhenti,
+  hadap berputar halus (tidak patah 90°), dan kaki NPC hanya mengayun
+  saat benar-benar berjalan.
+- **Kontrol keyboard berubah:** Q / E kini memutar kamera; beraksi
+  memakai **Spasi** (sebelumnya E). Gerak tetap WASD / tombol panah.
+- Ekonomi v1–v10, HUD, panel, dan simpanan lama tidak berubah.
+
 ## Yang baru di v10 — Animasi Karakter dari Strip, Payung Kedai & Perbaikan Aset
 
 - **Strip animasi 4-frame (16 file baru):** tiap karakter kini punya

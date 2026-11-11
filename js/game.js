@@ -1,9 +1,10 @@
-// Saudagar Sagu Meranti — v8 SESUAI GAMBAR REFERENSI
-// Visual persis konsep referensi: HUD kaca gelap, logo, avatar Lv/EXP,
-// panel Target Bisnis kanan, sidebar kiri, nav bawah kaca, tombol Hari
-// Berikutnya bundar hijau, papan tanda kayu bangunan, kilang dengan silo
-// dan forklift, pasar awning garis merah-putih, kedai payung, kapal kargo
-// besar, crane, jembatan kayu, cincin hijau pemain. Ekonomi v1-v7 tetap.
+// Saudagar Sagu Meranti — v11 DUNIA 3D + KAMERA ORBIT
+// Dunia kembali 3D penuh (Three.js, seperti v6-v8): bangunan, kapal,
+// crane, jembatan, pohon rumbia dan karakter 3D. Kamera orbit bebas
+// seperti melihat peta: putar (seret kanan / mode Putar / tombol
+// putar / Q-E), zoom (roda mouse / tombol + -), geser (seret kiri).
+// Semua gerakan kamera dan karakter dihaluskan (lerp & easing).
+// Ekonomi v1-v10 tetap, simpanan lama tetap bisa dipakai.
 const SAVE_KEY = "saudagarSaguMerantiV1";
 const TARGET_UANG = 5000000;
 const TARGET_EKSPOR = 100;
@@ -76,7 +77,7 @@ function awal() {
     pelanggan: 0, pelangganDilayani: 0, kepuasan: 0,
     pekerja: { kebun: 0, kilang: 0, barista: 0 },
     kontrak: [], kontrakId: 1,
-    pemain: { x: 480, y: 420, arah: "bawah", jalan: false, langkah: 0, ayun: 0 },
+    pemain: { x: 480, y: 420, arah: "bawah", jalan: false, langkah: 0, ayun: 0, kecepatan: 0 },
     harga: { tepung: 8000, mie: 15000, kue: 12000, ekspor: 15000 },
     log: ["Selamat datang di Selatpanjang 3D! Klik petak kebun — kamu akan berjalan ke sana dan menanam."],
     menang: false,
@@ -357,11 +358,11 @@ function klikDunia(wx, wy) {
 }
 function gerakPemain() {
   const p = S.pemain;
-  let bergerak = false;
-  if (tombol.w) { p.y -= 3; p.arah = "atas"; bergerak = true; }
-  if (tombol.s) { p.y += 3; p.arah = "bawah"; bergerak = true; }
-  if (tombol.a) { p.x -= 3; p.arah = "kiri"; bergerak = true; }
-  if (tombol.d) { p.x += 3; p.arah = "kanan"; bergerak = true; }
+  let bergerak = false, ax = 0, ay = 0;
+  if (tombol.w) { ay -= 1; p.arah = "atas"; bergerak = true; }
+  if (tombol.s) { ay += 1; p.arah = "bawah"; bergerak = true; }
+  if (tombol.a) { ax -= 1; p.arah = "kiri"; bergerak = true; }
+  if (tombol.d) { ax += 1; p.arah = "kanan"; bergerak = true; }
   if (targetJalan) {
     const dx = targetJalan.x - p.x, dy = targetJalan.y - p.y, j = Math.hypot(dx, dy);
     if (j < 6) {
@@ -369,11 +370,14 @@ function gerakPemain() {
       if (aksiTertunda) { const a = aksiTertunda; aksiTertunda = null; aksiTerpilih(); }
     } else {
       p.arah = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "kanan" : "kiri") : (dy > 0 ? "bawah" : "atas");
-      p.x += dx / j * 3; p.y += dy / j * 3; bergerak = true;
+      ax = dx / j; ay = dy / j; bergerak = true;
     }
   }
-  p.jalan = bergerak;
-  if (bergerak) p.langkah += 0.35; else p.langkah = 0;
+  // Kecepatan mengakselerasi & mengerem halus (tidak berhenti mendadak);
+  // fase langkah mengikuti jarak tempuh supaya ayunan kaki tidak patah.
+  p.kecepatan = (p.kecepatan || 0) + ((bergerak ? 3 : 0) - (p.kecepatan || 0)) * 0.15;
+  if (p.kecepatan > 0.05) { p.x += ax * p.kecepatan; p.y += ay * p.kecepatan; p.langkah += p.kecepatan * 0.12; }
+  p.jalan = p.kecepatan > 0.4;
   if (p.ayun > 0) p.ayun--;
   S.lahan.forEach(pl => { if (pl.anim > 0) pl.anim--; });
   p.x = Math.max(16, Math.min(W - 16, p.x)); p.y = Math.max(16, Math.min(H - 16, p.y));
@@ -404,7 +408,7 @@ function bunyiKlik() {
 function mulaiGame() {
   bunyiKlik();
   const s = document.getElementById("splash"); if (s) s.classList.add("tersembunyi");
-  toast("Selamat bermain! Klik petak kebun untuk menanam.");
+  toast("Selamat bermain! Seret untuk menggeser, tombol putar / Q-E untuk memutar kamera.");
 }
 function toggleSuara() {
   suaraAktif = !suaraAktif;
@@ -468,6 +472,31 @@ let plotMeshes = [], buildingMeshes = {}, player3 = null, npc3 = [], pelanggan3 
 let clouds3 = [], water3 = null, boat3 = null, sunMesh = null, moonMesh = null;
 let partikel3D = [], rain3 = [], smoke3 = [], conveyor3 = [];
 let camPan = { x: 0, z: 0 }, camJarak = 2.0;
+let camPanT = { x: 0, z: 0 }, camJarakT = 2.0, camSudut = 0, camSudutT = 0;
+let modePutar = false; // false: seret = geser peta; true: seret = putar kamera
+// --- Matematika kamera orbit (fungsi murni, bisa diuji tanpa Three.js) ---
+function posisiKamera(sudut, jarak, tx, tz) {
+  const d = 17 * jarak, h = 12 * jarak;
+  return { x: tx + Math.sin(sudut) * d, y: h, z: tz + Math.cos(sudut) * d, lx: tx - Math.sin(sudut) * 2, lz: tz - Math.cos(sudut) * 2 };
+}
+function geserKamera(sudut, dx, dy, k) {
+  const c = Math.cos(sudut), s = Math.sin(sudut);
+  return { x: -dx * k * c - dy * k * s, z: dx * k * s - dy * k * c };
+}
+function lerpSudut(a, b, t) {
+  let d = (b - a) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return a + d * t;
+}
+function putarKamera(derajat) { camSudutT += derajat * Math.PI / 180; bunyiKlik(); }
+function zoomKamera(d) { camJarakT = Math.max(0.6, Math.min(3.2, camJarakT + d)); bunyiKlik(); }
+function toggleModePutar() {
+  modePutar = !modePutar; bunyiKlik();
+  const t = document.getElementById("modePutarTeks"); if (t) t.textContent = modePutar ? "Putar" : "Geser";
+  const b = document.getElementById("tombolModePutar"); if (b) b.classList.toggle("aktif", modePutar);
+  toast(modePutar ? "Mode putar: seret untuk memutar kamera" : "Mode geser: seret untuk menggeser peta");
+}
 let signKebun = null, forklift3 = null, cincinPemain = null;
 function mat(warna) { return new THREE.MeshLambertMaterial({ color: warna }); }
 function kotak(w, h, d, warna, x, y, z) {
@@ -790,18 +819,30 @@ function init3D() {
       const t = kotak(0.05, 0.7, 0.05, 0xffffff, (Math.random() - 0.5) * 60, Math.random() * 15, (Math.random() - 0.5) * 34);
       t.visible = false; scene3.add(t); rain3.push(t);
     }
-    // Klik di dunia 3D -> raycast ke tanah; seret untuk geser kamera, roda mouse untuk zoom
+    // Kontrol kamera orbit: klik = pilih, seret kiri = geser peta,
+    // seret kanan / mode Putar = putar kamera (+ zoom vertikal), roda = zoom
     const ray = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
     const bidang = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-    let tekanX = 0, tekanY = 0, menggeser = false;
-    renderer3.domElement.addEventListener("pointerdown", (e) => { tekanX = e.clientX; tekanY = e.clientY; menggeser = false; });
+    let tekanX = 0, tekanY = 0, menggeser = false, dragKanan = false;
+    renderer3.domElement.addEventListener("contextmenu", (e) => e.preventDefault());
+    renderer3.domElement.addEventListener("pointerdown", (e) => { tekanX = e.clientX; tekanY = e.clientY; menggeser = false; dragKanan = (e.button === 2); });
     renderer3.domElement.addEventListener("pointermove", (e) => {
       if (e.buttons === 0) return;
       const dx = e.clientX - tekanX, dy = e.clientY - tekanY;
       if (Math.abs(dx) + Math.abs(dy) > 6) menggeser = true;
-      if (menggeser) { camPan.x -= dx * 0.03; camPan.z -= dy * 0.03; tekanX = e.clientX; tekanY = e.clientY; }
+      if (menggeser) {
+        if (dragKanan || modePutar) {
+          camSudutT += dx * 0.006;
+          camJarakT = Math.max(0.6, Math.min(3.2, camJarakT + dy * 0.004));
+        } else {
+          const g = geserKamera(camSudut, dx, dy, 0.03);
+          camPanT.x += g.x; camPanT.z += g.z;
+        }
+        tekanX = e.clientX; tekanY = e.clientY;
+      }
     });
+    renderer3.domElement.addEventListener("pointercancel", () => { menggeser = false; });
     renderer3.domElement.addEventListener("pointerup", (e) => {
       if (menggeser) return;
       const r = renderer3.domElement.getBoundingClientRect();
@@ -815,7 +856,7 @@ function init3D() {
     });
     renderer3.domElement.addEventListener("wheel", (e) => {
       e.preventDefault();
-      camJarak = Math.max(0.7, Math.min(2.4, camJarak + (e.deltaY > 0 ? 0.1 : -0.1)));
+      camJarakT = Math.max(0.6, Math.min(3.2, camJarakT + (e.deltaY > 0 ? 0.15 : -0.15)));
     }, { passive: false });
     return true;
   } catch (err) {
@@ -879,15 +920,18 @@ function updateDunia3D() {
   if (player3) {
     player3.position.set(w2x(S.pemain.x), 0, w2z(S.pemain.y));
     const rot = { bawah: 0, atas: Math.PI, kanan: Math.PI / 2, kiri: -Math.PI / 2 }[S.pemain.arah] || 0;
-    player3.rotation.y = rot;
     const u = player3.userData;
+    // Hadap berputar halus (tidak patah 90 derajat), ayunan kaki mereda halus saat berhenti
+    u.rotHalus = (u.rotHalus === undefined) ? rot : lerpSudut(u.rotHalus, rot, 0.15);
+    player3.rotation.y = u.rotHalus;
+    u.ampKaki = (u.ampKaki || 0) + ((S.pemain.jalan ? 1 : 0) - (u.ampKaki || 0)) * 0.12;
     const ayun = S.pemain.ayun > 0 ? Math.sin((S.pemain.ayun / 22) * Math.PI) * 1.4 : 0;
     u.alat.rotation.x = -ayun;
     u.alat.visible = true;
-    const k = S.pemain.jalan ? Math.sin(S.pemain.langkah * 2) * 0.6 : 0;
+    const k = Math.sin(S.pemain.langkah * 2) * 0.6 * u.ampKaki;
     u.kakiK.rotation.x = k; u.kakiN.rotation.x = -k;
     u.lenganK.rotation.x = -k; u.lenganN.rotation.x = k;
-    player3.position.y = S.pemain.jalan ? Math.abs(Math.sin(S.pemain.langkah * 2)) * 0.08 : 0;
+    player3.position.y = Math.abs(Math.sin(S.pemain.langkah * 2)) * 0.08 * u.ampKaki;
   }
 }
 function animate3D() {
@@ -903,13 +947,19 @@ function animate3D() {
   NPC.forEach((n, idx) => {
     const tx = n.wx[n.i], ty = n.wy[n.i];
     const dx = tx - n.x, dy = ty - n.y, j = Math.hypot(dx, dy);
+    let bergerak = false;
     if (j < 4) n.i = (n.i + 1) % n.wx.length;
-    else { n.x += dx / j * n.cepat; n.y += dy / j * n.cepat; }
+    else { n.x += dx / j * n.cepat; n.y += dy / j * n.cepat; bergerak = true; }
     const g = npc3[idx];
     if (g) {
       g.position.set(w2x(n.x), 0, w2z(n.y));
-      g.rotation.y = dx > 0 ? Math.PI / 2 : dx < 0 ? -Math.PI / 2 : 0;
-      const k = Math.sin(frame / 8 + idx) * 0.5;
+      const rotT = dx > 0 ? Math.PI / 2 : dx < 0 ? -Math.PI / 2 : g.rotation.y;
+      g.userData.rotHalus = (g.userData.rotHalus === undefined) ? rotT : lerpSudut(g.userData.rotHalus, rotT, 0.12);
+      g.rotation.y = g.userData.rotHalus;
+      // Kaki hanya mengayun saat berjalan; fase mengikuti langkah, amplitudo mereda halus
+      n.fase = (n.fase || 0) + (bergerak ? 0.14 : 0);
+      n.amp = (n.amp || 0) + ((bergerak ? 1 : 0) - (n.amp || 0)) * 0.1;
+      const k = Math.sin(n.fase) * 0.5 * n.amp;
       g.userData.kakiK.rotation.x = k; g.userData.kakiN.rotation.x = -k;
     }
   });
@@ -950,16 +1000,27 @@ function animate3D() {
   conveyor3.forEach((kb, i) => {
     kb.position.x = 1.6 + ((frame / 2 + i * 25) % 70) * 0.1;
   });
-  // Kamera: fokus ke tengah pulau (bukan tepat ke pemain) agar seluruh
+  // Kamera orbit: fokus ke tengah pulau (bukan tepat ke pemain) agar seluruh
   // pulau — kebun, kilang, kedai, pasar, pelabuhan, kapal, jembatan —
   // muat dalam satu bingkai seperti gambar referensi. Kamera mengikuti
   // pemain hanya sebagian (35%) supaya tetap bisa melihat area kerja.
+  // Sudut putar, jarak zoom, dan geseran semuanya dihaluskan (lerp)
+  // supaya kamera bergerak lembut seperti melihat peta.
   if (camera3 && player3) {
-    const px = player3.position.x * 0.35 + camPan.x, pz = player3.position.z * 0.35 + camPan.z;
-    camera3.position.x += ((px + 0) - camera3.position.x) * 0.05;
-    camera3.position.y += ((12 * camJarak) - camera3.position.y) * 0.05;
-    camera3.position.z += ((pz + 17 * camJarak) - camera3.position.z) * 0.05;
-    camera3.lookAt(px, 0.5, pz - 2);
+    if (tombol.q) camSudutT += 0.02;
+    if (tombol.e) camSudutT -= 0.02;
+    camSudut = lerpSudut(camSudut, camSudutT, 0.08);
+    camJarak += (camJarakT - camJarak) * 0.08;
+    camPan.x += (camPanT.x - camPan.x) * 0.12;
+    camPan.z += (camPanT.z - camPan.z) * 0.12;
+    const tx = player3.position.x * 0.35 + camPan.x, tz = player3.position.z * 0.35 + camPan.z;
+    const pk = posisiKamera(camSudut, camJarak, tx, tz);
+    camera3.position.x += (pk.x - camera3.position.x) * 0.1;
+    camera3.position.y += (pk.y - camera3.position.y) * 0.1;
+    camera3.position.z += (pk.z - camera3.position.z) * 0.1;
+    camera3.lookAt(pk.lx, 0.5, pk.lz);
+    const kompas = (typeof document !== "undefined") ? document.getElementById("kompas") : null;
+    if (kompas) kompas.style.transform = "rotate(" + (-camSudut * 180 / Math.PI) + "deg)";
   }
   updateDunia3D();
   if (renderer3) renderer3.render(scene3, camera3);
@@ -973,7 +1034,9 @@ function pasangKontrolDunia() {
     if (k === "s" || k === "arrowdown") tombol.s = true;
     if (k === "a" || k === "arrowleft") tombol.a = true;
     if (k === "d" || k === "arrowright") tombol.d = true;
-    if (k === "e" || k === " ") { e.preventDefault(); aksiTerpilih(); }
+    if (k === "q") tombol.q = true;
+    if (k === "e") tombol.e = true;
+    if (k === " ") { e.preventDefault(); aksiTerpilih(); }
   });
   document.addEventListener("keyup", (e) => {
     const k = e.key.toLowerCase();
@@ -981,6 +1044,8 @@ function pasangKontrolDunia() {
     if (k === "s" || k === "arrowdown") tombol.s = false;
     if (k === "a" || k === "arrowleft") tombol.a = false;
     if (k === "d" || k === "arrowright") tombol.d = false;
+    if (k === "q") tombol.q = false;
+    if (k === "e") tombol.e = false;
   });
 }
 
