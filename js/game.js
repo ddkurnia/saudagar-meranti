@@ -1,11 +1,11 @@
-// Saudagar Sagu Meranti — v12.2 TAMPILAN HD
-// v12.1: klik bangunan 3D membuka panel (raycast gambar).
-// v12.2: dunia 3D dirender 2x lebih tajam (pixel ratio perangkat,
-// maks 2x — buffer 1920x1120 dari kanvas 960x560), semua teks di
-// dunia (papan tanda, nama NPC, teks melayang) digambar 2x lebih
-// besar (kanvas 1024x192), dan tekstur aset memakai anisotropi
-// maksimal supaya tetap tajam saat dilihat miring. Ekonomi dan
-// simpanan lama tidak berubah.
+// Saudagar Sagu Meranti — v12.3 TAMPILAN HD (SUPERSAMPLING)
+// v12.2 menaikkan render mengikuti pixel ratio perangkat — tapi di
+// layar DPR=1 (termasuk browser pemeriksaan) buffer tetap 960x560
+// sehingga teks & bangunan masih terlihat lembut saat di-zoom.
+// v12.3: paksa supersampling 2x SELALU (buffer 1920x1120 dari kanvas
+// 960x560) supaya tajam di semua layar, bukan hanya di layar retina.
+// Harga: GPU bekerja 4x piksel — masih ringan untuk dunia billboard.
+// Ekonomi dan simpanan lama tidak berubah.
 const SAVE_KEY = "saudagarSaguMerantiV1";
 const TARGET_UANG = 5000000;
 const TARGET_EKSPOR = 100;
@@ -664,9 +664,11 @@ function init3D() {
     camera3.position.set(0, 12 * camJarak, 17 * camJarak);
     camera3.lookAt(0, 0.5, -2);
     renderer3 = new THREE.WebGLRenderer({ antialias: true });
-    // HD: render 2x lebih tajam di layar retina/tablet (buffer
-    // 1920x1120 dari kanvas 960x560); dibatasi 2x demi performa.
-    renderer3.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    // HD: supersampling 2x SELALU (buffer 1920x1120 dari kanvas
+    // 960x560) — bukan hanya mengikuti pixel ratio perangkat, karena
+    // di layar DPR=1 buffer akan tetap 960x560 dan tampilan lembut.
+    // Selalu 2x supaya tajam di semua layar; dibatasi 2x demi performa.
+    renderer3.setPixelRatio(2);
     anisoMax3D = Math.min(8, renderer3.capabilities.getMaxAnisotropy());
     renderer3.setSize(960, 560);
     renderer3.shadowMap.enabled = true;

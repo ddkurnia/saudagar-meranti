@@ -9,6 +9,21 @@ memproduksi Mie Sagu dan Kue Bangkit Sagu, mengekspor tepung sagu ke pasar
 internasional, dan mengembangkan Kedai Kopi Liberika Meranti sebagai
 bisnis sampingan.
 
+## Yang baru di v12.3 — Tampilan HD: Supersampling 2x Selalu
+
+- **Perbaikan dari v12.2:** v12.2 menaikkan render mengikuti pixel
+  ratio perangkat — tetapi di layar DPR=1 (termasuk browser
+  pemeriksaan) buffer tetap 960×560 sehingga teks dan bangunan masih
+  terlihat lembut saat di-zoom. v12.3 memaksa supersampling 2x
+  SELALU (buffer 1920×1120 dari kanvas 960×560) supaya tajam di semua
+  layar, bukan hanya di layar retina/tablet.
+- Label 2x (1024×192) dan anisotropi maksimal dari v12.2 tetap.
+- Catatan jujur: gambar asetnya sendiri bergaya ilustrasi dengan tepi
+  yang lembut — render yang tajam membuat tepinya sejelas mungkin,
+  tetapi detail asli gambar tidak bisa melebihi resolusi gambarnya
+  (bangunan ~700px). Bila nanti ingin gambar yang lebih tajam lagi,
+  asetnya perlu digambar ulang beresolusi lebih tinggi.
+
 ## Yang baru di v12.2 — Tampilan HD
 
 - **Render 2x lebih tajam:** dunia 3D kini dirender mengikuti
