@@ -6,6 +6,20 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v22.1 — Logo layar mulai diperkecil (2026-11-11)
+
+Perbaikan cepat dari masukan pengguna ("logo di halaman awal terlalu besar"):
+logo resmi di layar mulai dikecilkan dari `width: min(340px, 88%)` /
+`max-height: 30vh` menjadi `width: min(240px, 72%)` / `max-height: 22vh`
+(di HP: `min(200px, 68%)` / `20vh`) — logo kini menjadi aksen header,
+bukan spanduk raksasa; kartu menu muat tanpa scroll di tablet landscape
+(logo ~189px tinggi pada lebar 240px, rasio gambar 1132:894 dipertahankan).
+Tidak ada perubahan gameplay, data, atau logika lain. `VERSI_GAME "v22.1"`;
+refs `css?v=14`, `city.js?v=28`; nama cache SW `meranti-rising-v22.1`
+(dinaikkan bersama versi supaya cache PWA lama terhapus); precache SW
+diperbarui ke `?v=` baru. Tes: 2 cek baru (ukuran logo desktop + HP) di
+tests/test13.js.
+
 ## Yang baru di v22 — Advanced Traffic, Pathfinding & Transportation Engine (2026-11-11, Worker 1: INTI)
 
 **v22-W1 membangun inti mesin lalu lintas yang sesungguhnya** — menggantikan
