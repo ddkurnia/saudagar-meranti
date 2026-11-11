@@ -1,10 +1,14 @@
 /* =====================================================================
-   MERANTI RISING — v20 Complete UI/UX Modernization
+   MERANTI RISING — v20 Complete UI/UX Modernization + v21 Worker 1-5
+   (Compact HUD & Full Viewport Optimization — lapisan presentasi saja)
    Design system: premium modern city builder (SimCity / Cities:
    Skylines), minimalis, dark translucent HUD, glassmorphism hanya
    pada panel melayang. Peta = 80-90% layar; panel tidak menutupi peta.
    Struktur HTML dipertahankan: semua ID lama tetap ada (lihat Kontrak
    ID di laporan Worker 1). File JS TIDAK diubah oleh v20 Worker 1.
+   v21 Worker 1: token ukuran compact di :root + density mode;
+   html/body/#aplikasi 100dvh; header/nav/posisi kolom compact.
+   VERSI_GAME "v21" (naik dari "v20" di Worker 5).
    ===================================================================== */
 
 /* ---------- A. DESIGN SYSTEM ---------- */
@@ -41,10 +45,57 @@
   --bayangan: 0 10px 30px rgba(0, 0, 0, .35);
   --bayangan-kecil: 0 6px 18px rgba(0, 0, 0, .35);
   --bayangan-aksen: 0 8px 22px rgba(34, 197, 94, .4);
+  /* ---------- v21 Worker 1: TOKEN UKURAN COMPACT (default) ----------
+     Nilai default di :root = mode compact (tablet & desktop).
+     Density mode via class pada #aplikasi (variabel diwariskan ke
+     semua elemen HUD di dalamnya). JANGAN pakai transform: scale()
+     pada seluruh aplikasi — skala UI terpisah dari skala dunia. */
+  --hud-tinggi: 52px;        /* tinggi header 48-56px */
+  --avatar: 36px;            /* avatar pemain 34-38px */
+  --nav-lebar: 44px;         /* rel nav kiri 40-48px */
+  --panel-lebar: 240px;      /* lebar kolom kiri / panel 210-240px */
+  --minimap-lebar: 200px;    /* lebar kolom kanan / minimap 180-210px (dipakai Worker 2) */
+  --drawer-maks: 30vh;       /* tinggi maks drawer bangun (dipakai Worker 3) */
+  --kartu-lebar: 120px;      /* kartu bangun 110-135px (dipakai Worker 3) */
+  --kartu-gambar: 64px;      /* gambar kartu bangun 60-75px (dipakai Worker 3) */
+  --kontrol-tinggi: 44px;    /* kontrol waktu / tombol Mode Bangun 42-48px */
+  --berita-tinggi: 26px;     /* ticker berita 24-28px */
+  --ikon-btn: 32px;          /* tombol ikon bar atas 30-36px */
+  --kolom-bawah: 150px;      /* jarak bawah kolom kiri/kanan (ticker + tombol + celah) */
+  --spasi-kompak: 8px;
+}
+/* v21: density-compact = default (nilai sama dengan :root, ditulis
+   eksplisit supaya mode bisa diganti via JS tanpa mengubah :root). */
+#aplikasi.density-compact {
+  --hud-tinggi: 52px; --avatar: 36px; --nav-lebar: 44px;
+  --panel-lebar: 240px; --minimap-lebar: 200px; --drawer-maks: 30vh;
+  --kartu-lebar: 120px; --kartu-gambar: 64px; --kontrol-tinggi: 44px;
+  --berita-tinggi: 26px; --ikon-btn: 32px; --kolom-bawah: 150px;
+}
+/* v21: density-normal = ukuran v20 (layar kecil / pengguna yang
+   memilih tampilan lebih besar). */
+#aplikasi.density-normal {
+  --hud-tinggi: 62px; --avatar: 46px; --nav-lebar: 48px;
+  --panel-lebar: 300px; --minimap-lebar: 248px; --drawer-maks: 40vh;
+  --kartu-lebar: 124px; --kartu-gambar: 64px; --kontrol-tinggi: 48px;
+  --berita-tinggi: 28px; --ikon-btn: 36px; --kolom-bawah: 190px;
+}
+/* v21: density-expanded = panel sengaja dibuka lebar (dipakai Worker 2
+   saat panel statistik/minimap diperbesar). */
+#aplikasi.density-expanded {
+  --hud-tinggi: 60px; --avatar: 44px; --nav-lebar: 52px;
+  --panel-lebar: 300px; --minimap-lebar: 248px; --drawer-maks: 40vh;
+  --kartu-lebar: 135px; --kartu-gambar: 75px; --kontrol-tinggi: 48px;
+  --berita-tinggi: 28px; --ikon-btn: 40px; --kolom-bawah: 190px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; overflow: hidden; }
+/* v21 Worker 1: FULL VIEWPORT — 100dvh (fallback 100%) supaya game
+   mengisi seluruh viewport tanpa scroll halaman; overflow hidden di
+   html/body; safe-area dipakai konsisten di HUD/drawer (lihat
+   #barAtas, #kolomKiri/#kolomKanan, #menuBangun, #beritaPulau).
+   Address bar / tab browser TIDAK bisa dihilangkan via CSS. */
+html, body { height: 100%; height: 100dvh; overflow: hidden; }
 body {
   font-family: var(--font);
   background: linear-gradient(160deg, #0f2027, #203a43, #2c5364);
@@ -71,7 +122,8 @@ h1, h2, h3 { line-height: 1.2; font-weight: 800; }
 }
 
 /* ---------- Aplikasi: peta memenuhi layar ---------- */
-#aplikasi { position: relative; height: 100%; overflow: hidden; }
+/* v21: 100dvh (fallback 100%), overflow hidden — tanpa scroll halaman. */
+#aplikasi { position: relative; height: 100%; height: 100dvh; overflow: hidden; }
 #panggung { position: absolute; inset: 0; background: #1f6fc0; overflow: hidden; }
 #peta { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; }
 #peta:active { cursor: grabbing; }
@@ -84,10 +136,15 @@ h1, h2, h3 { line-height: 1.2; font-weight: 800; }
   right: calc(10px + env(safe-area-inset-right, 0px));
   z-index: 20;
   /* v20 Worker 3: SATU BARIS (nowrap) — HUD 2 baris akan menutupi
-     kolom kiri/kanan (top 76px). Zona tengah menyusut & bisa digeser
-     horizontal bila pill tidak muat; di ≤820px wrap diizinkan lagi. */
-  display: flex; align-items: center; gap: var(--spasi-m); flex-wrap: nowrap;
-  padding: 8px 14px;
+     kolom kiri/kanan (top = 20px + --hud-tinggi). Zona tengah menyusut & bisa digeser
+     horizontal bila pill tidak muat; di ≤820px wrap diizinkan lagi.
+     v21 Worker 1: COMPACT — tinggi header = --hud-tinggi (52px).
+     Penentu tinggi BUKAN avatar (36px) melainkan tumpukan teks
+     identitas (judul+nama+level ≈ 43px, line-height 1.1) + padding
+     vertikal 5px + border 2px ≈ 55px total. */
+  display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+  min-height: var(--hud-tinggi);
+  padding: 5px 12px;
   background: var(--panel);
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-m);
@@ -95,52 +152,61 @@ h1, h2, h3 { line-height: 1.2; font-weight: 800; }
   box-shadow: var(--bayangan);
 }
 /* Zona kiri: identitas */
-.identitas { display: flex; align-items: center; gap: 10px; min-width: 0; flex: none; }
+.identitas { display: flex; align-items: center; gap: var(--spasi-kompak); min-width: 0; flex: none; }
 #avatarPemain {
-  width: 46px; height: 46px; border-radius: 50%; object-fit: cover; flex: none;
+  width: var(--avatar); height: var(--avatar); border-radius: 50%; object-fit: cover; flex: none;
   border: 2px solid var(--emas); background: #1e3a5f;
 }
 .judulBlok { min-width: 0; }
-.judulGame { font-size: 16px; font-weight: 800; white-space: nowrap; letter-spacing: .4px; }
+.judulGame { font-size: 15px; font-weight: 800; white-space: nowrap; letter-spacing: .4px; line-height: 1.1; }
 .judulGame b { color: var(--aksen-muda); }
-.namaPemimpin { font-size: 12px; font-weight: 700; color: var(--emas-muda); white-space: nowrap; margin-top: 1px; }
-.levelBox { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
-#lvlTeks { font-size: 12px; font-weight: 700; white-space: nowrap; color: #a5f3c0; }
-.xpBarLuar { width: 110px; height: 7px; background: rgba(255, 255, 255, .2); border-radius: 5px; overflow: hidden; }
+.namaPemimpin { font-size: 11.5px; font-weight: 700; color: var(--emas-muda); white-space: nowrap; margin-top: 0; line-height: 1.1; }
+.levelBox { display: flex; align-items: center; gap: 6px; margin-top: 1px; }
+#lvlTeks { font-size: 11.5px; font-weight: 700; white-space: nowrap; color: #a5f3c0; line-height: 1.1; }
+.xpBarLuar { width: 88px; height: 6px; background: rgba(255, 255, 255, .2); border-radius: 5px; overflow: hidden; }
 .xpBarDalam { height: 100%; width: 0%; background: linear-gradient(90deg, var(--emas), #f59e0b); transition: width .4s ease; }
-.xpTeks { font-size: 11px; color: var(--teks-redup); white-space: nowrap; }
+.xpTeks { font-size: 10.5px; color: var(--teks-redup); white-space: nowrap; line-height: 1.1; }
 /* Zona tengah: sumber daya — uang menonjol, listrik/air sekunder kecil.
    v20 Worker 3: zona ini menyusut (min-width 0) & bisa digeser
-   horizontal — HUD tetap satu baris di tablet/laptop. */
-.sumberDaya { display: flex; gap: 6px; flex-wrap: nowrap; margin-left: auto; margin-right: auto; justify-content: center; flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+   horizontal — HUD tetap satu baris di tablet/laptop.
+   v21 Worker 5 (cacat 10): justify-content: SAFE center — pill tetap
+   di tengah bila muat, tetapi bila overflow (lebar ±1074px) isi
+   menempel ke KIRI, bukan terpotong di kiri. justify-content: center
+   biasa + overflow-x: auto memotong pil PERTAMA (uang) karena sisi kiri
+   yang terpotong tidak bisa digulir kembali — persis gejala live v20
+   ("hanya terlihat 749.282"). Fallback flex-start untuk browser lama
+   yang belum mengenal "safe center". */
+.sumberDaya { display: flex; gap: 6px; flex-wrap: nowrap; margin-left: auto; margin-right: auto; justify-content: flex-start; justify-content: safe center; flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
 .sumberDaya::-webkit-scrollbar { display: none; }
 .sd {
-  font-size: 13px; white-space: nowrap;
+  font-size: 12px; white-space: nowrap;
   background: rgba(255, 255, 255, .07);
   border: 1px solid rgba(255, 255, 255, .09);
-  border-radius: var(--radius-pil); padding: 5px 10px;
+  border-radius: var(--radius-pil); padding: 4px 8px;
   transition: background var(--anim-cepat);
 }
 .sd:hover { background: rgba(255, 255, 255, .13); }
-.sd.utama { background: rgba(251, 191, 36, .14); border-color: rgba(251, 191, 36, .35); font-size: 13.5px; }
+.sd.utama { background: rgba(251, 191, 36, .14); border-color: rgba(251, 191, 36, .35); font-size: 12.5px; }
 .sd .angka { color: var(--emas-muda); }
 .sd .angka.minus { color: #ff7675; }
-.sd.sekunder { font-size: 11.5px; padding: 4px 8px; opacity: .75; }
-/* Zona kanan: jam + aksi */
+.sd.sekunder { font-size: 11px; padding: 3px 7px; opacity: .75; }
+/* Zona kanan: jam + cuaca = SATU komponen compact (sudah satu pill
+   sejak v20: fase + hari + jam + fase + cuaca). v21: padding & font
+   dikecilkan supaya tidak makan dua baris/ruang. */
 #jamAtas {
-  display: flex; align-items: center; gap: 8px; flex: none;
+  display: flex; align-items: center; gap: 6px; flex: none;
   background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .09);
-  border-radius: var(--radius-pil); padding: 5px 12px; white-space: nowrap;
+  border-radius: var(--radius-pil); padding: 4px 10px; white-space: nowrap;
 }
-#jamAtas .ikonFase { font-size: 20px; }
-#jamAtasHari { font-size: 12.5px; color: var(--teks-redup); }
-#jamAtasJam { font-size: 16px; color: var(--emas-muda); }
-#jamAtasFase { font-size: 12.5px; font-weight: 700; color: #a5f3c0; }
-#jamAtasCuaca { font-size: 12.5px; color: var(--teks-redup); }
-.tombolAtas { display: flex; gap: 6px; flex: none; }
+#jamAtas .ikonFase { font-size: 18px; }
+#jamAtasHari { font-size: 12px; color: var(--teks-redup); }
+#jamAtasJam { font-size: 15px; color: var(--emas-muda); }
+#jamAtasFase { font-size: 12px; font-weight: 700; color: #a5f3c0; }
+#jamAtasCuaca { font-size: 12px; color: var(--teks-redup); }
+.tombolAtas { display: flex; gap: 5px; flex: none; }
 .btnIkon {
   background: rgba(255, 255, 255, .1); color: #fff; border: 1px solid rgba(255, 255, 255, .18);
-  border-radius: 50%; width: 36px; height: 36px; font-size: 16px; position: relative;
+  border-radius: 50%; width: var(--ikon-btn); height: var(--ikon-btn); font-size: 15px; position: relative;
   transition: background var(--anim-cepat), transform var(--anim-cepat);
 }
 .btnIkon:hover { background: rgba(255, 255, 255, .22); transform: translateY(-1px); }
@@ -152,10 +218,13 @@ h1, h2, h3 { line-height: 1.2; font-weight: 800; }
 .ikonFase { font-size: 20px; line-height: 1; transition: transform .3s linear; }
 
 /* ---------- C. KOLOM KIRI — nav rail + panel ---------- */
+/* v21 Worker 1: top/bottom mengikuti header baru — top = offset
+   header (10px) + --hud-tinggi + celah 10px + safe-area; bottom =
+   --kolom-bawah. Lebar kolom kiri = --panel-lebar (240px compact). */
 #kolomKiri {
-  position: absolute; left: 10px; top: 76px; bottom: 190px; z-index: 15;
+  position: absolute; left: 10px; top: calc(20px + var(--hud-tinggi) + env(safe-area-inset-top, 0px)); bottom: var(--kolom-bawah); z-index: 15;
   display: flex; flex-direction: column; gap: var(--spasi-s);
-  width: 300px; max-width: 300px;
+  width: var(--panel-lebar); max-width: var(--panel-lebar);
   pointer-events: none;
 }
 #kolomKiri > * { pointer-events: auto; }
@@ -168,37 +237,56 @@ h1, h2, h3 { line-height: 1.2; font-weight: 800; }
 .tglTeks span { font-size: 11.5px; color: var(--teks-redup); }
 .cuacaTeks { margin-left: auto; text-align: right; font-size: 12px; line-height: 1.35; color: var(--teks-redup); }
 #barisKiri { flex: 1; display: flex; gap: var(--spasi-s); min-height: 0; }
-/* Rel nav: floating vertical, ikon SVG, tooltip saat hover */
-#relKiri { display: flex; flex-direction: column; gap: 8px; flex: none; }
+/* Rel nav: floating vertical, ikon SVG, tooltip saat hover.
+   v21: lebar = --nav-lebar (44px compact, dulu 48px); ikon SVG
+   proporsional 20px; tooltip digeser mengikuti lebar baru.
+   v21 Worker 5 (cacat 5): #relKiri diberi position + z-index 40 —
+   stacking context sendiri DI ATAS panel kiri (#panelKiri punya
+   backdrop-filter = stacking context sendiri), supaya tooltip yang
+   menjorok ke kanan tidak tertutup panel yang sedang terbuka. */
+#relKiri { display: flex; flex-direction: column; gap: 8px; flex: none; position: relative; z-index: 40; }
 #relKiri button {
   position: relative;
-  width: 48px; height: 48px; border-radius: 50%;
+  width: var(--nav-lebar); height: var(--nav-lebar); border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   background: var(--panel); color: #dbe7f3; border: 1px solid var(--panel-border);
   backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   box-shadow: var(--bayangan-kecil);
   transition: background var(--anim-cepat), color var(--anim-cepat), transform var(--anim-cepat);
 }
-#relKiri button svg { flex: none; }
+#relKiri button svg { flex: none; width: 20px; height: 20px; }
 #relKiri button:hover { background: rgba(255, 255, 255, .2); color: #fff; transform: translateX(2px); }
 #relKiri button.aktif { background: var(--aksen); border-color: var(--aksen-muda); color: #fff; box-shadow: var(--bayangan-aksen); }
 #relKiri button.aktif:hover { background: var(--aksen-terang); }
 .navTip {
-  position: absolute; left: 56px; top: 50%; transform: translateY(-50%) translateX(-4px);
+  position: absolute; left: calc(var(--nav-lebar) + 10px); top: 50%; transform: translateY(-50%) translateX(-4px);
   background: var(--panel-kuat); border: 1px solid var(--panel-border-kuat);
   color: var(--teks); font-size: 12px; font-weight: 700; white-space: nowrap;
   border-radius: 8px; padding: 5px 10px; pointer-events: none;
-  opacity: 0; transition: opacity var(--anim-cepat), transform var(--anim-cepat);
-  z-index: 30;
+  opacity: 0; visibility: hidden; transition: opacity var(--anim-cepat), transform var(--anim-cepat), visibility var(--anim-cepat);
+  z-index: 60;
 }
-#relKiri button:hover .navTip, #relKiri button:focus-visible .navTip {
-  opacity: 1; transform: translateY(-50%) translateX(0);
+#relKiri button:hover .navTip, #relKiri button:focus-visible .navTip,
+#relKiri button.tampil .navTip {
+  opacity: 1; visibility: visible; transform: translateY(-50%) translateX(0);
 }
+/* v21 Worker 5 (lingkup M): tombol pemilih density yang aktif. */
+[data-density].aktif { outline: 3px solid var(--emas); outline-offset: 1px; }
 /* Panel kiri: hanya muncul saat dipilih (toggle ada di bukaTabKiri) */
 #panelKiri { flex: 1; min-width: 0; overflow-y: auto; padding: 12px 14px; animation: panelMasuk var(--anim) ease; }
 @keyframes panelMasuk { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
 #panelKiriIsi { font-size: 13px; }
 #panelKiri.tersembunyi { display: none; }
+/* v21 Worker 2: panel statistik compact — padding & baris lebih rapat,
+   font 12.5px, bar mini 6px; lebar panel tetap --panel-lebar (240px
+   compact) dan konten tidak overflow horizontal. Class "tab-statistik"
+   dipasang renderPanelKiri() saat tab statistik aktif. */
+#panelKiri.tab-statistik { padding: 10px 12px; }
+#panelKiri.tab-statistik #panelKiriIsi { font-size: 12.5px; }
+#panelKiri.tab-statistik .judulPanel { font-size: 13px; margin: 6px 0 4px; }
+#panelKiri.tab-statistik .barisStat { padding: 3px 0; }
+#panelKiri.tab-statistik .bar { height: 6px; margin: 3px 0 6px; }
+#panelKiriIsi { overflow-x: hidden; overflow-wrap: break-word; }
 /* Pintasan wilayah: Kepulauan & Kecamatan (tetap bisa dibuka) */
 #pintasanWilayah { display: flex; gap: 6px; }
 #pintasanWilayah button {
@@ -222,28 +310,59 @@ h1, h2, h3 { line-height: 1.2; font-weight: 800; }
 .btnAksi.bahaya { background: rgba(185, 28, 28, .8); border-color: var(--bahaya); }
 
 /* ---------- D. KOLOM KANAN — minimap + panel kontekstual ---------- */
+/* v21 Worker 2: lebar kolom kanan = token --minimap-lebar (200px
+   compact, 248px di density-normal/expanded) — kartu peta, panel
+   kanan, dan drawer bangun (right) semuanya mengikuti token ini. */
 #kolomKanan {
-  position: absolute; right: 10px; top: 76px; bottom: 190px; z-index: 15;
+  position: absolute; right: 10px; top: calc(20px + var(--hud-tinggi) + env(safe-area-inset-top, 0px)); bottom: var(--kolom-bawah); z-index: 15;
   display: flex; flex-direction: column; gap: 10px;
-  width: 248px; max-width: 300px;
+  width: var(--minimap-lebar); max-width: var(--minimap-lebar);
   pointer-events: none;
 }
+/* v21 Worker 2: minimap ditutup — kolom mengecil ke lebar kartu yang
+   tersisa (judul + 2 tombol); panel kanan yang sedang terbuka tetap
+   selebar token supaya isinya tidak terjepit. */
+#kolomKanan.minimap-ditutup { width: auto; max-width: none; }
+#kolomKanan.minimap-ditutup #panelKanan { width: var(--minimap-lebar); flex: none; }
+/* v21 Worker 5 (cacat 3): panel kanan terbuka MELEBARKAN kolom kanan
+   jadi 280px — isi panel (Status, Listrik, Air, Kapasitas, biaya)
+   terbaca sebagai kartu, bukan pil sempit 200px. Minimap di atasnya
+   tetap selebar token & rata kanan; panel memakai lebar penuh 280px.
+   Aturan ini diletakkan SETELAH .minimap-ditutup supaya menang bila
+   kedua class ada bersamaan. */
+#kolomKanan.panel-terbuka { width: 280px; max-width: 280px; }
+#kolomKanan.panel-terbuka #kartuPeta { width: var(--minimap-lebar); align-self: flex-end; }
+#kolomKanan.panel-terbuka #panelKanan { width: 280px; }
 #kolomKanan > * { pointer-events: auto; }
 #kartuPeta { padding: 10px 12px; flex: none; transition: width var(--anim), box-shadow var(--anim); }
-.kartuJudul { font-size: 13px; font-weight: 800; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.kartuJudul { font-size: 13px; font-weight: 800; display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 8px; white-space: nowrap; }
 .kartuJudulAksi { display: flex; align-items: center; gap: 6px; }
-#btnPetaBesar {
+/* v21 Worker 2: tombol kartu peta 30px (proporsional dengan tombol
+   zoom minimap 32px di bawahnya; di layar sentuh tetap 44px). */
+#btnPetaBesar, #btnPetaTutup {
   background: rgba(255, 255, 255, .1); color: #fff; border: 1px solid rgba(255, 255, 255, .2);
-  border-radius: 8px; width: 24px; height: 24px; font-size: 13px; line-height: 1;
+  border-radius: 8px; width: 30px; height: 30px; font-size: 14px; line-height: 1;
   transition: background var(--anim-cepat);
 }
-#btnPetaBesar:hover { background: rgba(255, 255, 255, .25); }
+#btnPetaBesar:hover, #btnPetaTutup:hover { background: rgba(255, 255, 255, .25); }
 .kompas { font-size: 16px; }
 #minimap { width: 100%; height: auto; border-radius: 10px; display: block; cursor: crosshair; border: 1px solid rgba(255, 255, 255, .15); }
-/* v20: minimap diperbesar — class "diperbesar" ditoggle Worker 2 via #btnPetaBesar.
-   v20 Worker 3: kartu lebih lebar dari kolom (340 vs 248) — geser ke
-   kiri supaya tepi kanan tetap sejajar kolom, tidak keluar layar. */
-#kartuPeta.diperbesar { width: 340px; margin-left: -92px; }
+/* v20: minimap diperbesar — class "diperbesar" ditoggle via #btnPetaBesar.
+   v21 Worker 5 (cacat 4): pelebaran dilakukan dengan MELEBARKAN KOLOM
+   kanan (#kolomKanan.minimap-diperbesar = token + 100px, 300px compact)
+   — kartu mengisi lebar kolom (width 100%), bukan meluber keluar kolom
+   via margin-left negatif (pendekatan lama: kartu 300px di dalam kolom
+   200px — di sebagian viewport pelebaran tidak terlihat). Kanvas
+   minimap ikut dinaikkan resolusinya via JS (320x192) + digambar ulang.
+   v21 Worker 2: lebar = token + 100px (300px compact, 348px normal). */
+#kolomKanan.minimap-diperbesar { width: calc(var(--minimap-lebar) + 100px); max-width: calc(var(--minimap-lebar) + 100px); }
+#kartuPeta.diperbesar { width: 100%; }
+/* v21 Worker 2: minimap ditutup — kanvas & tombol zoom hilang, kartu
+   menyusut jadi bar judul (tombol ▴ membuka lagi). Bila sedang
+   diperbesar, ukuran besar ikut dibatalkan supaya bar tetap ramping. */
+#kartuPeta.ditutup #minimap, #kartuPeta.ditutup .miniKontrol { display: none; }
+#kartuPeta.ditutup { padding: 8px 10px; }
+#kartuPeta.ditutup .kartuJudul { margin-bottom: 0; }
 .miniKontrol { display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end; }
 .miniKontrol button {
   width: 32px; height: 32px; border-radius: 50%; font-size: 16px;
@@ -267,7 +386,11 @@ h1, h2, h3 { line-height: 1.2; font-weight: 800; }
   transition: background var(--anim-cepat);
 }
 .statBuka:hover { background: rgba(255, 255, 255, .25); }
-#panelKanan { overflow-y: auto; padding: 12px 14px; font-size: 13px; max-height: 58%; flex: 1 1 auto; min-height: 0; animation: panelMasukKanan var(--anim) ease; }
+#panelKanan { overflow-y: auto; padding: 12px 14px; font-size: 13px; flex: 1 1 auto; min-height: 0; background: var(--panel-kuat); animation: panelMasukKanan var(--anim) ease; }
+/* v21 Worker 5 (cacat 3): max-height 58% lama DICABUT — panel memakai
+   seluruh sisa tinggi kolom (flex 1 + overflow-y auto) supaya semua
+   baris info terlihat tanpa terjepit; latar panel-kuat (.92) supaya
+   kartu terbaca tegas di atas peta yang terang. */
 @keyframes panelMasukKanan { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: translateX(0); } }
 #panelKanan.tersembunyi { display: none; }
 
@@ -318,8 +441,8 @@ h1, h2, h3 { line-height: 1.2; font-weight: 800; }
 
 /* ---------- Mode Bangun: tombol compact ---------- */
 #btnModeBangun {
-  position: absolute; left: 10px; bottom: 40px; z-index: 18;
-  height: 44px; padding: 0 18px 0 14px; border-radius: var(--radius-pil);
+  position: absolute; left: 10px; bottom: calc(var(--berita-tinggi) + 14px + env(safe-area-inset-bottom, 0px)); z-index: 18;
+  height: var(--kontrol-tinggi); padding: 0 18px 0 14px; border-radius: var(--radius-pil);
   display: flex; align-items: center; gap: 8px;
   background: linear-gradient(135deg, var(--aksen-terang), var(--aksen)); color: #fff;
   border: 1px solid rgba(255, 255, 255, .35); font-size: 14px; font-weight: 800;
@@ -333,17 +456,22 @@ h1, h2, h3 { line-height: 1.2; font-weight: 800; }
 #btnModeBangun:active { transform: scale(.97); }
 #btnModeBangun.aktif { outline: 3px solid var(--emas); }
 
-/* ---------- G. Kontrol waktu: compact, kanan bawah ---------- */
+/* ---------- G. Kontrol waktu: compact, kanan bawah ----------
+   v21 Worker 2: tinggi = --kontrol-tinggi (44px compact, maks 48px),
+   tombol 34px (44px di layar sentuh). Bottom = ticker + celah +
+   safe-area, sejajar #btnModeBangun. Lebar total ±170px — drawer
+   bangun berakhir di token+22px (222px compact) dari kanan, jadi
+   tidak bertabrakan dengan drawer maupun ticker. */
 #kontrolWaktu {
-  position: absolute; right: 10px; bottom: 40px; z-index: 18;
-  display: flex; gap: 2px; align-items: center;
+  position: absolute; right: 10px; bottom: calc(var(--berita-tinggi) + 14px + env(safe-area-inset-bottom, 0px)); z-index: 18;
+  display: flex; gap: 2px; align-items: center; min-height: var(--kontrol-tinggi);
   background: var(--panel); border: 1px solid var(--panel-border);
   border-radius: var(--radius-pil); padding: 4px;
   backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   box-shadow: var(--bayangan);
 }
 #kontrolWaktu button {
-  height: 32px; min-width: 32px; padding: 0 8px; font-size: 13px; font-weight: 800;
+  height: 34px; min-width: 32px; padding: 0 8px; font-size: 13px; font-weight: 800;
   background: transparent; color: #fff; border: none; border-radius: 18px;
   transition: background var(--anim-cepat);
 }
@@ -354,20 +482,37 @@ h1, h2, h3 { line-height: 1.2; font-weight: 800; }
 
 /* ---------- E. Build drawer bawah ---------- */
 /* v20 Worker 3: drawer TIDAK BOLEH menutupi kolom kiri/kanan — tepi
-   kiri/kanan digeser ke dalam (kolom kiri berakhir di x=310,
-   kolom kanan mulai di W-258), berapa pun tinggi drawer. */
+   kiri/kanan digeser ke dalam, berapa pun tinggi drawer.
+   v21 Worker 2: kiri = kolom kiri + celah (262px compact); kanan =
+   kolom kanan + celah (222px compact = token 200 + offset 10 + celah
+   12; 270px di density-normal/expanded) — mengikuti token
+   --minimap-lebar supaya tidak ada celah/overlap saat minimap
+   mengecil. bottom = ticker + celah + safe-area.
+   v21 Worker 3: drawer = flex column dengan max-height token
+   --drawer-maks (30vh compact) — katalog (#itemBangunWrap) menyusut
+   & menggulir vertikal bila perlu, bar kategori + label TIDAK
+   terpotong; drawer tidak pernah menutupi seluruh dunia permainan. */
 #menuBangun {
-  position: absolute; left: 322px; right: 270px; bottom: 34px; z-index: 18;
+  position: absolute; left: calc(var(--panel-lebar) + 22px); right: calc(var(--minimap-lebar) + 22px); bottom: calc(var(--berita-tinggi) + 8px + env(safe-area-inset-bottom, 0px)); z-index: 18;
   max-width: 940px; margin-left: auto; margin-right: auto;
   padding: 8px 10px 10px;
+  display: flex; flex-direction: column;
+  max-height: var(--drawer-maks);
   transition: transform var(--anim), opacity var(--anim);
 }
 #menuBangun.tersembunyi { display: none; }
-/* Katalog terlipat: hanya bar kategori yang terlihat, peta tetap lega.
-   #barisKatalog (berisi tombol lipat) TETAP terlihat agar bisa dibuka lagi. */
-#menuBangun.terlipat #itemBangunWrap { display: none; }
-#menuBangun.terlipat { padding-bottom: 8px; }
+/* Katalog terlipat: HANYA bar kategori yang terlihat (toolbar
+   48-56px), peta tetap lega. #barisKatalog (label + tombol lipat/
+   tutup) & #pesanKatalog ikut disembunyikan — katalog dibuka lagi
+   dengan mengklik salah satu tab kategori (lihat renderMenuBangun)
+   atau tombol Mode Bangun. */
+#menuBangun.terlipat #itemBangunWrap,
+#menuBangun.terlipat #barisKatalog,
+#menuBangun.terlipat #pesanKatalog { display: none; }
+#menuBangun.terlipat { padding: 6px 10px; }
+#menuBangun.terlipat #katBangun { margin-bottom: 0; }
 #katBangun {
+  flex: none;
   display: flex; gap: 5px; flex-wrap: nowrap; overflow-x: auto;
   padding-bottom: 2px; scrollbar-width: none; margin-bottom: 8px;
 }
@@ -389,54 +534,68 @@ h1, h2, h3 { line-height: 1.2; font-weight: 800; }
 }
 .katTab:hover { background: rgba(255, 255, 255, .15); color: #fff; }
 .katTab.aktif { background: var(--aksen); color: #fff; border-color: var(--aksen-muda); }
-#barisKatalog { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; padding: 0 2px; }
+#barisKatalog { flex: none; display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; padding: 0 2px; }
 .labelKatalog { font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--teks-samar); }
-#btnLipatKatalog {
+/* v21 Worker 3: tombol lipat (▾, collapse katalog) + tombol tutup (✕,
+   tutup drawer sepenuhnya & kembali ke toolbar saja) — sepasang di
+   kanan baris katalog; klik tombol TIDAK ikut toggle baris (lihat
+   pasangTombol: stopPropagation). */
+.tombolKatalog { display: flex; gap: 6px; }
+#btnLipatKatalog, #btnTutupDrawer {
   background: rgba(255, 255, 255, .1); color: #fff; border: 1px solid rgba(255, 255, 255, .2);
   border-radius: 8px; width: 26px; height: 26px; font-size: 13px; line-height: 1;
   transition: background var(--anim-cepat), transform var(--anim);
 }
-#btnLipatKatalog:hover { background: rgba(255, 255, 255, .25); }
+#btnLipatKatalog:hover, #btnTutupDrawer:hover { background: rgba(255, 255, 255, .25); }
 #menuBangun.terlipat #btnLipatKatalog { transform: rotate(180deg); }
-#itemBangunWrap { display: flex; align-items: stretch; gap: 6px; }
+#itemBangunWrap { display: flex; align-items: stretch; gap: 6px; flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
 .geser {
   flex: none; width: 26px; border-radius: 10px; font-size: 20px;
   background: rgba(255, 255, 255, .07); color: #fff; border: 1px solid rgba(255, 255, 255, .1);
   transition: background var(--anim-cepat);
 }
 .geser:hover { background: rgba(255, 255, 255, .17); }
-#itemBangun { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; flex: 1; }
+#itemBangun { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; flex: 1; scroll-snap-type: x proximity; }
+/* v21 Worker 3: kartu mengikuti token — lebar --kartu-lebar (120px
+   compact, 124px normal, 135px expanded), gambar --kartu-gambar
+   (64px compact, 56px normal, 75px expanded); scroll-snap supaya
+   gulir horizontal berhenti rapi di kartu. Nama maks 2 baris,
+   meta/harga ringkas; deskripsi lengkap TIDAK di kartu — hanya di
+   panel kanan saat bangunan dipilih (renderPanelKanan). */
 .kartuBangun {
-  flex: none; width: 124px; background: rgba(255, 255, 255, .06);
+  flex: none; width: var(--kartu-lebar); background: rgba(255, 255, 255, .06);
   border: 1px solid rgba(255, 255, 255, .12); border-radius: var(--radius-s);
-  padding: 6px; cursor: pointer; text-align: center;
+  padding: 6px; cursor: pointer; text-align: center; scroll-snap-align: start;
   transition: background var(--anim-cepat), border-color var(--anim-cepat), transform var(--anim-cepat);
 }
 .kartuBangun:hover { background: rgba(255, 255, 255, .14); transform: translateY(-2px); }
 .kartuBangun.dipilih { border-color: var(--aksen-terang); box-shadow: 0 0 0 2px rgba(34, 197, 94, .5); }
 .kartuBangun.terkunci { opacity: .55; }
-.kartuBangun canvas { width: 100%; height: 56px; border-radius: 8px; background: rgba(255, 255, 255, .05); }
+.kartuBangun canvas { width: 100%; height: var(--kartu-gambar); border-radius: 8px; background: rgba(255, 255, 255, .05); }
 .kartuInfo { min-width: 0; margin-top: 4px; }
 .kartuNama { font-size: 12px; font-weight: 700; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 30px; }
 .kartuDes { font-size: 10.5px; color: var(--teks-redup); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 26px; }
 .kartuHarga { font-size: 11px; color: var(--emas-muda); margin-top: 2px; }
 .kartuKunci { font-size: 10.5px; color: #ff7675; }
 
-/* ---------- J. Berita Pulau (ticker bawah) ---------- */
+/* ---------- J. Berita Pulau (ticker bawah) ----------
+   v21 Worker 2: tinggi = --berita-tinggi (26px compact, maks 28px),
+   font 11.5px, label singkat 11px — ringkas, tidak mengganggu peta;
+   #menuBangun & #kontrolWaktu sudah di atasnya (bottom = ticker + celah). */
 #beritaPulau {
-  position: absolute; left: 0; right: 0; bottom: 0; height: 28px; z-index: 19;
-  display: flex; align-items: center; gap: 10px;
+  position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--berita-tinggi) + env(safe-area-inset-bottom, 0px)); z-index: 19;
+  display: flex; align-items: center; gap: 10px; padding-bottom: env(safe-area-inset-bottom, 0px);
   background: rgba(5, 18, 32, .9); border-top: 1px solid rgba(255, 255, 255, .1);
-  font-size: 12px; overflow: hidden;
+  font-size: 11.5px; line-height: 1; overflow: hidden;
 }
-.beritaLabel { flex: none; font-weight: 800; color: var(--aksen-muda); padding-left: 12px; }
+.beritaLabel { flex: none; font-size: 11px; font-weight: 800; color: var(--aksen-muda); padding-left: 10px; white-space: nowrap; }
 .beritaJalan { flex: 1; overflow: hidden; white-space: nowrap; }
 #beritaTeks { display: inline-block; padding-left: 100%; animation: beritaJalan 40s linear infinite; color: var(--teks-redup); }
 @keyframes beritaJalan { from { transform: translateX(0); } to { transform: translateX(-100%); } }
 
 /* ---------- Chip mode & toast (di atas peta) ---------- */
 #modeChip {
-  position: absolute; top: 76px; left: 50%; transform: translateX(-50%);
+  position: absolute; top: calc(20px + var(--hud-tinggi) + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%);
   display: flex; gap: 10px; align-items: center; z-index: 25;
   background: var(--panel-kuat); border: 1px solid rgba(255, 255, 255, .25);
   border-radius: var(--radius-pil); padding: 7px 12px; font-size: 12.5px;
@@ -446,7 +605,7 @@ h1, h2, h3 { line-height: 1.2; font-weight: 800; }
 #modeChip button { background: rgba(255, 255, 255, .15); color: #fff; border: 1px solid rgba(255, 255, 255, .3); border-radius: 12px; padding: 3px 9px; font-size: 12px; transition: background var(--anim-cepat); }
 #modeChip button:hover { background: rgba(255, 255, 255, .28); }
 .toast {
-  position: absolute; top: 122px; left: 50%; transform: translateX(-50%) translateY(-8px);
+  position: absolute; top: calc(66px + var(--hud-tinggi) + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%) translateY(-8px);
   background: var(--panel-kuat); border: 1px solid rgba(255, 255, 255, .25);
   padding: 9px 16px; border-radius: var(--radius-s); font-size: 13px; z-index: 26;
   opacity: 0; pointer-events: none; transition: opacity var(--anim), transform var(--anim);
@@ -463,29 +622,38 @@ h1, h2, h3 { line-height: 1.2; font-weight: 800; }
 
 /* ---------- I. Responsif ---------- */
 @media (max-width: 1100px) {
-  #kolomKiri { width: 262px; }
-  #kolomKanan { width: 224px; }
-  .xpBarLuar { width: 70px; }
-  /* v20 Worker 3: drawer tetap di antara kolom (kiri berakhir x=272,
-     kanan mulai W-234) — 19 tab tetap muat & geser horizontal. */
-  #menuBangun { right: 246px; left: 284px; }
+  #kolomKiri { width: 232px; max-width: 232px; }
+  #kolomKanan { width: 200px; }
+  /* v21 Worker 5 (cacat 10): di lebar sempit, teks XP disembunyikan &
+     bar XP mengecil (48px) supaya zona identitas tidak mendesak pil
+     uang — bersama safe-center di .sumberDaya, pil uang tidak lagi
+     terpotong di ±1074px. */
+  .xpTeks { display: none; }
+  .xpBarLuar { width: 48px; }
+  /* v20 Worker 3: drawer tetap di antara kolom (kiri berakhir x=242,
+     kanan mulai W-210) — 19 tab tetap muat & geser horizontal.
+     v21 Worker 2: kanan = kolom kanan 200px + celah 22px = 222px. */
+  #menuBangun { right: 222px; left: 254px; }
   #jamAtasCuaca { display: none; }
   /* v20 Worker 3: HUD satu baris di tablet — pill sekunder (listrik/air)
      disembunyikan lebih awal; tanggal disembunyikan (jam + fase tetap). */
   .sd.sekunder { display: none; }
   #jamAtasHari { display: none; }
-  #kartuPeta.diperbesar { margin-left: -116px; }
+  /* v21 Worker 5 (cacat 4): minimap diperbesar = kolom 300px (bukan
+     kartu meluber via margin negatif — lihat aturan dasar). */
+  #kolomKanan.minimap-diperbesar { width: 300px; max-width: 300px; }
 }
 @media (max-width: 820px) {
   #btnToggleKiri, #btnToggleKanan { display: block; }
   /* v20 Worker 3: HUD boleh 2 baris di HP — kolom & kartu tutorial /
-     mode chip / toast turun ke 128-140px supaya tidak tertutup HUD. */
+     mode chip / toast turun ke 128-140px supaya tidak tertutup HUD.
+     v21: header compact → 2 baris ≈ 10px lebih pendek, turun ke 118-130px. */
   #barAtas { flex-wrap: wrap; }
-  #kolomKiri { width: 250px; top: 128px; bottom: 210px; }
-  #kolomKanan { width: 200px; top: 128px; bottom: 210px; }
-  #kartuTutorial { top: 132px; }
-  #modeChip { top: 132px; }
-  .toast { top: 140px; }
+  #kolomKiri { width: 250px; max-width: 250px; top: 118px; bottom: 190px; }
+  #kolomKanan { width: 200px; top: 118px; bottom: 190px; }
+  #kartuTutorial { top: 122px; }
+  #modeChip { top: 122px; }
+  .toast { top: 130px; }
   #panelKiri.tersembunyi, #panelKanan.tersembunyi { display: none; }
   .judulGame { display: none; }
   /* v18-D: di layar kecil, tanggal di bar atas disembunyikan (jam + fase
@@ -500,31 +668,46 @@ h1, h2, h3 { line-height: 1.2; font-weight: 800; }
   /* v19 Worker 5: pill sekunder (listrik/air) disembunyikan di layar
      kecil — info tetap ada di kartu statistik & panel Ekonomi */
   .sd.sekunder { display: none; }
-  #menuBangun { left: 8px; right: 8px; bottom: 34px; }
+  #menuBangun { left: 8px; right: 8px; bottom: calc(var(--berita-tinggi) + 8px + env(safe-area-inset-bottom, 0px)); }
   /* v20 Worker 3: tombol Mode Bangun & kontrol waktu TIDAK BOLEH
      tertutup drawer. Aturan lama (bottom 212px) salah: drawer terbuka
      tingginya ~250px, jadi tombol itu berada DALAM rentang vertikal
      drawer dan tertutup (drawer z-index sama tapi muncul belakangan
      di DOM). Kini: default di bawah (40px, di atas ticker); bila
-     drawer terbuka, naik di atasnya (300px / 150px bila terlipat);
-     kolom ikut naik supaya tidak tertutup drawer. :has() didukung
-     Chrome 105+ / Safari 15.4+; browser lama kembali ke perilaku lama. */
-  #btnModeBangun { bottom: 40px; }
-  #kontrolWaktu { bottom: 40px; }
+     drawer terbuka, naik di atasnya (drawer-maks + ticker + celah /
+     terlipat = ticker + tinggi toolbar); kolom ikut naik supaya tidak
+     tertutup drawer. v21 Worker 3: nilai lama 300px/150px (drawer
+     v20 ~250px) diganti calc() dari token --drawer-maks (30vh) agar
+     selaras dengan tinggi drawer v21 — bila token berubah, aturan ini
+     ikut berubah. :has() didukung Chrome 105+ / Safari 15.4+;
+     browser lama kembali ke perilaku lama. */
+  #btnModeBangun { bottom: calc(var(--berita-tinggi) + 14px + env(safe-area-inset-bottom, 0px)); }
+  #kontrolWaktu { bottom: calc(var(--berita-tinggi) + 14px + env(safe-area-inset-bottom, 0px)); }
   #aplikasi:has(#menuBangun:not(.tersembunyi)) #btnModeBangun,
-  #aplikasi:has(#menuBangun:not(.tersembunyi)) #kontrolWaktu { bottom: 300px; z-index: 19; }
+  #aplikasi:has(#menuBangun:not(.tersembunyi)) #kontrolWaktu { bottom: calc(var(--drawer-maks) + var(--berita-tinggi) + 18px); z-index: 19; }
   #aplikasi:has(#menuBangun:not(.tersembunyi).terlipat) #btnModeBangun,
-  #aplikasi:has(#menuBangun:not(.tersembunyi).terlipat) #kontrolWaktu { bottom: 150px; }
+  #aplikasi:has(#menuBangun:not(.tersembunyi).terlipat) #kontrolWaktu { bottom: calc(var(--berita-tinggi) + 78px); }
   #aplikasi:has(#menuBangun:not(.tersembunyi)) #kolomKiri,
-  #aplikasi:has(#menuBangun:not(.tersembunyi)) #kolomKanan { bottom: 300px; }
+  #aplikasi:has(#menuBangun:not(.tersembunyi)) #kolomKanan { bottom: calc(var(--drawer-maks) + var(--berita-tinggi) + 18px); }
   #aplikasi:has(#menuBangun:not(.tersembunyi).terlipat) #kolomKiri,
-  #aplikasi:has(#menuBangun:not(.tersembunyi).terlipat) #kolomKanan { bottom: 150px; }
-  .kartuBangun { width: 104px; }
+  #aplikasi:has(#menuBangun:not(.tersembunyi).terlipat) #kolomKanan { bottom: calc(var(--berita-tinggi) + 78px); }
+  /* v21 Worker 5: di HP portrait kolom kiri (250px, panel terbuka) +
+     kolom kanan (180px) tumpang-tindih horizontal (250+180 > 390) —
+     bila panel kiri dibuka, kartu minimap disembunyikan supaya panel
+     tidak tertutup minimap; tutup panel kiri untuk melihat minimap
+     lagi. Panel kanan (detail bangunan terpilih) TIDAK disembunyikan.
+     :has() butuh Chrome 105+ / Safari 15.4+ (batas yang sama dengan
+     aturan drawer di atas). */
+  #aplikasi:has(#panelKiri:not(.tersembunyi)) #kartuPeta { display: none; }
+  .kartuBangun { width: 110px; }
   #kolomKanan { width: 180px; }
-  #kartuPeta.diperbesar { width: 260px; margin-left: -80px; }
+  /* v21 Worker 5 (cacat 4): minimap diperbesar = kolom 260px di HP. */
+  #kolomKanan.minimap-diperbesar { width: 260px; max-width: 260px; }
   /* Nav kiri jadi rail ikon kecil */
   #relKiri button { width: 44px; height: 44px; }
-  .navTip { display: none; }
+  /* v21 Worker 5 (cacat 5): aturan lama yang menyembunyikan tooltip di
+     layar kecil DICABUT — tooltip harus tetap muncul saat fokus/sentuh
+     di HP (class "tampil" dari JS); hover tidak ada di layar sentuh. */
   #kartuTutorial { width: min(440px, 92%); }
   /* v20 Worker 3: main menu di layar kecil — padding & logo mengecil */
   .kartuMulai, .kartuModal { padding: 24px 18px; }
@@ -540,8 +723,8 @@ h1, h2, h3 { line-height: 1.2; font-weight: 800; }
   #relKiri button { width: 48px; height: 48px; }
   .kartuBangun { min-height: 44px; }
   #btnGeserKiri, #btnGeserKanan { min-width: 44px; min-height: 44px; }
-  #btnLipatKatalog { width: 44px; height: 44px; }
-  #btnPetaBesar { width: 44px; height: 44px; }
+  #btnLipatKatalog, #btnTutupDrawer { width: 44px; height: 44px; }
+  #btnPetaBesar, #btnPetaTutup { width: 44px; height: 44px; }
   #btnModeBangun { min-height: 44px; }
 }
 
@@ -641,7 +824,7 @@ h1, h2, h3 { line-height: 1.2; font-weight: 800; }
 
 /* ---------- F. Kartu tutorial interaktif (rapi, tidak menutupi tengah peta) ---------- */
 #kartuTutorial {
-  position: absolute; top: calc(76px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%);
+  position: absolute; top: calc(20px + var(--hud-tinggi) + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%);
   z-index: 24; width: min(480px, 92%);
   background: var(--panel-kuat); border: 1px solid rgba(74, 222, 128, .55); border-radius: var(--radius-m);
   padding: 12px 16px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);

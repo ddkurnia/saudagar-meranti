@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>MERANTI RISING — Ayo Membangun Meranti!</title>
-<link rel="stylesheet" href="css/city.css?v=12">
+<link rel="stylesheet" href="css/city.css?v=13">
 </head>
 <body>
 <!-- Layar mulai: pembuka sinematik MERANTI RISING (v20: main menu ala game PC/console) -->
@@ -25,6 +25,7 @@
       <button id="btnLanjut" class="btnUtama">▶ LANJUTKAN PERMAINAN</button>
       <button id="btnBaru" class="btnUtama sekunder">＋ PERMAINAN BARU</button>
       <button id="btnProfil" class="btnUtama sekunder"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.5 3.5-5 7-5s6.2 1.5 7 5"/></svg> PROFIL PEMAIN</button>
+      <button id="btnPengaturanMulai" class="btnUtama sekunder">⚙️ PENGATURAN</button>
     </div>
     <p id="infoSave" class="infoSave"></p>
     <details class="caraMain">
@@ -78,13 +79,35 @@
       </div>
     </div>
     <div class="tombolMulai">
+      <button id="btnHapusProfil" class="btnUtama sekunder">🗑 Hapus Profil</button>
       <button id="btnTutupProfil" class="btnUtama">Tutup</button>
     </div>
   </div>
+  <!-- Tahap pengaturan layar mulai (v21 Worker 5, cacat 14): density +
+       hapus profil tanpa harus masuk ke dalam game dulu. Hapus profil
+       dua-ketuk (resetProfil) — simpanan game TIDAK dihapus; setelah itu
+       MULAI menampilkan formulir identitas + tutorial lagi. -->
+  <div id="tahapPengaturan" class="kartuMulai" style="display:none">
+    <h2>Pengaturan</h2>
+    <p class="desMulai">Tampilan &amp; profil pemain. Perubahan tersimpan otomatis.</p>
+    <p class="labelForm">Tampilan (Density)</p>
+    <div class="tombolMulai">
+      <button type="button" class="btnUtama sekunder" data-density="compact" onclick="aturDensity('compact')">Compact — HUD ringkas</button>
+      <button type="button" class="btnUtama sekunder" data-density="normal" onclick="aturDensity('normal')">Normal — ukuran v20</button>
+      <button type="button" class="btnUtama sekunder" data-density="expanded" onclick="aturDensity('expanded')">Expanded — panel lega</button>
+    </div>
+    <p class="labelForm">Profil Pemain</p>
+    <div class="tombolMulai">
+      <button id="btnHapusProfilMulai" class="btnUtama sekunder">🗑 Hapus Profil</button>
+      <button id="btnKembaliPengaturanMulai" class="btnUtama">← Kembali</button>
+    </div>
+    <p class="infoSave">Hapus profil mengembalikan layar mulai ke formulir identitas — tutorial muncul lagi di permainan baru. Simpanan game TIDAK dihapus.</p>
+  </div>
 </div>
 
-<!-- Aplikasi -->
-<div id="aplikasi" style="display:none">
+<!-- Aplikasi (v21: density-compact = default; ganti class ke
+     density-normal / density-expanded untuk mode lain — lihat :root) -->
+<div id="aplikasi" class="density-compact" style="display:none">
   <section id="panggung">
     <canvas id="peta"></canvas>
     <div id="toast" class="toast"></div>
@@ -160,7 +183,7 @@
     <div id="barisKiri">
       <nav id="relKiri" aria-label="Navigasi utama">
         <button data-tab="peta" aria-label="Overview" title="Overview"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg><span class="navTip">Overview</span></button>
-        <button data-tab="misi" class="aktif" aria-label="Misi" title="Misi"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg><span class="navTip">Misi</span></button>
+        <button data-tab="misi" aria-label="Misi" title="Misi"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg><span class="navTip">Misi</span></button>
         <button data-tab="penduduk" aria-label="Penduduk" title="Penduduk"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.6c2.6.3 4.4 1.9 5 4.4"/></svg><span class="navTip">Penduduk</span></button>
         <button data-tab="ekonomi" aria-label="Ekonomi" title="Ekonomi"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-8M21 20H3"/></svg><span class="navTip">Ekonomi</span></button>
         <button data-tab="infrastruktur" aria-label="Infrastruktur" title="Infrastruktur"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 0 0-5.6 5L3 17.4V21h3.6l5.9-5.9a4 4 0 0 0 5-5.6L14 12.9l-2.4-2.4 2.9-4Z"/></svg><span class="navTip">Infrastruktur</span></button>
@@ -168,7 +191,10 @@
         <button data-tab="riset" aria-label="Penelitian" title="Penelitian"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v5.5L4.5 18a2 2 0 0 0 1.8 3h11.4a2 2 0 0 0 1.8-3L14 8.5V3"/><path d="M7.5 14h9"/></svg><span class="navTip">Penelitian</span></button>
         <button data-tab="statistik" aria-label="Statistik" title="Statistik"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20V4"/><path d="M4 20h16"/><path d="M8 16v-5M12 16V8M16 16v-3"/></svg><span class="navTip">Statistik</span></button>
       </nav>
-      <aside id="panelKiri" class="kartuKaca">
+      <!-- v21 Worker 2: panel kiri COLLAPSED secara default — saat game
+           dimulai hanya ikon nav yang terlihat (termasuk Misi); panel
+           dibuka lewat bukaTabKiri() saat ikon diketuk. -->
+      <aside id="panelKiri" class="kartuKaca tersembunyi">
         <div id="panelKiriIsi"></div>
       </aside>
     </div>
@@ -194,7 +220,7 @@
        (data-tab="statistik", cabang renderPanelKiri oleh Worker 2). -->
   <div id="kolomKanan">
     <div id="kartuPeta" class="kartuKaca">
-      <div class="kartuJudul"><span>Peta Meranti</span><span class="kartuJudulAksi"><button id="btnPetaBesar" title="Perbesar minimap" aria-label="Perbesar minimap">⤢</button><span class="kompas">🧭</span></span></div>
+      <div class="kartuJudul"><span>Peta Meranti</span><span class="kartuJudulAksi"><button id="btnPetaBesar" title="Perbesar minimap" aria-label="Perbesar minimap">⤢</button><button id="btnPetaTutup" title="Tutup minimap" aria-label="Tutup minimap" aria-expanded="true">▾</button><span class="kompas">🧭</span></span></div>
       <canvas id="minimap" width="220" height="132"></canvas>
       <div class="miniKontrol">
         <button id="btnZoomIn" title="Perbesar">＋</button>
@@ -257,13 +283,20 @@
   <!-- Menu bangun bawah v20: bottom build drawer.
        #katBangun = bar kategori (selalu terlihat saat Mode Bangun aktif);
        katalog (#itemBangunWrap) bisa dilipat via #btnLipatKatalog
-       (Worker 2: toggle class "terlipat" pada #menuBangun).
+       (toggle class "terlipat" pada #menuBangun) atau ditutup penuh
+       via #btnTutupDrawer (tutupDrawerBangun: drawer hilang, mode
+       bangun batal, kembali ke toolbar saja).
+       v21 Worker 3: saat terlipat HANYA bar kategori yang terlihat
+       (toolbar ~48-56px); katalog dibuka lagi dengan klik tab kategori.
        19 kategori: wadah + CSS sudah siap digulir horizontal. -->
   <footer id="menuBangun" class="kartuKaca">
     <div id="katBangun"></div>
     <div id="barisKatalog">
       <span class="labelKatalog">Katalog Bangunan</span>
-      <button id="btnLipatKatalog" title="Buka / tutup katalog" aria-label="Buka atau tutup katalog">▾</button>
+      <span class="tombolKatalog">
+        <button id="btnLipatKatalog" title="Lipat katalog (hanya bar kategori)" aria-label="Lipat katalog">▾</button>
+        <button id="btnTutupDrawer" title="Tutup menu bangun" aria-label="Tutup menu bangun">✕</button>
+      </span>
     </div>
     <div id="pesanKatalog" class="pesanKatalog" style="display:none"></div>
     <div id="itemBangunWrap">
@@ -293,6 +326,6 @@
 <script src="js/city-utilitas.js?v=1"></script>
 <script src="js/city-bahagia.js?v=1"></script>
 <script src="js/city-lalin.js?v=1"></script>
-<script src="js/city.js?v=22"></script>
+<script src="js/city.js?v=23"></script>
 </body>
 </html>

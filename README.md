@@ -6,6 +6,160 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v21 — Compact HUD & Full Viewport Optimization (2026-11-11)
+
+**v21 adalah penyempurnaan v20, bukan remake.** Seluruh sistem gameplay
+dipertahankan apa adanya — World Map Engine, kamera/zoom, placement,
+katalog 118 bangunan, ekonomi, penduduk, pekerja, misi, waktu real-time,
+kecepatan simulasi, save game, profil pemain, seluruh data. Yang berubah
+hanya ukuran, tata letak, responsivitas, dan pengalaman pengguna — plus
+perbaikan 12 cacat UI dari cek live v20. Format simpanan TIDAK berubah
+(`petaVersi` tetap 5; simpanan lama tetap bisa dimuat).
+
+### Compact HUD (ukuran v20 → v21, mode Compact)
+
+| Elemen | v20 (Normal) | v21 (Compact) |
+|---|---|---|
+| Header | 62 px | ~55 px (token 52) |
+| Avatar pemimpin | 46 px | 36 px |
+| Nav kiri | 48 px | 44 px (ikon saja + tooltip) |
+| Panel kiri | 300 px, terbuka default | 240 px, **tertutup default** |
+| Minimap | 248 px | 200 px (bisa ditutup & diperbesar) |
+| Build drawer | ~40 vh | maks **30 vh** (toolbar ~47–50 px saat terlipat) |
+| Kartu bangunan | 124 px / gambar 64 px | 120 px / gambar 64 px, scroll-snap |
+| Kontrol waktu | 48 px | 44 px |
+| News bar | 28 px | 26 px |
+
+Mode Density bisa diganti di Pengaturan (dalam game maupun di layar
+mulai): **Compact / Normal / Expanded** — class di `#aplikasi`, pilihan
+tersimpan di localStorage (`merantiRisingDensityV1`) dan dipulihkan saat
+muat. Skala UI terpisah dari skala dunia: zoom peta tidak mengubah HUD,
+dan tidak pernah dipakai `transform: scale()` pada seluruh aplikasi.
+
+### 12 cacat UI dari cek live v20 — diperbaiki di v21
+
+1. **Panel kanan tidak terbaca** — panel kanan kini kartu yang benar-benar
+   tampil: memakai sisa tinggi kolom kanan (lebar 280 px saat terbuka),
+   latar panel kuat, dan **menutup build drawer** saat terbuka (panel &
+   drawer tidak tumpang-tindih). Panel jalan kini juga menampilkan
+   kapasitas jalan (dari `JALAN[tipe].kapasitas`, mis. jalan-tanah
+   10 kendaraan/jam), kecepatan rencana, kemacetan, dan volume lalu
+   lintas (diturunkan dari `S.lalin`).
+2. **Minimap tidak bisa diperbesar** — tombol ⤢ kini benar-benar
+   memperbesar minimap (kolom kanan melebar dari 200 px menjadi
+   300 px, kanvas 320×192, tombol berubah jadi ⤡), bekerja sama dengan
+   tombol tutup W2 (menutup membatalkan mode besar; membuka lagi tidak
+   langsung memperbesar).
+3. **Tooltip nav tidak muncul** — `.navTip` kini muncul saat hover,
+   fokus keyboard, dan sentuh (1,6 detik); nav punya stacking context
+   sendiri di atas panel kiri; aturan yang menyembunyikan tooltip di
+   ≤820 px dicabut.
+4. **Tutorial langkah 5 (kode: langkah 4) tidak selesai otomatis** —
+   penyebab: `cekTutorial()` tidak pernah dipanggil dari jalur waktu.
+   Kini `cekTutorial()` dipanggil di akhir `majukanWaktu()` dan di
+   `aturKecepatan()`; langkah selesai bila kecepatan 2× **dan** waktu
+   game sudah maju ≥30 menit sejak langkah tampil (jalur lama: 120
+   menit + pekerja bekerja, tetap dipertahankan).
+5. **Tutorial langkah 6 tidak mengarahkan kamera** — penyebab: kamera
+   dipusatkan ke **tengah footprint 2×2** petak kebun sagu; petak
+   tengah itu menabrak jalan sehingga `cekBangun` gagal ("Sudah ada
+   jalan di sini"). Kini kamera dipusatkan ke **petak anchor**
+   (238, 212 pada peta awal) yang lolos `cekBangun`, dan petak itu
+   disorot sebagai `terpilih` dengan panel kanan tampil.
+6. **Nama kehilangan spasi ("Sukma Dewi" → "SukmaDewi")** — penyebab
+   BUKAN sanitasi nama (sudah benar), melainkan handler `keydown`
+   global yang mem-`preventDefault()` spasi (toggle pause) dan
+   menggeser kamera dengan a/d/w/s/p **tanpa memeriksa apakah fokus
+   sedang di input**. Kini handler kembali lebih awal bila fokus ada di
+   INPUT/TEXTAREA/SELECT/contentEditable.
+7. **Panel Pengaturan tidak tertutup** — `tutupSemuaPanel()` baru
+   dipanggil dari `tampilkanTahap()`, `mulaiGame()`,
+   `kembaliKeMenuUtama()`, dan `resetProfil()`; panel kiri selalu
+   tertutup saat kembali ke menu atau memulai permainan.
+8. **Pil uang terpotong di lebar ±1074 px** — zona tengah HUD memakai
+   `justify-content: safe center` + `overflow-x: auto` (sebelumnya
+   `center` + overflow memotong pil PERTAMA di kiri — pil uang);
+   pada ≤1100 px teks XP disembunyikan dan bar XP menyempit. Estimasi
+   aritmetik CSS: pil uang tetap terlihat pada 1074 px.
+9. **Misi bukan "1 utama + 2–3 sampingan"** — drawer misi kini hanya
+   menampilkan misi utama + maksimal 3 misi sampingan berikutnya yang
+   belum selesai, plus penghitung "X/12 misi selesai" dan tombol
+   "Lihat semua misi (N lagi)" yang membuka daftar lengkap 12 misi
+   (dengan tombol "Tampilkan lebih sedikit").
+10. **Statistik tanpa grafik** — panel Statistik kini punya mini bar per
+    indikator: ⚡ Listrik, 💧 Air, 🎓 Pendidikan, 🏥 Kesehatan,
+    🧹 Kebersihan, 🌿 Lingkungan — masing-masing bar + angka % dari
+    data aktual (`S.utilitas`, `hitungLayanan()`,
+    `statusLingkungan()`), bukan angka palsu.
+11. **Overlay lalu lintas terlalu pucat** — alpha dinaikkan: hijau
+    lancar 0.35 → **0.55**, kuning 0.45 → **0.55**, merah 0.5 → **0.6**;
+    overlay listrik/air/drainase/polusi/kebahagiaan/layanan/zona juga
+    dinaikkan secukupnya (0.5–0.6).
+12. **"PERMAINAN BARU" tidak membersihkan profil** — layar mulai kini
+    punya tombol **⚙️ PENGATURAN** (membuka tahap Pengaturan dengan
+    pemilih density + hapus profil), dan panel **Profil Pemain** punya
+    tombol **🗑 Hapus Profil** (dua-ketuk, sama seperti di dalam game).
+    Setelah hapus profil dari layar mulai, formulir identitas muncul
+    lagi saat "MULAI" ditekan.
+
+### Perbaikan bug krusial (dari Worker 4, dipertahankan di v21)
+
+- **Reload memuat simpanan lama — DIPERBAIKI.** Akar masalah: autosave
+  tiap ~1 detik di SETIAP tab (termasuk tab lama yang di-background-kan)
+  menimpa simpanan tab baru. Perbaikan: lease tab
+  (`merantiRisingTabAktifV1`, autosave dilewati bila lease segar milik
+  tab lain, simpan manual merebut lease, denyut tiap 500 ms) +
+  `S.generasiSimpan` + verifikasi baca-balik di `simpan()` (kini
+  mengembalikan boolean). Dibuktikan tes headless dua konteks VM yang
+  berbagi localStorage.
+- **Tint malam — BELUM DIPERBAIKI, JANGAN diklaim sudah.** Jalur kode
+  terbukti benar dengan ctx perekam; tes headless lama bersifat
+  vacuous. Pengerasan di v20/v21: penjaga interval memantau
+  `waktuGambarPetaTerakhir` + diagnostik `window.__merantiRender`
+  (`frameGambarPeta`, `gelapTerakhir`, `loopGagalBeruntun`,
+  `kesalahanLoopTerakhir`, `kesalahanRenderTerakhir`) + tes regresi
+  ctx-perekam. Akar masalah masih butuh debug live (rencana ada di
+  laporan Worker 4).
+
+### Uji viewport (aritmetik dari nilai CSS — BUKAN pengukuran live)
+
+| Ukuran | Header | Drawer maks | Peta terlihat (drawer tertutup) | Peta terlihat (drawer terbuka) |
+|---|---|---|---|---|
+| 1280×800 (tablet landscape) | ~55 px | 240 px (30 vh) | 88,6% tinggi | 58,6% |
+| 1536×864 | ~55 px | 259 px | 89,5% | 59,5% |
+| 1920×1080 (desktop) | ~55 px | 324 px | 91,6% | 61,6% |
+| 390×844 (HP portrait) | ~55 px | 253 px | 89,2% | 59,2% |
+
+Tidak ada horizontal overflow pada lebar desktop/tablet; pada ≤820 px
+minimap disembunyikan saat panel kiri terbuka (aturan `:has()`) agar
+panel kiri 250 px + kolom kanan 180 px tidak tumpang-tindih di layar
+390 px. Batas yang diketahui: panel kiri + panel kanan detail yang
+terbuka bersamaan di ≤820 px masih bisa tumpang-tindih ~60 px (pengguna
+menutup salah satunya dengan ketukan; keadaan default tidak tumpang-tindih).
+
+### Tes headless
+
+`cp tests/test13.js /tmp/run_test13.js && node /tmp/run_test13.js` →
+**TEST_V13_OK — 916 cek, 0 gagal** (851 baseline + 65 cek baru v21
+Worker 5: panel kanan, minimap besar/kecil, tooltip, tutorial langkah
+4 & 6, nama ber-spasi + penjaga keyboard, panel tertutup saat kembali
+ke menu, misi ringkas, bar statistik, alpha overlay, Pengaturan di layar
+mulai + hapus profil di panel Profil, density, regresi v21).
+
+### Batas jujur & belum terverifikasi live
+
+- **Tint malam: belum terverifikasi live dan belum diperbaiki** (lihat di atas).
+- Semua ukuran viewport di atas dihitung dari token CSS, bukan diukur
+  di browser sungguhan; tampilan di tablet landscape dan smartphone
+  sungguhan, drawer 30% viewport saat disentuh, tooltip/nav di layar
+  sentuh, dan pil uang di 1074 px **belum dicek live**.
+- `:has()` butuh Chrome 105+ / Safari 15.4+ (aturan minimap ≤820 px).
+- Toolbar terlipat ~45–47 px, sedikit di bawah target 48–56 px
+  (toleransi compact).
+- Estimasi lebar HUD pada 1280 px menunjukkan overflow tengah ~388 px
+  (zona tengah bisa di-scroll secara horizontal oleh desain); pada
+  1920 px HUD muat penuh.
+
 ## Yang baru di v20 — Complete UI/UX Modernization: Premium 2026 City Builder Interface (2026-11-11)
 
 **Total redesign tampilan & pengalaman pengguna (BUKAN membuat ulang

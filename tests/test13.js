@@ -850,8 +850,8 @@ const kecHarap = ["tebing-tinggi-barat", "tebing-tinggi", "tebing-tinggi-timur",
 // (a) konstanta, ukuran peta & cakupan kecamatan
 cek("CITY 480x320, seed 20261111", C.CITY.GRID_W === 480 && C.CITY.GRID_H === 320 && C.CITY.SEED === 20261111, C.CITY.GRID_W + "x" + C.CITY.GRID_H + " seed " + C.CITY.SEED);
 cek("CITY SAVE_KEY/SAVE_LAMA/PROFIL_KEY v17", C.CITY.SAVE_KEY === "merantiRisingWorldV1" && C.CITY.SAVE_LAMA === "saudagarSaguMerantiCityV1" && C.CITY.PROFIL_KEY === "merantiRisingProfilV1", C.CITY.SAVE_KEY + " / " + C.CITY.SAVE_LAMA + " / " + C.CITY.PROFIL_KEY);
-cek("VERSI_GAME v20", versiGame17 === "v20", versiGame17);
-cek("index.html memakai ?v=12/9/4/1/22 (v20)", idxHtml.includes("css/city.css?v=12") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=1") && idxHtml.includes("js/city.js?v=22"));
+cek("VERSI_GAME v21", versiGame17 === "v21", versiGame17);
+cek("index.html memakai ?v=13/9/4/1/23 (v21)", idxHtml.includes("css/city.css?v=13") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=1") && idxHtml.includes("js/city.js?v=23"));
 cek("PULAU_DEFS 27 pulau", !!pulauDefs17 && pulauDefs17.length === 27, pulauDefs17 ? pulauDefs17.length : "tidak ada");
 cek("KECAMATAN_DEFS 9 kecamatan", kecIds.length === 9, kecIds.length);
 cek("9 id kecamatan sesuai kontrak", kecHarap.every(id => kecIds.includes(id)), kecIds.join(","));
@@ -1158,7 +1158,7 @@ cek("v17.1: helper cariTileKebunSagu ada", srcCityA.includes("function cariTileK
 cek("v17.1: panel legenda terrain ada", srcCityA.includes("Peta — Legenda Terrain"));
 cek("v17.1: auto-pan tutorial langkah 6 memakai cariTileKebunSagu", srcCityA.includes("cariTileKebunSagu()"));
 cek("v18-A: kontrol waktu baru di index.html (btnKec05, tanpa btnHari/btnKec3)", idxHtml.includes('id="btnKec05"') && !idxHtml.includes('id="btnHari"') && !idxHtml.includes('id="btnKec3"'));
-cek("v18-D: VERSI_GAME naik ke v20 (modul akhir)", C.VERSI_GAME === "v20", C.VERSI_GAME);
+cek("v18-D: VERSI_GAME naik ke v21 (modul akhir)", C.VERSI_GAME === "v21", C.VERSI_GAME);
 // Kembalikan ke permainan baru yang bersih setelah semua uji waktu
 C.mulaiGame(true);
 cek("v18-A: permainan baru mulai 06:00 hari ke-0", C.waktuGame === 360 && C.hariGame() === 0 && C.jamGame() === 6, C.waktuGame);
@@ -1416,7 +1416,7 @@ cek("v18-C: riset tetap harian (olah-sagu 2 hari, konstruksi-beton 3 hari)", C.T
 cek("v18-C: prosesPergantianHari tetap memajukan riset per hari", srcCityB.includes("S.riset.sisa--"));
 cek("v18-C: tidak ada lagi progres konstruksi harian (b.progres += 1 / d.waktu)", !srcCityB.includes("b.progres += 1 / d.waktu"));
 cek("v18-C: loop utama tidak lagi memanggil perbaruiFeri(dt)", !srcCityB.includes("perbaruiFeri(dt);"));
-cek("v18-D: VERSI_GAME v20 (modul akhir)", C.VERSI_GAME === "v20", C.VERSI_GAME);
+cek("v18-D: VERSI_GAME v21 (modul akhir)", C.VERSI_GAME === "v21", C.VERSI_GAME);
 let mangroveC = 0;
 for (const baris of C.peta.terrain) for (const t of baris) if (t === "mangrove") mangroveC++;
 cek("v18-C: v17.1 mangrove > 1000 petak", mangroveC > 1000, mangroveC);
@@ -1425,8 +1425,8 @@ cek("v18-C: v17.1 cariTileKebunSagu menemukan petak valid", !!tkSaguC && C.cekBa
 cek("v18-C: v17.1 legenda terrain masih ada", srcCityB.includes("Peta — Legenda Terrain"));
 // ---- v18-D: UI jam/kalender bar atas + tutorial langkah 4 baru + hapus hariBerikutnya ----
 // (a) versi & refs di index.html (dibaca dari disk; harness sudah memakai fs)
-cek("v18-D: VERSI_GAME v20", C.VERSI_GAME === "v20", C.VERSI_GAME);
-cek("v18-D: index.html refs v20 (css v=12, city-data v=9, city-map v=4, city-utilitas v=1, city v=22) + city-bahagia v=1 + city-lalin v=1", idxHtml.includes("css/city.css?v=12") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city.js?v=22") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=1"));
+cek("v18-D: VERSI_GAME v21", C.VERSI_GAME === "v21", C.VERSI_GAME);
+cek("v18-D: index.html refs v21 (css v=13, city-data v=9, city-map v=4, city-utilitas v=1, city v=23) + city-bahagia v=1 + city-lalin v=1", idxHtml.includes("css/city.css?v=13") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city.js?v=23") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=1"));
 cek("v18-D: #jamAtas ada di bar atas (jam, hari, fase, cuaca)", idxHtml.includes('id="jamAtas"') && idxHtml.includes('id="jamAtasJam"') && idxHtml.includes('id="jamAtasHari"') && idxHtml.includes('id="jamAtasFase"') && idxHtml.includes('id="jamAtasCuaca"'));
 cek("v18-D: #ikonFase hanya satu (dipindah ke #jamAtas, tidak duplikat)", (idxHtml.match(/id="ikonFase"/g) || []).length === 1);
 cek("v18-D: tidak ada tombol Hari Berikutnya di index.html", !idxHtml.includes('id="btnHari"') && !idxHtml.includes('id="btnKec3"') && !/<button[^>]*>[^<]*Hari Berikutnya/.test(idxHtml) && !idxHtml.includes("⏭ Hari Berikutnya"));
@@ -1445,26 +1445,39 @@ cek("v18-D: #ikonFase mengikuti jam (☀️ di siang hari)", C.document.getEleme
 cek("v18-D: labelFaseID: Sunrise=Fajar, Noon=Siang, Night=Malam", C.labelFaseID("Sunrise") === "Fajar" && C.labelFaseID("Noon") === "Siang" && C.labelFaseID("Night") === "Malam");
 // (c) kontrol kecepatan: nilai 3 ditolak -> 1 (diulang di D sebagai kontrak modul)
 cek("v18-D: aturKecepatan(3) ditolak -> 1", (() => { C.aturKecepatan(3); return C.kecepatan === 1; })());
-// (d) tutorial langkah 4 baru: aksi percepat 2x; selesai setelah >=120 menit game + pekerja bekerja
+// (d) tutorial langkah 4 baru (v21 Worker 5, cacat 6): aksi percepat 2x;
+// selesai bila kecepatan SUDAH 2x DAN waktu maju >= 30 menit game —
+// tanpa menunggu aksi bangun berikutnya (cekTutorial kini dipanggil
+// dari majukanWaktu & aturKecepatan). Syarat lama (120 menit + pekerja
+// bekerja) tetap berlaku sebagai jalur kedua.
 C.S.tutorial = { aktif: true, selesai: false, langkah: 4 };
 C.S.penduduk.total = 30; // angkatan kerja 16 jiwa
 C.S.bangunan.forEach(b => { b.selesai = true; b.progres = 1; }); // semua beroperasi (dermaga butuh 2 pekerja)
+// Isolasi langkah 4: kebun sagu sudah ada & penduduk 30 akan membuat
+// langkah 5-6 ikut terlewati berantai — simpan dulu, kembalikan sesudah.
+const kebunSimpanD = C.S.bangunan.filter(b => b.id === "kebun-sagu");
+C.S.bangunan = C.S.bangunan.filter(b => b.id !== "kebun-sagu");
+C.S.penduduk.total = 4;
 vm.runInContext("waktuGame = 360;", sandbox); // 06:00 hari ke-0 — baseline langkah 4
 C.tampilkanTutorial();
 cek("v18-D: tutorial langkah 4: teks & aksi baru (tanpa Hari Berikutnya)", C.TUTORIAL[4].aksi.label.includes("2×") && !C.TUTORIAL[4].des.includes("Hari Berikutnya") && !C.TUTORIAL[4].aksi.label.includes("Hari Berikutnya"), C.TUTORIAL[4].aksi.label + " / " + C.TUTORIAL[4].des);
 C.TUTORIAL[4].aksi.fn();
 cek("v18-D: aksi langkah 4 mengatur kecepatan 2", C.kecepatan === 2, C.kecepatan);
-cek("v18-D: langkah 4 belum selesai sebelum 120 menit game", C.S.tutorial.langkah === 4, "langkah=" + C.S.tutorial.langkah);
-C.majukanWaktu(60);
-C.cekTutorial();
-cek("v18-D: langkah 4 belum selesai setelah 60 menit game", C.S.tutorial.langkah === 4, "langkah=" + C.S.tutorial.langkah);
-C.majukanWaktu(60); // total 120 menit game sejak langkah 4 tampil
-C.cekTutorial();
-// Catatan: langkah 5 & 6 langsung ikut terlewati di state tes ini karena
-// kondisinya sudah terpenuhi (kebun-sagu sudah ada, penduduk 30 ≥ 10) —
-// itu perilaku tutorial yang benar (langkah terpenuhi langsung dilewati),
-// jadi yang diuji di sini adalah langkah 4 SUDAH lewat (>= 5), bukan tepat 5.
-cek("v18-D: langkah 4 lewat setelah 120 menit game + pekerja bekerja", C.S.tutorial.langkah >= 5, "langkah=" + C.S.tutorial.langkah + " bekerja=" + C.hitungTenagaKerja().bekerja);
+cek("v21-w5: langkah 4 BELUM selesai sebelum waktu maju (0 menit)", C.S.tutorial.langkah === 4, "langkah=" + C.S.tutorial.langkah);
+C.majukanWaktu(20);
+cek("v21-w5: langkah 4 belum selesai setelah 20 menit game pada 2x (<30)", C.S.tutorial.langkah === 4, "langkah=" + C.S.tutorial.langkah);
+C.majukanWaktu(10); // total 30 menit game sejak langkah 4 tampil
+cek("v21-w5: langkah 4 SELESAI sendiri setelah 30 menit game pada 2x (cekTutorial dari jalur waktu, tanpa aksi bangun)", C.S.tutorial.langkah === 5, "langkah=" + C.S.tutorial.langkah);
+// Jalur kedua (syarat lama) tetap berlaku: 120 menit + pekerja bekerja
+// pada 1x (tanpa 2x) juga menyelesaikan langkah 4.
+C.S.bangunan.push.apply(C.S.bangunan, kebunSimpanD);
+C.S.penduduk.total = 30;
+C.S.tutorial = { aktif: true, selesai: false, langkah: 4 };
+vm.runInContext("waktuGame = 360;", sandbox);
+C.tampilkanTutorial();
+C.aturKecepatan(1);
+C.majukanWaktu(120);
+cek("v21-w5: langkah 4 selesai via jalur lama (120 menit + pekerja) pada 1x", C.S.tutorial.langkah >= 5, "langkah=" + C.S.tutorial.langkah + " bekerja=" + C.hitungTenagaKerja().bekerja);
 C.aturKecepatan(1);
 C.S.tutorial = { aktif: false, selesai: true, langkah: 7 }; // kembalikan ke keadaan selesai
 // (e) smoke test render dengan sistem waktu baru + v17.1 tetap jalan
@@ -2650,8 +2663,8 @@ const rumahNyalaV20 = C.S.bangunan.find(b => b.id === "rumah-sederhana" && b.sel
 cek("v20-overlay: skenario blackout — ada rumah padam & ada rumah menyala", !!rumahPadamV20 && !!rumahNyalaV20, "padam=" + C.S.utilitas.listrik.padam.length + " rumah=" + nRumahV20);
 C.aturOverlay("listrik");
 const cacheListrikV20 = C.bangunCacheOverlay();
-cek("v20-overlay: rumah padam HARUS merah di overlay listrik", !!rumahPadamV20 && cacheListrikV20.get(rumahPadamV20.x + "," + rumahPadamV20.y) === "rgba(231,76,60,0.45)", rumahPadamV20 ? cacheListrikV20.get(rumahPadamV20.x + "," + rumahPadamV20.y) : "tidak ada rumah padam");
-cek("v20-overlay: rumah berlistrik HARUS hijau di overlay listrik", !!rumahNyalaV20 && cacheListrikV20.get(rumahNyalaV20.x + "," + rumahNyalaV20.y) === "rgba(34,197,94,0.35)", rumahNyalaV20 ? cacheListrikV20.get(rumahNyalaV20.x + "," + rumahNyalaV20.y) : "tidak ada rumah menyala");
+cek("v20-overlay: rumah padam HARUS merah di overlay listrik", !!rumahPadamV20 && cacheListrikV20.get(rumahPadamV20.x + "," + rumahPadamV20.y) === "rgba(231,76,60,0.55)", rumahPadamV20 ? cacheListrikV20.get(rumahPadamV20.x + "," + rumahPadamV20.y) : "tidak ada rumah padam");
+cek("v20-overlay: rumah berlistrik HARUS hijau di overlay listrik", !!rumahNyalaV20 && cacheListrikV20.get(rumahNyalaV20.x + "," + rumahNyalaV20.y) === "rgba(34,197,94,0.5)", rumahNyalaV20 ? cacheListrikV20.get(rumahNyalaV20.x + "," + rumahNyalaV20.y) : "tidak ada rumah menyala");
 // (k) pill listrik menampilkan jumlah padam (temuan cek live v19)
 C.renderHUD();
 const teksListrikV20 = C.document.getElementById("listrikTeks").textContent;
@@ -2671,8 +2684,8 @@ tambahBangunanTes("pltd", pltdPosV20.x, pltdPosV20.y);
 C.hitungUtilitas();
 const cacheListrik2V20 = C.bangunCacheOverlay();
 cek("v20-overlay: cache dibangun ulang setelah PLTD (objek cache baru)", cacheListrik2V20 !== cacheListrikV20);
-cek("v20-overlay: rumah yang tadinya padam kini hijau setelah PLTD", !!rumahPadamV20 && cacheListrik2V20.get(rumahPadamV20.x + "," + rumahPadamV20.y) === "rgba(34,197,94,0.35)", rumahPadamV20 ? cacheListrik2V20.get(rumahPadamV20.x + "," + rumahPadamV20.y) : "tidak ada rumah padam");
-cek("v20-overlay: PLTD diwarnai kuning (pembangkit)", cacheListrik2V20.get(pltdPosV20.x + "," + pltdPosV20.y) === "rgba(251,191,36,0.4)", cacheListrik2V20.get(pltdPosV20.x + "," + pltdPosV20.y));
+cek("v20-overlay: rumah yang tadinya padam kini hijau setelah PLTD", !!rumahPadamV20 && cacheListrik2V20.get(rumahPadamV20.x + "," + rumahPadamV20.y) === "rgba(34,197,94,0.5)", rumahPadamV20 ? cacheListrik2V20.get(rumahPadamV20.x + "," + rumahPadamV20.y) : "tidak ada rumah padam");
+cek("v20-overlay: PLTD diwarnai kuning (pembangkit)", cacheListrik2V20.get(pltdPosV20.x + "," + pltdPosV20.y) === "rgba(251,191,36,0.5)", cacheListrik2V20.get(pltdPosV20.x + "," + pltdPosV20.y));
 C.aturOverlay(null);
 // Pill normal tanpa padam setelah jaringan pulih
 C.mulaiGame(true);
@@ -2689,15 +2702,15 @@ C.aturOverlay("traffic");
 const cacheMacetV20 = C.bangunCacheOverlay();
 const kunciJalanV20 = Object.keys(C.S.lalin.perPetak);
 cek("v20-overlay: populasi 400 -> semua petak jalan macet (status 2)", kunciJalanV20.length > 0 && kunciJalanV20.every(k => C.S.lalin.perPetak[k] === 2), kunciJalanV20.length + " petak");
-cek("v20-overlay: overlay traffic untuk jalan macet HARUS merah", kunciJalanV20.length > 0 && kunciJalanV20.every(k => cacheMacetV20.get(k) === "rgba(231,76,60,0.5)"), kunciJalanV20.slice(0, 3).map(k => k + "=" + cacheMacetV20.get(k)).join(" "));
+cek("v20-overlay: overlay traffic untuk jalan macet HARUS merah", kunciJalanV20.length > 0 && kunciJalanV20.every(k => cacheMacetV20.get(k) === "rgba(231,76,60,0.6)"), kunciJalanV20.slice(0, 3).map(k => k + "=" + cacheMacetV20.get(k)).join(" "));
 C.S.penduduk.total = 10;
 C.hitungLalin();
 const cachePadatV20 = C.bangunCacheOverlay();
-cek("v20-overlay: populasi 10 -> ada petak padat kuning", Object.keys(C.S.lalin.perPetak).some(k => C.S.lalin.perPetak[k] === 1 && cachePadatV20.get(k) === "rgba(241,196,15,0.45)"), JSON.stringify(C.S.lalin.perPetak));
+cek("v20-overlay: populasi 10 -> ada petak padat kuning", Object.keys(C.S.lalin.perPetak).some(k => C.S.lalin.perPetak[k] === 1 && cachePadatV20.get(k) === "rgba(241,196,15,0.55)"), JSON.stringify(C.S.lalin.perPetak));
 C.S.penduduk.total = 4;
 C.hitungLalin();
 const cacheLancarV20 = C.bangunCacheOverlay();
-cek("v20-overlay: populasi 4 -> ada petak lancar hijau", Object.keys(C.S.lalin.perPetak).some(k => C.S.lalin.perPetak[k] === 0 && cacheLancarV20.get(k) === "rgba(34,197,94,0.35)"), JSON.stringify(C.S.lalin.perPetak));
+cek("v20-overlay: populasi 4 -> ada petak lancar hijau", Object.keys(C.S.lalin.perPetak).some(k => C.S.lalin.perPetak[k] === 0 && cacheLancarV20.get(k) === "rgba(34,197,94,0.55)"), JSON.stringify(C.S.lalin.perPetak));
 C.aturOverlay(null);
 
 // (e) v19 tetap jalan: waktuGame, listrik, air, kebahagiaan, zoning, APBD, konstruksi 4 jam
@@ -2800,5 +2813,455 @@ cek("v20-profil: profil Sukma dipulihkan (keadaan akhir bersih)", C.profilPemain
 // Kembalikan ke keadaan bersih
 vm.runInContext("waktuGame = 360;", sandbox);
 C.aturKecepatan(1);
+
+// ---- v21 Worker 2: panel statistik compact, minimap, default collapsed ----
+// (a) HTML default: panel kiri collapsed, tidak ada ikon nav aktif,
+//     tombol tutup minimap ada (versi ?v= TIDAK diubah — dikunci tes v20).
+cek("v21-w2: panel kiri collapsed secara default di index.html", idxHtml.includes('id="panelKiri" class="kartuKaca tersembunyi"'));
+cek("v21-w2: tombol misi TIDAK aktif secara default di index.html", !idxHtml.includes('data-tab="misi" class="aktif"'));
+cek("v21-w2: tombol tutup minimap ada di index.html", idxHtml.includes('id="btnPetaTutup"') && idxHtml.includes('aria-expanded="true"'));
+// (b) CSS: kolom kanan & drawer mengikuti token --minimap-lebar (200px compact)
+cek("v21-w2: CSS kolom kanan memakai token --minimap-lebar", cssTxt.includes("width: var(--minimap-lebar)"));
+cek("v21-w2: CSS drawer kanan mengikuti token minimap", cssTxt.includes("right: calc(var(--minimap-lebar) + 22px)"));
+cek("v21-w5: CSS minimap diperbesar = KOLOM token + 100px (300px compact, tanpa margin negatif)", cssTxt.includes("#kolomKanan.minimap-diperbesar") && cssTxt.includes("width: calc(var(--minimap-lebar) + 100px)") && !cssTxt.includes("margin-left: -100px"));
+cek("v21-w2: CSS tidak ada lagi lebar lama kolom kanan 248px / diperbesar 340px / drawer 270px", !cssTxt.includes("width: 248px") && !/#kartuPeta\.diperbesar \{[^}]*width: 340px/.test(cssTxt) && !cssTxt.includes("right: 270px"));
+cek("v21-w2: CSS tombol kartu peta 30px (btnPetaBesar + btnPetaTutup)", cssTxt.includes("#btnPetaBesar, #btnPetaTutup"));
+cek("v21-w2: CSS kontrol waktu setinggi token (44px compact)", /#kontrolWaktu \{[^}]*height: var\(--kontrol-tinggi\)/.test(cssTxt));
+cek("v21-w2: CSS berita 11.5px (tinggi token 26px sudah dari W1)", /#beritaPulau \{[^}]*font-size: 11\.5px/.test(cssTxt));
+cek("v21-w2: CSS panel statistik compact ada (tab-statistik, bar 6px)", cssTxt.includes("#panelKiri.tab-statistik") && cssTxt.includes("#panelKiri.tab-statistik .bar { height: 6px"));
+// (c) JS: toggleMinimap ada + handler terpasang + klik menutup/membuka
+cek("v21-w2: fungsi toggleMinimap ada", typeof C.toggleMinimap === "function");
+cek("v21-w2: #btnPetaTutup punya handler onclick", typeof C.document.getElementById("btnPetaTutup").onclick === "function");
+const kpW2 = C.document.getElementById("kartuPeta");
+const kkW2 = C.document.getElementById("kolomKanan");
+kpW2.classList.remove("ditutup"); kkW2.classList.remove("minimap-ditutup");
+C.document.getElementById("btnPetaTutup").onclick();
+cek("v21-w2: klik #btnPetaTutup menutup minimap (kartu + kolom mengecil)", kpW2.classList.contains("ditutup") && kkW2.classList.contains("minimap-ditutup"));
+cek("v21-w2: tombol tutup berubah jadi ▴ saat minimap ditutup", C.document.getElementById("btnPetaTutup").textContent === "▴");
+C.document.getElementById("btnPetaTutup").onclick();
+cek("v21-w2: klik #btnPetaTutup kedua membuka minimap lagi", !kpW2.classList.contains("ditutup") && !kkW2.classList.contains("minimap-ditutup"));
+C.document.getElementById("btnPetaTutup").onclick();
+C.document.getElementById("btnPetaBesar").onclick();
+cek("v21-w2: klik #btnPetaBesar saat minimap tertutup membuka lagi (tanpa memperbesar)", !kpW2.classList.contains("ditutup") && !kpW2.classList.contains("diperbesar"));
+C.document.getElementById("btnPetaBesar").onclick();
+cek("v21-w2: klik #btnPetaBesar saat minimap terbuka memperbesar", kpW2.classList.contains("diperbesar"));
+C.document.getElementById("btnPetaBesar").onclick();
+cek("v21-w2: klik #btnPetaBesar kedua mengembalikan minimap", !kpW2.classList.contains("diperbesar"));
+// (d) JS: panel statistik compact — label singkat, tanpa label panjang v20
+vm.runInContext('panelKiri = "statistik";', sandbox);
+C.renderPanelKiri();
+const htmlStatW2 = C.document.getElementById("panelKiriIsi").innerHTML;
+cek("v21-w2: panel Statistik compact memuat Statistik Kota & Kemacetan", htmlStatW2.includes("Statistik Kota") && htmlStatW2.includes("Kemacetan"));
+cek("v21-w2: panel Statistik memakai label singkat (Pendapatan/jam, Tenaga kerja)", htmlStatW2.includes("Pendapatan/jam") && htmlStatW2.includes("Tenaga kerja"));
+cek("v21-w2: panel Statistik tanpa label panjang v20 (rata-rata/jam hari ini)", !htmlStatW2.includes("rata-rata/jam hari ini"));
+cek("v21-w2: panel Statistik menunjuk detail ke tab Penduduk & Ekonomi", htmlStatW2.includes("Detail lengkap di tab Penduduk"));
+// (e) JS: ikon nav hanya aktif bila panel terbuka (default collapsed)
+cek("v21-w2: renderPanelKiri hanya mengaktifkan ikon bila panel terbuka", src.includes("panelTerbuka") && src.includes('classList.toggle("tab-statistik"'));
+cek("v21-w2: bukaTabKiri menutup panel lalu me-render ulang (ikon padam)", src.includes('el.classList.add("tersembunyi"); bunyiKlik(); renderPanelKiri();'));
+
+// ---- v21 Worker 3: build drawer (token), katalog, mode bangun ----
+// (a) CSS: token drawer/kartu diterapkan (bukan angka hardcode lama)
+cek("v21-w3: CSS drawer max-height memakai token --drawer-maks (30vh compact)", /#menuBangun \{[^}]*max-height: var\(--drawer-maks\)/.test(cssTxt));
+cek("v21-w3: CSS drawer compact 30vh (token :root & density-compact)", (cssTxt.match(/--drawer-maks: 30vh/g) || []).length >= 2);
+cek("v21-w3: CSS kartu lebar memakai token --kartu-lebar", /\.kartuBangun \{[^}]*width: var\(--kartu-lebar\)/.test(cssTxt));
+cek("v21-w3: CSS gambar kartu memakai token --kartu-gambar", /\.kartuBangun canvas \{[^}]*height: var\(--kartu-gambar\)/.test(cssTxt));
+cek("v21-w3: CSS tidak ada lagi kartu 124px / gambar 56px hardcode", !cssTxt.includes("width: 124px") && !/\.kartuBangun canvas \{[^}]*height: 56px/.test(cssTxt));
+const lebarKartuToken = [...cssTxt.matchAll(/--kartu-lebar: (\d+)px/g)].map(m => +m[1]);
+cek("v21-w3: token --kartu-lebar semua dalam 110-135px", lebarKartuToken.length === 4 && lebarKartuToken.every(v => v >= 110 && v <= 135), lebarKartuToken.join(","));
+const gambarKartuToken = [...cssTxt.matchAll(/--kartu-gambar: (\d+)px/g)].map(m => +m[1]);
+cek("v21-w3: token --kartu-gambar semua dalam 60-75px", gambarKartuToken.length === 4 && gambarKartuToken.every(v => v >= 60 && v <= 75), gambarKartuToken.join(","));
+const lebarKartuHardcode = [...cssTxt.matchAll(/\.kartuBangun \{[^}]*width: (\d+)px/g)].map(m => +m[1]);
+cek("v21-w3: tidak ada aturan kartu >135px (HP 110px)", lebarKartuHardcode.every(v => v <= 135), lebarKartuHardcode.join(","));
+cek("v21-w3: CSS terlipat menyembunyikan baris katalog + pesan (toolbar saja)", cssTxt.includes("#menuBangun.terlipat #barisKatalog") && cssTxt.includes("#menuBangun.terlipat #pesanKatalog"));
+cek("v21-w3: CSS katalog scroll-snap horizontal", cssTxt.includes("scroll-snap-type: x proximity") && cssTxt.includes("scroll-snap-align: start"));
+// (b) CSS: :has() <=820px selaras drawer baru (bukan 300/150px lama)
+cek("v21-w3: CSS :has() terbuka memakai calc drawer-maks + berita + celah", cssTxt.includes("bottom: calc(var(--drawer-maks) + var(--berita-tinggi) + 18px)"));
+cek("v21-w3: CSS :has() tidak ada lagi bottom 300px / 150px lama", !cssTxt.includes("bottom: 300px") && !cssTxt.includes("bottom: 150px"));
+cek("v21-w3: CSS drawer kiri/kanan tetap mengikuti token panel/minimap", cssTxt.includes("left: calc(var(--panel-lebar) + 22px)") && cssTxt.includes("right: calc(var(--minimap-lebar) + 22px)"));
+// (c) HTML/JS: tombol tutup drawer ada + handler + perilaku menutup penuh
+cek("v21-w3: tombol tutup drawer ada di index.html", idxHtml.includes('id="btnTutupDrawer"'));
+cek("v21-w3: fungsi tutupDrawerBangun & tutupPanelSaatBangun ada", typeof C.tutupDrawerBangun === "function" && typeof C.tutupPanelSaatBangun === "function");
+cek("v21-w3: #btnTutupDrawer punya handler onclick", typeof C.document.getElementById("btnTutupDrawer").onclick === "function");
+const mbW3 = C.document.getElementById("menuBangun");
+const bmbW3 = C.document.getElementById("btnModeBangun");
+mbW3.classList.remove("tersembunyi"); bmbW3.classList.add("aktif");
+vm.runInContext('mode = { jenis: "bangun", id: "rumah-sederhana" };', sandbox);
+C.document.getElementById("btnTutupDrawer").onclick();
+cek("v21-w3: klik #btnTutupDrawer menutup drawer + membatalkan mode bangun", mbW3.classList.contains("tersembunyi") && !bmbW3.classList.contains("aktif") && C.mode.jenis === "pilih");
+C.document.getElementById("btnModeBangun").onclick();
+cek("v21-w3: klik #btnModeBangun membuka drawer lagi (katalog terbuka, bukan terlipat)", !mbW3.classList.contains("tersembunyi") && !mbW3.classList.contains("terlipat") && bmbW3.classList.contains("aktif"));
+mbW3.classList.remove("terlipat");
+C.document.getElementById("btnLipatKatalog").onclick();
+cek("v21-w3: klik #btnLipatKatalog melipat katalog (toolbar saja)", mbW3.classList.contains("terlipat"));
+C.document.getElementById("btnLipatKatalog").onclick();
+cek("v21-w3: klik #btnLipatKatalog kedua membuka katalog lagi", !mbW3.classList.contains("terlipat"));
+// (d) JS: klik tab kategori membuka katalog yang terlipat
+C.renderMenuBangun();
+mbW3.classList.add("terlipat");
+const tabW3 = C.document.getElementById("katBangun").lastElementChild;
+cek("v21-w3: tab kategori ter-render (smoke renderMenuBangun)", !!tabW3 && typeof tabW3.onclick === "function");
+tabW3.onclick();
+cek("v21-w3: klik tab kategori membuka katalog terlipat", !mbW3.classList.contains("terlipat"));
+// (e) JS: mode bangun menutup panel kiri & panel kanan
+const pkW3 = C.document.getElementById("panelKiri");
+const pknW3 = C.document.getElementById("panelKanan");
+pkW3.classList.remove("tersembunyi");
+vm.runInContext('terpilih = { jenis: "tile", x: 5, y: 5 };', sandbox);
+C.renderPanelKanan();
+cek("v21-w3: pra-syarat: panel kiri terbuka & panel kanan tampil sebelum mode bangun", !pkW3.classList.contains("tersembunyi") && pknW3.style.display === "block");
+C.bukaMenuBangunUntuk("permukiman");
+cek("v21-w3: bukaMenuBangunUntuk menutup panel kiri & panel kanan", pkW3.classList.contains("tersembunyi") && pknW3.style.display === "none");
+cek("v21-w3: pemanggil tutupPanelSaatBangun ada di bukaMenu + 3 kartu + Mode Bangun", (src.match(/tutupPanelSaatBangun\(\);/g) || []).length === 5);
+// (f) JS: tombol batal mode (modeChip) sudah ada & berfungsi (verifikasi W3)
+cek("v21-w3: tombol batal mode ada di index.html + handler terpasang", idxHtml.includes('id="btnBatalMode"') && typeof C.document.getElementById("btnBatalMode").onclick === "function");
+vm.runInContext('mode = { jenis: "jalan", id: "jalan-tanah" };', sandbox);
+C.document.getElementById("btnBatalMode").onclick();
+cek("v21-w3: klik #btnBatalMode membatalkan mode bangun (kembali ke pilih)", C.mode.jenis === "pilih");
+// (g) JS: renderMenuBangun smoke test + canvas preview 64px + kartu tanpa deskripsi panjang
+let renderMenuOk = false, kartuTerakhir = null;
+try {
+  C.renderMenuBangun();
+  kartuTerakhir = C.document.getElementById("itemBangun").lastElementChild;
+  renderMenuOk = !!kartuTerakhir;
+} catch (e) { renderMenuOk = false; }
+cek("v21-w3: renderMenuBangun tanpa error & kartu ter-render (stub DOM)", renderMenuOk);
+cek("v21-w3: canvas preview 104x64 di 3 tempat (bangunan, jalan, jembatan)", (src.match(/c\.width = 104; c\.height = 64;/g) || []).length === 3);
+cek("v21-w3: kartu hanya menampilkan meta singkat (pekerja/waktu), deskripsi panjang di panel kanan", src.includes("<div class='kartuDes'>\" + meta") && src.includes("Deskripsi panjang TIDAK di kartu"));
+
+// ---- v21 Worker 4: regresi bug krusial cek live v20 ----
+// (A) TINT MALAM — ctx PEREKAM (bukan stub no-op): tint HARUS memanggil
+// fillRect rgba(10,20,60,0.383) menutup penuh kanvas pada 20:00/20:10,
+// TIDAK ada pada 12:00; lampu (arc) bertambah pada malam hari bila kamera
+// di permukiman. Tes lama hanya memeriksa "tanpa error" — tes ini
+// membuktikan perintah tint benar-benar dikeluarkan gambarPeta.
+const ctxAsliW4 = vm.runInContext("ctx", sandbox);
+const rekamW4 = { fill: [], arc: 0 };
+const ctxRekamW4 = buatCtx();
+ctxRekamW4.fillRect = function (x, y, w, h) { rekamW4.fill.push([this.fillStyle, x, y, w, h]); };
+ctxRekamW4.arc = function () { rekamW4.arc++; };
+sandbox.__ctxRekamW4 = ctxRekamW4;
+vm.runInContext("ctx = __ctxRekamW4;", sandbox);
+const tintW4 = () => rekamW4.fill.filter(f => String(f[0]).indexOf("rgba(10,20,60") === 0);
+const LndW4 = C.peta.landing;
+vm.runInContext("kamera.cx = tileTengahDunia(" + LndW4.x + ", " + LndW4.y + ").x; kamera.cy = tileTengahDunia(" + LndW4.x + ", " + LndW4.y + ").y; kamera.zoom = 1;", sandbox);
+vm.runInContext("waktuGame = 12 * 60;", sandbox);
+rekamW4.fill = []; rekamW4.arc = 0;
+C.gambarPeta();
+const arcSiangW4 = rekamW4.arc;
+cek("v21-w4: tint malam TIDAK digambar pada 12:00", tintW4().length === 0, JSON.stringify(tintW4()));
+vm.runInContext("waktuGame = 20 * 60;", sandbox);
+rekamW4.fill = []; rekamW4.arc = 0;
+C.gambarPeta();
+const tint20W4 = tintW4();
+cek("v21-w4: tint malam digambar penuh pada 20:00 (rgba 0.383, 800x600)", tint20W4.length === 1 && String(tint20W4[0][0]).indexOf("rgba(10,20,60,0.38") === 0 && tint20W4[0][1] === 0 && tint20W4[0][2] === 0 && tint20W4[0][3] === 800 && tint20W4[0][4] === 600, JSON.stringify(tint20W4));
+cek("v21-w4: lampu malam digambar pada 20:00 (arc bertambah vs siang, kamera di permukiman)", rekamW4.arc > arcSiangW4, rekamW4.arc + " vs " + arcSiangW4);
+vm.runInContext("waktuGame = 20 * 60 + 10;", sandbox);
+rekamW4.fill = [];
+C.gambarPeta();
+cek("v21-w4: tint malam tetap digambar pada 20:10 (skenario cek live v20)", tintW4().length === 1, JSON.stringify(tintW4()));
+cek("v21-w4: gelapTerakhir = 0,85 pada 20:10", Math.abs(vm.runInContext("gelapTerakhir", sandbox) - 0.85) < 1e-9, vm.runInContext("gelapTerakhir", sandbox));
+// Stres loop 06:00 -> 20:00 (120 frame, tiap 10 frame +14 menit game).
+const frameAwalW4 = vm.runInContext("jumlahFrameGambarPeta", sandbox);
+vm.runInContext("waktuGame = 360;", sandbox);
+let tintLoopW4 = 0;
+for (let i = 0; i < 120; i++) {
+  if (i % 10 === 0) vm.runInContext("waktuGame += 14;", sandbox);
+  rekamW4.fill = [];
+  vm.runInContext("loop(" + (2000 + i * 16) + ");", sandbox);
+  if (tintW4().length) tintLoopW4++;
+}
+cek("v21-w4: loop 120 frame 06:00->20:00 tanpa error loop", vm.runInContext("loopErrorDilaporkan", sandbox) === false);
+cek("v21-w4: loop menggambar tint pada frame malam", tintLoopW4 > 0, "frame tint=" + tintLoopW4);
+cek("v21-w4: jumlahFrameGambarPeta bertambah selama loop", vm.runInContext("jumlahFrameGambarPeta", sandbox) > frameAwalW4);
+cek("v21-w4: loopGagalBeruntun = 0 setelah loop sehat", vm.runInContext("loopGagalBeruntun", sandbox) === 0);
+// Penjaga interval: loop yang gagal SEBELUM gambarPeta tidak boleh
+// membutakan penjaga — gambarPeta harus tetap digambar ulang dari tick.
+const pwAsliW4 = vm.runInContext("perbaruiWarga", sandbox);
+vm.runInContext("perbaruiWarga = function () { throw new Error('uji-loop-gagal'); };", sandbox);
+const frameSebelumGagalW4 = vm.runInContext("jumlahFrameGambarPeta", sandbox);
+vm.runInContext("loop(999000);", sandbox);
+cek("v21-w4: loop yang gagal sebelum gambarPeta tercatat (loopGagalBeruntun>0)", vm.runInContext("loopGagalBeruntun", sandbox) > 0 && String(vm.runInContext("kesalahanLoopTerakhir", sandbox)).indexOf("uji-loop-gagal") >= 0, vm.runInContext("kesalahanLoopTerakhir", sandbox));
+cek("v21-w4: frame gambarPeta TIDAK bertambah saat loop gagal", vm.runInContext("jumlahFrameGambarPeta", sandbox) === frameSebelumGagalW4);
+vm.runInContext("waktuGambarPetaTerakhir = Date.now() - 5000;", sandbox);
+vm.runInContext("waktuGame = 20 * 60;", sandbox); // penjaga harus menggambar tint MALAM (bukan pagi)
+rekamW4.fill = [];
+vm.runInContext("tickInterval500();", sandbox);
+cek("v21-w4: penjaga interval menggambar ulang tint saat tidak ada frame selesai >1 detik", tintW4().length >= 1, JSON.stringify(tintW4()));
+cek("v21-w4: jumlahFrameGambarPeta bertambah setelah penjaga bekerja", vm.runInContext("jumlahFrameGambarPeta", sandbox) > frameSebelumGagalW4);
+sandbox.__pwAsliW4 = pwAsliW4;
+vm.runInContext("perbaruiWarga = __pwAsliW4;", sandbox);
+sandbox.__ctxAsliW4 = ctxAsliW4;
+vm.runInContext("ctx = __ctxAsliW4;", sandbox);
+
+// (B) SIMPAN/MUAT — skenario cek live v20: simpan manual 20:16 Hari 1
+// (Rp1.696.352, kebun sagu selesai) -> reload + LANJUTKAN harus
+// memulihkan PERSIS itu, bukan simpanan lama.
+C.mulaiGame(true);
+let tileKebunW4 = null;
+outerKebunW4: for (const j of C.S.jalan) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+  const tx = j.x + dx, ty = j.y + dy;
+  const t = C.terrainDi(C.peta, tx, ty);
+  if (bisaBangun(t) && !C.TERRAIN[t].butuhBuka && t !== "pantai" && !C.adaBangunanDi(C.S, tx, ty) && !C.adaJalanDi(C.S, tx, ty)) { tileKebunW4 = { x: tx, y: ty }; break outerKebunW4; }
+}
+cek("v21-w4: pra-syarat: tile kosong untuk kebun sagu", !!tileKebunW4);
+if (tileKebunW4) C.S.bangunan.push({ id: "kebun-sagu", x: tileKebunW4.x, y: tileKebunW4.y, rot: 0, selesai: true, progres: 1, kecamatan: null });
+vm.runInContext("waktuGame = 20 * 60 + 16;", sandbox);
+C.S.uang = 1696352; C.S.penduduk.total = 4; C.S.kayu = 62;
+const okSimpanW4 = C.simpan();
+const mW4 = C.muat();
+cek("v21-w4: simpan manual berhasil (return true)", okSimpanW4 === true);
+cek("v21-w4: simpan 20:16 Hari 1 termuat persis (jam/uang/bangunan)", !!mW4 && mW4.waktuGame === 1216 && mW4.uang === 1696352 && mW4.bangunan.length === C.S.bangunan.length, mW4 && (mW4.waktuGame + "/" + mW4.uang + "/" + mW4.bangunan.length));
+cek("v21-w4: kebun sagu yang baru selesai ikut tersimpan", !!mW4 && mW4.bangunan.some(b => b.id === "kebun-sagu" && b.selesai));
+cek("v21-w4: generasiSimpan tercatat & naik", typeof mW4.generasiSimpan === "number" && mW4.generasiSimpan >= 1, mW4 && mW4.generasiSimpan);
+const genW4 = mW4.generasiSimpan;
+C.mulaiGame(false);
+cek("v21-w4: LANJUTKAN memulihkan 20:16 Hari 1 (bukan simpanan lama)", C.jamGame() === 20 && C.menitGame() === 16 && C.S.hari === 1 && C.S.uang === 1696352, C.jamGame() + ":" + C.menitGame() + " Hari " + C.S.hari + " Rp" + C.S.uang);
+cek("v21-w4: kebun sagu selesai tetap ada setelah LANJUTKAN", C.S.bangunan.some(b => b.id === "kebun-sagu" && b.selesai));
+cek("v21-w4: petaVersi tetap 5 setelah muat", C.S.petaVersi === 5, C.S.petaVersi);
+C.S.uang = 1800000;
+vm.runInContext("waktuGame = 21 * 60;", sandbox);
+C.simpan();
+const m2W4 = C.muat();
+cek("v21-w4: simpan kedua menimpa dengan keadaan terbaru (uang/jam)", !!m2W4 && m2W4.uang === 1800000 && m2W4.waktuGame === 1260, m2W4 && (m2W4.uang + "/" + m2W4.waktuGame));
+cek("v21-w4: generasiSimpan naik tiap simpan", !!m2W4 && m2W4.generasiSimpan === genW4 + 2, m2W4 && m2W4.generasiSimpan + " vs " + genW4);
+// Kompatibilitas: simpanan lama TANPA generasiSimpan tetap bisa dimuat.
+const mLamaW4 = C.muat();
+delete mLamaW4.generasiSimpan;
+store.set(vm.runInContext("CITY.SAVE_KEY", sandbox), JSON.stringify(mLamaW4));
+C.mulaiGame(false);
+cek("v21-w4: simpanan lama tanpa generasiSimpan tetap bisa dimuat", !!C.S && C.S.uang === 1800000 && C.jamGame() === 21, C.S && C.S.uang);
+cek("v21-w4: simpanan lama mendapat generasiSimpan default lalu naik saat simpan", C.S.generasiSimpan === 1, C.S.generasiSimpan);
+
+// (C) TAB GANDA — skenario akar bug reload: tab lama (Hari 4, 20:09)
+// yang di-background-kan TIDAK BOLEH menimpa simpanan tab baru (Hari 1,
+// 20:16) lewat autosave; reload + LANJUTKAN harus membaca simpanan baru.
+function buatKonteksGameW4() {
+  const elemen2 = {};
+  const listeners2 = {};
+  const sb2 = {
+    console: console, setTimeout: setTimeout, clearTimeout: clearTimeout,
+    setInterval: () => 0, clearInterval: () => {},
+    requestAnimationFrame: () => {},
+    localStorage: {
+      getItem: (k) => (store.has(k) ? store.get(k) : null),
+      setItem: (k, v) => store.set(k, v),
+      removeItem: (k) => store.delete(k),
+    },
+    document: {
+      getElementById: (id) => { if (!elemen2[id]) elemen2[id] = buatEl(id); return elemen2[id]; },
+      querySelectorAll: () => [],
+      createElement: (tag) => buatEl(tag),
+      addEventListener: (ev, fn) => { listeners2[ev] = fn; },
+    },
+    window: { addEventListener: (ev, fn) => { listeners2[ev] = fn; }, devicePixelRatio: 1, innerWidth: 1200 },
+    Image: class { constructor() { this.complete = false; this.naturalWidth = 0; } set src(v) {} },
+    confirm: () => true,
+    Date: Date, Math: Math, JSON: JSON, Object: Object, Array: Array, parseInt: parseInt, parseFloat: parseFloat, isNaN: isNaN,
+  };
+  vm.createContext(sb2);
+  vm.runInContext(src, sb2);
+  listeners2["DOMContentLoaded"]();
+  return { sb: sb2, elemen: elemen2 };
+}
+const tabBW4 = buatKonteksGameW4();
+const B4 = tabBW4.sb;
+// Tab B = tab LAMA: permainan Hari 4, 20:09, Rp1.728.850 (keadaan basi).
+vm.runInContext("mulaiGame(true);", B4);
+vm.runInContext("waktuGame = 3 * 1440 + 20 * 60 + 9; S.uang = 1728850; S.penduduk.total = 8; S.kayu = 64; simpan();", B4);
+const muatBW4 = vm.runInContext("muat()", B4);
+cek("v21-w4: tab lama menyimpan Hari 4 / 20:09", !!muatBW4 && muatBW4.waktuGame === 3 * 1440 + 20 * 60 + 9 && muatBW4.uang === 1728850, muatBW4 && (muatBW4.waktuGame + "/" + muatBW4.uang));
+// Tab A = tab BARU: permainan baru Hari 1, simpan manual 20:16 Rp1.696.352.
+C.mulaiGame(true);
+vm.runInContext("waktuGame = 20 * 60 + 16;", sandbox);
+C.S.uang = 1696352;
+cek("v21-w4: tab baru simpan manual 20:16 berhasil", C.simpan() === true);
+cek("v21-w4: simpanan di store adalah milik tab baru (Hari 1)", (() => { const m = C.muat(); return !!m && m.waktuGame === 1216 && m.uang === 1696352; })());
+// Tab lama melakukan AUTOSAVE (seperti tab background tiap ~1 menit):
+// HARUS dilewati karena lease segar milik tab baru.
+const autosaveBW4 = vm.runInContext("simpan(true);", B4);
+cek("v21-w4: autosave tab lama DITOLAK saat tab baru memegang lease", autosaveBW4 === false, String(autosaveBW4));
+cek("v21-w4: autosave tab lama TIDAK menimpa simpanan tab baru", (() => { const m = C.muat(); return !!m && m.waktuGame === 1216 && m.uang === 1696352; })());
+// Tick interval tab lama juga tidak boleh menimpa (denyut lease patuh).
+vm.runInContext("tickInterval500(); tickInterval500();", B4);
+cek("v21-w4: tick autosave tab lama tidak menimpa simpanan tab baru", (() => { const m = C.muat(); return !!m && m.waktuGame === 1216 && m.uang === 1696352; })());
+// Reload di tab baru + LANJUTKAN -> simpanan BARU (skenario cek live v20).
+C.mulaiGame(false);
+cek("v21-w4: reload + LANJUTKAN di tab baru memuat Hari 1 / 20:16 (bukan Hari 4)", C.S.hari === 1 && C.jamGame() === 20 && C.menitGame() === 16 && C.S.uang === 1696352, "Hari " + C.S.hari + " " + C.jamGame() + ":" + C.menitGame() + " Rp" + C.S.uang);
+// Lease kedaluwarsa: pemilik tutup -> tab lama boleh mengambil alih.
+store.set(vm.runInContext("TAB_KUNCI", sandbox), JSON.stringify({ id: "tab-lain-yang-sudah-tutup", ts: Date.now() - 10000 }));
+const ambilAlihW4 = vm.runInContext("simpan(true);", B4);
+cek("v21-w4: autosave tab lama diizinkan setelah lease kedaluwarsa", ambilAlihW4 === true, String(ambilAlihW4));
+cek("v21-w4: setelah ambil alih, simpanan adalah milik tab lama", (() => { const m = vm.runInContext("muat()", B4); return !!m && m.uang === 1728850; })());
+// Simpan MANUAL di tab lain selalu menang (aksi pengguna mengambil alih).
+C.simpan();
+cek("v21-w4: simpan manual tab baru merebut lease kembali", C.muat().uang === 1696352);
+// Verifikasi baca-balik: tulis yang gagal HARUS dilaporkan (return false).
+const setItemAsliB4 = B4.localStorage.setItem;
+B4.localStorage.setItem = () => { throw new Error("kuota penuh (simulasi)"); };
+const gagalTulisW4 = vm.runInContext("simpan();", B4);
+B4.localStorage.setItem = setItemAsliB4;
+cek("v21-w4: simpan yang tulisnya gagal mengembalikan false (bukan diam-diam ok)", gagalTulisW4 === false, String(gagalTulisW4));
+cek("v21-w4: kegagalan tulis dilaporkan via toast", String(tabBW4.elemen["toast"].textContent).indexOf("Gagal menyimpan") >= 0, tabBW4.elemen["toast"].textContent);
+
+// =====================================================================
+// v21 Worker 5 (TERAKHIR) — 12 cacat UI cek live v20 + density + finalisasi
+// Keadaan saat bagian ini berjalan: game hasil reload W4 (Hari 1, 20:16,
+// Rp1.696.352, kebun sagu selesai, petaVersi 5, lease dipegang tab ini).
+// =====================================================================
+
+// --- (a) Panel kanan terbaca sebagai kartu ---
+const idxRumahW5 = C.S.bangunan.findIndex(b => b.id === "rumah-sederhana");
+cek("v21-w5: pra-syarat (a): ada rumah sederhana terpilih", idxRumahW5 >= 0, idxRumahW5);
+vm.runInContext("terpilih = { jenis: 'bangunan', idx: " + idxRumahW5 + " };", sandbox);
+C.renderPanelKanan();
+const htmlKananW5 = C.document.getElementById("panelKanan").innerHTML;
+cek("v21-w5: panel kanan tampil (display block)", C.document.getElementById("panelKanan").style.display === "block");
+cek("v21-w5: panel kanan rumah memuat Status/Listrik/Air/Kapasitas/Kebahagiaan/biaya", htmlKananW5.includes("Status") && htmlKananW5.includes("Listrik") && htmlKananW5.includes("Air") && htmlKananW5.includes("Kapasitas rumah") && htmlKananW5.includes("Kebahagiaan") && htmlKananW5.includes("Biaya operasional"), htmlKananW5.slice(0, 160));
+cek("v21-w5: panel kanan terbuka melebarkan kolom kanan (panel-terbuka 280px)", C.document.getElementById("kolomKanan").classList.contains("panel-terbuka"));
+cek("v21-w5: panel kanan terbuka menutup drawer bangun (panel & drawer tidak tumpang-tindih)", C.document.getElementById("menuBangun").classList.contains("tersembunyi"));
+cek("v21-w5: CSS panel kanan memakai sisa tinggi kolom (tanpa max-height 58%) + latar kuat", !cssTxt.includes("max-height: 58%") && cssTxt.includes("#kolomKanan.panel-terbuka") && cssTxt.includes("width: 280px"));
+const jalanW5 = C.S.jalan[0];
+vm.runInContext("terpilih = { jenis: 'tile', x: " + jalanW5.x + ", y: " + jalanW5.y + " };", sandbox);
+C.renderPanelKanan();
+const htmlJalanW5 = C.document.getElementById("panelKanan").innerHTML;
+cek("v21-w5: panel kanan jalan memuat nama + Kapasitas + Kemacetan + Volume", htmlJalanW5.includes("Jalan Tanah") && htmlJalanW5.includes("Kapasitas jalan") && htmlJalanW5.includes("Kemacetan") && htmlJalanW5.includes("Volume lalu lintas"), htmlJalanW5.slice(0, 200));
+cek("v21-w5: panel kanan jalan memuat kapasitas JALAN (10 kendaraan/jam utk jalan-tanah)", htmlJalanW5.includes("10 kendaraan/jam"), htmlJalanW5.slice(0, 300));
+vm.runInContext("terpilih = null;", sandbox);
+C.renderPanelKanan();
+cek("v21-w5: panel kanan tertutup saat tidak ada pilihan + kolom kembali 200px", C.document.getElementById("panelKanan").style.display === "none" && !C.document.getElementById("kolomKanan").classList.contains("panel-terbuka"));
+
+// --- (b) Minimap bisa diperbesar ---
+const kpW5 = C.document.getElementById("kartuPeta");
+const kkW5 = C.document.getElementById("kolomKanan");
+if (kpW5.classList.contains("ditutup")) C.toggleMinimap();
+if (kpW5.classList.contains("diperbesar")) C.toggleMinimapBesar();
+cek("v21-w5: fungsi toggleMinimapBesar ada", typeof C.toggleMinimapBesar === "function");
+C.document.getElementById("btnPetaBesar").onclick();
+cek("v21-w5: klik ⤢ memperbesar minimap (kartu + kolom melebar)", kpW5.classList.contains("diperbesar") && kkW5.classList.contains("minimap-diperbesar"), "kartu=" + kpW5.classList.contains("diperbesar") + " kolom=" + kkW5.classList.contains("minimap-diperbesar"));
+cek("v21-w5: minimap diperbesar menaikkan resolusi kanvas (320x192)", C.document.getElementById("minimap").width === 320 && C.document.getElementById("minimap").height === 192, C.document.getElementById("minimap").width + "x" + C.document.getElementById("minimap").height);
+cek("v21-w5: tombol ⤢ berubah jadi ⤡ saat diperbesar", C.document.getElementById("btnPetaBesar").textContent === "⤡", C.document.getElementById("btnPetaBesar").textContent);
+C.document.getElementById("btnPetaBesar").onclick();
+cek("v21-w5: klik ⤡ kedua mengembalikan minimap (kolom + kanvas 220x132)", !kpW5.classList.contains("diperbesar") && !kkW5.classList.contains("minimap-diperbesar") && C.document.getElementById("minimap").width === 220 && C.document.getElementById("minimap").height === 132);
+C.document.getElementById("btnPetaBesar").onclick(); // besar lagi
+C.toggleMinimap(); // tutup saat besar
+cek("v21-w5: menutup minimap membatalkan mode diperbesar", kpW5.classList.contains("ditutup") && !kpW5.classList.contains("diperbesar") && !kkW5.classList.contains("minimap-diperbesar"));
+C.toggleMinimap(); // buka lagi
+cek("v21-w5: membuka minimap lagi tidak langsung memperbesar", !kpW5.classList.contains("ditutup") && !kpW5.classList.contains("diperbesar") && !kkW5.classList.contains("minimap-diperbesar"));
+cek("v21-w5: CSS minimap besar = kolom token+100px (tanpa margin negatif)", cssTxt.includes("#kolomKanan.minimap-diperbesar") && !cssTxt.includes("margin-left: -100px"));
+
+// --- (c) Tooltip nav ---
+const navTipCountW5 = (idxHtml.match(/<span class="navTip">/g) || []).length;
+cek("v21-w5: tooltip nav ada di DOM (8 tombol nav punya .navTip)", navTipCountW5 === 8, navTipCountW5);
+cek("v21-w5: CSS tooltip tampil saat hover/fokus/class tampil", cssTxt.includes("#relKiri button.tampil .navTip") && cssTxt.includes("#relKiri button:focus-visible .navTip"));
+cek("v21-w5: CSS rel nav punya stacking context di atas panel kiri (z-index 40)", /#relKiri \{[^}]*z-index: 40/.test(cssTxt));
+cek("v21-w5: CSS tidak lagi menyembunyikan .navTip di <=820px", !cssTxt.includes(".navTip { display: none"));
+cek("v21-w5: JS memasang handler tampil tooltip (mouseenter/fokus/sentuh)", srcCityD.includes('addEventListener("mouseenter"') && srcCityD.includes('classList.add("tampil")'));
+
+// --- (d) Tutorial langkah 4: cekTutorial dipanggil dari jalur waktu ---
+const idxAturW5 = srcCityD.indexOf("function aturKecepatan");
+cek("v21-w5: aturKecepatan memanggil cekTutorial", srcCityD.indexOf("cekTutorial()", idxAturW5) > 0 && srcCityD.indexOf("cekTutorial()", idxAturW5) < idxAturW5 + 600);
+const idxMajuW5 = srcCityD.indexOf("function majukanWaktu");
+cek("v21-w5: majukanWaktu memanggil cekTutorial", srcCityD.indexOf("cekTutorial()", idxMajuW5) > 0 && srcCityD.indexOf("cekTutorial()", idxMajuW5) < idxMajuW5 + 2600);
+
+// --- (e) Tutorial langkah 6: kamera ke petak anchor valid ---
+C.S.tutorial = { aktif: true, selesai: false, langkah: 5 };
+C.tampilkanTutorial();
+const tkW5 = C.cariTileKebunSagu();
+cek("v21-w5: tampilkanTutorial langkah 6 mengarahkan kamera ke petak anchor (bukan tengah footprint)", !!tkW5 && C.kamera.cx === C.tileTengahDunia(tkW5.x, tkW5.y).x && C.kamera.cy === C.tileTengahDunia(tkW5.x, tkW5.y).y, JSON.stringify(tkW5) + " kamera=" + C.kamera.cx + "," + C.kamera.cy);
+cek("v21-w5: petak di tengah layar = anchor kebun sagu (cekBangun ok)", (() => { const w = C.layarKeDunia(400, 300, 800, 600); const t = C.duniaKeTile(w.x, w.y); return C.cekBangun(C.BANGUNAN_MAP["kebun-sagu"], Math.floor(t.x), Math.floor(t.y), 0).ok; })());
+cek("v21-w5: petak anchor disorot sebagai terpilih + panel kanan tampil", !!C.terpilih && C.terpilih.jenis === "tile" && !!tkW5 && C.terpilih.x === tkW5.x && C.terpilih.y === tkW5.y && C.document.getElementById("panelKanan").style.display === "block", JSON.stringify(C.terpilih));
+C.S.tutorial = { aktif: false, selesai: true, langkah: 7 }; // kembalikan selesai
+
+// --- (f) Nama dengan spasi + penjaga keyboard (cacat 8) ---
+vm.runInContext("profilPemain = { nama: 'Sukma', gender: 'wanita', avatar: 'x', tutorialSelesai: true, dibuat: '2026-11-11' };", sandbox);
+C.ubahNamaPemimpin("Sukma Dewi");
+cek("v21-w5: nama dengan spasi dipertahankan (profil + pemimpin + header)", C.profilPemain.nama === "Sukma Dewi" && C.S.pemimpin.nama === "Sukma Dewi" && C.document.getElementById("namaPemimpin").textContent === "Pemimpin: Sukma Dewi", C.document.getElementById("namaPemimpin").textContent);
+const kdW5 = listeners["keydown"];
+cek("v21-w5: handler keydown terpasang", typeof kdW5 === "function");
+C.document.getElementById("layarMulai").style.display = "none"; // di dalam game
+C.document.getElementById("modalLevel").style.display = "none"; // modal level-up dari tes sebelumnya harus tertutup dulu (bila terbuka, keydown memang diabaikan)
+let dicegahW5 = false;
+kdW5({ key: " ", target: { tagName: "INPUT" }, preventDefault: () => { dicegahW5 = true; } });
+cek("v21-w5: spasi di input TIDAK di-preventDefault (nama bisa pakai spasi)", dicegahW5 === false);
+const camSebelumW5 = { cx: C.kamera.cx, cy: C.kamera.cy };
+kdW5({ key: "a", target: { tagName: "INPUT" }, preventDefault: () => {} });
+cek("v21-w5: tombol 'a' di input tidak menggeser kamera", C.kamera.cx === camSebelumW5.cx && C.kamera.cy === camSebelumW5.cy);
+let dicegah2W5 = false;
+C.aturKecepatan(1);
+kdW5({ key: " ", target: { tagName: "CANVAS" }, preventDefault: () => { dicegah2W5 = true; } });
+cek("v21-w5: spasi di peta tetap toggle pause (dicegah + kecepatan 0)", dicegah2W5 === true && C.kecepatan === 0, "dicegah=" + dicegah2W5 + " kec=" + C.kecepatan);
+C.aturKecepatan(1);
+
+// --- (g) Panel kiri tertutup saat kembali ke menu / mulai permainan ---
+vm.runInContext("panelKiri = 'pengaturan';", sandbox);
+C.document.getElementById("panelKiri").classList.remove("tersembunyi");
+C.renderPanelKiri();
+cek("v21-w5: pra-syarat (g): panel Pengaturan terbuka", !C.document.getElementById("panelKiri").classList.contains("tersembunyi"));
+C.kembaliKeMenuUtama();
+cek("v21-w5: kembali ke menu menutup panel kiri + kembali ke tahap sinematik", C.document.getElementById("panelKiri").classList.contains("tersembunyi") && C.document.getElementById("tahapSinematik").style.display === "block");
+C.mulaiGame(false);
+cek("v21-w5: memulai permainan (LANJUTKAN) dengan panel kiri tertutup", C.document.getElementById("panelKiri").classList.contains("tersembunyi"));
+
+// --- (h) Misi: utama + <=3 sampingan ---
+vm.runInContext("panelKiri = 'misi'; tampilkanSemuaMisi = false;", sandbox);
+C.renderPanelKiri();
+const htmlMisiW5 = C.document.getElementById("panelKiriIsi").innerHTML;
+const jmlBarisW5 = (htmlMisiW5.match(/barisMisi/g) || []).length;
+cek("v21-w5: drawer misi ringkas: utama + <=3 sampingan (<=4 baris dari 12 misi)", jmlBarisW5 >= 1 && jmlBarisW5 <= 4, jmlBarisW5 + " baris");
+cek("v21-w5: drawer misi punya tombol 'Lihat semua misi'", htmlMisiW5.includes("Lihat semua misi"), htmlMisiW5.slice(-160));
+cek("v21-w5: drawer misi menampilkan penghitung selesai", /\/12 misi selesai/.test(htmlMisiW5));
+C.tampilSemuaMisi(true);
+const htmlMisiSemuaW5 = C.document.getElementById("panelKiriIsi").innerHTML;
+cek("v21-w5: 'Lihat semua misi' menampilkan ke-12 misi + tombol ciutkan", (htmlMisiSemuaW5.match(/barisMisi/g) || []).length === 12 && htmlMisiSemuaW5.includes("Tampilkan lebih sedikit"), (htmlMisiSemuaW5.match(/barisMisi/g) || []).length + " baris");
+C.tampilSemuaMisi(false);
+
+// --- (i) Statistik: bar per indikator ---
+vm.runInContext("panelKiri = 'statistik';", sandbox);
+C.renderPanelKiri();
+const htmlStatW5 = C.document.getElementById("panelKiriIsi").innerHTML;
+cek("v21-w5: panel Statistik punya 6 indikator (Listrik/Air/Pendidikan/Kesehatan/Kebersihan/Lingkungan)", ["⚡ Listrik", "💧 Air", "🎓 Pendidikan", "🏥 Kesehatan", "🧹 Kebersihan", "🌿 Lingkungan"].every(k => htmlStatW5.includes(k)), htmlStatW5.slice(0, 120));
+const jmlBarW5 = (htmlStatW5.match(/<div class="bar">/g) || []).length;
+cek("v21-w5: panel Statistik punya >=7 bar (kebahagiaan + 6 indikator)", jmlBarW5 >= 7, jmlBarW5 + " bar");
+cek("v21-w5: bar Listrik memakai persen utilitas aktual (bukan angka palsu)", htmlStatW5.includes("⚡ Listrik</span><b>" + Math.round(C.S.utilitas.listrik.persen) + "%</b>"), "persen=" + C.S.utilitas.listrik.persen);
+cek("v21-w5: panel Statistik tetap memuat Statistik Kota & Kemacetan", htmlStatW5.includes("Statistik Kota") && htmlStatW5.includes("Kemacetan"));
+
+// --- (j) Overlay lalu lintas: alpha >= 0.5 ---
+cek("v21-w5: overlay traffic hijau 0.55 / kuning 0.55 / merah 0.6 (kode)", srcCityD.includes('"rgba(34,197,94,0.55)"') && srcCityD.includes('"rgba(241,196,15,0.55)"') && srcCityD.includes('"rgba(231,76,60,0.6)"'));
+C.aturOverlay("traffic");
+const cacheTrafficW5 = C.bangunCacheOverlay();
+cek("v21-w5: cache overlay traffic memakai alpha baru di semua petak jalan", Object.keys(C.S.lalin.perPetak).length > 0 && Object.keys(C.S.lalin.perPetak).every(k => /0\.(55|6)\)$/.test(cacheTrafficW5.get(k) || "")), Object.keys(C.S.lalin.perPetak).slice(0, 3).map(k => k + "=" + cacheTrafficW5.get(k)).join(" "));
+C.aturOverlay(null);
+
+// --- (k) Pengaturan di layar mulai + hapus profil di panel Profil ---
+cek("v21-w5: layar mulai punya tombol Pengaturan", idxHtml.includes('id="btnPengaturanMulai"'));
+cek("v21-w5: panel Profil Pemain punya tombol Hapus Profil", idxHtml.includes('id="btnHapusProfil"'));
+cek("v21-w5: tahap Pengaturan di layar mulai ada (density + hapus profil)", idxHtml.includes('id="tahapPengaturan"') && idxHtml.includes('id="btnHapusProfilMulai"') && idxHtml.includes('data-density="compact"'));
+cek("v21-w5: tombol Pengaturan layar mulai tampil bila ada profil", (() => { vm.runInContext("profilPemain = { nama: 'Sukma Dewi', gender: 'wanita', avatar: 'x', tutorialSelesai: true, dibuat: '2026-11-11' };", sandbox); C.aturLayarMulai(); return C.document.getElementById("btnPengaturanMulai").style.display === "inline-block"; })());
+cek("v21-w5: klik Pengaturan layar mulai membuka tahap Pengaturan", (() => { C.document.getElementById("btnPengaturanMulai").onclick(); return C.document.getElementById("tahapPengaturan").style.display === "block"; })());
+C.tampilkanProfil();
+cek("v21-w5: panel Profil menampilkan nama + tombol hapus berfungsi", C.document.getElementById("profilNama").textContent === "Sukma Dewi" && typeof C.document.getElementById("btnHapusProfil").onclick === "function");
+C.document.getElementById("btnHapusProfil").onclick();
+cek("v21-w5: hapus profil ketuk-1 hanya meminta konfirmasi (profil masih ada)", C.profilPemain !== null && C.document.getElementById("btnHapusProfil").textContent === "Yakin hapus profil?");
+C.document.getElementById("btnHapusProfil").onclick();
+cek("v21-w5: hapus profil ketuk-2 menghapus profil + kembali ke menu sinematik", C.profilPemain === null && C.document.getElementById("tahapSinematik").style.display === "block");
+cek("v21-w5: setelah hapus profil, tombol MULAI tampil (formulir identitas muncul lagi)", C.document.getElementById("btnMulai").style.display === "inline-block");
+
+// --- (M) Density: ganti class #aplikasi + tersimpan ---
+cek("v21-w5: fungsi aturDensity/muatDensity ada", typeof C.aturDensity === "function" && typeof C.muatDensity === "function");
+C.aturDensity("expanded");
+cek("v21-w5: density expanded mengganti class #aplikasi + tersimpan", C.document.getElementById("aplikasi").classList.contains("density-expanded") && !C.document.getElementById("aplikasi").classList.contains("density-compact") && store.get("merantiRisingDensityV1") === "expanded", store.get("merantiRisingDensityV1"));
+C.aturDensity("normal");
+cek("v21-w5: density normal mengganti class #aplikasi", C.document.getElementById("aplikasi").classList.contains("density-normal"));
+C.aturDensity("compact");
+cek("v21-w5: density compact kembali (default) + tersimpan", C.document.getElementById("aplikasi").classList.contains("density-compact") && store.get("merantiRisingDensityV1") === "compact");
+cek("v21-w5: panel Pengaturan memuat pemilih density (Compact/Normal/Expanded)", (() => { vm.runInContext("panelKiri = 'pengaturan';", sandbox); C.renderPanelKiri(); const h = C.document.getElementById("panelKiriIsi").innerHTML; return h.includes("Tampilan (Density)") && h.includes("data-density='compact'") && h.includes("data-density='normal'") && h.includes("data-density='expanded'"); })());
+cek("v21-w5: CSS tidak memakai transform: scale() pada #aplikasi", !/#aplikasi[^{]*\{[^}]*transform:\s*scale\(/.test(cssTxt.replace(/\/\*[\s\S]*?\*\//g, "")));
+cek("v21-w5: CSS HUD aman overflow di 1074px (safe center + xpTeks disembunyikan <=1100px)", cssTxt.includes("justify-content: safe center") && cssTxt.includes(".xpTeks { display: none;"));
+cek("v21-w5: CSS portrait HP: minimap disembunyikan saat panel kiri terbuka (:has)", cssTxt.includes("#aplikasi:has(#panelKiri:not(.tersembunyi)) #kartuPeta"));
+
+// --- (l) v21 tetap jalan: regresi sistem inti ---
+if (typeof C.perbaruiDiagnostikRender === "function") C.perbaruiDiagnostikRender();
+cek("v21-w5: regresi — 19 kategori, overlay, profil, density, minimap besar, tutup panel, petaVersi 5, generasiSimpan, diagnostik render", C.TAB_BANGUN.length === 19 && typeof C.aturOverlay === "function" && typeof C.resetProfil === "function" && typeof C.aturDensity === "function" && typeof C.toggleMinimapBesar === "function" && typeof C.tutupSemuaPanel === "function" && C.S.petaVersi === 5 && typeof C.S.generasiSimpan === "number" && typeof vm.runInContext("window.__merantiRender", sandbox) === "object", "petaVersi=" + C.S.petaVersi + " gen=" + C.S.generasiSimpan);
+cek("v21-w5: VERSI_GAME v21 + refs v21 (css v=13, city.js v=23)", C.VERSI_GAME === "v21" && idxHtml.includes("css/city.css?v=13") && idxHtml.includes("js/city.js?v=23"));
 
 console.log(gagal === 0 ? "TEST_V13_OK" : "TEST_V13_GAGAL:" + gagal + " dari " + (lulus + gagal));
