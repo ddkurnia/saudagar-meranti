@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v16"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v16.1"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -462,6 +462,7 @@ function bangunDi(def, x, y, rot) {
   bunyiSukses();
   toast(def.nama + " mulai dibangun (" + def.waktu + " hari).", "ok");
   log("Membangun " + def.nama + " di (" + (x + 1) + "," + (y + 1) + ").");
+  cekMisi(); // hadiah misi dibayar seketika, bukan menunggu pergantian hari
   simpan(); renderHUD(); renderPanelKanan(); renderMenuBangun();
   if (panelKiri === "misi") renderPanelKiri(); // penghitung misi langsung diperbarui
   cekTutorial();
@@ -474,7 +475,7 @@ function bangunJalanDi(tipe, x, y) {
   if (terrainDi(peta, x, y) === "hutan") { peta.terrain[y][x] = "rumput"; S.kayu += 2; S.bersih.push({ x: x, y: y }); }
   S.jalan.push({ x: x, y: y, tipe: tipe });
   S.statistik.jalan++;
-  bunyiKlik(); simpan(); renderHUD();
+  bunyiKlik(); cekMisi(); simpan(); renderHUD();
   if (panelKiri === "misi") renderPanelKiri(); // penghitung misi langsung diperbarui
   cekTutorial();
   return true;
@@ -486,7 +487,7 @@ function bangunJembatanDi(tipe, x, y) {
   S.jembatan.push({ x: x, y: y, tipe: tipe });
   S.statistik.jembatan++;
   bunyiSukses(); toast(JEMBATAN[tipe].nama + " dibangun.", "ok");
-  simpan(); renderHUD();
+  cekMisi(); simpan(); renderHUD();
   if (panelKiri === "misi") renderPanelKiri(); // penghitung misi langsung diperbarui
   cekTutorial();
   return true;
@@ -540,7 +541,7 @@ function bangunJembatanGantung(x0, y0, x1, y1) {
   bunyiSukses();
   toast("Jembatan Gantung dibangun (" + cek.n + " petak) — dua tepi kini terhubung!", "ok");
   log("Jembatan Gantung selesai (" + cek.n + " petak).");
-  simpan(); renderHUD();
+  cekMisi(); simpan(); renderHUD();
   if (panelKiri === "misi") renderPanelKiri(); // penghitung misi langsung diperbarui
   cekTutorial();
   return true;
@@ -1141,6 +1142,116 @@ function gambarSpriteBangunan(def, px, py, s, b) {
 }
 
 // ---------------- Render utama ----------------
+// Gambar satu bangunan (dipakai lapisan gabungan agar urutan kedalaman benar)
+function gambarSatuBangunan(b, lebar, tinggi, malam) {
+  const def = BANGUNAN_MAP[b.id]; if (!def) return;
+  const k = kakiBangunan(def, b.rot);
+  const cx = b.x + (k.w - 1) / 2, cy = b.y + (k.h - 1) / 2;
+  const tengah = tileTengahDunia(cx, cy);
+  const s = duniaKeLayar(tengah.x, tengah.y, lebar, tinggi);
+  const z = kamera.zoom;
+  const px = s.x, py = s.y;
+  if (px < -200 || px > lebar + 200 || py < -300 || py > tinggi + 200) return;
+  if (!b.selesai) {
+    // Perancah konstruksi
+    const halfW = (k.w + k.h) * 16 * z, halfH = (k.w + k.h) * 8 * z;
+    ctx.fillStyle = "rgba(178,190,195,0.85)";
+    poly([[px, py - halfH], [px + halfW, py], [px, py + halfH], [px - halfW, py]]); ctx.fill();
+    ctx.strokeStyle = "#f1c40f"; ctx.lineWidth = 3 * z;
+    ctx.beginPath(); ctx.moveTo(px - halfW, py); ctx.lineTo(px, py - halfH); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px + halfW, py); ctx.lineTo(px, py - halfH); ctx.stroke();
+    ctx.strokeStyle = "#2d3436"; ctx.lineWidth = 1.5 * z;
+    ctx.strokeRect(px - halfW * 0.5, py - halfH - 22 * z, halfW, 7 * z);
+    ctx.fillStyle = "#00b894";
+    ctx.fillRect(px - halfW * 0.5, py - halfH - 22 * z, halfW * b.progres, 7 * z);
+  } else if (def.lapangan) {
+    const img = gambarAset[def.lapangan.sprite];
+    ctx.fillStyle = "#8a6d3b";
+    poly([[px, py - (k.w + k.h) * 8 * z], [px + (k.w + k.h) * 16 * z, py], [px, py + (k.w + k.h) * 8 * z], [px - (k.w + k.h) * 16 * z, py]]); ctx.fill();
+    ctx.fillStyle = "#7ec850";
+    poly([[px, py - (k.w + k.h) * 6.5 * z], [px + (k.w + k.h) * 13 * z, py], [px, py + (k.w + k.h) * 6.5 * z], [px - (k.w + k.h) * 13 * z, py]]); ctx.fill();
+    if (img && img.complete && img.naturalWidth) {
+      const n = def.lapangan.jumlah || 4;
+      for (let i = 0; i < n; i++) {
+        const tx = b.x + (i % k.w), ty = b.y + Math.floor(i / k.w);
+        const tc = tileTengahDunia(tx, ty);
+        const sc = duniaKeLayar(tc.x, tc.y, lebar, tinggi);
+        const tw = 40 * z, th = tw * (img.naturalHeight / img.naturalWidth);
+        ctx.drawImage(img, sc.x - tw / 2, sc.y + 16 * z - th, tw, th);
+      }
+    }
+  } else if (def.gambar) {
+    gambarSpriteBangunan(def, px, py, z, b);
+  } else {
+    gambarBangunanVektor(def, px, py, z, b.rot, b, malam);
+  }
+  if (b.selesai && b.kurangBahan) {
+    ctx.fillStyle = "#e74c3c";
+    ctx.beginPath(); ctx.arc(px, py - (k.w + k.h) * 8 * z - 30 * z, 9 * z, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#ffffff"; ctx.font = "bold " + Math.max(10, 12 * z) + "px sans-serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("!", px, py - (k.w + k.h) * 8 * z - 30 * z);
+  }
+}
+// Gambar satu warga (dipakai lapisan gabungan)
+function gambarSatuWarga(w, lebar, tinggi) {
+  const t = tileTengahDunia(w.x, w.y);
+  const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
+  const img = gambarAset["assets/characters/" + w.sprite + "/idle.png"];
+  const z = kamera.zoom;
+  const bob = w.jalan ? Math.abs(Math.sin(w.fase)) * 2 * z : 0;
+  if (img && img.complete && img.naturalWidth) {
+    const h = 30 * z, ww = h * (img.naturalWidth / img.naturalHeight);
+    // Hadap mengikuti arah jalan: bila bergerak ke kiri layar, balik gambar.
+    const hadapKiri = (Math.cos(w.arah || 0) - Math.sin(w.arah || 0)) < 0;
+    if (hadapKiri) {
+      ctx.save(); ctx.translate(s.x, 0); ctx.scale(-1, 1);
+      ctx.drawImage(img, -ww / 2, s.y + 8 * z - h - bob, ww, h);
+      ctx.restore();
+    } else {
+      ctx.drawImage(img, s.x - ww / 2, s.y + 8 * z - h - bob, ww, h);
+    }
+  } else {
+    ctx.fillStyle = "#2d3436";
+    ctx.beginPath(); ctx.arc(s.x, s.y - 6 * z - bob, 4 * z, 0, Math.PI * 2); ctx.fill();
+  }
+}
+// Gambar satu kendaraan (truk/kapal/perahu) — dipakai lapisan gabungan
+function gambarSatuKendaraan(k, lebar, tinggi) {
+  const z = kamera.zoom;
+  if (k.tipe === "truk") {
+    const t = tileTengahDunia(k.x, k.y);
+    const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
+    const img = gambarAset["assets/vehicles/truk-pengangkut.png"];
+    if (img && img.complete && img.naturalWidth) {
+      const w = 44 * z, h = w * (img.naturalHeight / img.naturalWidth);
+      const hadapKiri = (Math.cos(k.arah || 0) - Math.sin(k.arah || 0)) < 0;
+      if (hadapKiri) {
+        ctx.save(); ctx.translate(s.x, 0); ctx.scale(-1, 1);
+        ctx.drawImage(img, -w / 2, s.y + 8 * z - h, w, h);
+        ctx.restore();
+      } else {
+        ctx.drawImage(img, s.x - w / 2, s.y + 8 * z - h, w, h);
+      }
+    }
+  } else if (k.tipe === "kapal") {
+    const t = tileTengahDunia(k.x, k.y + Math.sin(frame / 30) * 0.15);
+    const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
+    const img = gambarAset["assets/vehicles/kapal-kargo.png"];
+    if (img && img.complete && img.naturalWidth) {
+      const w = 70 * z, h = w * (img.naturalHeight / img.naturalWidth);
+      ctx.drawImage(img, s.x - w / 2, s.y - h * 0.6, w, h);
+    }
+  } else if (k.tipe === "perahu") {
+    const t = tileTengahDunia(k.x, k.y + Math.sin(frame / 40 + 2) * 0.2);
+    const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
+    const img = gambarAset["assets/vehicles/perahu-kecil.png"];
+    if (img && img.complete && img.naturalWidth) {
+      const w = 40 * z, h = w * (img.naturalHeight / img.naturalWidth);
+      ctx.drawImage(img, s.x - w / 2, s.y - h * 0.5, w, h);
+    }
+  }
+}
 function gambarPeta() {
   if (!kanvas || !ctx || !peta || !S) return;
   const lebar = kanvas.clientWidth, tinggi = kanvas.clientHeight;
@@ -1342,83 +1453,18 @@ function gambarPeta() {
   };
   for (const j of S.jalan) gambarJalanTile(j.x, j.y, j.tipe, false);
   for (const j of S.jembatan) gambarJalanTile(j.x, j.y, j.tipe, true);
-  // 3. Bangunan (diurutkan berdasarkan kedalaman)
-  const urut = [...S.bangunan].sort((a, b) => (a.x + a.y) - (b.x + b.y) || a.y - b.y);
-  for (const b of urut) {
-    const def = BANGUNAN_MAP[b.id]; if (!def) continue;
-    const k = kakiBangunan(def, b.rot);
-    const cx = b.x + (k.w - 1) / 2, cy = b.y + (k.h - 1) / 2;
-    const tengah = tileTengahDunia(cx, cy);
-    const s = duniaKeLayar(tengah.x, tengah.y, lebar, tinggi);
-    const z = kamera.zoom;
-    const px = s.x, py = s.y;
-    if (px < -200 || px > lebar + 200 || py < -300 || py > tinggi + 200) continue;
-    if (!b.selesai) {
-      // Perancah konstruksi
-      const halfW = (k.w + k.h) * 16 * z, halfH = (k.w + k.h) * 8 * z;
-      ctx.fillStyle = "rgba(178,190,195,0.85)";
-      poly([[px, py - halfH], [px + halfW, py], [px, py + halfH], [px - halfW, py]]); ctx.fill();
-      ctx.strokeStyle = "#f1c40f"; ctx.lineWidth = 3 * z;
-      ctx.beginPath(); ctx.moveTo(px - halfW, py); ctx.lineTo(px, py - halfH); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(px + halfW, py); ctx.lineTo(px, py - halfH); ctx.stroke();
-      ctx.strokeStyle = "#2d3436"; ctx.lineWidth = 1.5 * z;
-      ctx.strokeRect(px - halfW * 0.5, py - halfH - 22 * z, halfW, 7 * z);
-      ctx.fillStyle = "#00b894";
-      ctx.fillRect(px - halfW * 0.5, py - halfH - 22 * z, halfW * b.progres, 7 * z);
-    } else if (def.lapangan) {
-      const img = gambarAset[def.lapangan.sprite];
-      ctx.fillStyle = "#8a6d3b";
-      poly([[px, py - (k.w + k.h) * 8 * z], [px + (k.w + k.h) * 16 * z, py], [px, py + (k.w + k.h) * 8 * z], [px - (k.w + k.h) * 16 * z, py]]); ctx.fill();
-      ctx.fillStyle = "#7ec850";
-      poly([[px, py - (k.w + k.h) * 6.5 * z], [px + (k.w + k.h) * 13 * z, py], [px, py + (k.w + k.h) * 6.5 * z], [px - (k.w + k.h) * 13 * z, py]]); ctx.fill();
-      if (img && img.complete && img.naturalWidth) {
-        const n = def.lapangan.jumlah || 4;
-        for (let i = 0; i < n; i++) {
-          const tx = b.x + (i % k.w), ty = b.y + Math.floor(i / k.w);
-          const tc = tileTengahDunia(tx, ty);
-          const sc = duniaKeLayar(tc.x, tc.y, lebar, tinggi);
-          const tw = 40 * z, th = tw * (img.naturalHeight / img.naturalWidth);
-          ctx.drawImage(img, sc.x - tw / 2, sc.y + 16 * z - th, tw, th);
-        }
-      }
-    } else if (def.gambar) {
-      gambarSpriteBangunan(def, px, py, z, b);
-    } else {
-      gambarBangunanVektor(def, px, py, z, b.rot, b, malam);
-    }
-    if (b.selesai && b.kurangBahan) {
-      ctx.fillStyle = "#e74c3c";
-      ctx.beginPath(); ctx.arc(px, py - (k.w + k.h) * 8 * z - 30 * z, 9 * z, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "#ffffff"; ctx.font = "bold " + Math.max(10, 12 * z) + "px sans-serif";
-      ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText("!", px, py - (k.w + k.h) * 8 * z - 30 * z);
-    }
-  }
-  // 4. Kendaraan & warga
-  gambarKendaraan(lebar, tinggi);
+  // 3. Bangunan, warga & kendaraan — SATU lapisan diurutkan kedalaman (x+y),
+  //    agar warga/truk yang berjalan di utara bangunan tergambar DI BELAKANG atapnya
+  //    (sebelumnya warga/truk digambar setelah semua bangunan, jadi tampak berdiri di atas atap).
+  const lapisan = [];
+  const urutBangunan = [...S.bangunan].sort((a, b) => (a.x + a.y) - (b.x + b.y) || a.y - b.y);
+  for (const b of urutBangunan) lapisan.push({ k: b.x + b.y, f: () => gambarSatuBangunan(b, lebar, tinggi, malam) });
+  for (const w of wargaVisual) lapisan.push({ k: w.x + w.y, f: () => gambarSatuWarga(w, lebar, tinggi) });
+  for (const k of kendaraanVisual) lapisan.push({ k: k.x + k.y, f: () => gambarSatuKendaraan(k, lebar, tinggi) });
+  lapisan.sort((a, b) => a.k - b.k);
+  for (const item of lapisan) item.f();
+  // 4. Feri antar pulau (di laut lepas, jauh dari bangunan)
   gambarFeri(lebar, tinggi);
-  for (const w of wargaVisual) {
-    const t = tileTengahDunia(w.x, w.y);
-    const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
-    const img = gambarAset["assets/characters/" + w.sprite + "/idle.png"];
-    const z = kamera.zoom;
-    const bob = w.jalan ? Math.abs(Math.sin(w.fase)) * 2 * z : 0;
-    if (img && img.complete && img.naturalWidth) {
-      const h = 30 * z, ww = h * (img.naturalWidth / img.naturalHeight);
-      // Hadap mengikuti arah jalan: bila bergerak ke kiri layar, balik gambar.
-      const hadapKiri = (Math.cos(w.arah || 0) - Math.sin(w.arah || 0)) < 0;
-      if (hadapKiri) {
-        ctx.save(); ctx.translate(s.x, 0); ctx.scale(-1, 1);
-        ctx.drawImage(img, -ww / 2, s.y + 8 * z - h - bob, ww, h);
-        ctx.restore();
-      } else {
-        ctx.drawImage(img, s.x - ww / 2, s.y + 8 * z - h - bob, ww, h);
-      }
-    } else {
-      ctx.fillStyle = "#2d3436";
-      ctx.beginPath(); ctx.arc(s.x, s.y - 6 * z - bob, 4 * z, 0, Math.PI * 2); ctx.fill();
-    }
-  }
   // 5. Hover & ghost
   if (hover && mode.jenis !== "pilih") gambarGhost(lebar, tinggi);
   else if (hover && mode.jenis === "pilih") {
@@ -1555,46 +1601,9 @@ function gambarGhost(lebar, tinggi) {
   }
 }
 function gambarKendaraan(lebar, tinggi) {
-  const z = kamera.zoom;
-  // Truk di jalan
-  const truk = kendaraanVisual.find(k => k.tipe === "truk");
-  if (truk) {
-    const t = tileTengahDunia(truk.x, truk.y);
-    const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
-    const img = gambarAset["assets/vehicles/truk-pengangkut.png"];
-    if (img && img.complete && img.naturalWidth) {
-      const w = 44 * z, h = w * (img.naturalHeight / img.naturalWidth);
-      const hadapKiri = (Math.cos(truk.arah || 0) - Math.sin(truk.arah || 0)) < 0;
-      if (hadapKiri) {
-        ctx.save(); ctx.translate(s.x, 0); ctx.scale(-1, 1);
-        ctx.drawImage(img, -w / 2, s.y + 8 * z - h, w, h);
-        ctx.restore();
-      } else {
-        ctx.drawImage(img, s.x - w / 2, s.y + 8 * z - h, w, h);
-      }
-    }
-  }
-  // Kapal di dekat dermaga/pelabuhan
-  const kapal = kendaraanVisual.find(k => k.tipe === "kapal");
-  if (kapal) {
-    const t = tileTengahDunia(kapal.x, kapal.y + Math.sin(frame / 30) * 0.15);
-    const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
-    const img = gambarAset["assets/vehicles/kapal-kargo.png"];
-    if (img && img.complete && img.naturalWidth) {
-      const w = 70 * z, h = w * (img.naturalHeight / img.naturalWidth);
-      ctx.drawImage(img, s.x - w / 2, s.y - h * 0.6, w, h);
-    }
-  }
-  const perahu = kendaraanVisual.find(k => k.tipe === "perahu");
-  if (perahu) {
-    const t = tileTengahDunia(perahu.x, perahu.y + Math.sin(frame / 40 + 2) * 0.2);
-    const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
-    const img = gambarAset["assets/vehicles/perahu-kecil.png"];
-    if (img && img.complete && img.naturalWidth) {
-      const w = 40 * z, h = w * (img.naturalHeight / img.naturalWidth);
-      ctx.drawImage(img, s.x - w / 2, s.y - h * 0.5, w, h);
-    }
-  }
+  // (Dipakai bila kendaraan digambar terpisah; di gambarPeta kendaraan
+  //  kini masuk lapisan gabungan via gambarSatuKendaraan.)
+  for (const k of kendaraanVisual) gambarSatuKendaraan(k, lebar, tinggi);
 }
 function initKendaraan() {
   kendaraanVisual = [];
@@ -1914,6 +1923,13 @@ function previewBangunan(def, ukuran) {
   }
   return c;
 }
+// Alasan terkunci: gabungkan syarat level DAN penelitian (keduanya terlihat di kartu)
+function alasanKunci(def, kataLevel) {
+  const bagian = [];
+  if ((def.level || 1) > S.level) bagian.push((kataLevel || "Butuh level ") + def.level);
+  if (def.tech && !S.teknologi[def.tech]) bagian.push("Penelitian: " + TEKNOLOGI_MAP[def.tech].nama);
+  return bagian.join(" + ");
+}
 function renderMenuBangun() {
   if (!S) return;
   const katEl = $("katBangun");
@@ -1943,7 +1959,7 @@ function renderMenuBangun() {
     for (const id of Object.keys(JALAN)) {
       const j = JALAN[id];
       const kunci = ((j.level || 1) > S.level) || (id === "jalan-raya" && !S.teknologi["konstruksi-beton"]);
-      const alasan = (j.level || 1) > S.level ? "Butuh level " + j.level : "Butuh penelitian: Konstruksi Beton";
+      const alasan = alasanKunci({ level: j.level, tech: (id === "jalan-raya" ? "konstruksi-beton" : null) }, "Butuh level ");
       const c = document.createElement("canvas"); c.width = 104; c.height = 56;
       const cx = c.getContext("2d");
       cx.fillStyle = j.warna;
@@ -1962,7 +1978,7 @@ function renderMenuBangun() {
     for (const id of Object.keys(JEMBATAN)) {
       const j = JEMBATAN[id];
       const kunci = ((j.level || 1) > S.level) || (j.tech && !S.teknologi[j.tech]);
-      const alasan = (j.level || 1) > S.level ? "Butuh level " + j.level : (j.tech ? "Butuh penelitian: " + TEKNOLOGI_MAP[j.tech].nama : "");
+      const alasan = alasanKunci(j, "Butuh level ");
       const c = document.createElement("canvas"); c.width = 104; c.height = 56;
       const cx = c.getContext("2d");
       const imgJembatan = j.gambar ? gambarAset[j.gambar] : null;
@@ -1996,7 +2012,7 @@ function renderMenuBangun() {
     else if (kategoriBangun === "sosial") { if (!(def.kat === "sosial" && !def.dekorasi)) continue; }
     else if (def.kat !== kategoriBangun) continue;
     const kunci = ((def.level || 1) > S.level) || (def.tech && !S.teknologi[def.tech]);
-    const alasan = (def.level || 1) > S.level ? "Butuh peradaban level " + def.level : (def.tech ? "Butuh penelitian: " + TEKNOLOGI_MAP[def.tech].nama : "");
+    const alasan = alasanKunci(def, "Butuh peradaban level ");
     const aktif = mode.jenis === "bangun" && mode.id === def.id;
     tambahKartu(def.nama, def.des, hargaTeks(def.harga) + " · " + def.waktu + " hari", kunci, alasan, () => {
       mode = { jenis: "bangun", id: def.id }; tilePratinjau = null; terpilih = null; bunyiKlik(); renderHUD(); renderMenuBangun(); renderPanelKanan();

@@ -312,7 +312,7 @@ C.S.jalan = jalanLama; C.S.jembatan = jembLama;
 
 
 // v14: tampilan referensi — 10 tab bangun, dekorasi, minimap, berita, ghost
-cek("TAB_BANGUN 10 tab", C.TAB_BANGUN.length === 10, C.TAB_BANGUN.length);
+cek("TAB_BANGUN 11 tab", C.TAB_BANGUN.length === 11, C.TAB_BANGUN.length);
 cek("tab jalan & jembatan terpisah", C.TAB_BANGUN.some(t => t.id === "jalan") && C.TAB_BANGUN.some(t => t.id === "jembatan"));
 const dekor = C.BANGUNAN.filter(b => b.kat === "sosial" && b.dekorasi);
 cek("4 bangunan dekorasi", dekor.length === 4, dekor.map(b => b.id).join(","));
@@ -415,9 +415,13 @@ if (celah) {
   const cekOk = C.cekJembatanGantung(celah.x0, celah.y0, celah.x1, celah.y1);
   cek("jembatan gantung di celah air = ok", cekOk.ok, cekOk.alasan);
   const uangG = C.S.uang, besiG = C.S.besi;
+  const misiJembatanSblm = !!C.S.misiSelesai["jembatan-pertama"];
   const okG = C.bangunJembatanGantung(celah.x0, celah.y0, celah.x1, celah.y1);
   cek("bangun jembatan gantung berhasil", okG === true);
-  cek("biaya jembatan gantung per petak", C.S.uang === uangG - 50000 * celah.n && C.S.besi === besiG - 5 * celah.n, C.S.uang + "/" + C.S.besi);
+  // Membangun jembatan menyelesaikan misi "Jembatan Penghubung" (Rp40.000) —
+  // hadiah dibayar seketika sejak v16.1, jadi ikut dihitung bila misi baru selesai.
+  const hadiahJembatan = misiJembatanSblm ? 0 : 40000;
+  cek("biaya jembatan gantung per petak", C.S.uang === uangG - 50000 * celah.n + hadiahJembatan && C.S.besi === besiG - 5 * celah.n, C.S.uang + "/" + C.S.besi);
   cek("tile jembatan gantung tercatat", C.S.jembatan.filter(j => j.tipe === "jembatan-gantung").length === celah.n);
   const rent = C.rentangJembatanGantung(celah.x0 + 1, celah.y0);
   cek("rentang jembatan gantung ditemukan", rent.n === celah.n && rent.x0 === celah.x0 + 1 && rent.x1 === celah.x1 - 1, JSON.stringify(rent));
@@ -677,5 +681,46 @@ store.set(C.CITY.SAVE_KEY, JSON.stringify(sLama));
 C.mulaiGame(false);
 cek("simpanan lama: pemimpin diisi dari profil", C.S.pemimpin && C.S.pemimpin.nama === "Sukma");
 cek("simpanan lama: tutorial dianggap selesai", C.S.tutorial && C.S.tutorial.selesai === true && C.S.tutorial.aktif === false);
+
+// ---- v16.1: tab Infrastruktur, hadiah misi seketika, urutan gambar warga ----
+// Tab Infrastruktur ada (11 tab) dan memuat Dermaga/Pelabuhan/Bandara
+cek("TAB_BANGUN punya 11 tab termasuk Infrastruktur", C.TAB_BANGUN.length === 11 && C.TAB_BANGUN.some(t => t.id === "infrastruktur"), C.TAB_BANGUN.map(t => t.id).join(","));
+const infraBangunan = C.BANGUNAN.filter(b => b.kat === "infrastruktur").map(b => b.id);
+cek("kategori infrastruktur berisi dermaga, pelabuhan, bandara", infraBangunan.includes("dermaga") && infraBangunan.includes("pelabuhan") && infraBangunan.includes("bandara"), infraBangunan.join(","));
+vm.runInContext('kategoriBangun = "infrastruktur";', sandbox);
+const itemEl = vm.runInContext('$("itemBangun")', sandbox);
+let jumlahKartuInfra = 0;
+const appendAsliInfra = itemEl.appendChild;
+itemEl.appendChild = function(c) { jumlahKartuInfra++; return appendAsliInfra.call(this, c); };
+C.renderMenuBangun();
+itemEl.appendChild = appendAsliInfra;
+cek("tab Infrastruktur menampilkan 3 kartu", jumlahKartuInfra === 3, "kartu=" + jumlahKartuInfra);
+// Hadiah misi dibayar seketika saat membangun (tanpa menunggu hari berganti)
+C.mulaiGame(true);
+const uangSblmMisi = C.S.uang, xpSblmMisi = C.S.xp;
+const tRumahMisi = cariTileRumah();
+cek("v16.1: ada petak valid untuk rumah (uji misi)", !!tRumahMisi);
+if (tRumahMisi) {
+  const okMisi = C.bangunDi(C.BANGUNAN_MAP["rumah-sederhana"], tRumahMisi.x, tRumahMisi.y, 0);
+  cek("hadiah misi Rumah Pertama dibayar seketika (uang +Rp10.000)", okMisi === true && C.S.uang === uangSblmMisi - 25000 + 10000, "uang=" + C.S.uang + " awal=" + uangSblmMisi);
+  cek("hadiah misi Rumah Pertama dibayar seketika (XP +20)", C.S.xp === xpSblmMisi + 20, "xp=" + C.S.xp + " awal=" + xpSblmMisi);
+  cek("misi Rumah Pertama tercatat selesai", C.S.misiSelesai["rumah-pertama"] === true);
+}
+// Kartu Jembatan Gantung menyebut syarat level DAN penelitian sekaligus
+vm.runInContext('S.level = 2;', sandbox);
+cek("alasan kunci Jembatan Gantung menyebut level + penelitian", C.alasanKunci(C.JEMBATAN["jembatan-gantung"], "Butuh level ") === "Butuh level 3 + Penelitian: Teknologi Transportasi", C.alasanKunci(C.JEMBATAN["jembatan-gantung"], "Butuh level "));
+// Z-order: warga di utara rumah digambar SEBELUM rumah (di belakang atap)
+const rumahZ = C.S.bangunan.find(b => b.id === "rumah-sederhana");
+cek("z-order: ada rumah untuk uji", !!rumahZ);
+if (rumahZ) {
+  vm.runInContext('wargaVisual.push({ sprite: "petani", x: ' + rumahZ.x + ', y: ' + (rumahZ.y - 1) + ', arah: 0, fase: 0, jalan: true });', sandbox);
+  vm.runInContext('gambarAset["assets/characters/petani/idle.png"] = { complete: true, naturalWidth: 100, naturalHeight: 130, _nama: "warga" }; gambarAset["assets/buildings/building-rumah-sederhana.png"] = { complete: true, naturalWidth: 300, naturalHeight: 200, _nama: "rumah" };', sandbox);
+  vm.runInContext('var _urutanZ = []; var _drawAsli = ctx.drawImage; ctx.drawImage = function(img) { _urutanZ.push(img && img._nama ? img._nama : "?"); return _drawAsli.apply(ctx, arguments); };', sandbox);
+  C.gambarPeta();
+  const urutanZ = vm.runInContext('_urutanZ', sandbox);
+  const idxWarga = urutanZ.indexOf("warga"), idxRumah = urutanZ.indexOf("rumah");
+  cek("z-order: warga di utara rumah digambar SEBELUM rumah (di belakang atap)", idxWarga !== -1 && idxRumah !== -1 && idxWarga < idxRumah, "urutan=" + urutanZ.slice(0, 10).join(","));
+  vm.runInContext('ctx.drawImage = _drawAsli;', sandbox);
+}
 
 console.log(gagal === 0 ? "TEST_V13_OK" : "TEST_V13_GAGAL:" + gagal + " dari " + (lulus + gagal));

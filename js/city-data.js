@@ -115,6 +115,7 @@ const TAB_BANGUN = [
   { id: "permukiman",  nama: "Bangunan",    ikon: "🏢" },
   { id: "jalan",       nama: "Jalan",       ikon: "🛣️" },
   { id: "jembatan",    nama: "Jembatan",    ikon: "🌉" },
+  { id: "infrastruktur", nama: "Infrastruktur", ikon: "🏗️" },
   { id: "perkebunan",  nama: "Lahan",       ikon: "🌱" },
   { id: "industri",    nama: "Produksi",    ikon: "🏭" },
   { id: "sosial",      nama: "Sosial",      ikon: "👥" },

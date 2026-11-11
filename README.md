@@ -6,6 +6,32 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v16.1 — Perbaikan dari cek live desktop v15 (2026-11-11)
+
+- **BUG KRITIS — Dermaga/Pelabuhan/Bandara kini bisa dibangun:**
+  cek live desktop menemukan kategori "infrastruktur" tidak punya tab
+  di menu bangun, sehingga Dermaga (syarat rute feri!), Pelabuhan
+  (ekspor) dan Bandara tidak pernah tampil — seluruh sistem feri &
+  perdagangan antar-pulau v15 tidak bisa dijangkau. Ditambah tab
+  **Infrastruktur 🏗️** (11 tab) yang menampilkan ketiganya.
+- **Hadiah misi dibayar seketika:** membangun kini langsung memanggil
+  cekMisi(), jadi hadiah misi (mis. Jembatan Penghubung Rp40.000 +
+  50 XP) dibayar saat misi selesai, bukan menunggu pergantian hari.
+  (Sebelumnya penghitung misi sudah diperbarui seketika di v15.1.3,
+  tapi uang/XP-nya baru masuk keesokan hari.)
+- **Warga tidak lagi berdiri di atas atap:** bangunan, warga & kendaraan
+  kini digambar dalam SATU lapisan yang diurutkan berdasarkan kedalaman
+  (x+y), jadi warga/truk yang berjalan di utara bangunan tergambar DI
+  BELAKANG atapnya (sebelumnya mereka digambar setelah semua bangunan,
+  sehingga tampak berdiri di bubungan atap).
+- **Kartu terkunci menyebut semua syarat:** kartu Jembatan Gantung kini
+  menampilkan "Butuh level 3 + Penelitian: Teknologi Transportasi"
+  (sebelumnya hanya "Butuh level 3" sehingga syarat riset tersembunyi).
+  Berlaku juga untuk kartu bangunan & jalan.
+- **Panel kanan lebih lega:** max-height 46% → 58% + flex, supaya info
+  bangunan & tombol Tutup lebih mudah dijangkau.
+- Uji headless lolos (`TEST_V13_OK`, 173 cek).
+
 ## Yang baru di v16 — MERANTI RISING: Onboarding Pemain (2026-11-11)
 
 - **Nama resmi game: MERANTI RISING** — tagline **"AYO MEMBANGUN MERANTI!"**
