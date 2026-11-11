@@ -11,6 +11,8 @@ body {
   background: linear-gradient(160deg, #0f2027, #203a43, #2c5364);
   color: #f5f6fa;
   -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
 }
 button { font-family: inherit; cursor: pointer; }
 
@@ -65,7 +67,7 @@ button { font-family: inherit; cursor: pointer; }
 
 /* Bar atas */
 #barAtas {
-  position: absolute; top: 10px; left: 10px; right: 10px; z-index: 20;
+  position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); left: calc(10px + env(safe-area-inset-left, 0px)); right: calc(10px + env(safe-area-inset-right, 0px)); z-index: 20;
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
   padding: 8px 14px;
   background: rgba(8, 28, 48, .85);
@@ -316,11 +318,24 @@ button { font-family: inherit; cursor: pointer; }
   #kolomKanan { width: 210px; top: 70px; bottom: 210px; }
   #panelKiri.tersembunyi, #panelKanan.tersembunyi { display: none; }
   .judulGame { display: none; }
-  .sumberDaya { gap: 6px; }
+  /* Bar sumber daya bisa digeser horizontal (7 pil tidak muat di layar HP) */
+  .sumberDaya { gap: 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .sumberDaya::-webkit-scrollbar { display: none; }
   .sd { font-size: 12px; padding: 4px 8px; }
   #menuBangun { left: 8px; right: 8px; bottom: 34px; }
   #btnModeBangun { width: 60px; height: 60px; font-size: 20px; bottom: 200px; }
   #btnModeBangun span { font-size: 9px; }
   #kontrolWaktu { bottom: 200px; }
   .kartuBangun { width: 104px; }
+  #kolomKanan { width: 180px; }
+}
+/* Layar sentuh (Android/iOS): target ketuk minimal 44px */
+@media (pointer: coarse) {
+  #kontrolWaktu button { height: 44px; min-width: 44px; font-size: 15px; }
+  .btnIkon { width: 44px; height: 44px; font-size: 18px; }
+  #modeChip button { min-height: 44px; padding: 6px 14px; font-size: 13px; }
+  .btnKecil { min-height: 44px; padding: 8px 14px; font-size: 13px; }
+  #relKiri button { width: 48px; height: 48px; }
+  .kartuBangun { min-height: 44px; }
+  #btnGeserKiri, #btnGeserKanan { min-width: 44px; min-height: 44px; }
 }

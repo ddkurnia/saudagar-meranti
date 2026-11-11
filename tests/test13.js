@@ -17,7 +17,7 @@ function buatEl(id) {
   return {
     id: id, style: {}, innerHTML: "", textContent: "",
     dataset: {}, classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
-    addEventListener() {}, appendChild() {}, lastElementChild: null, onclick: null,
+    addEventListener() {}, appendChild(c) { this.lastElementChild = c; }, lastElementChild: null, onclick: null,
     clientWidth: 800, clientHeight: 600,
     getContext: () => buatCtx(),
     getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
@@ -55,7 +55,7 @@ const src = fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-data
   + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-map.js", "utf8")
   + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city.js", "utf8");
 vm.runInContext(src, sandbox);
-for (const nama of ["S", "peta", "BANGUNAN", "BANGUNAN_MAP", "TEKNOLOGI_MAP", "KATEGORI", "MISI", "LEVEL_PERADABAN", "KOMODITAS", "JALAN", "JEMBATAN", "TERRAIN", "CITY", "mode", "hover", "terpilih", "kecepatan", "kamera", "jamVisual", "akumulasiHari", "wargaVisual", "kendaraanVisual", "TAB_BANGUN"]) {
+for (const nama of ["S", "peta", "BANGUNAN", "BANGUNAN_MAP", "TEKNOLOGI_MAP", "KATEGORI", "MISI", "LEVEL_PERADABAN", "KOMODITAS", "JALAN", "JEMBATAN", "TERRAIN", "CITY", "mode", "hover", "terpilih", "kecepatan", "kamera", "jamVisual", "akumulasiHari", "wargaVisual", "kendaraanVisual", "TAB_BANGUN", "tilePratinjau", "jembatanMulai"]) {
   Object.defineProperty(sandbox, nama, { get: () => vm.runInContext(nama, sandbox), configurable: true });
 }
 listeners["DOMContentLoaded"]();
@@ -464,6 +464,61 @@ if (pantaiUtama && pantaiRangsang) {
   try { C.gambarPeta(); cek("render peta + feri berlayar (tanpa error)", true); } catch (e) { cek("render peta + feri berlayar (tanpa error)", false, e.message); }
   try { vm.runInContext('panelKiri = "pulau";', sandbox); C.renderPanelKiri(); cek("panel Pulau dirender (tanpa error)", true); } catch (e) { cek("panel Pulau dirender (tanpa error)", false, e.message); }
   try { C.renderMenuBangun(); cek("menu bangun + kartu jembatan gantung (tanpa error)", true); } catch (e) { cek("menu bangun + kartu jembatan gantung (tanpa error)", false, e.message); }
+}
+
+// v15.1: ramah layar sentuh Android
+const idxHtml = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+cek("viewport memakai viewport-fit=cover", idxHtml.includes("viewport-fit=cover"));
+cek("layar mulai menjelaskan cara main sentuh", idxHtml.includes("cubit 2 jari") && idxHtml.includes("ketuk 2"));
+const cssTxt = fs.readFileSync(path.join(ROOT, "css/city.css"), "utf8");
+cek("CSS: bar sumber daya bisa digeser horizontal di HP", cssTxt.includes(".sumberDaya { gap: 6px; flex-wrap: nowrap; overflow-x: auto"));
+cek("CSS: target ketuk 44px untuk pointer kasar", cssTxt.includes("@media (pointer: coarse)") && cssTxt.includes("min-height: 44px"));
+// Ketuk dua kali (sentuh): ketukan pertama hanya pratinjau, kedua membangun
+let tileSentuh = null;
+outerS: for (const j of C.S.jalan) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+  const tx = j.x + dx, ty = j.y + dy;
+  const t = C.terrainDi(C.peta, tx, ty);
+  if (C.TERRAIN[t].bangun && !C.adaBangunanDi(C.S, tx, ty) && !C.adaJalanDi(C.S, tx, ty)) { tileSentuh = { x: tx, y: ty }; break outerS; }
+}
+cek("ditemukan tile untuk uji ketuk sentuh", !!tileSentuh, JSON.stringify(tileSentuh));
+if (tileSentuh) {
+  const jmlBangunan = C.S.bangunan.length;
+  vm.runInContext('mode = { jenis: "bangun", id: "rumah-sederhana" }; tilePratinjau = null;', sandbox);
+  C.tanganiKetuk(tileSentuh, 0, true);
+  cek("ketukan sentuh pertama: belum membangun, pratinjau diset", C.S.bangunan.length === jmlBangunan && !!C.tilePratinjau && C.tilePratinjau.x === tileSentuh.x && C.tilePratinjau.y === tileSentuh.y, JSON.stringify(C.tilePratinjau));
+  try { C.gambarPeta(); cek("ghost pratinjau sentuh dirender (tanpa error)", true); } catch (e) { cek("ghost pratinjau sentuh dirender (tanpa error)", false, e.message); }
+  C.tanganiKetuk(tileSentuh, 0, true);
+  cek("ketukan sentuh kedua di petak sama: membangun", C.S.bangunan.length === jmlBangunan + 1 && !C.tilePratinjau);
+  // Ketuk petak lain memindahkan pratinjau (bukan membangun)
+  const tileLain = { x: tileSentuh.x, y: tileSentuh.y };
+  let tileLain2 = null;
+  outerL: for (const j of C.S.jalan) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const tx = j.x + dx, ty = j.y + dy;
+    if (tx === tileSentuh.x && ty === tileSentuh.y) continue;
+    const t = C.terrainDi(C.peta, tx, ty);
+    if (C.TERRAIN[t].bangun && !C.adaBangunanDi(C.S, tx, ty) && !C.adaJalanDi(C.S, tx, ty)) { tileLain2 = { x: tx, y: ty }; break outerL; }
+  }
+  if (tileLain2) {
+    const jml2 = C.S.bangunan.length;
+    C.tanganiKetuk(tileLain2, 0, true);
+    cek("ketuk petak lain: pratinjau pindah, belum membangun", C.S.bangunan.length === jml2 && !!C.tilePratinjau && C.tilePratinjau.x === tileLain2.x);
+    C.tanganiKetuk(tileLain2, 0, true);
+    cek("ketuk kedua di petak baru: membangun", C.S.bangunan.length === jml2 + 1);
+  }
+  // Mouse tetap sekali klik
+  const jml3 = C.S.bangunan.length;
+  vm.runInContext('mode = { jenis: "bangun", id: "rumah-sederhana" }; tilePratinjau = null;', sandbox);
+  let tileMouse = null;
+  outerM: for (const j of C.S.jalan) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const tx = j.x + dx, ty = j.y + dy;
+    const t = C.terrainDi(C.peta, tx, ty);
+    if (C.TERRAIN[t].bangun && !C.adaBangunanDi(C.S, tx, ty) && !C.adaJalanDi(C.S, tx, ty)) { tileMouse = { x: tx, y: ty }; break outerM; }
+  }
+  if (tileMouse) {
+    C.tanganiKetuk(tileMouse, 0, false);
+    cek("klik mouse: langsung membangun (tanpa pratinjau)", C.S.bangunan.length === jml3 + 1);
+  }
+  vm.runInContext('mode = { jenis: "pilih", id: null }; tilePratinjau = null;', sandbox);
 }
 
 console.log(gagal === 0 ? "TEST_V13_OK" : "TEST_V13_GAGAL:" + gagal + " dari " + (lulus + gagal));

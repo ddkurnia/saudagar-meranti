@@ -6,6 +6,28 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v15.1 — Ramah Layar Sentuh Android (2026-11-11)
+
+Game kini nyaman dimainkan di HP/tablet Android (dan iOS):
+
+- **Ketuk 2× untuk membangun:** di layar sentuh, ketukan pertama
+  hanya menampilkan pratinjau bangunan/jembatan di petak itu (label
+  "Bangun di Sini" + chip "ketuk lagi di petak yang sama"), ketukan
+  kedua yang membangun — tidak ada lagi bangunan salah tempat karena
+  salah ketuk. Mouse tetap sekali klik (ada pratinjau hover).
+- **Gestur peta ala HP:** cubit 2 jari untuk zoom, geser 2 jari
+  untuk menggeser peta (sebelumnya 2 jari hanya zoom), seret 1 jari
+  untuk menggeser, seret untuk menggambar jalan.
+- **Tata letak HP:** bar sumber daya bisa digeser horizontal (7 pil
+  tidak muat di layar kecil), panel kiri/kanan tersembunyi secara
+  default di layar ≤820px dan terbuka saat ikon rel/statistik ditekan,
+  tombol-tombol penting minimal 44px (standar Android), area aman
+  poni (notch) dihormati, dan layar mulai kini menjelaskan cara main
+  sentuh.
+- Uji headless lolos (`TEST_V13_OK`, 129 cek): alur ketuk dua kali
+  (pratinjau → bangun, pindah pratinjau, mouse sekali klik), viewport
+  & aturan CSS sentuh.
+
 ## Yang baru di v15 — Kepulauan Meranti: 25 Pulau (2026-11-11)
 
 Peta kini satu kepulauan 96×72 dengan **25 pulau** yang ukurannya dan

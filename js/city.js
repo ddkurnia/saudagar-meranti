@@ -14,6 +14,7 @@ let peta = null;
 let S = null;             // state permainan
 let mode = { jenis: "pilih", id: null }; // pilih | bangun | jalan | jembatan | jembatan-gantung | pindah
 let jembatanMulai = null; // titik awal Jembatan Gantung (dua klik)
+let tilePratinjau = null; // (sentuh) petak yang diketuk sekali — ketuk kedua membangun (anti salah ketuk)
 let hover = null;         // {x, y} tile di bawah kursor
 let terpilih = null;      // {jenis:"bangunan", idx} | {jenis:"tile", x, y}
 let sedangPindah = null;  // bangunan yang sedang dipindah
@@ -861,7 +862,7 @@ function perbaruiWarga(dt) {
 let kanvas = null, ctx = null, skalaRender = 1.5;
 let kendaraanVisual = [];
 let pointerAktif = new Map();
-let seretMulai = null, sedangSeret = false, jarakPinch = 0;
+let seretMulai = null, sedangSeret = false, jarakPinch = 0, titikTengahPinch = null;
 
 function naungi(hex, persen) {
   const n = parseInt(hex.slice(1), 16);
@@ -1369,19 +1370,21 @@ function gambarPeta() {
   }
 }
 function gambarGhost(lebar, tinggi) {
-  if (!hover) return;
+  // Di layar sentuh, pratinjau bertahan di petak yang diketuk sekali.
+  const h = (tilePratinjau && (mode.jenis === "bangun" || mode.jenis === "jembatan")) ? tilePratinjau : hover;
+  if (!h) return;
   const z = kamera.zoom;
   let ok = true, alasan = "";
-  let footprint = [[hover.x, hover.y]];
+  let footprint = [[h.x, h.y]];
   if (mode.jenis === "bangun") {
     const def = BANGUNAN_MAP[mode.id];
     const k = kakiBangunan(def, 0);
     footprint = [];
-    for (let j = 0; j < k.h; j++) for (let i = 0; i < k.w; i++) footprint.push([hover.x + i, hover.y + j]);
-    const cek = cekBangun(def, hover.x, hover.y, 0);
+    for (let j = 0; j < k.h; j++) for (let i = 0; i < k.w; i++) footprint.push([h.x + i, h.y + j]);
+    const cek = cekBangun(def, h.x, h.y, 0);
     ok = cek.ok; alasan = cek.alasan || "";
     if (ok) {
-      const cx = hover.x + (k.w - 1) / 2, cy = hover.y + (k.h - 1) / 2;
+      const cx = h.x + (k.w - 1) / 2, cy = h.y + (k.h - 1) / 2;
       const tengah = tileTengahDunia(cx, cy);
       const s = duniaKeLayar(tengah.x, tengah.y, lebar, tinggi);
       ctx.save(); ctx.globalAlpha = 0.55;
@@ -1402,23 +1405,23 @@ function gambarGhost(lebar, tinggi) {
       ctx.fillText(label, s.x, ly + 1);
     }
   } else if (mode.jenis === "jalan") {
-    const cek = cekJalan(mode.id, hover.x, hover.y);
+    const cek = cekJalan(mode.id, h.x, h.y);
     ok = cek.ok; alasan = cek.alasan || "";
   } else if (mode.jenis === "jembatan") {
-    const cek = cekJembatan(mode.id, hover.x, hover.y);
+    const cek = cekJembatan(mode.id, h.x, h.y);
     ok = cek.ok; alasan = cek.alasan || "";
   } else if (mode.jenis === "jembatan-gantung") {
     // Dua klik: titik awal di darat, lalu titik akhir di darat seberang.
     if (!jembatanMulai) {
       const darat = t => t !== "laut" && t !== "sungai" && t !== "rawa";
-      ok = darat(terrainDi(peta, hover.x, hover.y));
+      ok = darat(terrainDi(peta, h.x, h.y));
       alasan = ok ? "Klik daratan seberang untuk membentangkan jembatan." : "Titik awal harus di daratan.";
     } else {
-      const cek = cekJembatanGantung(jembatanMulai.x, jembatanMulai.y, hover.x, hover.y);
+      const cek = cekJembatanGantung(jembatanMulai.x, jembatanMulai.y, h.x, h.y);
       ok = cek.ok; alasan = cek.alasan || "";
       footprint = [];
-      const dx = Math.sign(hover.x - jembatanMulai.x), dy = Math.sign(hover.y - jembatanMulai.y);
-      const jarak = Math.abs(hover.x - jembatanMulai.x) + Math.abs(hover.y - jembatanMulai.y);
+      const dx = Math.sign(h.x - jembatanMulai.x), dy = Math.sign(h.y - jembatanMulai.y);
+      const jarak = Math.abs(h.x - jembatanMulai.x) + Math.abs(h.y - jembatanMulai.y);
       for (let i = 0; i <= jarak; i++) footprint.push([jembatanMulai.x + dx * i, jembatanMulai.y + dy * i]);
     }
   } else if (mode.jenis === "pindah" && sedangPindah != null) {
@@ -1427,7 +1430,7 @@ function gambarGhost(lebar, tinggi) {
       const def = BANGUNAN_MAP[b.id];
       const k = kakiBangunan(def, b.rot);
       footprint = [];
-      for (let j = 0; j < k.h; j++) for (let i = 0; i < k.w; i++) footprint.push([hover.x + i, hover.y + j]);
+      for (let j = 0; j < k.h; j++) for (let i = 0; i < k.w; i++) footprint.push([h.x + i, h.y + j]);
       ok = true;
     }
   }
@@ -1712,7 +1715,8 @@ function renderHUD() {
     else {
       chip.style.display = "flex";
       let label = "";
-      if (mode.jenis === "bangun") label = "Membangun: " + BANGUNAN_MAP[mode.id].nama;
+      if (tilePratinjau) label = "Pratinjau di petak — ketuk lagi di petak yang sama untuk membangun";
+      else if (mode.jenis === "bangun") label = "Membangun: " + BANGUNAN_MAP[mode.id].nama;
       else if (mode.jenis === "jalan") label = "Membangun: " + JALAN[mode.id].nama + " (seret untuk menggambar)";
       else if (mode.jenis === "jembatan") label = "Membangun: " + JEMBATAN[mode.id].nama;
       else if (mode.jenis === "jembatan-gantung") label = jembatanMulai ? "Jembatan Gantung: klik daratan seberang" : "Jembatan Gantung: klik daratan awal";
@@ -1848,7 +1852,7 @@ function renderMenuBangun() {
         cx.beginPath(); cx.moveTo(16, 28); cx.lineTo(88, 28); cx.stroke();
         cx.setLineDash([]);
       }
-      tambahKartu(j.nama, "Seret di peta untuk menggambar jalan.", hargaTeks(j.harga), kunci, alasan, () => { mode = { jenis: "jalan", id: id }; terpilih = null; bunyiKlik(); renderHUD(); renderMenuBangun(); }, c);
+      tambahKartu(j.nama, "Seret di peta untuk menggambar jalan.", hargaTeks(j.harga), kunci, alasan, () => { mode = { jenis: "jalan", id: id }; tilePratinjau = null; terpilih = null; bunyiKlik(); renderHUD(); renderMenuBangun(); }, c);
     }
   }
   // Tab Jembatan — hanya jembatan
@@ -1880,7 +1884,7 @@ function renderMenuBangun() {
       tambahKartu(j.nama, desJembatan, hargaTeks(j.harga) + (id === "jembatan-gantung" ? " /petak" : ""), kunci, alasan, () => {
         if (id === "jembatan-gantung") { mode = { jenis: "jembatan-gantung", id: id }; jembatanMulai = null; }
         else mode = { jenis: "jembatan", id: id };
-        terpilih = null; bunyiKlik(); renderHUD(); renderMenuBangun();
+        tilePratinjau = null; terpilih = null; bunyiKlik(); renderHUD(); renderMenuBangun();
       }, c);
     }
   }
@@ -1893,7 +1897,7 @@ function renderMenuBangun() {
     const alasan = (def.level || 1) > S.level ? "Butuh peradaban level " + def.level : (def.tech ? "Butuh penelitian: " + TEKNOLOGI_MAP[def.tech].nama : "");
     const aktif = mode.jenis === "bangun" && mode.id === def.id;
     tambahKartu(def.nama, def.des, hargaTeks(def.harga) + " · " + def.waktu + " hari", kunci, alasan, () => {
-      mode = { jenis: "bangun", id: def.id }; terpilih = null; bunyiKlik(); renderHUD(); renderMenuBangun(); renderPanelKanan();
+      mode = { jenis: "bangun", id: def.id }; tilePratinjau = null; terpilih = null; bunyiKlik(); renderHUD(); renderMenuBangun(); renderPanelKanan();
     }, previewBangunan(def));
     const kartuTerakhir = itemEl.lastElementChild;
     if (aktif) kartuTerakhir.classList.add("dipilih");
@@ -2134,6 +2138,49 @@ function pointerKeTile(e) {
   // ke kanan-bawah (klik di tengah wajik memilih tile tetangga).
   return { x: Math.floor(t.x), y: Math.floor(t.y) };
 }
+// Tangani ketukan/klik di peta. Di layar sentuh, mode bangun & jembatan
+// memakai dua ketukan (anti salah ketuk): ketukan pertama hanya
+// menampilkan pratinjau di petak itu, ketukan kedua di petak yang sama
+// yang membangun. Mouse tetap sekali klik (ada pratinjau hover).
+function tanganiKetuk(t, tombol, sentuh) {
+  if (tombol !== 0) return;
+  if (mode.jenis === "pilih") {
+    const b = adaBangunanDi(S, t.x, t.y);
+    if (b) terpilih = { jenis: "bangunan", idx: S.bangunan.indexOf(b) };
+    else terpilih = { jenis: "tile", x: t.x, y: t.y };
+    bunyiKlik(); renderPanelKanan();
+  } else if (mode.jenis === "bangun") {
+    if (sentuh && !(tilePratinjau && tilePratinjau.x === t.x && tilePratinjau.y === t.y)) {
+      tilePratinjau = { x: t.x, y: t.y }; hover = { x: t.x, y: t.y };
+      bunyiKlik(); renderHUD();
+    } else {
+      tilePratinjau = null;
+      bangunDi(BANGUNAN_MAP[mode.id], t.x, t.y, 0);
+    }
+  } else if (mode.jenis === "jembatan") {
+    if (sentuh && !(tilePratinjau && tilePratinjau.x === t.x && tilePratinjau.y === t.y)) {
+      tilePratinjau = { x: t.x, y: t.y }; hover = { x: t.x, y: t.y };
+      bunyiKlik(); renderHUD();
+    } else {
+      tilePratinjau = null;
+      bangunJembatanDi(mode.id, t.x, t.y);
+    }
+  } else if (mode.jenis === "jembatan-gantung") {
+    // Dua klik: pertama titik awal di darat, kedua daratan seberang.
+    const darat = tt => tt !== "laut" && tt !== "sungai" && tt !== "rawa";
+    if (!jembatanMulai) {
+      if (darat(terrainDi(peta, t.x, t.y))) {
+        jembatanMulai = { x: t.x, y: t.y };
+        toast("Titik awal dipilih — klik daratan seberang dalam satu garis lurus.", "ok");
+        bunyiKlik();
+      } else { toast("Titik awal Jembatan Gantung harus di daratan.", "gagal"); bunyiGagal(); }
+    } else {
+      if (bangunJembatanGantung(jembatanMulai.x, jembatanMulai.y, t.x, t.y)) jembatanMulai = null;
+    }
+  } else if (mode.jenis === "pindah") {
+    pindahBangunanSelesai(t.x, t.y);
+  }
+}
 function pasangInput() {
   kanvas.addEventListener("contextmenu", e => e.preventDefault());
   kanvas.addEventListener("pointerdown", e => {
@@ -2142,6 +2189,7 @@ function pasangInput() {
     if (pointerAktif.size === 2) {
       const pts = [...pointerAktif.values()];
       jarakPinch = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      titikTengahPinch = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
       seretMulai = null;
       return;
     }
@@ -2158,11 +2206,15 @@ function pasangInput() {
     if (pointerAktif.size === 2) {
       const pts = [...pointerAktif.values()];
       const jarakBaru = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      const tengahBaru = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
       if (jarakPinch > 0 && jarakBaru > 0) {
         const rect = kanvas.getBoundingClientRect();
-        kameraZoomDi((pts[0].x + pts[1].x) / 2 - rect.left, (pts[0].y + pts[1].y) / 2 - rect.top, jarakBaru / jarakPinch, rect.width, rect.height);
+        kameraZoomDi(tengahBaru.x - rect.left, tengahBaru.y - rect.top, jarakBaru / jarakPinch, rect.width, rect.height);
       }
+      // Dua jari: geser peta mengikuti titik tengah (standar peta di HP)
+      if (titikTengahPinch) kameraGeser(tengahBaru.x - titikTengahPinch.x, tengahBaru.y - titikTengahPinch.y);
       jarakPinch = jarakBaru;
+      titikTengahPinch = tengahBaru;
       return;
     }
     hover = pointerKeTile(e);
@@ -2185,37 +2237,14 @@ function pasangInput() {
   });
   const akhiriPointer = (e) => {
     pointerAktif.delete(e.pointerId);
-    if (pointerAktif.size < 2) jarakPinch = 0;
+    if (pointerAktif.size < 2) { jarakPinch = 0; titikTengahPinch = null; }
     if (!seretMulai) return;
     const klik = !sedangSeret;
     const t = pointerKeTile(e);
     const tombol = seretMulai.button;
     seretMulai = null; sedangSeret = false;
     if (!klik || tombol !== 0) return;
-    if (mode.jenis === "pilih") {
-      const b = adaBangunanDi(S, t.x, t.y);
-      if (b) terpilih = { jenis: "bangunan", idx: S.bangunan.indexOf(b) };
-      else terpilih = { jenis: "tile", x: t.x, y: t.y };
-      bunyiKlik(); renderPanelKanan();
-    } else if (mode.jenis === "bangun") {
-      bangunDi(BANGUNAN_MAP[mode.id], t.x, t.y, 0);
-    } else if (mode.jenis === "jembatan") {
-      bangunJembatanDi(mode.id, t.x, t.y);
-    } else if (mode.jenis === "jembatan-gantung") {
-      // Dua klik: pertama titik awal di darat, kedua daratan seberang.
-      const darat = tt => tt !== "laut" && tt !== "sungai" && tt !== "rawa";
-      if (!jembatanMulai) {
-        if (darat(terrainDi(peta, t.x, t.y))) {
-          jembatanMulai = { x: t.x, y: t.y };
-          toast("Titik awal dipilih — klik daratan seberang dalam satu garis lurus.", "ok");
-          bunyiKlik();
-        } else { toast("Titik awal Jembatan Gantung harus di daratan.", "gagal"); bunyiGagal(); }
-      } else {
-        if (bangunJembatanGantung(jembatanMulai.x, jembatanMulai.y, t.x, t.y)) jembatanMulai = null;
-      }
-    } else if (mode.jenis === "pindah") {
-      pindahBangunanSelesai(t.x, t.y);
-    }
+    tanganiKetuk(t, tombol, e.pointerType === "touch");
   };
   kanvas.addEventListener("pointerup", akhiriPointer);
   kanvas.addEventListener("pointercancel", akhiriPointer);
@@ -2237,7 +2266,7 @@ function pasangInput() {
     else if (e.key === "-") kameraZoomTombol(1 / 1.15, kanvas.clientWidth, kanvas.clientHeight);
     else if (e.key === " ") { e.preventDefault(); hariBerikutnya(); }
     else if (e.key === "p" || e.key === "P") { aturKecepatan(kecepatan === 0 ? 1 : 0); }
-    else if (e.key === "Escape") { mode = { jenis: "pilih", id: null }; jembatanMulai = null; sedangPindah = null; terpilih = null; renderHUD(); renderMenuBangun(); renderPanelKanan(); }
+    else if (e.key === "Escape") { mode = { jenis: "pilih", id: null }; jembatanMulai = null; tilePratinjau = null; sedangPindah = null; terpilih = null; renderHUD(); renderMenuBangun(); renderPanelKanan(); }
   });
 }
 function aturKecepatan(k) {
@@ -2255,24 +2284,25 @@ function pasangTombol() {
   $("btnHari").onclick = () => { hariBerikutnya(); bunyiKlik(); };
   $("btnSimpan").onclick = () => { simpan(); toast("Permainan disimpan.", "ok"); bunyiSukses(); };
   $("btnSuara").onclick = () => { bunyiAktif = !bunyiAktif; $("btnSuara").textContent = bunyiAktif ? "🔊" : "🔇"; if (bunyiAktif) bunyiKlik(); };
-  $("btnBatalMode").onclick = () => { mode = { jenis: "pilih", id: null }; jembatanMulai = null; sedangPindah = null; renderHUD(); renderMenuBangun(); };
+  $("btnBatalMode").onclick = () => { mode = { jenis: "pilih", id: null }; jembatanMulai = null; tilePratinjau = null; sedangPindah = null; renderHUD(); renderMenuBangun(); };
   $("btnToggleKiri").onclick = () => { $("panelKiri").classList.toggle("tersembunyi"); bunyiKlik(); };
   $("btnToggleKanan").onclick = () => { $("panelKanan").classList.toggle("tersembunyi"); bunyiKlik(); };
   if (window.innerWidth <= 820) { $("panelKiri").classList.add("tersembunyi"); $("panelKanan").classList.add("tersembunyi"); }
   $("btnLevelTutup").onclick = () => { $("modalLevel").style.display = "none"; renderHUD(); renderMenuBangun(); renderPanelKiri(); };
-  // Rel kiri (Peta / Misi / Riset / Peradaban / Berita)
+  // Rel kiri (Peta / Misi / Riset / Peradaban / Berita) — membuka panelnya
+  // (di HP panel kiri tersembunyi secara default, jadi ketuk rel membukanya)
   document.querySelectorAll("#relKiri button").forEach(b => {
     b.onclick = () => {
       const tab = b.dataset.tab;
       if (tab === "peta") { kameraPusatkan(peta); bunyiKlik(); toast("Peta dipusatkan.", "ok"); return; }
-      panelKiri = tab; bunyiKlik(); renderPanelKiri();
+      panelKiri = tab; $("panelKiri").classList.remove("tersembunyi"); bunyiKlik(); renderPanelKiri();
     };
   });
   // Tombol "›" di kartu statistik membuka tab kiri yang sesuai
   document.querySelectorAll("#kartuStatistik .statBuka").forEach(b => {
-    b.onclick = () => { panelKiri = b.dataset.tab; bunyiKlik(); renderPanelKiri(); };
+    b.onclick = () => { panelKiri = b.dataset.tab; $("panelKiri").classList.remove("tersembunyi"); bunyiKlik(); renderPanelKiri(); };
   });
-  $("btnBerita").onclick = () => { panelKiri = "berita"; bunyiKlik(); renderPanelKiri(); };
+  $("btnBerita").onclick = () => { panelKiri = "berita"; $("panelKiri").classList.remove("tersembunyi"); bunyiKlik(); renderPanelKiri(); };
   $("btnModeBangun").onclick = () => {
     const mb = $("menuBangun");
     mb.classList.toggle("tersembunyi");
