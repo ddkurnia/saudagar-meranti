@@ -9,6 +9,30 @@ memproduksi Mie Sagu dan Kue Bangkit Sagu, mengekspor tepung sagu ke pasar
 internasional, dan mengembangkan Kedai Kopi Liberika Meranti sebagai
 bisnis sampingan.
 
+## Yang baru di v12 — Dunia 3D dari Aset Asli + Animasi
+
+- **Semua aset 2D kini menjadi objek 3D:** 7 bangunan asli (kilang,
+  kedai, pasar, pelabuhan, gudang, rumah pekerja, rumah kebun), pohon
+  rumbia & kelapa asli, kapal kargo, crane, forklift, truk, perahu,
+  jembatan, dermaga, dan semua objek asli (mesin kilang, karung sagu,
+  tumpukan tepung, kontainer, meja-kursi, mesin kopi, payung kedai,
+  gerobak pasar, lampu jalan, bunga, rumput, semak) — semuanya berdiri
+  di ruang 3D, selalu menghadap kamera, dengan bayangan di tanah.
+  Bangunan, pohon, dan karakter kotak balok prosedural sudah tidak ada.
+- **Animasi dari strip asli:** pemain, NPC, dan pekerja memakai strip
+  jalan/kerja 4 frame asli (jalan, bekerja, diam); asap cerobong
+  beranimasi naik & memudar; ombak pantai beranimasi; forklift dan truk
+  bergerak bolak-balik; perahu hanyut di laut; kapal bergoyang; pohon
+  dan bunga bergoyang; lampu jalan menyala saat malam; laut memakai
+  tekstur ombak asli.
+- **Cara kerja (jujur):** gambar aset tetap 2D, tapi ditempatkan sebagai
+  objek nyata di dunia 3D (teknik billboard) — bukan model poligon asli.
+  Aset yang tidak dipakai di dunia 3D: `assets/environment/jalan.png`
+  (jalan tetap strip tanah prosedural) dan pose `interact.png` (belum
+  dipakai). File `js/world25.js` dan dunia sprite 2.5D tetap tersimpan
+  di repo.
+- Kamera orbit v11, ekonomi, HUD, panel, dan simpanan lama tidak berubah.
+
 ## Yang baru di v11 — Dunia 3D Kembali + Kamera Orbit Putar & Zoom
 
 - **Dunia kembali 3D penuh (Three.js):** kebun rumbia, kilang dengan silo

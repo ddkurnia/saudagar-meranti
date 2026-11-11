@@ -1,10 +1,12 @@
-// Saudagar Sagu Meranti — v11 DUNIA 3D + KAMERA ORBIT
-// Dunia kembali 3D penuh (Three.js, seperti v6-v8): bangunan, kapal,
-// crane, jembatan, pohon rumbia dan karakter 3D. Kamera orbit bebas
-// seperti melihat peta: putar (seret kanan / mode Putar / tombol
-// putar / Q-E), zoom (roda mouse / tombol + -), geser (seret kiri).
-// Semua gerakan kamera dan karakter dihaluskan (lerp & easing).
-// Ekonomi v1-v10 tetap, simpanan lama tetap bisa dipakai.
+// Saudagar Sagu Meranti — v12 DUNIA 3D DARI ASET ASLI + ANIMASI
+// Semua aset 2D yang sudah ada kini menjadi objek di dunia 3D
+// (billboard: berdiri di ruang 3D, menghadap kamera, berbayangan):
+// 7 bangunan, 8 karakter dengan strip jalan/kerja, pohon, kendaraan,
+// dan objek asli — bukan lagi kotak balok prosedural. Animasinya:
+// strip jalan/kerja 4 frame, asap cerobong, ombak pantai, forklift &
+// truk bergerak, perahu hanyut, kapal bergoyang, pohon bergoyang,
+// lampu menyala saat malam. Kamera orbit v11 tetap. Ekonomi v1-v11
+// tetap, simpanan lama tetap bisa dipakai.
 const SAVE_KEY = "saudagarSaguMerantiV1";
 const TARGET_UANG = 5000000;
 const TARGET_EKSPOR = 100;
@@ -497,7 +499,117 @@ function toggleModePutar() {
   const b = document.getElementById("tombolModePutar"); if (b) b.classList.toggle("aktif", modePutar);
   toast(modePutar ? "Mode putar: seret untuk memutar kamera" : "Mode geser: seret untuk menggeser peta");
 }
-let signKebun = null, forklift3 = null, cincinPemain = null;
+// ================= ASET 3D DARI SPRITE ASLI (v12) =================
+// Gambar 2D yang sudah ada dipakai sebagai objek di dalam dunia 3D:
+// berdiri tegak di ruang 3D (posisi x/y/z nyata), selalu menghadap
+// kamera (billboard), punya bayangan di tanah, dan bisa dianimasikan
+// (strip jalan/kerja, asap, ombak, kendaraan bergerak, pohon bergoyang).
+// Ini BUKAN model poligon asli — gambarnya tetap 2D, tapi hidup di
+// dunia 3D dengan kedalaman, bayangan, dan gerakan. Aset prosedural
+// (kotak balok) diganti aset asli.
+// Aspek (lebar/tinggi) tiap gambar, dihitung dari manifest.json —
+// dipakai supaya proporsi gambar selalu benar di dunia 3D.
+const ASPEK_ASET = {
+  "assets/buildings/building-gudang.png": 1.42, "assets/buildings/building-kebun.png": 1.604,
+  "assets/buildings/building-kedai-liberika.png": 1.137, "assets/buildings/building-kilang-sagu.png": 1.354,
+  "assets/buildings/building-pasar.png": 1.472, "assets/buildings/building-pelabuhan.png": 1.585,
+  "assets/buildings/building-rumah-pekerja.png": 1.16,
+  "assets/environment/batu.png": 1.276, "assets/environment/bunga.png": 1.109,
+  "assets/environment/dermaga.png": 1.415, "assets/environment/jembatan.png": 1.343,
+  "assets/environment/laut.webp": 1, "assets/environment/ombak.webp": 1.327,
+  "assets/environment/pohon-kelapa.png": 1.006, "assets/environment/pohon-rumbia.png": 1.015,
+  "assets/environment/rumput.png": 1.283, "assets/environment/semak.png": 1.098,
+  "assets/environment/tanaman-hias.png": 0.83,
+  "assets/objects/conveyor.png": 1.782, "assets/objects/gerobak-pasar.png": 1.341,
+  "assets/objects/karung-sagu.png": 0.844, "assets/objects/kontainer.png": 1.159,
+  "assets/objects/lampu-jalan.png": 0.475, "assets/objects/meja-kursi.png": 1.225,
+  "assets/objects/mesin-kilang.png": 1.249, "assets/objects/mesin-kopi.png": 0.867,
+  "assets/objects/payung-kedai.png": 1.022, "assets/objects/tumpukan-tepung.png": 1.427,
+  "assets/vehicles/crane.png": 0.969, "assets/vehicles/forklift.png": 1.189,
+  "assets/vehicles/kapal-kargo.png": 1.278, "assets/vehicles/perahu-kecil.png": 1.475,
+  "assets/vehicles/perahu-muatan.png": 1.299, "assets/vehicles/truk-pengangkut.png": 1.124,
+};
+// Aspek pose diam tiap karakter (lebar/tinggi dari manifest.json)
+const ASPEK_KARAKTER = {
+  player: 0.778, petani: 0.898, "pekerja-kilang": 0.826, barista: 0.815,
+  pedagang: 0.782, pelanggan: 0.903, sopir: 0.787, "pekerja-pelabuhan": 0.791,
+};
+const NPC_ASET = { "Pak Tani": "petani", "Bu Sari": "pelanggan", "Pedagang": "pedagang", "Sopir Truk": "sopir", "Pekerja Pelabuhan": "pekerja-pelabuhan" };
+let tekstur3D = {};
+let billboard3 = [];   // semua bidang aset yang menghadap kamera
+let ombak3 = [];       // bidang ombak datar di tepi pantai (animasi frame)
+let lampuNyala3 = [];  // bola lampu yang menyala saat malam
+let manajerMuat3D = null, muat3DSelesai = false;
+let asapTex3D = null, ombakTex3D = null; // tekstur strip bersama (asap & ombak)
+function muatTekstur3D(path) {
+  if (tekstur3D[path]) return tekstur3D[path];
+  const tex = new THREE.TextureLoader(manajerMuat3D).load(path);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  tekstur3D[path] = tex;
+  return tex;
+}
+// Strip animasi (4 frame mendatar): tekstur baru per pemakai supaya
+// tiap karakter bisa menunjukkan frame berbeda (offset independen).
+function muatStrip3D(path) {
+  const tex = new THREE.TextureLoader(manajerMuat3D).load(path);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.repeat.set(0.25, 1);
+  return tex;
+}
+function aturFrameStrip(tex, frameIdx) { if (tex) tex.offset.x = (frameIdx % 4) * 0.25; }
+function bayanganTanah(x, z, r) {
+  const b = new THREE.Mesh(new THREE.CircleGeometry(r, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22, depthWrite: false }));
+  b.rotation.x = -Math.PI / 2; b.position.set(x, 0.05, z);
+  return b;
+}
+// Bidang aset di dunia 3D. opts: x, z (posisi tanah, satuan 3D), y0
+// (ketinggian dasar), goyang (amplitudo goyangan), fase, bayangan
+// (jari-jari bayangan tanah, 0 = tanpa), datar (terbaring di tanah,
+// mis. jembatan & dermaga), tex (tekstur siap pakai, mis. strip asap).
+function buatBillboard(path, tinggi, opts) {
+  opts = opts || {};
+  const tex = opts.tex || muatTekstur3D(path);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshLambertMaterial({ map: tex, transparent: true, alphaTest: 0.08, side: THREE.DoubleSide }));
+  const aspek = opts.strip ? 1 : (ASPEK_ASET[path] || 1);
+  m.position.set(opts.x || 0, (opts.y0 || 0) + tinggi / 2, opts.z || 0);
+  if (opts.datar) m.rotation.x = -Math.PI / 2;
+  m.visible = false; // baru tampil saat gambar termuat (tidak ada kotak putih)
+  m.userData = { tinggi: tinggi, aspek: aspek, tex: tex, strip: !!opts.strip, balik: false, goyang: opts.goyang || 0, fase: opts.fase || 0, datar: !!opts.datar, skala: 1, muatOk: false, tersembunyi: false };
+  billboard3.push(m);
+  if (opts.bayangan && typeof scene3 !== "undefined" && scene3) scene3.add(bayanganTanah(opts.x || 0, opts.z || 0, opts.bayangan));
+  return m;
+}
+// Karakter dari strip animasi asli. opts: jalan (punya strip jalan),
+// kerja (punya strip kerja). Mode diubah lewat setModeKarakter.
+function buatKarakter3D(nama, tinggi, opts) {
+  opts = opts || {};
+  const rec = { nama: nama, tinggi: tinggi, mode: "idle", aspekIdle: ASPEK_KARAKTER[nama] || 0.8 };
+  rec.texIdle = muatTekstur3D("assets/characters/" + nama + "/idle.png");
+  rec.matIdle = new THREE.MeshLambertMaterial({ map: rec.texIdle, transparent: true, alphaTest: 0.08, side: THREE.DoubleSide });
+  if (opts.jalan) { rec.texJalan = muatStrip3D("assets/characters/" + nama + "/walk-strip.png"); rec.matJalan = new THREE.MeshLambertMaterial({ map: rec.texJalan, transparent: true, alphaTest: 0.08, side: THREE.DoubleSide }); }
+  if (opts.kerja) { rec.texKerja = muatStrip3D("assets/characters/" + nama + "/work-strip.png"); rec.matKerja = new THREE.MeshLambertMaterial({ map: rec.texKerja, transparent: true, alphaTest: 0.08, side: THREE.DoubleSide }); }
+  rec.plane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), rec.matIdle);
+  rec.plane.position.y = tinggi / 2;
+  rec.plane.visible = false;
+  rec.plane.userData = { tinggi: tinggi, aspek: rec.aspekIdle, tex: rec.texIdle, strip: false, balik: false, goyang: 0, fase: 0, datar: false, skala: 1, muatOk: false, tersembunyi: false, karakter: rec };
+  billboard3.push(rec.plane);
+  rec.grup = new THREE.Group();
+  rec.grup.add(rec.plane);
+  return rec;
+}
+function setModeKarakter(rec, mode) {
+  if (!rec || rec.mode === mode) return;
+  rec.mode = mode;
+  const u = rec.plane.userData;
+  if (mode === "jalan" && rec.matJalan) { rec.plane.material = rec.matJalan; u.aspek = 1; u.strip = true; u.tex = rec.texJalan; }
+  else if (mode === "kerja" && rec.matKerja) { rec.plane.material = rec.matKerja; u.aspek = 1; u.strip = true; u.tex = rec.texKerja; }
+  else { rec.mode = "idle"; rec.plane.material = rec.matIdle; u.aspek = rec.aspekIdle; u.strip = false; u.tex = rec.texIdle; }
+}
+let signKebun = null, forklift3 = null, cincinPemain = null, truk3 = null, perahu3 = null;
 function mat(warna) { return new THREE.MeshLambertMaterial({ color: warna }); }
 function kotak(w, h, d, warna, x, y, z) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(warna));
@@ -533,58 +645,6 @@ function buatLabel(teks) {
   };
   return sp;
 }
-function buatOrang3D(baju, topi) {
-  const g = new THREE.Group();
-  const kakiK = kotak(0.28, 0.7, 0.28, 0x333333, -0.18, 0.35, 0);
-  const kakiN = kotak(0.28, 0.7, 0.28, 0x333333, 0.18, 0.35, 0);
-  const badan = kotak(0.85, 0.9, 0.5, baju, 0, 1.15, 0);
-  const kepala = new THREE.Mesh(new THREE.SphereGeometry(0.34, 16, 12), mat(0xf1c27d));
-  kepala.position.set(0, 1.95, 0); kepala.castShadow = true;
-  const topiM = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.4, 0.18, 12), mat(topi));
-  topiM.position.set(0, 2.22, 0); topiM.castShadow = true;
-  const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.06, 12), mat(topi));
-  brim.position.set(0, 2.14, 0);
-  const lenganK = kotak(0.2, 0.7, 0.2, baju, -0.55, 1.15, 0);
-  const lenganN = kotak(0.2, 0.7, 0.2, baju, 0.55, 1.15, 0);
-  const alat = new THREE.Group();
-  const gagang = kotak(0.08, 1.1, 0.08, 0x5d4037, 0, 0.4, 0);
-  const kepalaAlat = kotak(0.5, 0.12, 0.12, 0x90a4ae, 0.2, 0.95, 0);
-  alat.add(gagang); alat.add(kepalaAlat);
-  alat.position.set(0.6, 1.0, 0.2); alat.visible = false;
-  g.add(kakiK, kakiN, badan, kepala, topiM, brim, lenganK, lenganN, alat);
-  g.userData = { kakiK: kakiK, kakiN: kakiN, lenganK: lenganK, lenganN: lenganN, alat: alat };
-  return g;
-}
-function buatPohonRumbia() {
-  const g = new THREE.Group();
-  const batang = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 2.4, 8), mat(0x6d4c41));
-  batang.position.y = 1.2; batang.castShadow = true; g.add(batang);
-  const daun = new THREE.Group();
-  for (let i = 0; i < 6; i++) {
-    const f = new THREE.Mesh(new THREE.ConeGeometry(0.55, 2.4, 4), mat(0x1b5e20));
-    f.position.set(Math.cos(i * Math.PI / 3) * 0.9, 2.6, Math.sin(i * Math.PI / 3) * 0.9);
-    f.rotation.z = Math.cos(i * Math.PI / 3) * 0.9;
-    f.rotation.x = -Math.sin(i * Math.PI / 3) * 0.9;
-    f.castShadow = true; daun.add(f);
-  }
-  daun.position.y = 0; g.add(daun);
-  const buah = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), mat(0xc62828));
-  buah.position.set(0.7, 2.2, 0.3); g.add(buah);
-  g.userData.daun = daun;
-  return g;
-}
-function buatBangunan(b, warna, atapWarna) {
-  const g = new THREE.Group();
-  const cx = w2x(b.x + b.w / 2), cz = w2z(b.y + b.h / 2);
-  const badan = kotak(b.w * SKALA, 2.6, b.h * SKALA, warna, 0, 1.3, 0);
-  const atap = new THREE.Mesh(new THREE.ConeGeometry(b.w * SKALA * 0.72, 1.8, 4), mat(atapWarna));
-  atap.position.y = 3.5; atap.rotation.y = Math.PI / 4; atap.castShadow = true;
-  const pintu = kotak(1.2, 1.8, 0.15, 0x5d4037, 0, 0.9, b.h * SKALA / 2 + 0.05);
-  g.add(badan, atap, pintu);
-  const label = buatLabel(b.label); label.position.y = 5.2; g.add(label);
-  g.position.set(cx, 0, cz);
-  return g;
-}
 function init3D() {
   if (window.SPRITE_WORLD) return false; // dunia sprite 2.5D aktif, Three.js tidak dipakai
   const wadah = (typeof document !== "undefined") ? document.getElementById("dunia3d") : null;
@@ -618,6 +678,12 @@ function init3D() {
     sunLight.shadow.camera.left = -35; sunLight.shadow.camera.right = 35;
     sunLight.shadow.camera.top = 35; sunLight.shadow.camera.bottom = -35;
     scene3.add(sunLight);
+    // Pemuat aset 3D: tombol mulai menunjukkan progres sampai semua gambar termuat
+    manajerMuat3D = new THREE.LoadingManager();
+    const tombolMulai = (typeof document !== "undefined") ? document.getElementById("tombolMulai") : null;
+    manajerMuat3D.onProgress = (url, masuk, total) => { if (tombolMulai) tombolMulai.textContent = "Memuat aset 3D… " + masuk + "/" + total; };
+    manajerMuat3D.onLoad = () => { muat3DSelesai = true; if (tombolMulai) tombolMulai.textContent = "▶ MULAI BERMAIN"; };
+    setTimeout(() => { if (!muat3DSelesai && tombolMulai) tombolMulai.textContent = "▶ MULAI BERMAIN"; }, 12000);
     // Tanah
     const tanah = new THREE.Mesh(new THREE.PlaneGeometry(70, 38), mat(0x7ec850));
     tanah.rotation.x = -Math.PI / 2; tanah.receiveShadow = true; scene3.add(tanah);
@@ -629,7 +695,9 @@ function init3D() {
     // Pasir + laut
     const pasir = new THREE.Mesh(new THREE.PlaneGeometry(70, 2.5), mat(0xf0d9a0));
     pasir.rotation.x = -Math.PI / 2; pasir.position.set(0, 0.03, 11.5); scene3.add(pasir);
-    water3 = new THREE.Mesh(new THREE.PlaneGeometry(70, 7), new THREE.MeshLambertMaterial({ color: 0x29b6f6, transparent: true, opacity: 0.92 }));
+    const lautTex = muatTekstur3D("assets/environment/laut.webp");
+    lautTex.wrapS = THREE.RepeatWrapping; lautTex.wrapT = THREE.RepeatWrapping; lautTex.repeat.set(10, 1);
+    water3 = new THREE.Mesh(new THREE.PlaneGeometry(70, 7), new THREE.MeshLambertMaterial({ map: lautTex, color: 0x29b6f6, transparent: true, opacity: 0.95 }));
     water3.rotation.x = -Math.PI / 2; water3.position.set(0, 0.05, 16); scene3.add(water3);
     // Matahari & bulan 3D
     sunMesh = new THREE.Mesh(new THREE.SphereGeometry(1.6, 16, 12), new THREE.MeshBasicMaterial({ color: 0xffeb3b }));
@@ -646,173 +714,168 @@ function init3D() {
       awan.position.set(-25 + i * 16, 13 + (i % 2), -10 + i * 3);
       scene3.add(awan); clouds3.push(awan);
     }
-    // Kebun: petak tanah + pohon rumbia
+    // Kebun: petak tanah + pohon rumbia asli (billboard 3D, bergoyang)
     for (let i = 0; i < PETAK_POS.length; i++) {
       const p = PETAK_POS[i];
       const tanahPetak = kotak(p.w * SKALA, 0.25, p.h * SKALA, 0xa1887f, w2x(p.x + p.w / 2), 0.12, w2z(p.y + p.h / 2));
       scene3.add(tanahPetak);
-      const pohon = buatPohonRumbia();
-      pohon.position.set(w2x(p.x + p.w / 2), 0.25, w2z(p.y + p.h / 2));
+      const pohon = buatBillboard("assets/environment/pohon-rumbia.png", 3.4, { x: w2x(p.x + p.w / 2), z: w2z(p.y + p.h / 2), y0: 0.25, goyang: 0.03, fase: i * 1.3, bayangan: 1.1 });
       scene3.add(pohon);
       const kecambah = new THREE.Mesh(new THREE.SphereGeometry(0.35, 10, 8), mat(0x66bb6a));
       kecambah.position.set(w2x(p.x + p.w / 2), 0.6, w2z(p.y + p.h / 2));
       scene3.add(kecambah);
       plotMeshes.push({ tanah: tanahPetak, pohon: pohon, kecambah: kecambah });
     }
-    // Bangunan 3D
-    buildingMeshes.kilang = buatBangunan(BANGUNAN.kilang, 0x90a4ae, 0x37474f);
-    buildingMeshes.kedai = buatBangunan(BANGUNAN.kedai, 0xa1887f, 0x6d4c41);
-    buildingMeshes.pasar = buatBangunan(BANGUNAN.pasar, 0xffb74d, 0xe65100);
-    buildingMeshes.pelabuhan = buatBangunan(BANGUNAN.pelabuhan, 0x4db6ac, 0x00695c);
-    for (const k of Object.keys(buildingMeshes)) scene3.add(buildingMeshes[k]);
-    // Cerobong + asap kilang
-    const cerobong = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 3, 10), mat(0x666666));
-    cerobong.position.set(w2x(BANGUNAN.kilang.x + 150), 4.5, w2z(BANGUNAN.kilang.y + 30));
-    scene3.add(cerobong);
-    for (let i = 0; i < 4; i++) {
-      const asap = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 8), new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 }));
-      asap.position.set(cerobong.position.x, 6.5 + i, cerobong.position.z);
+    // Bangunan asli (billboard 3D + papan tanda di atasnya)
+    const pasangBangunan = (kunci, path, tinggi) => {
+      const b = BANGUNAN[kunci];
+      const m = buatBillboard(path, tinggi, { x: w2x(b.x + b.w / 2), z: w2z(b.y + b.h / 2), bayangan: tinggi * 0.65 });
+      scene3.add(m);
+      const lb = buatLabel(b.label); lb.position.set(m.position.x, tinggi + 1, m.position.z); scene3.add(lb);
+      buildingMeshes[kunci] = m;
+    };
+    pasangBangunan("kilang", "assets/buildings/building-kilang-sagu.png", 7);
+    pasangBangunan("kedai", "assets/buildings/building-kedai-liberika.png", 7.5);
+    pasangBangunan("pasar", "assets/buildings/building-pasar.png", 6.5);
+    pasangBangunan("pelabuhan", "assets/buildings/building-pelabuhan.png", 7);
+    // Gudang & rumah pekerja (aset bangunan tambahan)
+    const gudang = buatBillboard("assets/buildings/building-gudang.png", 6, { x: w2x(660), z: w2z(510), bayangan: 3.5 });
+    scene3.add(gudang);
+    const lbGudang = buatLabel("Gudang Sagu"); lbGudang.position.set(gudang.position.x, 7, gudang.position.z); scene3.add(lbGudang);
+    const rumah = buatBillboard("assets/buildings/building-rumah-pekerja.png", 6, { x: w2x(300), z: w2z(500), bayangan: 3.5 });
+    scene3.add(rumah);
+    const lbRumah = buatLabel("Rumah Pekerja"); lbRumah.position.set(rumah.position.x, 7, rumah.position.z); scene3.add(lbRumah);
+    // Rumah kebun di tepi utara kebun
+    const rmKebun = buatBillboard("assets/buildings/building-kebun.png", 5.5, { x: w2x(250), z: w2z(20), bayangan: 3.5 });
+    scene3.add(rmKebun);
+    // Asap cerobong kilang — strip animasi 4 frame, naik & mengembang
+    asapTex3D = muatStrip3D("assets/animations/asap-cerobong-sheet.png");
+    for (let i = 0; i < 3; i++) {
+      const asap = buatBillboard("assets/animations/asap-cerobong-sheet.png", 1.6, { x: w2x(BANGUNAN.kilang.x + 55), z: w2z(BANGUNAN.kilang.y + 30), y0: 6.5 + i, tex: asapTex3D, strip: true });
+      asap.userData.yDasar = 6.5 + i;
       scene3.add(asap); smoke3.push(asap);
     }
-    // Kapal kargo besar di pelabuhan (ala referensi)
+    // Ombak animasi di tepi pantai (bidang datar, frame berganti)
+    ombakTex3D = muatStrip3D("assets/animations/ombak-sheet.png");
+    for (const ox of [-20, -7, 6, 19]) {
+      const om = buatBillboard("assets/animations/ombak-sheet.png", 2.2, { x: ox, z: 12.8, y0: 0.08, tex: ombakTex3D, strip: true, datar: true });
+      scene3.add(om); ombak3.push(om);
+    }
+    // Kapal kargo besar di pelabuhan (aset asli, bergoyang di air)
     boat3 = new THREE.Group();
-    boat3.add(kotak(12, 1.4, 3.2, 0x1e3a5f, 0, 0.7, 0));
-    boat3.add(kotak(12.4, 0.5, 3.4, 0xb91c1c, 0, 1.5, 0));
-    boat3.add(kotak(3.5, 2.2, 2.6, 0xffffff, -3.5, 2.6, 0));
-    boat3.add(kotak(3.5, 0.5, 2.7, 0xe53935, -3.5, 3.8, 0));
-    const warnaKontainerKapal = [0xe53935, 0xf59e0b, 0x1e88e5, 0x43a047];
-    warnaKontainerKapal.forEach((w, i) => {
-      boat3.add(kotak(1.8, 1.3, 2.6, w, 1.5 + i * 2, 2.2, 0));
-    });
+    const kapal = buatBillboard("assets/vehicles/kapal-kargo.png", 4, { x: 0, z: 0, y0: 0.1 });
+    kapal.position.y = 2.1;
+    boat3.add(kapal);
     boat3.position.set(w2x(820), 0.1, w2z(505));
     scene3.add(boat3);
-    // Silo kilang (2 tangki perak) + pipa
-    for (let i = 0; i < 2; i++) {
-      const silo = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 4.5, 14), new THREE.MeshLambertMaterial({ color: 0xcfd8dc }));
-      silo.position.set(w2x(BANGUNAN.kilang.x + 140 + i * 30), 2.25, w2z(BANGUNAN.kilang.y - 10));
-      silo.castShadow = true; scene3.add(silo);
-      const tutupSilo = new THREE.Mesh(new THREE.ConeGeometry(1.15, 0.9, 14), mat(0x90a4ae));
-      tutupSilo.position.set(silo.position.x, 4.9, silo.position.z); scene3.add(tutupSilo);
-    }
-    // Forklift kuning kilang (bergerak maju-mundur)
+    // Perahu kecil hanyut di laut + perahu muatan di dekat dermaga
+    perahu3 = new THREE.Group();
+    const perahu = buatBillboard("assets/vehicles/perahu-kecil.png", 1.8, { x: 0, z: 0, y0: 0.1 });
+    perahu.position.y = 1;
+    perahu3.add(perahu);
+    perahu3.position.set(w2x(350), 0.12, 17.5);
+    scene3.add(perahu3);
+    const perahuMuat = buatBillboard("assets/vehicles/perahu-muatan.png", 2.2, { x: w2x(950), z: 15, y0: 0.1 });
+    scene3.add(perahuMuat);
+    // Forklift kilang (aset asli, bergerak maju-mundur)
     forklift3 = new THREE.Group();
-    forklift3.add(kotak(1.8, 1.1, 1.4, 0xfacc15, 0, 0.8, 0));
-    forklift3.add(kotak(0.9, 0.9, 1.2, 0x37474f, 0.3, 1.7, 0));
-    forklift3.add(kotak(0.12, 1.6, 1.2, 0x37474f, -1, 1.1, 0));
-    forklift3.add(kotak(1, 0.1, 0.3, 0x90a4ae, -1.5, 0.3, 0.4));
-    forklift3.add(kotak(1, 0.1, 0.3, 0x90a4ae, -1.5, 0.3, -0.4));
+    const fork = buatBillboard("assets/vehicles/forklift.png", 2.2, { x: 0, z: 0, y0: 0 });
+    fork.position.y = 1.1;
+    forklift3.add(fork);
     forklift3.position.set(w2x(600), 0, w2z(BANGUNAN.kilang.y + BANGUNAN.kilang.h + 30));
     scene3.add(forklift3);
-    // Awning garis merah-putih pasar + peti buah
-    for (let i = 0; i < 6; i++) {
-      scene3.add(kotak(1.1, 0.12, 2.2, i % 2 ? 0xe53935 : 0xffffff, w2x(BANGUNAN.pasar.x + 20 + i * 28), 2.6, w2z(BANGUNAN.pasar.y + BANGUNAN.pasar.h + 14)));
-    }
-    const warnaBuah = [0x43a047, 0xf59e0b, 0xe53935, 0x8d6e63];
-    warnaBuah.forEach((w, i) => {
-      scene3.add(kotak(1.2, 0.6, 1, w, w2x(BANGUNAN.pasar.x + 30 + i * 40), 0.35, w2z(BANGUNAN.pasar.y + BANGUNAN.pasar.h + 30)));
-    });
-    // Payung putih kedai kopi
-    const payung = new THREE.Mesh(new THREE.ConeGeometry(2.2, 1, 12), mat(0xffffff));
-    payung.position.set(w2x(BANGUNAN.kedai.x + 100), 3.4, w2z(BANGUNAN.kedai.y + BANGUNAN.kedai.h + 22));
-    payung.castShadow = true; scene3.add(payung);
-    const tiangPayung = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 2.4, 8), mat(0x8d6e63));
-    tiangPayung.position.set(payung.position.x, 2.1, payung.position.z); scene3.add(tiangPayung);
-    // Jembatan kayu di kiri bawah (ala referensi)
-    for (let i = 0; i < 6; i++) {
-      scene3.add(kotak(3.4, 0.18, 0.9, 0x8d6e63, w2x(150), 0.5, w2z(480 + i * 12)));
-    }
-    scene3.add(kotak(0.15, 0.9, 6, 0x6d4c41, w2x(130), 0.9, w2z(505)));
-    scene3.add(kotak(0.15, 0.9, 6, 0x6d4c41, w2x(170), 0.9, w2z(505)));
-    // Batu karang di tepi laut
+    // Dermaga pelabuhan (bidang datar di tepi air)
+    const dermaga = buatBillboard("assets/environment/dermaga.png", 4, { x: w2x(800), z: w2z(470), y0: 0.08, datar: true });
+    scene3.add(dermaga);
+    // Jembatan kayu di kiri bawah (aset asli, terbaring di tanah)
+    const jembatan = buatBillboard("assets/environment/jembatan.png", 5, { x: w2x(150), z: w2z(505), y0: 0.08, datar: true });
+    scene3.add(jembatan);
+    // Payung putih kedai kopi (aset asli)
+    const payung = buatBillboard("assets/objects/payung-kedai.png", 3, { x: w2x(BANGUNAN.kedai.x + 100), z: w2z(BANGUNAN.kedai.y + BANGUNAN.kedai.h + 22), y0: 1.6, bayangan: 1.8 });
+    scene3.add(payung);
+    // Batu karang di tepi laut (aset asli)
     for (const [bx, bz, bs] of [[-26, 13, 1.4], [-23, 14, 1], [-25, 11, 0.8]]) {
-      const batu = new THREE.Mesh(new THREE.DodecahedronGeometry(bs, 0), mat(0x78909c));
-      batu.position.set(bx, 0.4, bz); batu.castShadow = true; scene3.add(batu);
+      const batu = buatBillboard("assets/environment/batu.png", bs, { x: bx, z: bz, bayangan: bs * 0.6 });
+      scene3.add(batu);
     }
     // Papan tanda kayu Kebun Rumbia (dinamis: jumlah petak)
     signKebun = buatLabel("Kebun Rumbia " + S.lahan.length + " / 12 Petak");
     signKebun.scale.set(7.5, 1.4, 1);
     signKebun.position.set(w2x(250), 3.6, w2z(320));
     scene3.add(signKebun);
-    // Pohon kelapa & hias di tepi
+    // Pohon kelapa di tepi (aset asli, bergoyang)
     for (const [px, pz] of [[-26, -12], [26, -12], [-26, 8], [26, 2]]) {
-      const ph = buatPohonRumbia(); ph.position.set(px, 0, pz); ph.scale.setScalar(1.2); scene3.add(ph);
-      const kelapa = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 8), mat(0x6d4c41));
-      kelapa.position.set(px + 0.6, 3.1, pz); scene3.add(kelapa);
+      const ph = buatBillboard("assets/environment/pohon-kelapa.png", 4.2, { x: px, z: pz, goyang: 0.03, fase: px, bayangan: 1.2 });
+      scene3.add(ph);
     }
-    // Lampu jalan di sepanjang jalan aspal
+    // Lampu jalan (aset asli) + bola lampu yang menyala saat malam
     for (const [lx, lz] of [[-2, -8], [2, -2], [-2, 4], [2, 8]]) {
-      const tiang = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 3.2, 8), mat(0x37474f));
-      tiang.position.set(lx, 1.6, lz); scene3.add(tiang);
-      const lampu = new THREE.Mesh(new THREE.SphereGeometry(0.28, 10, 8), new THREE.MeshBasicMaterial({ color: 0xfff176 }));
-      lampu.position.set(lx, 3.3, lz); scene3.add(lampu);
+      const lamp = buatBillboard("assets/objects/lampu-jalan.png", 3.4, { x: lx, z: lz, bayangan: 0.5 });
+      scene3.add(lamp);
+      const nyala = new THREE.Mesh(new THREE.SphereGeometry(0.28, 10, 8), new THREE.MeshBasicMaterial({ color: 0xfff176 }));
+      nyala.position.set(lx, 3.3, lz); nyala.visible = false; scene3.add(nyala); lampuNyala3.push(nyala);
     }
-    // Bunga taman
+    // Bunga taman (aset asli)
     for (let i = 0; i < 12; i++) {
-      const bunga = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), mat([0xe53935, 0xfdd835, 0xec407a, 0xab47bc][i % 4]));
-      bunga.position.set(-24 + (i % 6) * 9.5, 0.25, -14 + Math.floor(i / 6) * 2);
+      const bunga = buatBillboard("assets/environment/bunga.png", 0.8, { x: -24 + (i % 6) * 9.5, z: -14 + Math.floor(i / 6) * 2, goyang: 0.05, fase: i * 0.7 });
       scene3.add(bunga);
     }
-    // Conveyor belt kilang + kotak berjalan
+    // Tanaman hias, rumput & semak di tepi pulau (aset asli)
+    for (const [hx, hz] of [[-24, -6], [24, -6], [-24, 6], [24, 10]]) {
+      scene3.add(buatBillboard("assets/environment/tanaman-hias.png", 1.5, { x: hx, z: hz, goyang: 0.04, fase: hx }));
+    }
+    for (const [rx, rz] of [[-20, -10], [20, -10], [-20, 12], [20, 12], [-10, -13], [10, -13]]) {
+      scene3.add(buatBillboard("assets/environment/rumput.png", 0.8, { x: rx, z: rz, goyang: 0.05, fase: rx }));
+    }
+    for (const [sx, sz] of [[-27, -4], [27, -4], [-27, 4], [27, 8]]) {
+      scene3.add(buatBillboard("assets/environment/semak.png", 1.2, { x: sx, z: sz, goyang: 0.03, fase: sx }));
+    }
+    // Conveyor belt kilang + kotak berjalan + mesin conveyor asli
     const belt = kotak(7, 0.3, 1.2, 0x37474f, w2x(BANGUNAN.kilang.x + 85), 0.5, w2z(BANGUNAN.kilang.y + BANGUNAN.kilang.h + 24));
     scene3.add(belt);
     for (let i = 0; i < 3; i++) {
       const kb = kotak(0.9, 0.7, 0.9, 0xd7ccc8, 0, 1.05, w2z(BANGUNAN.kilang.y + BANGUNAN.kilang.h + 24));
       scene3.add(kb); conveyor3.push(kb);
     }
-    // Kios pasar + karung tepung
+    scene3.add(buatBillboard("assets/objects/conveyor.png", 2, { x: w2x(BANGUNAN.kilang.x + 40), z: w2z(BANGUNAN.kilang.y + BANGUNAN.kilang.h + 24), bayangan: 1.2 }));
+    // Mesin kilang + karung sagu + tumpukan tepung di depan kilang
+    scene3.add(buatBillboard("assets/objects/mesin-kilang.png", 2.6, { x: w2x(BANGUNAN.kilang.x + 100), z: w2z(BANGUNAN.kilang.y + BANGUNAN.kilang.h + 12), bayangan: 1.4 }));
+    scene3.add(buatBillboard("assets/objects/karung-sagu.png", 1.4, { x: w2x(BANGUNAN.kilang.x + 30), z: w2z(BANGUNAN.kilang.y + BANGUNAN.kilang.h + 18), bayangan: 0.7 }));
+    scene3.add(buatBillboard("assets/objects/tumpukan-tepung.png", 1.4, { x: w2x(BANGUNAN.kilang.x + 140), z: w2z(BANGUNAN.kilang.y + BANGUNAN.kilang.h + 18), bayangan: 0.8 }));
+    // Gerobak pasar di depan pasar
+    for (let i = 0; i < 2; i++) {
+      scene3.add(buatBillboard("assets/objects/gerobak-pasar.png", 2.2, { x: w2x(BANGUNAN.pasar.x + 40 + i * 90), z: w2z(BANGUNAN.pasar.y + BANGUNAN.pasar.h + 25), bayangan: 1.2 }));
+    }
+    // Meja & kursi kedai kopi semi-outdoor + mesin kopi (aset asli)
     for (let i = 0; i < 3; i++) {
-      const sx = w2x(BANGUNAN.pasar.x + 20 + i * 55), sz = w2z(BANGUNAN.pasar.y + BANGUNAN.pasar.h + 22);
-      scene3.add(kotak(2.6, 1.1, 1.6, 0x8d6e63, sx, 0.55, sz));
-      const atapKios = kotak(3, 0.15, 2, i % 2 ? 0xe53935 : 0x1e88e5, sx, 2.1, sz);
-      scene3.add(atapKios);
-      const karung = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.5, 0.9, 10), mat(0xd7ccc8));
-      karung.position.set(sx + 1.8, 0.45, sz); karung.castShadow = true; scene3.add(karung);
+      scene3.add(buatBillboard("assets/objects/meja-kursi.png", 2, { x: w2x(BANGUNAN.kedai.x + 30 + i * 60), z: w2z(BANGUNAN.kedai.y + BANGUNAN.kedai.h + 22), bayangan: 1 }));
     }
-    // Meja & kursi kedai kopi semi-outdoor + lampu hangat
+    scene3.add(buatBillboard("assets/objects/mesin-kopi.png", 2, { x: w2x(BANGUNAN.kedai.x + 170), z: w2z(BANGUNAN.kedai.y + BANGUNAN.kedai.h + 8), bayangan: 0.8 }));
+    // Kontainer, crane, dan truk pelabuhan (aset asli)
     for (let i = 0; i < 3; i++) {
-      const tx = w2x(BANGUNAN.kedai.x + 30 + i * 60), tz = w2z(BANGUNAN.kedai.y + BANGUNAN.kedai.h + 22);
-      const meja = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.12, 12), mat(0x6d4c41));
-      meja.position.set(tx, 0.9, tz); meja.castShadow = true; scene3.add(meja);
-      scene3.add(kotak(0.5, 0.9, 0.5, 0x8d6e63, tx + 1.2, 0.45, tz));
-      scene3.add(kotak(0.5, 0.9, 0.5, 0x8d6e63, tx - 1.2, 0.45, tz));
-      const lampKedai = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffd54f }));
-      lampKedai.position.set(tx, 2.2, tz); scene3.add(lampKedai);
+      scene3.add(buatBillboard("assets/objects/kontainer.png", 2, { x: w2x(760 + i * 40), z: w2z(430), y0: i === 2 ? 1.4 : 0, bayangan: 1.4 }));
     }
-    // Kontainer, crane, dan truk pelabuhan
-    const warnaKontainer = [0xe53935, 0x1e88e5, 0x43a047];
-    warnaKontainer.forEach((w, i) => {
-      scene3.add(kotak(3.2, 1.4, 1.6, w, w2x(760 + i * 40), 0.7 + (i === 2 ? 1.4 : 0), w2z(430)));
-    });
-    const craneMenara = kotak(0.8, 7, 0.8, 0xffb300, w2x(880), 3.5, w2z(360));
-    scene3.add(craneMenara);
-    scene3.add(kotak(6, 0.6, 0.6, 0xffb300, w2x(860), 7, w2z(360)));
-    const truk = new THREE.Group();
-    truk.add(kotak(4.5, 1.8, 2, 0x43a047, 0, 1.2, 0));
-    truk.add(kotak(1.6, 1.6, 1.9, 0x1565c0, 3, 1.1, 0));
-    for (const [wx2, wz2] of [[-1.6, 1.05], [1.6, 1.05], [-1.6, -1.05], [1.6, -1.05]]) {
-      const roda = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.3, 12), mat(0x212121));
-      roda.rotation.x = Math.PI / 2; roda.position.set(wx2, 0.45, wz2); truk.add(roda);
-    }
-    truk.position.set(w2x(620), 0, w2z(460));
-    scene3.add(truk);
-    // Pemain 3D — pria Indonesia, jaket hijau, topi petani hijau, tas kecil, rompi hijau
-    player3 = buatOrang3D(0xffffff, 0x2e7d32);
-    const rompiK = kotak(0.3, 0.85, 0.06, 0x2e7d32, -0.22, 1.15, 0.28);
-    const rompiN = kotak(0.3, 0.85, 0.06, 0x2e7d32, 0.22, 1.15, 0.28);
-    player3.add(rompiK); player3.add(rompiN);
-    const tas = kotak(0.5, 0.6, 0.22, 0x8d6e63, 0, 1.2, -0.36);
-    player3.add(tas);
-    player3.userData.alat.visible = true;
-    scene3.add(player3);
+    scene3.add(buatBillboard("assets/vehicles/crane.png", 7, { x: w2x(880), z: w2z(360), bayangan: 2 }));
+    truk3 = new THREE.Group();
+    const trukAset = buatBillboard("assets/vehicles/truk-pengangkut.png", 2.4, { x: 0, z: 0, y0: 0 });
+    trukAset.position.y = 1.2;
+    truk3.add(trukAset);
+    truk3.userData.plane = trukAset;
+    truk3.position.set(w2x(670), 0, w2z(460));
+    scene3.add(truk3);
+    // Pemain — karakter asli dengan strip animasi jalan/kerja
+    player3 = buatKarakter3D("player", 2.8, { jalan: true, kerja: true });
+    player3.grup.position.set(w2x(S.pemain.x), 0, w2z(S.pemain.y));
+    scene3.add(player3.grup);
     // Cincin hijau bercahaya di bawah pemain (ala referensi)
     cincinPemain = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.15, 32), new THREE.MeshBasicMaterial({ color: 0x4ade80, transparent: true, opacity: 0.9, side: THREE.DoubleSide }));
     cincinPemain.rotation.x = -Math.PI / 2; cincinPemain.position.y = 0.06;
     scene3.add(cincinPemain);
-    // NPC 3D
+    // NPC — karakter asli dengan strip animasi jalan + papan nama
     for (const n of NPC) {
-      const g = buatOrang3D(parseInt(n.baju.slice(1), 16), parseInt(n.topi.slice(1), 16));
-      const label = buatLabel(n.nama); label.position.y = 3.4; label.scale.set(3.4, 0.65, 1); g.add(label);
-      scene3.add(g); npc3.push(g);
+      const rec = buatKarakter3D(NPC_ASET[n.nama] || "petani", 2.6, { jalan: true });
+      const label = buatLabel(n.nama); label.position.y = 3.4; label.scale.set(3.4, 0.65, 1); rec.grup.add(label);
+      scene3.add(rec.grup); npc3.push(rec);
     }
     // Hujan (titisan tipis)
     for (let i = 0; i < 80; i++) {
@@ -881,57 +944,63 @@ function spawnPartikel3D(x, y, teks, warna, n) {
 }
 function updateDunia3D() {
   if (!scene3) return;
-  // Petak: pohon sesuai status
+  // Petak: pohon sesuai status (skala tumbuh lewat userData.skala)
   for (let i = 0; i < plotMeshes.length && i < S.lahan.length; i++) {
     const pm = plotMeshes[i], st = S.lahan[i];
     const skala = st.anim > 0 ? 1 - st.anim / 30 : 1;
-    if (st.status === "kosong") { pm.pohon.visible = false; pm.kecambah.visible = false; }
-    else if (st.status === "tumbuh") { pm.pohon.visible = false; pm.kecambah.visible = true; pm.kecambah.scale.setScalar(Math.max(0.2, skala)); }
-    else { pm.pohon.visible = true; pm.kecambah.visible = false; pm.pohon.scale.setScalar(Math.max(0.4, skala)); }
+    if (st.status === "kosong") { pm.pohon.userData.tersembunyi = true; pm.kecambah.visible = false; }
+    else if (st.status === "tumbuh") { pm.pohon.userData.tersembunyi = true; pm.kecambah.visible = true; pm.kecambah.scale.setScalar(Math.max(0.2, skala)); }
+    else { pm.pohon.userData.tersembunyi = false; pm.kecambah.visible = false; pm.pohon.userData.skala = Math.max(0.4, skala); }
     const pilih = terpilih && terpilih.kind === "plot" && terpilih.index === i;
     pm.tanah.material.color.setHex(pilih ? 0xffeb3b : 0xa1887f);
   }
-  // Pelanggan di kedai (orang 3D)
+  // Pelanggan di kedai (karakter asli, pose diam)
   while (pelanggan3.length < Math.min(S.pelanggan, 6)) {
-    const g = buatOrang3D(0xe53935, 0x333333);
-    g.position.set(w2x(BANGUNAN.kedai.x + 25 + pelanggan3.length * 28), 0, w2z(BANGUNAN.kedai.y + BANGUNAN.kedai.h + 32));
-    scene3.add(g); pelanggan3.push(g);
+    const rec = buatKarakter3D("pelanggan", 2.4);
+    rec.grup.position.set(w2x(BANGUNAN.kedai.x + 25 + pelanggan3.length * 28), 0, w2z(BANGUNAN.kedai.y + BANGUNAN.kedai.h + 32));
+    scene3.add(rec.grup); pelanggan3.push(rec);
   }
   while (pelanggan3.length > Math.min(S.pelanggan, 6)) {
-    const g = pelanggan3.pop(); scene3.remove(g);
+    const rec = pelanggan3.pop(); scene3.remove(rec.grup);
   }
-  // Pekerja di dunia
-  while (pekerja3.length < S.pekerja.kebun + S.pekerja.kilang + S.pekerja.barista) {
-    const g = buatOrang3D(0x2e7d32, 0xffeb3b);
-    scene3.add(g); pekerja3.push(g);
+  // Pekerja di dunia (karakter asli, strip kerja beranimasi)
+  const totalPekerja = S.pekerja.kebun + S.pekerja.kilang + S.pekerja.barista;
+  while (pekerja3.length < totalPekerja) {
+    const idx = pekerja3.length;
+    const nama = idx < S.pekerja.kebun ? "petani" : idx < S.pekerja.kebun + S.pekerja.kilang ? "pekerja-kilang" : "barista";
+    const rec = buatKarakter3D(nama, 2.6, { kerja: true });
+    setModeKarakter(rec, "kerja");
+    scene3.add(rec.grup); pekerja3.push(rec);
   }
-  while (pekerja3.length > S.pekerja.kebun + S.pekerja.kilang + S.pekerja.barista) {
-    const g = pekerja3.pop(); scene3.remove(g);
+  while (pekerja3.length > totalPekerja) {
+    const rec = pekerja3.pop(); scene3.remove(rec.grup);
   }
-  pekerja3.forEach((g, i) => {
-    if (i < S.pekerja.kebun) g.position.set(w2x(120 + i * 40), 0, w2z(320));
-    else if (i < S.pekerja.kebun + S.pekerja.kilang) g.position.set(w2x(520 + (i - S.pekerja.kebun) * 36), 0, w2z(200));
-    else g.position.set(w2x(730 + (i - S.pekerja.kebun - S.pekerja.kilang) * 36), 0, w2z(200));
+  pekerja3.forEach((rec, i) => {
+    if (i < S.pekerja.kebun) rec.grup.position.set(w2x(120 + i * 40), 0, w2z(320));
+    else if (i < S.pekerja.kebun + S.pekerja.kilang) rec.grup.position.set(w2x(520 + (i - S.pekerja.kebun) * 36), 0, w2z(200));
+    else rec.grup.position.set(w2x(730 + (i - S.pekerja.kebun - S.pekerja.kilang) * 36), 0, w2z(200));
+    if (rec.texKerja) aturFrameStrip(rec.texKerja, Math.floor((frame + i * 7) / 10) % 4);
   });
   // Papan tanda kebun dinamis + cincin pemain mengikuti
   if (signKebun) signKebun.userData.setTeks("Kebun Rumbia " + S.lahan.length + " / 12 Petak");
-  if (cincinPemain && player3) { cincinPemain.position.x = player3.position.x; cincinPemain.position.z = player3.position.z; }
-  // Pemain 3D mengikuti posisi logika
+  if (cincinPemain && player3) { cincinPemain.position.x = player3.grup.position.x; cincinPemain.position.z = player3.grup.position.z; }
+  // Pemain mengikuti posisi logika — mode animasi dari strip asli:
+  // kerja saat mengayun alat, jalan saat bergerak, diam saat berhenti.
   if (player3) {
-    player3.position.set(w2x(S.pemain.x), 0, w2z(S.pemain.y));
-    const rot = { bawah: 0, atas: Math.PI, kanan: Math.PI / 2, kiri: -Math.PI / 2 }[S.pemain.arah] || 0;
-    const u = player3.userData;
-    // Hadap berputar halus (tidak patah 90 derajat), ayunan kaki mereda halus saat berhenti
-    u.rotHalus = (u.rotHalus === undefined) ? rot : lerpSudut(u.rotHalus, rot, 0.15);
-    player3.rotation.y = u.rotHalus;
-    u.ampKaki = (u.ampKaki || 0) + ((S.pemain.jalan ? 1 : 0) - (u.ampKaki || 0)) * 0.12;
-    const ayun = S.pemain.ayun > 0 ? Math.sin((S.pemain.ayun / 22) * Math.PI) * 1.4 : 0;
-    u.alat.rotation.x = -ayun;
-    u.alat.visible = true;
-    const k = Math.sin(S.pemain.langkah * 2) * 0.6 * u.ampKaki;
-    u.kakiK.rotation.x = k; u.kakiN.rotation.x = -k;
-    u.lenganK.rotation.x = -k; u.lenganN.rotation.x = k;
-    player3.position.y = Math.abs(Math.sin(S.pemain.langkah * 2)) * 0.08 * u.ampKaki;
+    player3.grup.position.set(w2x(S.pemain.x), 0, w2z(S.pemain.y));
+    if (S.pemain.ayun > 0) {
+      setModeKarakter(player3, "kerja");
+      if (player3.texKerja) aturFrameStrip(player3.texKerja, Math.floor((22 - S.pemain.ayun) / 4) % 4);
+    } else if (S.pemain.jalan) {
+      setModeKarakter(player3, "jalan");
+      if (player3.texJalan) aturFrameStrip(player3.texJalan, Math.floor(S.pemain.langkah / 2) % 4);
+    } else {
+      setModeKarakter(player3, "idle");
+    }
+    player3.plane.userData.balik = S.pemain.arah === "kiri";
+    // Lompatan kecil saat berjalan, mereda halus saat berhenti
+    player3.ampKaki = (player3.ampKaki || 0) + ((S.pemain.jalan ? 1 : 0) - (player3.ampKaki || 0)) * 0.12;
+    player3.grup.position.y = S.pemain.jalan ? Math.abs(Math.sin(S.pemain.langkah * 2)) * 0.08 * player3.ampKaki : 0;
   }
 }
 function animate3D() {
@@ -943,32 +1012,55 @@ function animate3D() {
     return;
   }
   if (!scene3) { if (typeof requestAnimationFrame === "function") requestAnimationFrame(animate3D); return; }
-  // NPC berjalan
+  // NPC berjalan — strip animasi jalan asli, diam saat berhenti
   NPC.forEach((n, idx) => {
     const tx = n.wx[n.i], ty = n.wy[n.i];
     const dx = tx - n.x, dy = ty - n.y, j = Math.hypot(dx, dy);
     let bergerak = false;
     if (j < 4) n.i = (n.i + 1) % n.wx.length;
     else { n.x += dx / j * n.cepat; n.y += dy / j * n.cepat; bergerak = true; }
-    const g = npc3[idx];
-    if (g) {
-      g.position.set(w2x(n.x), 0, w2z(n.y));
-      const rotT = dx > 0 ? Math.PI / 2 : dx < 0 ? -Math.PI / 2 : g.rotation.y;
-      g.userData.rotHalus = (g.userData.rotHalus === undefined) ? rotT : lerpSudut(g.userData.rotHalus, rotT, 0.12);
-      g.rotation.y = g.userData.rotHalus;
-      // Kaki hanya mengayun saat berjalan; fase mengikuti langkah, amplitudo mereda halus
+    const rec = npc3[idx];
+    if (rec) {
+      rec.grup.position.set(w2x(n.x), 0, w2z(n.y));
+      // Fase langkah mengikuti jarak tempuh; amplitudo mereda halus
       n.fase = (n.fase || 0) + (bergerak ? 0.14 : 0);
       n.amp = (n.amp || 0) + ((bergerak ? 1 : 0) - (n.amp || 0)) * 0.1;
-      const k = Math.sin(n.fase) * 0.5 * n.amp;
-      g.userData.kakiK.rotation.x = k; g.userData.kakiN.rotation.x = -k;
+      if (bergerak) {
+        setModeKarakter(rec, "jalan");
+        if (rec.texJalan) aturFrameStrip(rec.texJalan, Math.floor(n.fase) % 4);
+      } else setModeKarakter(rec, "idle");
+      rec.plane.userData.balik = dx < 0;
+      rec.grup.position.y = bergerak ? Math.abs(Math.sin(n.fase)) * 0.06 * n.amp : 0;
     }
   });
-  // Pohon bergoyang, air berombak, kapal bergoyang, awan bergerak
-  plotMeshes.forEach((pm, i) => { if (pm.pohon.visible) pm.pohon.userData.daun.rotation.z = Math.sin(frame / 40 + i) * 0.08; });
+  // Air berombak, kapal bergoyang, awan bergerak
   if (water3) water3.position.y = 0.05 + Math.sin(frame / 30) * 0.05;
   if (boat3) { boat3.position.y = 0.1 + Math.sin(frame / 30) * 0.12; boat3.rotation.z = Math.sin(frame / 30) * 0.03; }
   clouds3.forEach((c, i) => { c.position.x += 0.02; if (c.position.x > 32) c.position.x = -32; });
-  smoke3.forEach((s, i) => { s.position.y += 0.02; if (s.position.y > 9) s.position.y = 6.5; });
+  // Asap cerobong: naik, membesar, memudar, frame strip berganti
+  if (asapTex3D) aturFrameStrip(asapTex3D, Math.floor(frame / 18) % 4);
+  smoke3.forEach((s, i) => {
+    s.position.y += 0.02;
+    if (s.position.y > (s.userData.yDasar || 6.5) + 3.8) s.position.y = (s.userData.yDasar || 6.5) + 0.8;
+    const naik = s.position.y - ((s.userData.yDasar || 6.5) + 0.8);
+    s.userData.skala = 1 + naik * 0.25;
+    s.material.opacity = Math.max(0.15, 0.75 - naik * 0.18);
+  });
+  // Ombak di tepi pantai: frame strip berganti
+  if (ombakTex3D) aturFrameStrip(ombakTex3D, Math.floor(frame / 20) % 4);
+  // Truk pelabuhan bolak-balik di jalan (gambar membalik arah)
+  if (truk3) {
+    truk3.position.x = w2x(670) + Math.sin(frame / 120) * 5.5;
+    if (truk3.userData.plane) truk3.userData.plane.userData.balik = Math.cos(frame / 120) < 0;
+  }
+  // Perahu kecil hanyut di laut
+  if (perahu3) {
+    perahu3.position.x = w2x(350) + Math.sin(frame / 150) * 3;
+    perahu3.position.y = 0.12 + Math.sin(frame / 30) * 0.08;
+    perahu3.rotation.z = Math.sin(frame / 30) * 0.04;
+  }
+  // Lampu jalan menyala saat malam
+  lampuNyala3.forEach(l => { l.visible = S.jam >= 17; });
   // Partikel 3D
   partikel3D = partikel3D.filter(pt => pt.life > 0);
   for (const pt of partikel3D) {
@@ -1000,6 +1092,21 @@ function animate3D() {
   conveyor3.forEach((kb, i) => {
     kb.position.x = 1.6 + ((frame / 2 + i * 25) % 70) * 0.1;
   });
+  // Semua aset billboard menghadap kamera (putar mengikuti sudut orbit),
+  // bergoyang lembut, diskalakan sesuai aspek & pertumbuhan, dan baru
+  // tampil saat gambarnya termuat (tanpa kotak putih).
+  for (const m of billboard3) {
+    const u = m.userData;
+    if (!u.datar) m.rotation.y = camSudut;
+    if (u.goyang) m.rotation.z = Math.sin(frame / 40 + (u.fase || 0)) * u.goyang;
+    if (!u.muatOk) {
+      const img = u.tex && u.tex.image;
+      if (img && img.complete && img.naturalWidth) u.muatOk = true;
+    }
+    m.visible = u.muatOk && !u.tersembunyi;
+    const sk = u.skala || 1;
+    m.scale.set(u.tinggi * u.aspek * (u.balik ? -1 : 1) * sk, u.tinggi * sk, 1);
+  }
   // Kamera orbit: fokus ke tengah pulau (bukan tepat ke pemain) agar seluruh
   // pulau — kebun, kilang, kedai, pasar, pelabuhan, kapal, jembatan —
   // muat dalam satu bingkai seperti gambar referensi. Kamera mengikuti
@@ -1013,7 +1120,7 @@ function animate3D() {
     camJarak += (camJarakT - camJarak) * 0.08;
     camPan.x += (camPanT.x - camPan.x) * 0.12;
     camPan.z += (camPanT.z - camPan.z) * 0.12;
-    const tx = player3.position.x * 0.35 + camPan.x, tz = player3.position.z * 0.35 + camPan.z;
+    const tx = player3.grup.position.x * 0.35 + camPan.x, tz = player3.grup.position.z * 0.35 + camPan.z;
     const pk = posisiKamera(camSudut, camJarak, tx, tz);
     camera3.position.x += (pk.x - camera3.position.x) * 0.1;
     camera3.position.y += (pk.y - camera3.position.y) * 0.1;
