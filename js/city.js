@@ -510,6 +510,7 @@ function bonusEkspor() {
 
 function hariBerikutnya() {
   if (!S) return;
+  S.penduduk.kemarin = S.penduduk.total; // untuk "+N/hari" di kartu statistik
   const rincian = { pajak: 0, penjualan: 0, ekspor: 0, wisata: 0, bunga: 0, upkeep: 0, gaji: 0 };
   // 1. Konstruksi
   for (const b of S.bangunan) {
@@ -982,10 +983,35 @@ function gambarPeta() {
         const th = tw * (img.naturalHeight / img.naturalWidth);
         ctx.drawImage(img, px - tw / 2 - 6 * z, py + 16 * z - th + 4 * z, tw, th);
         ctx.drawImage(img, px - tw / 2 + 8 * z, py + 16 * z - th + 8 * z, tw * 0.85, th * 0.85);
+        if (varr > 0.45) {
+          const tw3 = 24 * z, th3 = tw3 * (img.naturalHeight / img.naturalWidth);
+          ctx.drawImage(img, px - tw3 / 2 + 2 * z, py + 16 * z - th3 + 12 * z, tw3, th3);
+        }
       } else {
         ctx.fillStyle = "#2e7d32";
         ctx.beginPath(); ctx.arc(px - 6 * z, py + 10 * z, 7 * z, 0, Math.PI * 2); ctx.fill();
         ctx.beginPath(); ctx.arc(px + 8 * z, py + 12 * z, 6 * z, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    if (t === "pantai" && varr > 0.55) {
+      // Palem di pantai (ala referensi) — hiasan, tile tetap bisa dibangun
+      const imgK = gambarAset["assets/environment/pohon-kelapa.png"];
+      if (imgK && imgK.complete && imgK.naturalWidth) {
+        const tw = 30 * z, th = tw * (imgK.naturalHeight / imgK.naturalWidth);
+        ctx.drawImage(imgK, px - tw / 2 - 4 * z, py + 16 * z - th + 2 * z, tw, th);
+      }
+    }
+    if (t === "laut") {
+      // Buih ombak di tepi pantai (garis putih di sisi yang berbatasan darat)
+      const SISI_LAUT = [[px, py, px + 32 * z, py + 16 * z, 0, -1], [px + 32 * z, py + 16 * z, px, py + 32 * z, 1, 0], [px, py + 32 * z, px - 32 * z, py + 16 * z, 0, 1], [px - 32 * z, py + 16 * z, px, py, -1, 0]];
+      ctx.strokeStyle = "rgba(255,255,255,0.45)"; ctx.lineWidth = 2 * z;
+      for (const [ax, ay, bx, by, dx, dy] of SISI_LAUT) {
+        if (terrainDi(peta, x + dx, y + dy) === "pantai") {
+          ctx.beginPath();
+          ctx.moveTo(ax + (bx - ax) * 0.25, ay + (by - ay) * 0.25);
+          ctx.lineTo(ax + (bx - ax) * 0.75, ay + (by - ay) * 0.75);
+          ctx.stroke();
+        }
       }
     }
     if (t === "rawa") {
@@ -1168,9 +1194,15 @@ function gambarPeta() {
     const w = tileKeDunia(hover.x, hover.y);
     const s = duniaKeLayar(w.x, w.y, lebar, tinggi);
     const z = kamera.zoom;
-    ctx.strokeStyle = "rgba(255,255,255,0.8)"; ctx.lineWidth = 2;
+    ctx.save();
+    ctx.shadowColor = "rgba(34,197,94,0.9)"; ctx.shadowBlur = 14;
+    ctx.strokeStyle = "#22c55e"; ctx.lineWidth = 2.5;
     poly([[s.x, s.y], [s.x + 32 * z, s.y + 16 * z], [s.x, s.y + 32 * z], [s.x - 32 * z, s.y + 16 * z]]);
     ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = "rgba(34,197,94,0.12)";
+    poly([[s.x, s.y], [s.x + 32 * z, s.y + 16 * z], [s.x, s.y + 32 * z], [s.x - 32 * z, s.y + 16 * z]]);
+    ctx.fill();
   }
   if (terpilih && terpilih.jenis === "bangunan") {
     const b = S.bangunan[terpilih.idx];
@@ -1228,6 +1260,17 @@ function gambarGhost(lebar, tinggi) {
       if (def.gambar) gambarSpriteBangunan(def, s.x, s.y, z, bPalsu);
       else if (def.vektor) gambarBangunanVektor(def, s.x, s.y, z, 0, bPalsu, false);
       ctx.restore();
+      // Label "Bangun di Sini" ala referensi, di atas bangunan hantu
+      ctx.font = "bold 12px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      const label = "Bangun di Sini";
+      const lw = ctx.measureText(label).width + 18;
+      const ly = s.y - (k.w + k.h) * 8 * z - 52 * z;
+      ctx.fillStyle = "rgba(8,28,48,0.88)";
+      ctx.fillRect(s.x - lw / 2, ly - 11, lw, 22);
+      ctx.strokeStyle = "#22c55e"; ctx.lineWidth = 1.5;
+      ctx.strokeRect(s.x - lw / 2, ly - 11, lw, 22);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(label, s.x, ly + 1);
     }
   } else if (mode.jenis === "jalan") {
     const cek = cekJalan(mode.id, hover.x, hover.y);
@@ -1364,9 +1407,18 @@ function renderHUD() {
   $("kayuTeks").textContent = S.kayu;
   $("batuTeks").textContent = S.batu;
   $("besiTeks").textContent = S.besi;
+  const tualEl = $("tualTeks");
+  if (tualEl) tualEl.textContent = S.komoditas.tual || 0;
   $("pendudukTeks").textContent = S.penduduk.total + " jiwa";
   $("bahagiaTeks").textContent = S.penduduk.bahagia + "%";
   $("hariTeks").textContent = "Hari " + S.hari;
+  const HARI_ID = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+  const BULAN_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+  const kini = new Date();
+  const tglEl = $("tglTeks");
+  if (tglEl) tglEl.textContent = HARI_ID[kini.getDay()] + ", " + kini.getDate() + " " + BULAN_ID[kini.getMonth()] + " " + kini.getFullYear();
+  const suhuEl = $("suhuTeks");
+  if (suhuEl) suhuEl.textContent = S.cuaca === "Hujan" ? "27°C" : S.cuaca === "Berawan" ? "29°C" : "31°C";
   $("cuacaTeks").textContent = S.cuaca === "Hujan" ? "🌧 " + S.cuaca : S.cuaca === "Berawan" ? "⛅ " + S.cuaca : "☀ " + S.cuaca;
   const jam = Math.floor(jamVisual) % 24, menit = Math.floor((jamVisual % 1) * 60);
   $("jamTeks").textContent = String(jam).padStart(2, "0") + ":" + String(menit).padStart(2, "0");
@@ -1374,6 +1426,31 @@ function renderHUD() {
     const btn = $("btnKec" + k);
     if (btn) btn.classList.toggle("aktif", kecepatan === k);
   }
+  // Kartu statistik kanan (Penduduk / Kebahagiaan / Ekonomi / Peradaban)
+  const sp = $("statPenduduk");
+  if (sp) sp.textContent = S.penduduk.total + " jiwa";
+  const spt = $("statPendudukTumbuh");
+  if (spt) {
+    if (S.penduduk.kemarin === undefined || S.penduduk.kemarin === S.penduduk.total) spt.textContent = "";
+    else {
+      const d = S.penduduk.total - S.penduduk.kemarin;
+      spt.textContent = (d > 0 ? "+" : "") + d + "/hari";
+      spt.style.color = d >= 0 ? "#4ade80" : "#ff7675";
+    }
+  }
+  const sb = $("statBahagia");
+  if (sb) sb.textContent = S.penduduk.bahagia + "%";
+  const sbb = $("statBahagiaBar");
+  if (sbb) sbb.style.width = S.penduduk.bahagia + "%";
+  const se = $("statEkonomi");
+  if (se) {
+    const r = S.statistik.rincianHari || { pajak: 0, penjualan: 0, ekspor: 0, wisata: 0, bunga: 0, upkeep: 0, gaji: 0 };
+    const net = (r.pajak + r.penjualan + r.ekspor + r.wisata + r.bunga) - (r.upkeep + r.gaji);
+    se.textContent = (net >= 0 ? "" : "−") + rp(Math.abs(net)) + "/hari";
+  }
+  const spr = $("statPeradaban");
+  if (spr) spr.textContent = "Level " + S.level + " (" + lvl.nama + ")";
+  renderBerita();
   const chip = $("modeChip");
   if (chip) {
     if (mode.jenis === "pilih") { chip.style.display = "none"; }
@@ -1389,23 +1466,83 @@ function renderHUD() {
   }
 }
 
+// ---------------- Berita Pulau (ticker bawah) ----------------
+function renderBerita() {
+  const el = $("beritaTeks");
+  if (!el || !S) return;
+  const items = (S.log || []).slice(0, 5);
+  el.textContent = items.length ? items.join("  •  ") : "Selamat datang di Pulau Meranti — bangun permukiman pertamamu!";
+}
+
+// ---------------- Minimap ----------------
+function gambarMinimap() {
+  const mm = $("minimap");
+  if (!mm || !peta || !S) return;
+  const cx = mm.getContext("2d");
+  if (!cx) return;
+  const W = mm.width, H = mm.height;
+  const sx = W / peta.W, sy = H / peta.H;
+  const WARNA_MINI = { laut: "#2b7fd4", pantai: "#f0d9a0", rumput: "#7ec850", hutan: "#2e7d32", rawa: "#6a8f5f", sungai: "#3d9bd6" };
+  for (let y = 0; y < peta.H; y++) for (let x = 0; x < peta.W; x++) {
+    cx.fillStyle = WARNA_MINI[peta.terrain[y][x]] || "#7ec850";
+    cx.fillRect(x * sx, y * sy, Math.ceil(sx), Math.ceil(sy));
+  }
+  cx.fillStyle = "#3f3f46";
+  for (const j of S.jalan) cx.fillRect(j.x * sx, j.y * sy, Math.ceil(sx), Math.ceil(sy));
+  cx.fillStyle = "#8d6e63";
+  for (const j of S.jembatan) cx.fillRect(j.x * sx, j.y * sy, Math.ceil(sx), Math.ceil(sy));
+  const WARNA_KAT = { permukiman: "#fdcb6e", infrastruktur: "#dfe6e9", pendidikan: "#6c5ce7", kesehatan: "#00b894", ekonomi: "#e17055", perkebunan: "#55efc4", industri: "#636e72", sosial: "#fd79a8" };
+  for (const b of S.bangunan) {
+    const def = BANGUNAN_MAP[b.id]; if (!def) continue;
+    cx.fillStyle = WARNA_KAT[def.kat] || "#ffffff";
+    cx.fillRect(b.x * sx, b.y * sy, Math.ceil(sx) + 1, Math.ceil(sy) + 1);
+  }
+  if (kanvas) {
+    const lebar = kanvas.clientWidth, tinggi = kanvas.clientHeight;
+    const sudut = [layarKeDunia(0, 0, lebar, tinggi), layarKeDunia(lebar, tinggi, lebar, tinggi)];
+    const t0 = duniaKeTile(sudut[0].x, sudut[0].y), t1 = duniaKeTile(sudut[1].x, sudut[1].y);
+    const x0 = Math.max(0, Math.min(t0.x, t1.x) * sx), y0 = Math.max(0, Math.min(t0.y, t1.y) * sy);
+    const x1 = Math.min(W, Math.max(t0.x, t1.x) * sx), y1 = Math.min(H, Math.max(t0.y, t1.y) * sy);
+    cx.strokeStyle = "rgba(255,255,255,0.9)"; cx.lineWidth = 1.5;
+    cx.strokeRect(x0, y0, Math.max(4, x1 - x0), Math.max(4, y1 - y0));
+  }
+}
+function minimapKeTile(e) {
+  const mm = $("minimap");
+  const rect = mm.getBoundingClientRect();
+  const px = (e.clientX - rect.left) / rect.width * mm.width;
+  const py = (e.clientY - rect.top) / rect.height * mm.height;
+  const tx = Math.floor(px / mm.width * peta.W), ty = Math.floor(py / mm.height * peta.H);
+  return { x: Math.max(0, Math.min(peta.W - 1, tx)), y: Math.max(0, Math.min(peta.H - 1, ty)) };
+}
+function pasangMinimap() {
+  const mm = $("minimap");
+  if (!mm) return;
+  let seret = false;
+  const ke = (e) => { const t = minimapKeTile(e); const w = tileTengahDunia(t.x, t.y); kamera.cx = w.x; kamera.cy = w.y; };
+  mm.addEventListener("pointerdown", e => { seret = true; ke(e); });
+  mm.addEventListener("pointermove", e => { if (seret) ke(e); });
+  mm.addEventListener("pointerup", () => { seret = false; });
+  mm.addEventListener("pointerleave", () => { seret = false; });
+}
+
 // ---------------- Menu bangun (bawah) ----------------
 function previewBangunan(def, ukuran) {
   const c = document.createElement("canvas");
-  c.width = 72; c.height = 56;
+  c.width = 104; c.height = 56;
   const cx = c.getContext("2d");
   if (def.gambar) {
     const img = gambarAset[def.gambar];
     if (img && img.complete && img.naturalWidth) {
       const h = 50, w = h * (img.naturalWidth / img.naturalHeight);
-      cx.drawImage(img, (72 - w) / 2, 56 - h - 2, Math.min(w, 70), h);
+      cx.drawImage(img, (104 - w) / 2, 56 - h - 2, Math.min(w, 100), h);
     } else {
-      cx.fillStyle = "#b2bec3"; cx.fillRect(16, 16, 40, 30);
+      cx.fillStyle = "#b2bec3"; cx.fillRect(32, 16, 40, 30);
     }
   } else if (def.vektor) {
     const simpanCtx = ctx;
     ctx = cx;
-    gambarBangunanVektor(def, 36, 40, 0.55, 0, { rot: 0 }, false);
+    gambarBangunanVektor(def, 52, 40, 0.55, 0, { rot: 0 }, false);
     ctx = simpanCtx;
   }
   return c;
@@ -1414,10 +1551,10 @@ function renderMenuBangun() {
   if (!S) return;
   const katEl = $("katBangun");
   katEl.innerHTML = "";
-  for (const k of KATEGORI) {
+  for (const k of TAB_BANGUN) {
     const b = document.createElement("button");
     b.className = "katTab" + (kategoriBangun === k.id ? " aktif" : "");
-    b.textContent = k.nama;
+    b.textContent = k.ikon + " " + k.nama;
     b.onclick = () => { kategoriBangun = k.id; bunyiKlik(); renderMenuBangun(); };
     katEl.appendChild(b);
   }
@@ -1434,32 +1571,46 @@ function renderMenuBangun() {
     kartu.onclick = () => { if (kunci) { toast(kunciAlasan, "gagal"); bunyiGagal(); return; } onKlik(); };
     itemEl.appendChild(kartu);
   };
-  // Jalan & jembatan di kategori infrastruktur
-  if (kategoriBangun === "infrastruktur") {
+  // Tab Jalan — hanya jalan
+  if (kategoriBangun === "jalan") {
     for (const id of Object.keys(JALAN)) {
       const j = JALAN[id];
       const kunci = ((j.level || 1) > S.level) || (id === "jalan-raya" && !S.teknologi["konstruksi-beton"]);
       const alasan = (j.level || 1) > S.level ? "Butuh level " + j.level : "Butuh penelitian: Konstruksi Beton";
-      const c = document.createElement("canvas"); c.width = 72; c.height = 56;
+      const c = document.createElement("canvas"); c.width = 104; c.height = 56;
       const cx = c.getContext("2d");
       cx.fillStyle = j.warna;
-      cx.beginPath(); cx.moveTo(36, 8); cx.lineTo(66, 28); cx.lineTo(36, 48); cx.lineTo(6, 28); cx.closePath(); cx.fill();
+      cx.beginPath(); cx.moveTo(52, 8); cx.lineTo(96, 28); cx.lineTo(52, 48); cx.lineTo(8, 28); cx.closePath(); cx.fill();
+      if (id !== "jalan-tanah") {
+        cx.strokeStyle = id === "jalan-raya" ? "#f1c40f" : "rgba(255,255,255,0.85)"; cx.lineWidth = 2;
+        cx.setLineDash([7, 6]);
+        cx.beginPath(); cx.moveTo(16, 28); cx.lineTo(88, 28); cx.stroke();
+        cx.setLineDash([]);
+      }
       tambahKartu(j.nama, "Seret di peta untuk menggambar jalan.", hargaTeks(j.harga), kunci, alasan, () => { mode = { jenis: "jalan", id: id }; terpilih = null; bunyiKlik(); renderHUD(); renderMenuBangun(); }, c);
     }
+  }
+  // Tab Jembatan — hanya jembatan
+  if (kategoriBangun === "jembatan") {
     for (const id of Object.keys(JEMBATAN)) {
       const j = JEMBATAN[id];
       const kunci = ((j.level || 1) > S.level) || (j.tech && !S.teknologi[j.tech]);
       const alasan = (j.level || 1) > S.level ? "Butuh level " + j.level : (j.tech ? "Butuh penelitian: " + TEKNOLOGI_MAP[j.tech].nama : "");
-      const c = document.createElement("canvas"); c.width = 72; c.height = 56;
+      const c = document.createElement("canvas"); c.width = 104; c.height = 56;
       const cx = c.getContext("2d");
       cx.fillStyle = "#3d9bd6";
-      cx.beginPath(); cx.moveTo(36, 6); cx.lineTo(68, 28); cx.lineTo(36, 50); cx.lineTo(4, 28); cx.closePath(); cx.fill();
-      cx.fillStyle = j.warna; cx.fillRect(14, 24, 44, 8);
+      cx.beginPath(); cx.moveTo(52, 6); cx.lineTo(98, 28); cx.lineTo(52, 50); cx.lineTo(6, 28); cx.closePath(); cx.fill();
+      cx.fillStyle = j.warna; cx.fillRect(22, 22, 60, 12);
+      cx.strokeStyle = "rgba(0,0,0,0.35)"; cx.lineWidth = 1.5;
+      for (const px of [34, 52, 70]) { cx.beginPath(); cx.moveTo(px, 22); cx.lineTo(px, 34); cx.stroke(); }
       tambahKartu(j.nama, "Hanya di atas sungai atau laut.", hargaTeks(j.harga), kunci, alasan, () => { mode = { jenis: "jembatan", id: id }; terpilih = null; bunyiKlik(); renderHUD(); renderMenuBangun(); }, c);
     }
   }
+  // Bangunan: Dekorasi = sosial berflag dekorasi; Sosial = sosial lainnya
   for (const def of BANGUNAN) {
-    if (def.kat !== kategoriBangun) continue;
+    if (kategoriBangun === "dekorasi") { if (!(def.kat === "sosial" && def.dekorasi)) continue; }
+    else if (kategoriBangun === "sosial") { if (!(def.kat === "sosial" && !def.dekorasi)) continue; }
+    else if (def.kat !== kategoriBangun) continue;
     const kunci = ((def.level || 1) > S.level) || (def.tech && !S.teknologi[def.tech]);
     const alasan = (def.level || 1) > S.level ? "Butuh peradaban level " + def.level : (def.tech ? "Butuh penelitian: " + TEKNOLOGI_MAP[def.tech].nama : "");
     const aktif = mode.jenis === "bangun" && mode.id === def.id;
@@ -1475,7 +1626,7 @@ function renderMenuBangun() {
 function renderPanelKiri() {
   if (!S) return;
   const isi = $("panelKiriIsi");
-  const tabs = document.querySelectorAll("#panelKiriTab button");
+  const tabs = document.querySelectorAll("#relKiri button");
   tabs.forEach(b => b.classList.toggle("aktif", b.dataset.tab === panelKiri));
   if (panelKiri === "misi") {
     let html = "<div class='judulPanel'>Misi</div>";
@@ -1565,6 +1716,12 @@ function renderPanelKiri() {
       html += "<div class='misiDes'>Puncak peradaban tercapai — Pusat Perdagangan Nusantara!</div>";
     }
     isi.innerHTML = html;
+  } else if (panelKiri === "berita") {
+    let html = "<div class='judulPanel'>Berita Pulau</div>";
+    const items = (S.log || []).slice(0, 12);
+    if (!items.length) html += "<div class='misiDes'>Belum ada berita — mulailah membangun!</div>";
+    for (const l of items) html += "<div class='beritaItem'>" + l + "</div>";
+    isi.innerHTML = html;
   }
 }
 
@@ -1572,10 +1729,14 @@ function renderPanelKiri() {
 function renderPanelKanan() {
   const el = $("panelKanan");
   if (!S) return;
+  const aksi = $("aksiBangunan");
   if (!terpilih) {
-    el.innerHTML = "<div class='judulPanel'>Pulau Meranti</div><div class='misiDes'>Klik sebuah tile untuk melihat lahannya, atau klik bangunan untuk mengaturnya. Pilih bangunan dari menu bawah, lalu klik lokasi di peta.</div><div class='barisStat'><span>Bangunan</span><b>" + S.bangunan.length + "</b></div><div class='barisStat'><span>Jalan</span><b>" + S.jalan.length + " petak</b></div><div class='barisStat'><span>Jembatan</span><b>" + S.jembatan.length + " petak</b></div><div class='catatan'>Seret peta untuk menggeser · roda mouse / tombol ＋－ untuk zoom · Spasi = hari berikutnya · P = jeda.</div>";
+    el.style.display = "none";
+    if (aksi) aksi.style.display = "none";
     return;
   }
+  el.style.display = "block";
+  if (aksi) aksi.style.display = (terpilih.jenis === "bangunan") ? "flex" : "none";
   if (terpilih.jenis === "tile") {
     const t = terrainDi(peta, terpilih.x, terpilih.y);
     const jalan = S.jalan.find(j => j.x === terpilih.x && j.y === terpilih.y);
@@ -1757,9 +1918,32 @@ function pasangTombol() {
   $("btnToggleKanan").onclick = () => { $("panelKanan").classList.toggle("tersembunyi"); bunyiKlik(); };
   if (window.innerWidth <= 820) { $("panelKiri").classList.add("tersembunyi"); $("panelKanan").classList.add("tersembunyi"); }
   $("btnLevelTutup").onclick = () => { $("modalLevel").style.display = "none"; renderHUD(); renderMenuBangun(); renderPanelKiri(); };
-  document.querySelectorAll("#panelKiriTab button").forEach(b => {
+  // Rel kiri (Peta / Misi / Riset / Peradaban / Berita)
+  document.querySelectorAll("#relKiri button").forEach(b => {
+    b.onclick = () => {
+      const tab = b.dataset.tab;
+      if (tab === "peta") { kameraPusatkan(peta); bunyiKlik(); toast("Peta dipusatkan.", "ok"); return; }
+      panelKiri = tab; bunyiKlik(); renderPanelKiri();
+    };
+  });
+  // Tombol "›" di kartu statistik membuka tab kiri yang sesuai
+  document.querySelectorAll("#kartuStatistik .statBuka").forEach(b => {
     b.onclick = () => { panelKiri = b.dataset.tab; bunyiKlik(); renderPanelKiri(); };
   });
+  $("btnBerita").onclick = () => { panelKiri = "berita"; bunyiKlik(); renderPanelKiri(); };
+  $("btnModeBangun").onclick = () => {
+    const mb = $("menuBangun");
+    mb.classList.toggle("tersembunyi");
+    $("btnModeBangun").classList.toggle("aktif", !mb.classList.contains("tersembunyi"));
+    if (!mb.classList.contains("tersembunyi")) { kategoriBangun = "permukiman"; renderMenuBangun(); }
+    bunyiKlik();
+  };
+  $("btnAksiPindah").onclick = () => aksiPindah();
+  $("btnAksiPutar").onclick = () => aksiPutar();
+  $("btnAksiHapus").onclick = () => aksiHapus();
+  $("btnGeserKiri").onclick = () => { $("itemBangun").scrollBy({ left: -240, behavior: "smooth" }); };
+  $("btnGeserKanan").onclick = () => { $("itemBangun").scrollBy({ left: 240, behavior: "smooth" }); };
+  pasangMinimap();
   window.addEventListener("resize", aturUkuranKanvas);
   // Hujan & awan
   for (let i = 0; i < 60; i++) hujanTetes.push({ x: Math.random() * 1200, y: Math.random() * 800, v: 6 + Math.random() * 5 });
@@ -1782,6 +1966,7 @@ function loop(waktu) {
     }
   }
   gambarPeta();
+  if (frame % 20 === 0) gambarMinimap();
   requestAnimationFrame(loop);
 }
 setInterval(() => {
@@ -1818,9 +2003,7 @@ function mulaiGame(baru) {
   $("layarMulai").style.display = "none";
   $("aplikasi").style.display = "flex";
   aturUkuranKanvas();
-  renderHUD(); renderMenuBangun(); renderPanelKiri(); renderPanelKanan();
-  const el = $("log");
-  if (el) el.innerHTML = S.log.map(l => "<div>" + l + "</div>").join("");
+  renderHUD(); renderMenuBangun(); renderPanelKiri(); renderPanelKanan(); renderBerita();
   simpan();
   bunyiSukses();
 }

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Saudagar Sagu Meranti — City Builder</title>
-<link rel="stylesheet" href="css/city.css?v=1">
+<link rel="stylesheet" href="css/city.css?v=2">
 </head>
 <body>
 <!-- Layar mulai -->
@@ -32,74 +32,131 @@
 
 <!-- Aplikasi -->
 <div id="aplikasi" style="display:none">
+  <section id="panggung">
+    <canvas id="peta"></canvas>
+    <div id="toast" class="toast"></div>
+    <div id="modeChip" style="display:none">
+      <span id="modeChipTeks"></span>
+      <button id="btnBatalMode">✕ Batal</button>
+    </div>
+  </section>
+
+  <!-- Bar atas: identitas + sumber daya + ikon -->
   <header id="barAtas">
-    <div class="judulGame">🌴 Saudagar Sagu <b>Meranti</b></div>
-    <div class="levelBox">
-      <span id="lvlTeks">Lv. 1 · Pulau Alam</span>
-      <div class="xpBarLuar"><div id="xpBar" class="xpBarDalam"></div></div>
-      <span id="xpTeks" class="xpTeks">0/150 XP</span>
+    <div class="identitas">
+      <img id="avatarPemain" src="assets/characters/player/idle.png" alt="Pengelola Pulau">
+      <div class="judulBlok">
+        <div class="judulGame">🌴 Saudagar Sagu <b>Meranti</b></div>
+        <div class="levelBox">
+          <span id="lvlTeks">Lv. 1 · Pulau Alam</span>
+          <div class="xpBarLuar"><div id="xpBar" class="xpBarDalam"></div></div>
+          <span id="xpTeks" class="xpTeks">0/150 XP</span>
+        </div>
+      </div>
     </div>
     <div class="sumberDaya">
       <span class="sd" title="Uang">💰 <b id="uangTeks" class="angka">Rp0</b></span>
       <span class="sd" title="Kayu">🪵 <b id="kayuTeks">0</b></span>
       <span class="sd" title="Batu">🪨 <b id="batuTeks">0</b></span>
       <span class="sd" title="Besi">🔩 <b id="besiTeks">0</b></span>
+      <span class="sd" title="Tual Sagu">🌿 <b id="tualTeks">0</b></span>
       <span class="sd" title="Penduduk">👥 <b id="pendudukTeks">0 jiwa</b></span>
       <span class="sd" title="Kebahagiaan">😊 <b id="bahagiaTeks">0%</b></span>
     </div>
-    <div class="waktuBox">
-      <span id="hariTeks">Hari 1</span> · <span id="jamTeks">06:00</span> · <span id="cuacaTeks">☀ Cerah</span>
-    </div>
     <div class="tombolAtas">
-      <button id="btnToggleKiri" class="btnIkon" title="Panel kiri">☰</button>
-      <button id="btnToggleKanan" class="btnIkon" title="Panel info">ℹ️</button>
+      <button id="btnBerita" class="btnIkon" title="Berita Pulau">🔔</button>
       <button id="btnSimpan" class="btnIkon" title="Simpan">💾</button>
       <button id="btnSuara" class="btnIkon" title="Suara">🔊</button>
+      <button id="btnToggleKiri" class="btnIkon" title="Panel kiri">☰</button>
+      <button id="btnToggleKanan" class="btnIkon" title="Panel info">ℹ️</button>
     </div>
   </header>
 
-  <div id="tengah">
-    <aside id="panelKiri">
-      <div id="panelKiriTab">
-        <button data-tab="misi" class="aktif">Misi</button>
-        <button data-tab="ekonomi">Ekonomi</button>
-        <button data-tab="penduduk">Penduduk</button>
-        <button data-tab="riset">Penelitian</button>
-        <button data-tab="peradaban">Peradaban</button>
+  <!-- Kolom kiri: tanggal/cuaca, rel ikon, panel isi -->
+  <div id="kolomKiri">
+    <div id="tglCuaca" class="kartuKaca">
+      <div class="tglIkon">📅</div>
+      <div class="tglTeks"><b id="hariTeks">Hari 1</b><span id="tglTeks">—</span></div>
+      <div class="cuacaTeks"><span id="jamTeks">06:00</span> WIB<br><span id="cuacaTeks">☀ Cerah</span> · <span id="suhuTeks">31°C</span></div>
+    </div>
+    <div id="barisKiri">
+      <div id="relKiri">
+        <button data-tab="peta" title="Peta">🗺️</button>
+        <button data-tab="misi" class="aktif" title="Misi">🎯</button>
+        <button data-tab="riset" title="Penelitian">🧪</button>
+        <button data-tab="peradaban" title="Peradaban">🏛️</button>
+        <button data-tab="berita" title="Berita Pulau">📰</button>
       </div>
-      <div id="panelKiriIsi"></div>
-      <div class="logJudul">Catatan Pulau</div>
-      <div id="log"></div>
-    </aside>
+      <aside id="panelKiri" class="kartuKaca">
+        <div id="panelKiriIsi"></div>
+      </aside>
+    </div>
+    <div id="aksiBangunan" style="display:none">
+      <button id="btnAksiPindah" class="btnAksi">✥ Pindah</button>
+      <button id="btnAksiPutar" class="btnAksi">↻ Putar</button>
+      <button id="btnAksiHapus" class="btnAksi bahaya">🗑 Hapus</button>
+    </div>
+  </div>
 
-    <section id="panggung">
-      <canvas id="peta"></canvas>
-      <div id="kontrolKamera">
+  <!-- Kolom kanan: minimap, statistik, info pilihan -->
+  <div id="kolomKanan">
+    <div id="kartuPeta" class="kartuKaca">
+      <div class="kartuJudul">Peta Meranti <span class="kompas">🧭</span></div>
+      <canvas id="minimap" width="220" height="132"></canvas>
+      <div class="miniKontrol">
         <button id="btnZoomIn" title="Perbesar">＋</button>
         <button id="btnZoomOut" title="Perkecil">－</button>
         <button id="btnPusat" title="Pusatkan peta">◎</button>
       </div>
-      <div id="kontrolWaktu">
-        <button id="btnKec0" title="Jeda">⏸</button>
-        <button id="btnKec1" class="aktif" title="Kecepatan 1x">1×</button>
-        <button id="btnKec2" title="Kecepatan 2x">2×</button>
-        <button id="btnKec3" title="Kecepatan 3x">3×</button>
-        <button id="btnHari" title="Hari berikutnya">⏭ Hari Berikutnya</button>
+    </div>
+    <div id="kartuStatistik" class="kartuKaca">
+      <div class="statBaris">
+        <span class="statIkon">👥</span>
+        <div class="statIsi"><div class="statLabel">Penduduk</div><div class="statNilai"><b id="statPenduduk">0 jiwa</b> <span id="statPendudukTumbuh" class="hijau"></span></div></div>
+        <button class="statBuka" data-tab="penduduk" title="Detail penduduk">›</button>
       </div>
-      <div id="modeChip" style="display:none">
-        <span id="modeChipTeks"></span>
-        <button id="btnBatalMode">✕ Batal</button>
+      <div class="statBaris">
+        <span class="statIkon">😊</span>
+        <div class="statIsi"><div class="statLabel">Kebahagiaan</div><div class="statNilai"><b id="statBahagia">0%</b></div><div class="bar"><div id="statBahagiaBar" class="barIsi" style="background:#22c55e"></div></div></div>
       </div>
-      <div id="toast" class="toast"></div>
-    </section>
-
-    <aside id="panelKanan"></aside>
+      <div class="statBaris">
+        <span class="statIkon">🏛️</span>
+        <div class="statIsi"><div class="statLabel">Ekonomi</div><div class="statNilai"><b id="statEkonomi">Rp0/hari</b></div></div>
+        <button class="statBuka" data-tab="ekonomi" title="Detail ekonomi">›</button>
+      </div>
+      <div class="statBaris">
+        <span class="statIkon">🏆</span>
+        <div class="statIsi"><div class="statLabel">Peradaban</div><div class="statNilai"><b id="statPeradaban">Level 1</b></div></div>
+        <button class="statBuka" data-tab="peradaban" title="Detail peradaban">›</button>
+      </div>
+    </div>
+    <aside id="panelKanan" class="kartuKaca" style="display:none"></aside>
   </div>
 
-  <footer id="menuBangun">
+  <!-- Mode Bangun -->
+  <button id="btnModeBangun" title="Mode Bangun">🛠️<span>Mode<br>Bangun</span></button>
+
+  <!-- Kontrol kecepatan -->
+  <div id="kontrolWaktu">
+    <button id="btnKec0" title="Jeda">⏸</button>
+    <button id="btnKec1" class="aktif" title="Kecepatan 1x">1×</button>
+    <button id="btnKec2" title="Kecepatan 2x">2×</button>
+    <button id="btnKec3" title="Kecepatan 3x">3×</button>
+    <button id="btnHari" title="Hari berikutnya">⏭</button>
+  </div>
+
+  <!-- Menu bangun bawah -->
+  <footer id="menuBangun" class="kartuKaca">
     <div id="katBangun"></div>
-    <div id="itemBangun"></div>
+    <div id="itemBangunWrap">
+      <button id="btnGeserKiri" class="geser">‹</button>
+      <div id="itemBangun"></div>
+      <button id="btnGeserKanan" class="geser">›</button>
+    </div>
   </footer>
+
+  <!-- Berita Pulau -->
+  <div id="beritaPulau"><span class="beritaLabel">📈 Berita Pulau</span><div class="beritaJalan"><span id="beritaTeks"></span></div></div>
 </div>
 
 <!-- Modal naik level -->
@@ -115,6 +172,6 @@
 
 <script src="js/city-data.js?v=2"></script>
 <script src="js/city-map.js?v=1"></script>
-<script src="js/city.js?v=4"></script>
+<script src="js/city.js?v=5"></script>
 </body>
 </html>

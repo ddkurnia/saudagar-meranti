@@ -6,6 +6,40 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v14 — Tampilan Persis Referensi (2026-11-11)
+
+Tata letak mengikuti gambar referensi yang dilampirkan pengguna:
+pulau memenuhi layar, semua panel melayang di atas peta.
+
+- **Bar atas:** avatar pengelola + judul + Lv/XP, pil sumber daya
+  (uang, kayu, batu, besi, tual sagu, penduduk, kebahagiaan),
+  tombol lonceng (Berita Pulau), simpan, suara.
+- **Kiri:** kartu tanggal & cuaca (tanggal asli hari ini + jam game),
+  rel ikon bulat (Peta, Misi, Riset, Peradaban, Berita), panel misi
+  selalu terlihat, tombol Pindah/Hapus/Putar mengambang bila ada
+  bangunan dipilih.
+- **Kanan:** minimap "Peta Meranti" (terrain, jalan, jembatan,
+  bangunan, kotak area layar; klik/seret untuk menggeser kamera) +
+  zoom & pusatkan, kartu statistik (Penduduk +tumbuh/hari,
+  Kebahagiaan, Ekonomi Rp/hari, Peradaban), kartu info bila ada
+  tile/bangunan dipilih.
+- **Bawah:** menu bangun dengan 10 tab (Bangunan, Jalan, Jembatan,
+  Lahan, Produksi, Sosial, Pendidikan, Kesehatan, Perdagangan,
+  Dekorasi) + kartu bangunan bergambar (gambar di atas, nama &
+  harga di bawah), tombol Mode Bangun (kiri), pil kecepatan (kanan),
+  dan ticker Berita Pulau di tepi bawah (isi = catatan pulau).
+- **Pulau lebih hidup:** palem di pantai, rumpun hutan lebih lebat,
+  buih ombak di tepi pantai; hover tile kini sorotan hijau
+  bercahaya; ghost bangunan menampilkan label "Bangun di Sini".
+- Data & simulasi tidak berubah (save lama tetap terbaca; kategori
+  data tetap 8 — tab Dekorasi hanya filter tampilan dari sosial).
+- Jujur: referensi adalah gambar render statis — pulau tetap
+  isometrik 2D (bukan render 3D), tanpa sistem energi/surat, dan
+  angka di gambar (Lv 12, Rp 1.887.600, 324 jiwa) adalah angka
+  contoh, bukan angka simpanan pemain.
+- Uji headless lolos (`TEST_V13_OK`, 76 cek): 10 tab, 4 bangunan
+  dekorasi, minimap, berita, ghost, renderHUD/menu/panel v14.
+
 ## Yang baru di v13.3 — Jalan & Jembatan Tersambung, Lalu Lintas Seperti Nyata (2026-11-11)
 
 - **Garis jalan kini benar:** tiap petak jalan membaca tetangganya —

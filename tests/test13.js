@@ -46,6 +46,7 @@ const sandbox = {
   window: { addEventListener: (ev, fn) => { listeners[ev] = fn; }, devicePixelRatio: 1, innerWidth: 1200 },
   Image: class { constructor() { this.complete = false; this.naturalWidth = 0; } set src(v) {} },
   confirm: () => true,
+  Date: Date,
   Math: Math, JSON: JSON, Object: Object, Array: Array, parseInt: parseInt, parseFloat: parseFloat, isNaN: isNaN,
 };
 vm.createContext(sandbox);
@@ -53,7 +54,7 @@ const src = fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-data
   + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-map.js", "utf8")
   + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city.js", "utf8");
 vm.runInContext(src, sandbox);
-for (const nama of ["S", "peta", "BANGUNAN", "BANGUNAN_MAP", "TEKNOLOGI_MAP", "KATEGORI", "MISI", "LEVEL_PERADABAN", "KOMODITAS", "JALAN", "JEMBATAN", "TERRAIN", "CITY", "mode", "hover", "terpilih", "kecepatan", "kamera", "jamVisual", "akumulasiHari", "wargaVisual", "kendaraanVisual"]) {
+for (const nama of ["S", "peta", "BANGUNAN", "BANGUNAN_MAP", "TEKNOLOGI_MAP", "KATEGORI", "MISI", "LEVEL_PERADABAN", "KOMODITAS", "JALAN", "JEMBATAN", "TERRAIN", "CITY", "mode", "hover", "terpilih", "kecepatan", "kamera", "jamVisual", "akumulasiHari", "wargaVisual", "kendaraanVisual", "TAB_BANGUN"]) {
   Object.defineProperty(sandbox, nama, { get: () => vm.runInContext(nama, sandbox), configurable: true });
 }
 listeners["DOMContentLoaded"]();
@@ -307,5 +308,23 @@ cek("truk mengikuti loop jalan 800 tick tanpa keluar jalan", trukTetapDiJalan, "
 try { C.gambarPeta(); cek("render peta + jalan/jembatan baru (tanpa error)", true); }
 catch (e) { cek("render peta + jalan/jembatan baru (tanpa error)", false, e.message); }
 C.S.jalan = jalanLama; C.S.jembatan = jembLama;
+
+
+// v14: tampilan referensi — 10 tab bangun, dekorasi, minimap, berita, ghost
+cek("TAB_BANGUN 10 tab", C.TAB_BANGUN.length === 10, C.TAB_BANGUN.length);
+cek("tab jalan & jembatan terpisah", C.TAB_BANGUN.some(t => t.id === "jalan") && C.TAB_BANGUN.some(t => t.id === "jembatan"));
+const dekor = C.BANGUNAN.filter(b => b.kat === "sosial" && b.dekorasi);
+cek("4 bangunan dekorasi", dekor.length === 4, dekor.map(b => b.id).join(","));
+cek("sosial non-dekorasi 3", C.BANGUNAN.filter(b => b.kat === "sosial" && !b.dekorasi).length === 3);
+const mmEl = C.document.getElementById("minimap");
+mmEl.width = 220; mmEl.height = 132;
+try { C.gambarMinimap(); cek("minimap digambar (tanpa error)", true); } catch (e) { cek("minimap digambar (tanpa error)", false, e.message); }
+cek("berita dirender", (() => { C.renderBerita(); return C.document.getElementById("beritaTeks").textContent.length > 0; })());
+vm.runInContext('mode = { jenis: "bangun", id: "rumah-sederhana" }; hover = { x: 10, y: 10 };', sandbox);
+try { C.gambarPeta(); cek("ghost 'Bangun di Sini' (tanpa error)", true); } catch (e) { cek("ghost 'Bangun di Sini' (tanpa error)", false, e.message); }
+vm.runInContext('mode = { jenis: "pilih", id: null }; hover = null;', sandbox);
+try { C.renderHUD(); cek("renderHUD v14 (tanpa error)", true); } catch (e) { cek("renderHUD v14 (tanpa error)", false, e.message); }
+try { C.renderMenuBangun(); cek("renderMenuBangun 10 tab (tanpa error)", true); } catch (e) { cek("renderMenuBangun 10 tab (tanpa error)", false, e.message); }
+try { C.renderPanelKiri(); C.renderPanelKanan(); cek("panel kiri/kanan v14 (tanpa error)", true); } catch (e) { cek("panel kiri/kanan v14 (tanpa error)", false, e.message); }
 
 console.log(gagal === 0 ? "TEST_V13_OK" : "TEST_V13_GAGAL:" + gagal + " dari " + (lulus + gagal));

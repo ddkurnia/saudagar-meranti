@@ -70,6 +70,23 @@ const KATEGORI = [
   { id: "sosial",      nama: "Sosial & Rekreasi" },
 ];
 
+// ---------------- Tab menu bangun (tampilan referensi) ----------------
+// Tab "Dekorasi" menampilkan bangunan sosial berflag dekorasi; kat data
+// tetap "sosial" agar misi & syarat level tidak berubah.
+const TAB_BANGUN = [
+  { id: "permukiman",  nama: "Bangunan",    ikon: "🏢" },
+  { id: "jalan",       nama: "Jalan",       ikon: "🛣️" },
+  { id: "jembatan",    nama: "Jembatan",    ikon: "🌉" },
+  { id: "perkebunan",  nama: "Lahan",       ikon: "🌱" },
+  { id: "industri",    nama: "Produksi",    ikon: "🏭" },
+  { id: "sosial",      nama: "Sosial",      ikon: "👥" },
+  { id: "pendidikan",  nama: "Pendidikan",  ikon: "🎓" },
+  { id: "kesehatan",   nama: "Kesehatan",   ikon: "🏥" },
+  { id: "ekonomi",     nama: "Perdagangan", ikon: "🛒" },
+  { id: "dekorasi",    nama: "Dekorasi",    ikon: "🎡" },
+];
+
+
 // ---------------- Katalog bangunan ----------------
 // harga: {uang, kayu, batu, besi} — waktu: hari konstruksi
 // pekerja: staf yang dibutuhkan saat beroperasi
@@ -135,11 +152,11 @@ const BANGUNAN = [
   { id: "industri-ekspor", nama: "Industri Ekspor", kat: "industri", harga: { uang: 900000, batu: 50, besi: 25 }, waktu: 6, pekerja: 15, upkeep: 25000, kerja: 15, level: 4, tech: "industri-makanan", kaki: { w: 3, h: 2 }, gambar: "assets/buildings/building-industri-ekspor.png", vektor: { dinding: "#b2bec3", atap: "#636e72", jenisAtap: "datar", lantai: 3, detail: "cerobong" }, eksporBonus: 0.5, des: "Industri ekspor — harga ekspor semua komoditas +50%." },
   // ---- SOSIAL & REKREASI ----
   { id: "masjid", nama: "Masjid", kat: "sosial", harga: { uang: 150000, batu: 15 }, waktu: 3, pekerja: 2, upkeep: 2000, kerja: 2, bahagia: 5, kaki: { w: 2, h: 2 }, gambar: "assets/buildings/building-masjid.png", vektor: { dinding: "#ffffff", atap: "#00b894", jenisAtap: "kubah", lantai: 1, detail: "menara" }, des: "Masjid — pusat ibadah & kebahagiaan warga." },
-  { id: "taman", nama: "Taman Kota", kat: "sosial", harga: { uang: 15000, kayu: 2 }, waktu: 1, pekerja: 0, upkeep: 500, bahagia: 3, kaki: { w: 1, h: 1 }, gambar: "assets/buildings/building-taman.png", vektor: { dinding: "#00b894", atap: "#00b894", jenisAtap: "taman", lantai: 1 }, des: "Taman kota — ruang hijau untuk warga." },
-  { id: "lapangan", nama: "Lapangan Olahraga", kat: "sosial", harga: { uang: 40000 }, waktu: 1, pekerja: 0, upkeep: 1000, bahagia: 3, kaki: { w: 2, h: 1 }, gambar: "assets/buildings/building-lapangan.png", vektor: { dinding: "#00b894", atap: "#00b894", jenisAtap: "lapangan", lantai: 1 }, des: "Lapangan olahraga warga." },
-  { id: "stadion", nama: "Stadion", kat: "sosial", harga: { uang: 800000, batu: 60, besi: 20 }, waktu: 6, pekerja: 10, upkeep: 20000, kerja: 10, bahagia: 8, level: 4, kaki: { w: 3, h: 2 }, gambar: "assets/buildings/building-stadion.png", vektor: { dinding: "#dfe6e9", atap: "#0984e3", jenisAtap: "stadion", lantai: 1 }, des: "Stadion kebanggaan pulau." },
+  { id: "taman", dekorasi: true, nama: "Taman Kota", kat: "sosial", harga: { uang: 15000, kayu: 2 }, waktu: 1, pekerja: 0, upkeep: 500, bahagia: 3, kaki: { w: 1, h: 1 }, gambar: "assets/buildings/building-taman.png", vektor: { dinding: "#00b894", atap: "#00b894", jenisAtap: "taman", lantai: 1 }, des: "Taman kota — ruang hijau untuk warga." },
+  { id: "lapangan", dekorasi: true, nama: "Lapangan Olahraga", kat: "sosial", harga: { uang: 40000 }, waktu: 1, pekerja: 0, upkeep: 1000, bahagia: 3, kaki: { w: 2, h: 1 }, gambar: "assets/buildings/building-lapangan.png", vektor: { dinding: "#00b894", atap: "#00b894", jenisAtap: "lapangan", lantai: 1 }, des: "Lapangan olahraga warga." },
+  { id: "stadion", dekorasi: true, nama: "Stadion", kat: "sosial", harga: { uang: 800000, batu: 60, besi: 20 }, waktu: 6, pekerja: 10, upkeep: 20000, kerja: 10, bahagia: 8, level: 4, kaki: { w: 3, h: 2 }, gambar: "assets/buildings/building-stadion.png", vektor: { dinding: "#dfe6e9", atap: "#0984e3", jenisAtap: "stadion", lantai: 1 }, des: "Stadion kebanggaan pulau." },
   { id: "museum", nama: "Museum Sagu", kat: "sosial", harga: { uang: 300000, batu: 25 }, waktu: 4, pekerja: 5, upkeep: 8000, kerja: 5, bahagia: 5, level: 3, kaki: { w: 2, h: 2 }, gambar: "assets/buildings/building-museum.png", vektor: { dinding: "#ffeaa7", atap: "#6c5ce7", jenisAtap: "limas", lantai: 2 }, des: "Museum budaya sagu Meranti." },
-  { id: "taman-wisata", nama: "Taman Wisata", kat: "sosial", harga: { uang: 200000, kayu: 10 }, waktu: 3, pekerja: 4, upkeep: 5000, kerja: 4, bahagia: 6, level: 2, kaki: { w: 2, h: 2 }, gambar: "assets/buildings/building-taman-wisata.png", vektor: { dinding: "#00cec9", atap: "#00cec9", jenisAtap: "taman", lantai: 1 }, wisata: 8000, des: "Taman wisata — wisatawan datang (+Rp8.000/hari)." },
+  { id: "taman-wisata", dekorasi: true, nama: "Taman Wisata", kat: "sosial", harga: { uang: 200000, kayu: 10 }, waktu: 3, pekerja: 4, upkeep: 5000, kerja: 4, bahagia: 6, level: 2, kaki: { w: 2, h: 2 }, gambar: "assets/buildings/building-taman-wisata.png", vektor: { dinding: "#00cec9", atap: "#00cec9", jenisAtap: "taman", lantai: 1 }, wisata: 8000, des: "Taman wisata — wisatawan datang (+Rp8.000/hari)." },
   { id: "pasar-budaya", nama: "Pasar Budaya", kat: "sosial", harga: { uang: 100000, kayu: 8 }, waktu: 2, pekerja: 4, upkeep: 3000, kerja: 4, bahagia: 4, level: 2, kaki: { w: 2, h: 1 }, gambar: "assets/buildings/building-pasar-budaya.png", vektor: { dinding: "#e17055", atap: "#d63031", jenisAtap: "pelana", lantai: 1 }, des: "Pasar budaya — kerajinan & kuliner khas Meranti." },
 ];
 const BANGUNAN_MAP = {};
