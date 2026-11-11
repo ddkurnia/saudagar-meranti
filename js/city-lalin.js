@@ -744,6 +744,64 @@ function statusLalin() {
     jam: L.jam,
   };
 }
+// ---------------- v22.4-W3: kepadatan NYATA untuk label panel ----------------
+// TAMPILAN SAJA — tidak menyentuh hitungLalin / S.lalin.skor /
+// kemacetan / perPetak zona (tetap dipakai kebahagiaan, overlay &
+// invalidasi cache rute A*). Masalah yang diperbaiki: skor zona adalah
+// estimasi permintaan (rumus penduduk & bangunan per petak), jadi 1–2
+// kendaraan di jalan pendek bisa tampil "Padat 53/100" padahal jalan
+// nyaris kosong. Helper ini menghitung kepadatan dari kendaraan yang
+// benar-benar bergerak (infoKendaraan: aktif + menunggu) vs kapasitas
+// SIMULTAN seluruh jalan yang ada — rumus kapasitas yang SAMA dengan
+// hitungLalin v22-W4: tiap petak menampung
+// max(1, round(kapasitas/10)) kendaraan sekaligus (tanah 1, aspal 4,
+// raya 12, arteri 20). Ambang label memakai ambang zona yang sama
+// (LALIN_KONFIG.ambangPadat 0,6 / ambangMacet 1,0) supaya "Padat" /
+// "Macet" nyata konsisten dengan arti rasio di modul ini.
+//   n == 0        -> "Lancar — jalan kosong" (sama seperti panel v22.3)
+//   1 <= n <= 2   -> "Lancar" — 1–2 kendaraan secara fisik tidak bisa
+//                    menimbulkan macet, berapa pun skor zonanya.
+//   n >= 3        -> label dari rasio = n / kapasitasSimultan:
+//                    < 0,6 Lancar; <= 1,0 Padat; > 1,0 Macet.
+// Argumen `bergerak` opsional: panel mengoper ik.aktif + ik.menunggu;
+// bila tidak dioper, helper mencoba infoKendaraan() sendiri, lalu
+// jatuh ke S.lalin.kendaraanAktif. Mengembalikan objek (bukan string)
+// supaya panel bisa menampilkan angka pendukungnya.
+function kepadatanNyataLalin(bergerak) {
+  let n = (typeof bergerak === "number" && isFinite(bergerak)) ? Math.max(0, Math.floor(bergerak)) : null;
+  if (n === null) {
+    try {
+      if (typeof infoKendaraan === "function") {
+        const ik = infoKendaraan();
+        n = (ik.aktif || 0) + (ik.menunggu || 0);
+      }
+    } catch (e) {}
+  }
+  if (n === null) n = (S && S.lalin && typeof S.lalin.kendaraanAktif === "number") ? S.lalin.kendaraanAktif : 0;
+  let jumlahJalan = 0, kapasitasSimultan = 0;
+  if (S && Array.isArray(S.jalan)) {
+    jumlahJalan = S.jalan.length;
+    for (const j of S.jalan) {
+      const def = (typeof JALAN !== "undefined" && JALAN) ? JALAN[j.tipe] : null;
+      const kap = (def && def.kapasitas) || 10;
+      kapasitasSimultan += Math.max(1, Math.round(kap / LALIN_KONFIG.kapasitasSimultanPer10));
+    }
+  }
+  const rasio = kapasitasSimultan > 0 ? n / kapasitasSimultan : 0;
+  let label;
+  if (n === 0) label = "Lancar — jalan kosong";
+  else if (n <= 2) label = "Lancar";
+  else if (rasio < LALIN_KONFIG.ambangPadat) label = "Lancar";
+  else if (rasio <= LALIN_KONFIG.ambangMacet) label = "Padat";
+  else label = "Macet";
+  return {
+    kendaraanBergerak: n,
+    jumlahJalan: jumlahJalan,
+    kapasitasSimultan: kapasitasSimultan,
+    rasio: Math.round(rasio * 100) / 100,
+    label: label,
+  };
+}
 // Daftar petak jalan berstatus `status` (0 lancar / 1 padat / 2 macet).
 function daftarPetakStatus(status) {
   if (!S) return [];

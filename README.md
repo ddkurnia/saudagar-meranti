@@ -6,6 +6,93 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v22.4 — Kendaraan Terlihat Jelas (2026-11-12)
+
+Perbaikan atas temuan cek live v22.3 (`?v=41`): kendaraan BENAR-BENAR
+digambar dan bergerak (probe headless: truk `drawImage=1`, mobil
+`rotate=1`, posisi berubah, status `"menuju"`) tapi TIDAK PERNAH
+terlihat di peta selama ~10,5 jam game — hanya data panel + garis rute
+statis 2 petak. Penyebab paling mungkin: jalan awal hanya 2–3 petak
+sehingga kendaraan berosilasi di rute 2 petak (accelerating↔parking),
+dan sprite kecil (truk 44px, mobil 26px pada zoom 1) sehingga tak
+terlihat pada zoom peta dunia / kamera pemeriksa tidak mengarah ke
+petak kendaraan. v22.4 memperbaiki VISIBILITAS, bukan simulasi (yang
+sudah terbukti jalan). Tidak ada perubahan format simpanan (`SAVE_KEY`
+tetap `merantiRisingWorldV1`, `petaVersi` tetap 5), tidak ada perubahan
+data ekonomi/waktu, tidak ada file v23 yang disentuh (`js/city-suara.js`,
+`tests/test-suara.js`, `docs/v23-integrasi.md`, `assets/audio/*`).
+`VERSI_GAME "v22.4"`; refs `css?v=16` (tetap), `city.js?v=31`,
+`city-kendaraan.js?v=3`, `city-lalin.js?v=2`; nama cache SW
+`meranti-rising-v22.4`; precache SW diperbarui.
+
+### 1. Visual kendaraan lebih besar + sorotan (W1, `js/city.js` `gambarSatuKendaraan`)
+
+| Elemen | Lama | Baru |
+|---|---|---|
+| Mobil/ambulans vektor (lebar × tinggi) | 26×12 px (`pw 26*z`, `ph 12*z`) | 40×18 px (`pw 40*z`, `ph 18*z`), biru `#00a8ff`, outline `rgba(0,0,0,0.55)` `lineWidth max(1.5, 2*z)` |
+| Truk (sprite) | lebar 44×`z` | lebar 64×`z` |
+| Bus (sprite) | lebar 48×`z` | lebar 64×`z`; fallback vektor `"BUS"` 64×18 px (`64*z`×`18*z`) |
+| Bayangan | — | elips lembut di bawah tiap kendaraan (helper `bayangan(x,y,rx,ry,alpha)`) |
+| Fallback bila sprite belum termuat | truk: kosong (tidak terlihat) | vektor `"TRUK"` (bak oranye + kabin + roda + teks), `"KAPAL"` / `"PERAHU"` di cabang kapal/perahu |
+| Sorotan kendaraan bergerak | — | cincin kuning `rgba(255,214,64,0.55)` di bawah kendaraan darat ber-state `accelerating` / `cruising` / `turning` / `braking` |
+
+Posisi/koordinat kendaraan TIDAK diubah — hanya ukuran & penekanan visual.
+
+### 2. Rute terjauh + parkir singkat (W2, `js/city-kendaraan.js`)
+
+- Helper baru `pilihTujuanTerjauhJalan`: kandidat terjauh dulu (seri →
+  acak). `_beriTujuanBaru` memakainya dengan struktur 6 percobaan yang
+  dipertahankan (`jarakMin` 3→1→0, `Set` petak yang sudah dicoba).
+- `_beriTujuanMobil`: bangunan di-sort jarak menurun (di-shuffle dulu
+  untuk seri), lewati bangunan ≤1 petak, maks 5 percobaan.
+- Jeda parkir ambient dipersingkat: `parkirAmbientMin` 1→0,5 dtk,
+  `parkirAmbientMax` 3→1,5 dtk, `stateTimer` gagal total 3→1,5 dtk.
+- Probe W2: jalan 8 petak → rute 8 petak, bergerak 524 vs parking 35
+  tick (rasio 14,97); jalan 3 petak → bergerak 429 vs parking 93
+  (rasio 4,61; dulu 1,92).
+
+### 3. Panel lalu lintas jujur — label dari kepadatan nyata (W3, `js/city-lalin.js` + `js/city.js`)
+
+- Helper baru `kepadatanNyataLalin(bergerak)` (`js/city-lalin.js`
+  ~baris 770): kapasitas simultan = Σ `max(1, round(kapasitas/10))`
+  per petak jalan (tanah 1, aspal 4, raya 12, arteri 20); `n==0` →
+  `"Lancar — jalan kosong"`; 1≤n≤2 → `"Lancar"`; n≥3 → rasio
+  <0,6 Lancar, ≤1,0 Padat, >1,0 Macet (ambang sama dengan zona).
+- Panel Lalu Lintas (`js/city.js` cabang `else`, dulu skor zona
+  mentah): baris utama `"Kemacetan (nyata)"` dari helper + baris
+  pendamping `"Skor zona (estimasi)"`; cabang `jalanKosong`
+  dipertahankan. `hitungLalin` / skor / `perPetak` / kebahagiaan /
+  overlay / invalidasi cache TIDAK diubah.
+
+**Tes:** suite penuh **1233 cek** (v22.3: 1215 → +18 cek baru v22.4),
+**5 run, semua `TEST_V13_OK`, 0 gagal**. Cek baru: (a) mobil vektor
+lebar gambar 40px pada zoom 1 (≥36, dulu 26) + biru `#00a8ff` +
+outline + sorotan kuning; (b) truk tanpa sprite tetap digambar
+(fallback `"TRUK"`, bak oranye lebar 43,52px, tanpa `drawImage`);
+(c) jalan lurus 8 petak → rute 8 waypoint, bentang 7 petak (≥6, dulu
+maks 2); (d) 600 tick: bergerak 513–515 vs parkir 55–57, rasio
+~9,0–9,4 > 1 (30 tick sisanya state transisi `"arriving"`; angka
+bergerak/parkir bervariasi antar-run karena durasi parkir acak
+0,5–1,5 dtk — probe W2: 524 vs 35, rasio 14,97); (e) helper 0 →
+`"Lancar — jalan kosong"`, 1–2 → `"Lancar"`, 20 kendaraan di 8 petak
+aspal (kapSim 32, rasio 0,63) → `"Padat"`, 40 (rasio 1,25) →
+`"Macet"`, plus panel 0 kendaraan tanpa `"Padat"`/`"Macet"` dan baris
+`"Kemacetan (nyata)"` + `"Skor zona (estimasi)"` saat ada kendaraan;
+(f) konsistensi versi SW + tidak ada sisa refs v22.3. 10 TEST wajib v22
+(A*, lajur, lampu merah, bus, logistik, jalan buntu, kemacetan, hapus
+jalan, pedestrian, dua dermaga) + semua tes v22.3 tetap lulus (suite
+penuh 0 gagal). Tidak ada cek flaky dalam 5 run.
+
+### Batas jujur v22.4
+
+| Batas | Keterangan |
+|---|---|
+| Visibilitas di zoom peta dunia yang sangat jauh belum terbukti live | Sprite kini 40–64px pada zoom 1 dan terbukti digambar headless, tapi apakah kendaraan terlihat jelas saat kamera di-zoom jauh (peta dunia) hanya bisa dibuktikan lewat cek live di browser — belum dilakukan untuk v22.4. |
+| Daftar "Ruas Terpadat" per petak masih berbasis zona | Daftar ruas di panel Lalu Lintas (`js/city.js`) masih memakai `S.lalin.detailPetak` (rasio zona), bukan hitungan kendaraan nyata per petak; daftar itu disembunyikan saat jalan kosong, tapi saat ada kendaraan, label ruasnya tetap estimasi zona. |
+| Baris kemacetan di panel ringkasan masih memakai skor zona | Panel "Statistik Kota" (`js/city.js:4062`) dan pill HUD `statMacet` (`js/city.js:3461`) masih menampilkan `S.lalin.skor` + label zona (`"Padat"`/`"Macet"` bisa muncul di ringkasan/HUD padahal panel Lalu Lintas sudah jujur). Yang diperbaiki v22.4 hanya label utama di panel Lalu Lintas. |
+| Sorotan hanya untuk kendaraan darat ber-state | Cincin kuning hanya digambar untuk kendaraan darat (`truk`/`bus`/`mobil`/`ambulans`) dengan state `accelerating`/`cruising`/`turning`/`braking` — kapal/perahu tidak disorot, dan kendaraan yang `parking`/`menunggu` tidak bercincin. |
+| Rasio bergerak/parkir bervariasi antar-run | Durasi parkir acak (0,5–1,5 dtk) membuat rasio (d) bergerak antar-run (~9,0–9,4 pada probe finalizer; 14,97 pada probe W2) — asersi tes hanya menuntut rasio > 1, dan itu lulus 5/5 run. |
+
 ## Yang baru di v22.3 — Kendaraan Bergerak + Sinkron Profil/Simpanan (2026-11-12)
 
 Perbaikan atas dua kegagalan kritis cek live v22 (`?v=40`) plus

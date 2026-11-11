@@ -99,7 +99,7 @@ const KENDARAAN_KONFIG = {
   kmhKePetakPerDetik: 1 / 30,  // skala game: 1 petak/detik ≈ 30 km/jam
   jarakLateralLajurBerlawanan: 0.3, // petak — lajur berlawanan terpisah ~0,39 petak, jadi tidak dihitung "di depan"
   jarakLampuMerah: 2.5,        // petak — hanya rem bila persimpangan berikut sedekat ini
-  parkirAmbientMin: 1, parkirAmbientMax: 3, // detik jeda truk kota sebelum berangkat lagi
+  parkirAmbientMin: 0.5, parkirAmbientMax: 1.5, // detik jeda truk kota sebelum berangkat lagi (v22.4: 1–3 dtk -> 0,5–1,5 dtk — kendaraan tidak diam lama di ujung rute pendek)
   radiusTiba: 0.4,             // petak — radius tiba gerakAgen (sama seperti truk lama)
   putarMaks: 3.5,              // radian/detik — kemudi gerakAgen (sama seperti truk lama)
   kecepatanJembatanKmh: 40,    // jembatan tanpa data kecepatan (sama seperti W1)
@@ -345,6 +345,35 @@ function pilihTujuanAcakJalan(k, jarakMin, kecuali) {
   const t = calon[Math.floor(Math.random() * calon.length)];
   return { x: t.x, y: t.y };
 }
+// v22.4: pilih petak jalan TERJAUH (Manhattan) dari `k` yang masih
+// >= `jarakMin` — bukan acak. Di jalan pendek, tujuan acak membuat
+// kendaraan berosilasi di rute 2 petak (accelerating<->parking) dan
+// lebih banyak parkir daripada bergerak; tujuan terjauh memberi rute
+// terpanjang yang tersedia di jaringan (ujung-ke-ujung di jalan
+// lurus), jadi kendaraan terlihat bergerak lama sebelum parkir.
+// Bila beberapa petak sama-sama terjauh, dipilih acak di antaranya
+// (variasi, bukan deterministik penuh). `kecuali` (Set "x,y") =
+// petak yang sudah dicoba & gagal dirutekan, seperti
+// pilihTujuanAcakJalan. Mengembalikan null bila tidak ada kandidat.
+function pilihTujuanTerjauhJalan(k, jarakMin, kecuali) {
+  if (typeof S === "undefined" || !S || !S.jalan || !S.jalan.length) return null;
+  const min = (jarakMin === undefined ? 3 : jarakMin);
+  const kx = Math.round(k.x), ky = Math.round(k.y);
+  const kini = kx + "," + ky;
+  let jauh = -1;
+  const calon = [];
+  for (const j of S.jalan) {
+    if ((j.x + "," + j.y) === kini) continue;
+    if (kecuali && kecuali.has(j.x + "," + j.y)) continue;
+    const d = Math.abs(j.x - kx) + Math.abs(j.y - ky);
+    if (d < min) continue;
+    if (d > jauh) { jauh = d; calon.length = 0; calon.push(j); }
+    else if (d === jauh) calon.push(j);
+  }
+  if (!calon.length) return null;
+  const t = calon[Math.floor(Math.random() * calon.length)];
+  return { x: t.x, y: t.y };
+}
 // Beri tujuan baru (dipakai truk kota/ambient & mobil warga): rute A*
 // ke tujuan; bila gagal (tak ada jalan terjangkau), parkir & coba lagi
 // nanti.
@@ -363,12 +392,20 @@ function pilihTujuanAcakJalan(k, jarakMin, kecuali) {
 // gagal dilewati (komponen jalan terputus tidak boleh membuat kendaraan
 // parkir selamanya). Parkir hanya bila benar-benar tidak ada satu pun
 // tujuan yang bisa dirutekan.
+// v22.4: tujuan dipilih TERJAUH dulu (pilihTujuanTerjauhJalan) —
+// kandidat acak membuat kendaraan berosilasi di rute 2 petak
+// (accelerating<->parking) karena jalan awal hanya 2–3 petak.
+// Struktur 6 percobaan + jarakMin mengecil (3 -> 1 -> 0) dan
+// pengecualian petak yang gagal dirutekan dipertahankan; yang berubah
+// hanya URUTAN kandidat di tiap percobaan (terjauh dulu, bukan acak).
+// Parkir hanya bila benar-benar tidak ada satu pun tujuan yang bisa
+// dirutekan — dengan jeda coba-ulang 1,5 dtk (bukan 3 dtk).
 function _beriTujuanBaru(k) {
   if (k.mobilWarga && typeof _beriTujuanMobil === "function" && _beriTujuanMobil(k)) return;
   const dicoba = new Set();
   for (let percobaan = 0; percobaan < 6; percobaan++) {
     const jarakMin = percobaan < 2 ? 3 : (percobaan < 4 ? 1 : 0);
-    const t = pilihTujuanAcakJalan(k, jarakMin, dicoba);
+    const t = pilihTujuanTerjauhJalan(k, jarakMin, dicoba);
     if (!t) continue;
     dicoba.add(t.x + "," + t.y);
     if (typeof buatRuteKendaraan === "function" && buatRuteKendaraan(k, t.x, t.y) && k.status === "menuju") {
@@ -376,7 +413,7 @@ function _beriTujuanBaru(k) {
       return;
     }
   }
-  k.status = "parkir"; k.state = "parking"; k.stateTimer = 3;
+  k.status = "parkir"; k.state = "parking"; k.stateTimer = 1.5;
 }
 // Buat + daftarkan + (opsional) rutekan kendaraan jalan. Tanpa (tx,ty):
 // truk/mobil menjadi ambient (tujuan acak, parkir sejenak, berangkat
@@ -432,8 +469,15 @@ function _beriTujuanMobil(k) {
   const selesai = S.bangunan.filter(b => b.selesai);
   if (!selesai.length) return false;
   const kini = { x: Math.round(k.x), y: Math.round(k.y) };
+  // v22.4: bangunan dicoba dari yang TERJAUH (Manhattan), bukan acak
+  // — sama seperti _beriTujuanBaru, agar mobil warga menempuh rute
+  // terpanjang yang tersedia dan terlihat bergerak, bukan bolak-balik
+  // ke bangunan tetangga. Diacak dulu lalu di-sort stabil, jadi
+  // bangunan yang sama-sama jauh dipilih acak (variasi). Aturan lama
+  // dipertahankan: lewati bangunan <= 1 petak, maks 5 percobaan.
   const acak = selesai.slice();
   for (let i = acak.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const tmp = acak[i]; acak[i] = acak[j]; acak[j] = tmp; }
+  acak.sort((a, b) => (Math.abs(b.x - kini.x) + Math.abs(b.y - kini.y)) - (Math.abs(a.x - kini.x) + Math.abs(a.y - kini.y)));
   let percobaan = 0;
   for (const b of acak) {
     if (percobaan++ >= 5) break;

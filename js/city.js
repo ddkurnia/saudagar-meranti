@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v22.3"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v22.4"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -2265,12 +2265,31 @@ function gambarSatuWarga(w, lebar, tinggi) {
 // Gambar satu kendaraan (truk/kapal/perahu) — dipakai lapisan gabungan
 function gambarSatuKendaraan(k, lebar, tinggi) {
   const z = kamera.zoom;
+  // v22.4 Worker 1: kendaraan bergerak tapi tak terlihat di peta — sprite
+  // terlalu kecil & truk tanpa fallback bila sprite belum termuat. Satu
+  // elips bayangan lembut + (hanya saat bergerak) cincin sorotan kuning
+  // di bawah tiap kendaraan agar menonjol dari jalan. Posisi/koordinat
+  // kendaraan TIDAK diubah — hanya ukuran & penekanan visual.
+  const bergerak = ["accelerating", "cruising", "turning", "braking"].includes(k.state);
+  const bayangan = (x, y, rx, ry, a) => {
+    ctx.fillStyle = "rgba(0,0,0," + (a == null ? 0.30 : a) + ")";
+    ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+  };
+  const sorotan = (x, y, rx, ry) => {
+    if (!bergerak) return;
+    ctx.strokeStyle = "rgba(255,214,64,0.55)";
+    ctx.lineWidth = Math.max(1.5, 2 * z);
+    ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+  };
   if (k.tipe === "truk") {
     const t = tileTengahDunia(k.x, k.y);
     const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
     const img = gambarAset["assets/vehicles/truk-pengangkut.png"];
+    const w = 64 * z;
+    bayangan(s.x, s.y + 8 * z, w * 0.55, w * 0.16);
+    sorotan(s.x, s.y + 8 * z, w * 0.62, w * 0.22);
     if (img && img.complete && img.naturalWidth) {
-      const w = 44 * z, h = w * (img.naturalHeight / img.naturalWidth);
+      const h = w * (img.naturalHeight / img.naturalWidth);
       const hadapKiri = (Math.cos(k.arah || 0) - Math.sin(k.arah || 0)) < 0;
       if (hadapKiri) {
         ctx.save(); ctx.translate(s.x, 0); ctx.scale(-1, 1);
@@ -2279,6 +2298,21 @@ function gambarSatuKendaraan(k, lebar, tinggi) {
       } else {
         ctx.drawImage(img, s.x - w / 2, s.y + 8 * z - h, w, h);
       }
+    } else {
+      // v22.4: fallback vektor bila sprite truk belum termuat — truk
+      // selalu terlihat (mengikuti pola fallback "BUS" di cabang bus).
+      const hT = 20 * z;
+      ctx.fillStyle = "#e67e22";
+      ctx.fillRect(s.x - w / 2, s.y + 8 * z - 14 * z, w * 0.68, 14 * z);
+      ctx.fillStyle = "#d35400";
+      ctx.fillRect(s.x + w * 0.18, s.y + 8 * z - hT, w * 0.32, hT);
+      ctx.fillStyle = "#2d3436";
+      for (const wx of [-w * 0.32, -w * 0.02, w * 0.32]) {
+        ctx.beginPath(); ctx.arc(s.x + wx, s.y + 8 * z, 3.4 * z, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold " + Math.max(8, 10 * z) + "px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("TRUK", s.x - w * 0.16, s.y + 8 * z - 4 * z);
     }
   } else if (k.tipe === "bus") {
     // v19 Worker 5: bus memakai sprite bus sendiri (assets/vehicles/
@@ -2288,8 +2322,10 @@ function gambarSatuKendaraan(k, lebar, tinggi) {
     const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
     const imgBus = gambarAset["assets/vehicles/bus.png"];
     const img = (imgBus && imgBus.complete && imgBus.naturalWidth) ? imgBus : gambarAset["assets/vehicles/truk-pengangkut.png"];
+    bayangan(s.x, s.y + 8 * z, 64 * z * 0.55, 64 * z * 0.16);
+    sorotan(s.x, s.y + 8 * z, 64 * z * 0.62, 64 * z * 0.22);
     if (img && img.complete && img.naturalWidth) {
-      const w = 48 * z, h = w * (img.naturalHeight / img.naturalWidth);
+      const w = 64 * z, h = w * (img.naturalHeight / img.naturalWidth);
       const hadapKiri = (Math.cos(k.arah || 0) - Math.sin(k.arah || 0)) < 0;
       if (hadapKiri) {
         ctx.save(); ctx.translate(s.x, 0); ctx.scale(-1, 1);
@@ -2304,10 +2340,10 @@ function gambarSatuKendaraan(k, lebar, tinggi) {
       }
     } else {
       ctx.fillStyle = "#0984e3";
-      ctx.fillRect(s.x - 22 * z, s.y - 10 * z, 44 * z, 14 * z);
+      ctx.fillRect(s.x - 32 * z, s.y - 12 * z, 64 * z, 18 * z);
       ctx.fillStyle = "#ffffff";
       ctx.font = Math.max(8, 10 * z) + "px sans-serif"; ctx.textAlign = "center";
-      ctx.fillText("BUS", s.x, s.y + 2 * z);
+      ctx.fillText("BUS", s.x, s.y + 3 * z);
     }
   } else if (k.tipe === "mobil" || k.tipe === "ambulans") {
     // v22-W2: mobil & ambulans belum punya sprite — gambar vektor
@@ -2315,13 +2351,14 @@ function gambarSatuKendaraan(k, lebar, tinggi) {
     // Sudut layar dari arah tile (isometri): sx = cos-sin, sy = (cos+sin)/2.
     const t = tileTengahDunia(k.x, k.y);
     const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
-    const warna = (k.tipe === "ambulans") ? "#ffffff" : (k.warna || "#0984e3");
+    const warna = (k.tipe === "ambulans") ? "#ffffff" : (k.warna === "#0984e3" || !k.warna ? "#00a8ff" : k.warna);
     const ca = Math.cos(k.arah || 0), sa = Math.sin(k.arah || 0);
     const sudutLayar = Math.atan2((ca + sa) * 0.5, ca - sa);
+    const pw = 40 * z, ph = 18 * z, r = 5 * z;
+    sorotan(s.x, s.y + 6 * z, pw * 0.62, ph * 0.62);
     ctx.save();
     ctx.translate(s.x, s.y + 6 * z);
     ctx.rotate(sudutLayar);
-    const pw = 26 * z, ph = 12 * z, r = 4 * z;
     ctx.fillStyle = "rgba(0,0,0,0.25)";
     ctx.beginPath(); ctx.ellipse(0, 2 * z, pw * 0.55, ph * 0.55, 0, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = warna;
@@ -2332,12 +2369,12 @@ function gambarSatuKendaraan(k, lebar, tinggi) {
     ctx.lineTo(-pw / 2 + r, ph / 2); ctx.quadraticCurveTo(-pw / 2, ph / 2, -pw / 2, ph / 2 - r);
     ctx.lineTo(-pw / 2, -ph / 2 + r); ctx.quadraticCurveTo(-pw / 2, -ph / 2, -pw / 2 + r, -ph / 2);
     ctx.fill();
-    ctx.strokeStyle = "rgba(0,0,0,0.35)"; ctx.lineWidth = 1; ctx.stroke();
+    ctx.strokeStyle = "rgba(0,0,0,0.55)"; ctx.lineWidth = Math.max(1.5, 2 * z); ctx.stroke();
     ctx.fillStyle = (k.tipe === "ambulans") ? "#dfe6e9" : "rgba(255,255,255,0.75)";
     ctx.fillRect(-pw * 0.18, -ph * 0.32, pw * 0.36, ph * 0.64);
     ctx.fillStyle = "#2d3436";
     for (const [rx, ry] of [[-pw * 0.32, -ph / 2], [pw * 0.32, -ph / 2], [-pw * 0.32, ph / 2], [pw * 0.32, ph / 2]]) {
-      ctx.beginPath(); ctx.arc(rx, ry, 2.6 * z, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(rx, ry, 3.2 * z, 0, Math.PI * 2); ctx.fill();
     }
     if (k.tipe === "ambulans") {
       ctx.fillStyle = "#d63031";
@@ -2354,17 +2391,35 @@ function gambarSatuKendaraan(k, lebar, tinggi) {
     const t = tileTengahDunia(k.x, k.y + Math.sin(frame / 30) * 0.15);
     const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
     const img = gambarAset["assets/vehicles/kapal-kargo.png"];
+    bayangan(s.x, s.y, 36 * z, 10 * z, 0.18);
     if (img && img.complete && img.naturalWidth) {
       const w = 70 * z, h = w * (img.naturalHeight / img.naturalWidth);
       ctx.drawImage(img, s.x - w / 2, s.y - h * 0.6, w, h);
+    } else {
+      // v22.4: fallback vektor bila sprite kapal belum termuat.
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath(); ctx.ellipse(s.x, s.y, 34 * z, 10 * z, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#0984e3";
+      ctx.fillRect(s.x - 30 * z, s.y - 14 * z, 60 * z, 8 * z);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold " + Math.max(8, 10 * z) + "px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("KAPAL", s.x, s.y - 5 * z);
     }
   } else if (k.tipe === "perahu") {
     const t = tileTengahDunia(k.x, k.y + Math.sin(frame / 40 + 2) * 0.2);
     const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
     const img = gambarAset["assets/vehicles/perahu-kecil.png"];
+    bayangan(s.x, s.y, 22 * z, 7 * z, 0.18);
     if (img && img.complete && img.naturalWidth) {
       const w = 40 * z, h = w * (img.naturalHeight / img.naturalWidth);
       ctx.drawImage(img, s.x - w / 2, s.y - h * 0.5, w, h);
+    } else {
+      // v22.4: fallback vektor bila sprite perahu belum termuat.
+      ctx.fillStyle = "#8a6d3b";
+      ctx.beginPath(); ctx.ellipse(s.x, s.y, 20 * z, 6 * z, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold " + Math.max(8, 9 * z) + "px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("PERAHU", s.x, s.y - 2 * z);
     }
   }
 }
@@ -4087,7 +4142,24 @@ function renderPanelKiri() {
       html += "<div class='barisStat'><span>Kemacetan (nyata)</span><b>Lancar — jalan kosong</b></div>";
       html += "<div class='misiDes'>Tidak ada kendaraan bergerak — angka volume di atas estimasi permintaan zona (rumus penduduk &amp; bangunan), bukan lalu lintas nyata.</div>";
     } else {
-      html += "<div class='barisStat'><span>Kemacetan (skor)</span><b>" + ((S.lalin && typeof S.lalin.skor === "number") ? S.lalin.skor + "/100 · " + (S.lalin.skor >= 70 ? "Lancar" : S.lalin.skor >= 40 ? "Padat" : "Macet") : "—") + "</b></div>";
+      // v22.4-W3 — LABEL JUJUR LANJUTAN: skor zona (S.lalin.skor) adalah
+      // estimasi permintaan (rumus penduduk & bangunan) — 1–2 kendaraan
+      // di jalan pendek bisa membuatnya "Padat 53/100" padahal jalan
+      // nyaris kosong. Label utama kini dari kepadatan NYATA
+      // (kendaraan bergerak vs kapasitas simultan jalan,
+      // kepadatanNyataLalin di city-lalin.js); skor zona hanya angka
+      // estimasi pendamping. S.lalin.skor/kemacetan/perPetak TIDAK
+      // diubah — tetap dipakai kebahagiaan, overlay & A*.
+      const nyata = (typeof kepadatanNyataLalin === "function") ? kepadatanNyataLalin(kendaraanBergerak) : null;
+      const skorZona = (S.lalin && typeof S.lalin.skor === "number") ? S.lalin.skor : null;
+      const labelZona = skorZona === null ? "—" : skorZona + "/100 · " + (skorZona >= 70 ? "Lancar" : skorZona >= 40 ? "Padat" : "Macet");
+      if (nyata) {
+        html += "<div class='barisStat'><span>Kemacetan (nyata)</span><b>" + nyata.label + " · " + nyata.kendaraanBergerak + " kendaraan / kapasitas " + nyata.kapasitasSimultan + " (rasio " + nyata.rasio + ")</b></div>";
+        html += "<div class='barisStat'><span>Skor zona (estimasi)</span><span>" + labelZona + "</span></div>";
+        if (nyata.kendaraanBergerak <= 2) html += "<div class='misiDes'>Hanya " + nyata.kendaraanBergerak + " kendaraan di jalan — 1–2 kendaraan tidak bisa menimbulkan macet, berapa pun skor zona di atas.</div>";
+      } else {
+        html += "<div class='barisStat'><span>Kemacetan (skor)</span><b>" + labelZona + "</b></div>";
+      }
     }
     html += "<div class='barisStat'><span>Kecepatan rata-rata</span><span>" + (kecRata !== null ? kecRata + " km/jam" + (jalanKosong ? " (estimasi)" : "") : "—") + "</span></div>";
     html += "<div class='barisStat'><span>Waktu perjalanan</span><span>" + (tempuhRata !== null ? tempuhRata + " detik/petak" + (jalanKosong ? " (estimasi)" : "") : "—") + "</span></div>";
