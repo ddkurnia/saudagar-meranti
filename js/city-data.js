@@ -1,64 +1,99 @@
 // =====================================================================
-// SAUDAGAR SAGU MERANTI — CITY BUILDER (v13)
+// MERANTI RISING — CITY BUILDER (v17)
 // DATA: katalog bangunan, jalan, teknologi, misi, level peradaban,
-// komoditas & harga. Semua sistem membaca data ini (data-driven) —
-// menambah bangunan baru = menambah satu entri di sini.
+// komoditas & harga, terrain, pulau & kecamatan. Semua sistem membaca
+// data ini (data-driven) — menambah bangunan baru = menambah satu
+// entri di sini.
 // =====================================================================
 
 const CITY = {
   VERSI_SAVE: 1,
-  SAVE_KEY: "saudagarSaguMerantiCityV1",
-  SAVE_LAMA: "saudagarSaguMerantiV1",
+  SAVE_KEY: "merantiRisingWorldV1",
+  SAVE_LAMA: "saudagarSaguMerantiCityV1", // kunci lama v13-v15 — hanya untuk migrasi uang
   PROFIL_KEY: "merantiRisingProfilV1", // profil pemain (nama, karakter, avatar) — terpisah dari simpanan game
-  GRID_W: 96,
-  GRID_H: 72,
+  GRID_W: 480,
+  GRID_H: 320,
   TILE_W: 64,
   TILE_H: 32,
   SEED: 20261111,
-  // Posisi pulau utama 40x30 di dalam peta kepulauan 96x72 (tengah).
-  PULAU_UTAMA_X: 28,
-  PULAU_UTAMA_Y: 21,
 };
 
-// ---------------- Kepulauan (v15: 25 pulau) ----------------
+// ---------------- Kepulauan (v17: 27 pulau, dunia 480x320) ----------------
 // Pulau 0 = Tebing Tinggi (pulau utama, tempat permukiman pemain).
 // komoditas = hasil unggulan pulau itu (dikirim lewat rute feri).
+// cx/cy = pusat pulau (petak), rx/ry = jari-jari elips pulau (petak).
 const PULAU_DEFS = [
-  { id: "tebing-tinggi",  nama: "Tebing Tinggi",  ukuran: "besar", komoditas: "tual" },
-  { id: "rangsang",       nama: "Rangsang",       ukuran: "besar", komoditas: "kopra" },
-  { id: "padang",         nama: "Padang",         ukuran: "besar", komoditas: "karet" },
-  { id: "merbau",         nama: "Merbau",         ukuran: "sedang", komoditas: "kayu" },
-  { id: "topang",         nama: "Topang",         ukuran: "sedang", komoditas: "pinang" },
-  { id: "mendol",         nama: "Mendol",         ukuran: "sedang", komoditas: "kopra" },
-  { id: "rangsang-barat", nama: "Rangsang Barat", ukuran: "sedang", komoditas: "karet" },
-  { id: "ketam",          nama: "Ketam",          ukuran: "sedang", komoditas: "kayu" },
-  { id: "cawan",          nama: "Cawan",          ukuran: "sedang", komoditas: "batu" },
-  { id: "sagu",           nama: "Pulau Sagu",     ukuran: "kecil", komoditas: "tual" },
-  { id: "nipah",          nama: "Pulau Nipah",    ukuran: "kecil", komoditas: "pinang" },
-  { id: "rumbia",         nama: "Pulau Rumbia",   ukuran: "kecil", komoditas: "kayu" },
-  { id: "kelapa",         nama: "Pulau Kelapa",   ukuran: "kecil", komoditas: "kopra" },
-  { id: "pinang",         nama: "Pulau Pinang",   ukuran: "kecil", komoditas: "pinang" },
-  { id: "bakau",          nama: "Pulau Bakau",    ukuran: "kecil", komoditas: "kayu" },
-  { id: "pasir",          nama: "Pulau Pasir",    ukuran: "kecil", komoditas: "batu" },
-  { id: "karang",         nama: "Pulau Karang",   ukuran: "kecil", komoditas: "besi" },
-  { id: "tanjung",        nama: "Tanjung",        ukuran: "kecil", komoditas: "karet" },
-  { id: "selat",          nama: "Pulau Selat",    ukuran: "kecil", komoditas: "kopra" },
-  { id: "akar",           nama: "Pulau Akar",     ukuran: "kecil", komoditas: "kayu" },
-  { id: "bunga",          nama: "Pulau Bunga",    ukuran: "kecil", komoditas: "karet" },
-  { id: "damar",          nama: "Pulau Damar",    ukuran: "kecil", komoditas: "kayu" },
-  { id: "jati",           nama: "Pulau Jati",     ukuran: "kecil", komoditas: "kayu" },
-  { id: "padi",           nama: "Pulau Padi",     ukuran: "kecil", komoditas: "tual" },
-  { id: "mutiara",        nama: "Pulau Mutiara",  ukuran: "kecil", komoditas: "kopra" },
+  { id: "tebing-tinggi",     nama: "Tebing Tinggi",  ukuran: "besar", komoditas: "tual",   cx: 240, cy: 160, rx: 95, ry: 60 },
+  { id: "rangsang",          nama: "Rangsang",       ukuran: "besar", komoditas: "kopra",  cx: 415, cy: 150, rx: 58,  ry: 40 },
+  { id: "padang",            nama: "Padang",         ukuran: "besar", komoditas: "karet",  cx: 425, cy: 235, rx: 42,  ry: 28 },
+  { id: "merbau",            nama: "Merbau",         ukuran: "sedang", komoditas: "kayu",  cx: 95,  cy: 85,  rx: 48,  ry: 30 },
+  { id: "tasik-putri-puyu",  nama: "Tasik Putri Puyu", ukuran: "sedang", komoditas: "tual", cx: 140, cy: 58,  rx: 26,  ry: 17 },
+  { id: "pulau-merbau",      nama: "Pulau Merbau",   ukuran: "sedang", komoditas: "pinang", cx: 65,  cy: 130, rx: 30,  ry: 20 },
+  { id: "topang",            nama: "Topang",         ukuran: "sedang", komoditas: "pinang", cx: 230, cy: 60, rx: 22,  ry: 15 },
+  { id: "mendol",            nama: "Mendol",         ukuran: "sedang", komoditas: "kopra",  cx: 340, cy: 60,  rx: 24,  ry: 16 },
+  { id: "rangsang-barat",    nama: "Rangsang Barat", ukuran: "sedang", komoditas: "karet",  cx: 360, cy: 210, rx: 26,  ry: 18 },
+  { id: "ketam",             nama: "Ketam",          ukuran: "sedang", komoditas: "kayu",   cx: 300, cy: 230, rx: 22,  ry: 15 },
+  { id: "cawan",             nama: "Cawan",          ukuran: "sedang", komoditas: "batu",   cx: 200, cy: 240, rx: 20,  ry: 14 },
+  { id: "sagu",              nama: "Pulau Sagu",     ukuran: "kecil", komoditas: "tual",   cx: 150, cy: 250, rx: 12,  ry: 8 },
+  { id: "nipah",             nama: "Pulau Nipah",    ukuran: "kecil", komoditas: "pinang", cx: 260, cy: 260, rx: 10,  ry: 7 },
+  { id: "rumbia",            nama: "Pulau Rumbia",   ukuran: "kecil", komoditas: "kayu",   cx: 120, cy: 180, rx: 11,  ry: 8 },
+  { id: "kelapa",            nama: "Pulau Kelapa",   ukuran: "kecil", komoditas: "kopra",  cx: 420, cy: 90,  rx: 12,  ry: 8 },
+  { id: "pinang",            nama: "Pulau Pinang",   ukuran: "kecil", komoditas: "pinang", cx: 350, cy: 260, rx: 10,  ry: 7 },
+  { id: "bakau",             nama: "Pulau Bakau",    ukuran: "kecil", komoditas: "kayu",   cx: 60,  cy: 200, rx: 11,  ry: 8 },
+  { id: "pasir",             nama: "Pulau Pasir",    ukuran: "kecil", komoditas: "batu",   cx: 450, cy: 180, rx: 9,   ry: 6 },
+  { id: "karang",            nama: "Pulau Karang",   ukuran: "kecil", komoditas: "besi",   cx: 280, cy: 40,  rx: 9,   ry: 6 },
+  { id: "tanjung",           nama: "Tanjung",        ukuran: "kecil", komoditas: "karet",  cx: 40,  cy: 60,  rx: 8,   ry: 6 },
+  { id: "selat",             nama: "Pulau Selat",    ukuran: "kecil", komoditas: "kopra",  cx: 200, cy: 40,  rx: 9,   ry: 6 },
+  { id: "akar",              nama: "Pulau Akar",     ukuran: "kecil", komoditas: "kayu",   cx: 380, cy: 290, rx: 10,  ry: 7 },
+  { id: "bunga",             nama: "Pulau Bunga",    ukuran: "kecil", komoditas: "karet",  cx: 150, cy: 290, rx: 9,   ry: 6 },
+  { id: "damar",             nama: "Pulau Damar",    ukuran: "kecil", komoditas: "kayu",   cx: 90,  cy: 250, rx: 9,   ry: 6 },
+  { id: "jati",              nama: "Pulau Jati",     ukuran: "kecil", komoditas: "kayu",   cx: 460, cy: 270, rx: 9,   ry: 6 },
+  { id: "padi",              nama: "Pulau Padi",     ukuran: "kecil", komoditas: "tual",   cx: 230, cy: 300, rx: 10,  ry: 7 },
+  { id: "mutiara",           nama: "Pulau Mutiara",  ukuran: "kecil", komoditas: "kopra",  cx: 30,  cy: 150, rx: 8,   ry: 6 },
 ];
 
-// ---------------- Terrain ----------------
+// ---------------- Kecamatan (v17, 9 kecamatan) ----------------
+// CATATAN: batas kecamatan mengikuti pulau/geografi, BUKAN koordinat
+// resmi BPS. Ibu kota mengikuti data resmi Kabupaten Kepulauan Meranti
+// (Sekretariat Daerah/BPS & situs resmi kecamatan).
+// - Rangsang Pesisir beribu kota di Telesung (situs resmi kecamatan &
+//   Wikipedia/Perda 17/2012); sumber lama (BPS/Sekda 2016) menyebut Sonde.
+// - Tebing Tinggi Barat beribu kota di Alai (BPS, Perbup 9/2017, Perda
+//   RTRW 8/2020); "Alah Air" adalah kelurahan di Kec. Tebing Tinggi.
+const KECAMATAN_DEFS = [
+  { id: "tebing-tinggi-barat", nama: "Tebing Tinggi Barat", ibuKota: "Alai",          pulau: "tebing-tinggi",     komoditas: "sagu",   warna: "#16a34a", des: "Kecamatan di barat Pulau Tebing Tinggi, beribu kota di Alai, penghasil sagu." },
+  { id: "tebing-tinggi",       nama: "Tebing Tinggi",       ibuKota: "Selatpanjang", pulau: "tebing-tinggi",     komoditas: "tual",   warna: "#0ea5e9", des: "Kecamatan pusat kabupaten di Pulau Tebing Tinggi, beribu kota di Selatpanjang, penghasil tual sagu." },
+  { id: "tebing-tinggi-timur", nama: "Tebing Tinggi Timur", ibuKota: "Sungai Tohor", pulau: "tebing-tinggi",     komoditas: "karet",  warna: "#84cc16", des: "Kecamatan di timur Pulau Tebing Tinggi, beribu kota di Sungai Tohor, penghasil karet." },
+  { id: "rangsang-barat",      nama: "Rangsang Barat",      ibuKota: "Bantar",        pulau: "rangsang",          komoditas: "kopra",  warna: "#f59e0b", des: "Kecamatan di barat Pulau Rangsang, beribu kota di Bantar, penghasil kopra." },
+  { id: "rangsang-pesisir",    nama: "Rangsang Pesisir",    ibuKota: "Telesung",      pulau: "rangsang",          komoditas: "ikan",   warna: "#06b6d4", des: "Kecamatan pesisir di Pulau Rangsang, beribu kota di Telesung, penghasil ikan." },
+  { id: "rangsang",            nama: "Rangsang",            ibuKota: "Tanjung Samak", pulau: "rangsang",          komoditas: "kopra",  warna: "#eab308", des: "Kecamatan di timur Pulau Rangsang, beribu kota di Tanjung Samak, penghasil kopra." },
+  { id: "merbau",              nama: "Merbau",              ibuKota: "Teluk Belitung", pulau: "merbau",           komoditas: "kayu",   warna: "#78350f", des: "Kecamatan di Pulau Merbau, beribu kota di Teluk Belitung, penghasil kayu." },
+  { id: "pulau-merbau",        nama: "Pulau Merbau",        ibuKota: "Semukut",       pulau: "pulau-merbau",      komoditas: "pinang", warna: "#a16207", des: "Kecamatan di Pulau Merbau, beribu kota di Semukut, penghasil pinang." },
+  { id: "tasik-putri-puyu",    nama: "Tasik Putri Puyu",    ibuKota: "Bandul",        pulau: "tasik-putri-puyu",  komoditas: "tual",   warna: "#059669", des: "Kecamatan terjauh di Pulau Tasik Putri Puyu, beribu kota di Bandul, penghasil tual sagu." },
+];
+
+// ---------------- Terrain (v17: 16 jenis) ----------------
+// bisaBangun: boleh dibangun di atasnya (penegakan aturan pantai:true
+// ada di cekBangun, bukan di sini). butuhBuka: biaya buka lahan sebelum
+// bisa dibangun (null = langsung bisa). Buka lahan hutan memberi +2
+// kayu — ditangani di city.js, bukan di sini.
 const TERRAIN = {
-  laut:    { nama: "Laut",        bangun: false, warna: "#2b7fd4", warna2: "#1f6fc0" },
-  pantai:  { nama: "Pantai",      bangun: true,  warna: "#f0d9a0", warna2: "#e8cf8e" },
-  rumput:  { nama: "Lahan Rumput",bangun: true,  warna: "#7ec850", warna2: "#74bd48" },
-  hutan:   { nama: "Hutan Tropis",bangun: true,  warna: "#4e9b47", warna2: "#458f3f", tebang: { kayu: 2 } },
-  rawa:    { nama: "Rawa Gambut", bangun: false, warna: "#6a8f5f", warna2: "#5f8455" },
-  sungai:  { nama: "Sungai",      bangun: false, warna: "#3d9bd6", warna2: "#358ec7" },
+  laut:       { nama: "Laut",          warna: "#1f6fc0", warna2: "#185aa8", bisaBangun: false, butuhBuka: null,              des: "Laut terbuka — tidak bisa dibangun, hanya dilayari feri dan perahu." },
+  pantai:     { nama: "Pantai",        warna: "#e8d8a0", warna2: "#dcc987", bisaBangun: true,  butuhBuka: null,              des: "Pasir pantai — hanya bangunan pantai (dermaga, pelabuhan, terminal feri, perikanan) yang boleh dibangun di sini." },
+  pesisir:    { nama: "Pesisir",       warna: "#86c95e", warna2: "#79bd52", bisaBangun: true,  butuhBuka: null,              des: "Lahan pesisir yang subur — bisa dibangun apa saja." },
+  hutan:      { nama: "Hutan Tropis",  warna: "#4e9b47", warna2: "#458f3f", bisaBangun: true,  butuhBuka: null,              des: "Hutan tropis — bisa dibuka lahannya (membuka lahan memberi +2 kayu) lalu dibangun." },
+  sagu:       { nama: "Rawa Sagu",     warna: "#66b35c", warna2: "#5aa851", bisaBangun: true,  butuhBuka: null,              des: "Rawa sagu alami — lahan subur untuk kebun sagu, bisa dibangun." },
+  kelapa:     { nama: "Kebun Kelapa",  warna: "#8bc34a", warna2: "#7cb342", bisaBangun: true,  butuhBuka: null,              des: "Kebun kelapa alami — bisa dibangun, cocok untuk kebun kelapa." },
+  karet:      { nama: "Kebun Karet",   warna: "#558b2f", warna2: "#4a7d28", bisaBangun: true,  butuhBuka: null,              des: "Kebun karet alami — bisa dibangun, cocok untuk kebun karet." },
+  kopi:       { nama: "Kebun Kopi",    warna: "#8d9b4a", warna2: "#7d8c3e", bisaBangun: true,  butuhBuka: null,              des: "Kebun kopi Liberika alami — bisa dibangun, cocok untuk kebun kopi." },
+  sawah:      { nama: "Sawah",         warna: "#c4d94a", warna2: "#b3c93d", bisaBangun: true,  butuhBuka: null,              des: "Lahan sawah — bisa dibangun, cocok untuk pertanian padi." },
+  rawa:       { nama: "Rawa",          warna: "#6a8f5f", warna2: "#5f8455", bisaBangun: true,  butuhBuka: { uang: 10000 }, des: "Rawa — harus didrainase dulu (Rp10.000) sebelum bisa dibangun." },
+  gambut:     { nama: "Lahan Gambut",  warna: "#795548", warna2: "#6a4a3d", bisaBangun: true,  butuhBuka: { uang: 15000 }, des: "Lahan gambut — harus dikelola airnya dulu (Rp15.000) sebelum bisa dibangun." },
+  mangrove:   { nama: "Mangrove",      warna: "#2f6b5a", warna2: "#27604f", bisaBangun: false, butuhBuka: null,              des: "Hutan mangrove lindung — tidak bisa dibangun." },
+  sungai:     { nama: "Sungai",        warna: "#3d9bd6", warna2: "#358ec7", bisaBangun: false, butuhBuka: null,              des: "Sungai — tidak bisa dibangun, hanya bisa diseberangi jembatan." },
+  kanal:      { nama: "Kanal",         warna: "#4aa3d8", warna2: "#3f93c8", bisaBangun: false, butuhBuka: null,              des: "Kanal — tidak bisa dibangun, hanya bisa diseberangi jembatan." },
+  permukiman: { nama: "Permukiman",    warna: "#d8c49a", warna2: "#cbb489", bisaBangun: true,  butuhBuka: null,              des: "Lahan permukiman desa awal — bisa dibangun apa saja." },
+  industri:   { nama: "Zona Industri", warna: "#9c8e7e", warna2: "#8d7f6e", bisaBangun: true,  butuhBuka: null,              des: "Zona industri — bisa dibangun, cocok untuk pabrik dan gudang." },
 };
 
 // ---------------- Komoditas & harga dasar (Rp) ----------------

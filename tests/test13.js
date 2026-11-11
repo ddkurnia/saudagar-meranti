@@ -27,7 +27,11 @@ function buatEl(id) {
 const elemen = {};
 const listeners = {};
 const store = new Map();
+// v17: SAVE_LAMA = "saudagarSaguMerantiCityV1" (simpanan kota v13-v16).
+// Kunci lama "saudagarSaguMerantiV1" ikut diisi agar tes migrasi tetap
+// jalan bila modul city-data.js v17 belum selesai (SAVE_LAMA lama).
 store.set("saudagarSaguMerantiV1", JSON.stringify({ uang: 940000, day: 44 }));
+store.set("saudagarSaguMerantiCityV1", JSON.stringify({ uang: 940000, day: 44 }));
 const sandbox = {
   console: console,
   setTimeout: setTimeout, clearTimeout: clearTimeout,
@@ -55,7 +59,7 @@ const src = fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-data
   + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-map.js", "utf8")
   + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city.js", "utf8");
 vm.runInContext(src, sandbox);
-for (const nama of ["S", "peta", "BANGUNAN", "BANGUNAN_MAP", "TEKNOLOGI_MAP", "KATEGORI", "MISI", "LEVEL_PERADABAN", "KOMODITAS", "JALAN", "JEMBATAN", "TERRAIN", "CITY", "mode", "hover", "terpilih", "kecepatan", "kamera", "jamVisual", "akumulasiHari", "wargaVisual", "kendaraanVisual", "TAB_BANGUN", "tilePratinjau", "jembatanMulai", "profilPemain", "TUTORIAL"]) {
+for (const nama of ["S", "peta", "BANGUNAN", "BANGUNAN_MAP", "TEKNOLOGI_MAP", "KATEGORI", "MISI", "LEVEL_PERADABAN", "KOMODITAS", "JALAN", "JEMBATAN", "TERRAIN", "CITY", "mode", "hover", "terpilih", "kecepatan", "kamera", "jamVisual", "akumulasiHari", "wargaVisual", "kendaraanVisual", "TAB_BANGUN", "tilePratinjau", "jembatanMulai", "profilPemain", "TUTORIAL", "KECAMATAN_DEFS", "PULAU_DEFS", "VERSI_GAME"]) {
   Object.defineProperty(sandbox, nama, { get: () => vm.runInContext(nama, sandbox), configurable: true });
 }
 listeners["DOMContentLoaded"]();
@@ -67,6 +71,14 @@ function cek(nama, kond, info) {
 }
 const C = sandbox;
 
+// v17: TERRAIN memakai `bisaBangun` (fallback ke `.bangun` lama bila ada).
+function bisaBangun(t) {
+  const d = C.TERRAIN[t];
+  if (!d) return false;
+  if (d.bisaBangun !== undefined) return !!d.bisaBangun;
+  return !!d.bangun;
+}
+
 const p1 = C.generatePeta(20261111);
 const p2 = C.generatePeta(20261111);
 cek("peta deterministik (seed sama = terrain sama)", JSON.stringify(p1.terrain) === JSON.stringify(p2.terrain));
@@ -76,7 +88,7 @@ cek("peta punya laut", (hitung.laut || 0) > 100, hitung.laut);
 cek("peta punya pantai", (hitung.pantai || 0) > 20, hitung.pantai);
 cek("peta punya hutan", (hitung.hutan || 0) > 20, hitung.hutan);
 cek("peta punya sungai", (hitung.sungai || 0) > 5, hitung.sungai);
-cek("peta punya rumput", (hitung.rumput || 0) > 100, hitung.rumput);
+cek("peta punya pesisir", (hitung.pesisir || 0) > 100, hitung.pesisir);
 cek("landing di pantai", C.terrainDi(p1, p1.landing.x, p1.landing.y) === "pantai");
 const t0 = C.tileKeDunia(5, 7);
 const kembali = C.duniaKeTile(t0.x, t0.y);
@@ -84,7 +96,7 @@ cek("proyeksi iso pulang-pergi", Math.round(kembali.x) === 5 && Math.round(kemba
 
 C.mulaiGame(true);
 cek("game dimulai (state ada)", !!C.S);
-cek("migrasi save lama: uang awal 750.000 + 940.000", C.S.uang === 1690000, C.S.uang);
+cek("migrasi save kota lama (v13-v16): uang awal 750.000 + 940.000", C.S.uang === 1690000, C.S.uang);
 cek("dermaga awal ada", C.S.bangunan.some(b => b.id === "dermaga"));
 cek("jalan awal ada", C.S.jalan.length >= 2, C.S.jalan.length);
 cek("rumah perintis ada", C.S.bangunan.some(b => b.id === "rumah-sederhana"));
@@ -94,17 +106,27 @@ let tileBangun = null;
 outer2: for (const j of C.S.jalan) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
   const tx = j.x + dx, ty = j.y + dy;
   const t = C.terrainDi(C.peta, tx, ty);
-  if (C.TERRAIN[t].bangun && !C.adaBangunanDi(C.S, tx, ty) && !C.adaJalanDi(C.S, tx, ty)) { tileBangun = { x: tx, y: ty }; break outer2; }
+  // v17: rumah tidak boleh di pantai, rawa/gambut (biaya buka lahan), atau
+  // hutan (tebang menambah kayu — merusak ekspektasi uang/kayu di bawah).
+  if (bisaBangun(t) && !C.TERRAIN[t].butuhBuka && t !== "pantai" && t !== "hutan" && !C.adaBangunanDi(C.S, tx, ty) && !C.adaJalanDi(C.S, tx, ty)) { tileBangun = { x: tx, y: ty }; break outer2; }
 }
 cek("ditemukan tile bangun di samping jalan", !!tileBangun);
 const defRumah = C.BANGUNAN_MAP["rumah-sederhana"];
 const cekOk = C.cekBangun(defRumah, tileBangun.x, tileBangun.y, 0);
 cek("cekBangun rumah di samping jalan = ok", cekOk.ok, cekOk.alasan);
-const cekLaut = C.cekBangun(defRumah, 0, 0, 0);
+let tileLaut = null;
+outerLaut: for (let y = 0; y < C.peta.H; y++) for (let x = 0; x < C.peta.W; x++) {
+  if (C.terrainDi(C.peta, x, y) === "laut") { tileLaut = { x: x, y: y }; break outerLaut; }
+}
+cek("ditemukan petak laut", !!tileLaut);
+const cekLaut = tileLaut ? C.cekBangun(defRumah, tileLaut.x, tileLaut.y, 0) : { ok: true };
 cek("cekBangun di laut = ditolak", !cekLaut.ok);
 let tileJauh = null;
 outer: for (let y = 0; y < C.peta.H; y++) for (let x = 0; x < C.peta.W; x++) {
-  if (C.terrainDi(C.peta, x, y) === "rumput" && !C.adaBangunanDi(C.S, x, y) && !C.adaJalanDi(C.S, x, y)) {
+  // v17: tidak ada lagi terrain "rumput" — pakai lahan darat biasa
+  // (bisa dibangun, tanpa biaya buka lahan, bukan pantai).
+  const tj = C.terrainDi(C.peta, x, y);
+  if (C.TERRAIN[tj] && bisaBangun(tj) && !C.TERRAIN[tj].butuhBuka && tj !== "pantai" && !C.adaBangunanDi(C.S, x, y) && !C.adaJalanDi(C.S, x, y)) {
     let dekat = false;
     for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (C.adaJalanDi(C.S, x + i, y + j)) dekat = true;
     if (!dekat) { tileJauh = { x: x, y: y }; break outer; }
@@ -135,7 +157,8 @@ function cariLahan(w, h) {
     let ok = true;
     for (let j = 0; j < h && ok; j++) for (let i = 0; i < w && ok; i++) {
       const t = C.terrainDi(C.peta, x + i, y + j);
-      if (t !== "rumput" && t !== "hutan") ok = false;
+      // v17: lahan kosong = terrain bisa dibangun, tanpa biaya buka lahan, bukan pantai
+      if (!C.TERRAIN[t] || !bisaBangun(t) || C.TERRAIN[t].butuhBuka || t === "pantai") ok = false;
       if (C.adaBangunanDi(C.S, x + i, y + j) || C.adaJalanDi(C.S, x + i, y + j)) ok = false;
     }
     if (ok) return { x: x, y: y };
@@ -147,7 +170,7 @@ function beriAksesJalan(lahan, w, h) {
     let bisa = true;
     for (let j = 0; j < h; j++) {
       const t = C.terrainDi(C.peta, lahan.x + sisi, lahan.y + j);
-      if (!C.TERRAIN[t].bangun || C.adaBangunanDi(C.S, lahan.x + sisi, lahan.y + j) || C.adaJalanDi(C.S, lahan.x + sisi, lahan.y + j)) { bisa = false; break; }
+      if (!bisaBangun(t) || C.TERRAIN[t].butuhBuka || C.adaBangunanDi(C.S, lahan.x + sisi, lahan.y + j) || C.adaJalanDi(C.S, lahan.x + sisi, lahan.y + j)) { bisa = false; break; }
     }
     if (bisa) { for (let j = 0; j < h; j++) C.bangunJalanDi("jalan-tanah", lahan.x + sisi, lahan.y + j); return true; }
   }
@@ -248,18 +271,32 @@ cek("koneksi lurus (10,10) = Timur", C.koneksiJalanDi(10, 10, false) === 1);
 cek("koneksi lurus (11,10) = Barat", C.koneksiJalanDi(11, 10, false) === 4);
 cek("koneksi T (15,15) = Timur+Barat+Selatan", C.koneksiJalanDi(15, 15, false) === (1 | 4 | 2), C.koneksiJalanDi(15, 15, false));
 cek("koneksi tile kosong = 0", C.koneksiJalanDi(20, 20, false) === 0);
-// jembatan di tile sungai pertama: mask = tetangga darat/jalan
-const sg = C.peta.sungai[0];
+// jembatan di petak sungai pertama yang tetangganya "bersih"
+// (laut/sungai/lahan darat biasa — tanpa kanal/rawa/gambut/mangrove,
+// agar aturan koneksi tidak ambigu antara versi): mask = tetangga darat/jalan
+let sg = null;
+outerSg: for (let y = 1; y < C.peta.H - 1; y++) for (let x = 1; x < C.peta.W - 1; x++) {
+  if (C.terrainDi(C.peta, x, y) !== "sungai") continue;
+  let bersih = true;
+  for (const [dx, dy] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) {
+    const t = C.terrainDi(C.peta, x + dx, y + dy);
+    if (!(t === "laut" || t === "sungai" || (C.TERRAIN[t] && bisaBangun(t) && !C.TERRAIN[t].butuhBuka))) { bersih = false; break; }
+  }
+  if (bersih) { sg = [x, y]; break outerSg; }
+}
+cek("ditemukan petak sungai untuk uji jembatan", !!sg);
+if (sg) {
 C.S.jembatan = [{ x: sg[0], y: sg[1], tipe: "jembatan-kecil" }];
 const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
 let maskHarap = 0;
 for (let d = 0; d < 4; d++) {
   const nx = sg[0] + DIRS[d][0], ny = sg[1] + DIRS[d][1];
   if (C.adaJalanDi(C.S, nx, ny)) maskHarap |= (1 << d);
-  else { const t = C.terrainDi(C.peta, nx, ny); if (t !== "laut" && t !== "sungai") maskHarap |= (1 << d); }
+  else { const t = C.terrainDi(C.peta, nx, ny); if (t !== "laut" && t !== "sungai" && t !== "kanal") maskHarap |= (1 << d); }
 }
 cek("jembatan tersambung ke darat/jalan", maskHarap !== 0, "mask " + maskHarap);
 cek("koneksi jembatan sesuai terrain tetangga", C.koneksiJalanDi(sg[0], sg[1], true) === maskHarap, C.koneksiJalanDi(sg[0], sg[1], true) + " vs " + maskHarap);
+}
 // gerakan: agen mengikuti jalan L sampai ujung, belok bertahap, tetap di koridor
 cek("kecepatan game = 1 (untuk uji gerak)", C.kecepatan === 1, C.kecepatan);
 const agen = { x: 5, y: 5, tx: 5, ty: 5, arah: 0, cepat: 0.8, jalan: false,
@@ -343,7 +380,7 @@ const tengahMini = vm.runInContext("tileTengahDunia(20, 15)", sandbox);
 C.kamera.cx = tengahMini.x; C.kamera.cy = tengahMini.y; C.kamera.zoom = 2;
 C.gambarMinimap();
 const kotak1 = rekam.isi.filter(r => r[0] === "stroke").pop();
-cek("kotak minimap berbentuk kotak (lebar & tinggi < peta)", !!kotak1 && kotak1[3] < 220 && kotak1[4] < 132 && kotak1[3] > 10 && kotak1[4] > 10, kotak1 ? kotak1.slice(1).map(v => Math.round(v)).join(",") : "tidak ada");
+cek("kotak minimap berbentuk kotak (lebar & tinggi < peta)", !!kotak1 && kotak1[3] < 220 && kotak1[4] < 132 && kotak1[3] >= 4 && kotak1[4] >= 4, kotak1 ? kotak1.slice(1).map(v => Math.round(v)).join(",") : "tidak ada");
 const tengahMini2 = vm.runInContext("tileTengahDunia(10, 10)", sandbox);
 C.kamera.cx = tengahMini2.x; C.kamera.cy = tengahMini2.y;
 rekam.isi = [];
@@ -364,37 +401,32 @@ const sC2 = vm.runInContext('duniaKeLayar(' + tC2.x + ', ' + tC2.y + ', 800, 600
 const klik2 = vm.runInContext('pointerKeTile({ clientX: ' + sC2.x + ', clientY: ' + sC2.y + ' })', sandbox);
 cek("klik di tengah tile (25,11) memilih tile itu", klik2.x === 25 && klik2.y === 11, JSON.stringify(klik2));
 
-// v15: kepulauan 25 pulau
-cek("peta kepulauan 96x72", C.peta.W === 96 && C.peta.H === 72, C.peta.W + "x" + C.peta.H);
-cek("25 pulau terdaftar", C.peta.pulau.length === 25, C.peta.pulau.length);
+// v17: peta besar 480x320, 27 pulau, 9 kecamatan (bukan lagi 96x72 / 25 pulau)
+cek("peta 480x320 (v17)", C.peta.W === 480 && C.peta.H === 320, C.peta.W + "x" + C.peta.H);
+cek("27 pulau terdaftar", C.peta.pulau.length === 27, C.peta.pulau.length);
 const daratPerPulau = {};
 for (let y = 0; y < C.peta.H; y++) for (let x = 0; x < C.peta.W; x++) { const id = C.peta.pulauDi[y][x]; if (id >= 0) daratPerPulau[id] = (daratPerPulau[id] || 0) + 1; }
-cek("semua 25 pulau punya daratan", Object.keys(daratPerPulau).length === 25, Object.keys(daratPerPulau).length);
-const lama15 = C.generatePetaPulauUtama(20261111);
-let beda15 = 0;
-for (let y = 0; y < 30; y++) for (let x = 0; x < 40; x++) if (C.peta.terrain[y + 21][x + 28] !== lama15.terrain[y][x]) beda15++;
-cek("terrain pulau utama sama persis dengan peta lama", beda15 === 0, beda15 + " tile beda");
-cek("state baru: petaVersi 2 + pulau + ruteFeri", C.S.petaVersi === 2 && !!C.S.pulau && Array.isArray(C.S.ruteFeri));
+cek("semua 27 pulau punya daratan", Object.keys(daratPerPulau).length === 27, Object.keys(daratPerPulau).length);
+// DIHAPUS v17: tes "terrain pulau utama sama persis dengan peta lama"
+// (generatePetaPulauUtama 40x30) — peta v17 digambar ulang 480x320,
+// tidak ada lagi pulau utama 40x30 yang disalin persis; migrasi lama
+// diganti tes migrasi v17 di blok v17 (f).
+cek("state baru: pulau + ruteFeri", !!C.S.pulau && Array.isArray(C.S.ruteFeri));
 cek("pulau utama terhubung sejak awal", C.S.pulau["tebing-tinggi"].terhubung === true);
 cek("terminal-feri terdaftar (ekonomi, pantai, level 2)", !!C.BANGUNAN_MAP["terminal-feri"] && C.BANGUNAN_MAP["terminal-feri"].kat === "ekonomi" && C.BANGUNAN_MAP["terminal-feri"].pantai === true && C.BANGUNAN_MAP["terminal-feri"].level === 2);
 cek("55 bangunan di katalog", C.BANGUNAN.length === 55, C.BANGUNAN.length);
 cek("jembatan-gantung terdaftar (multi, level 3, tech transportasi)", !!C.JEMBATAN["jembatan-gantung"] && C.JEMBATAN["jembatan-gantung"].multi === true && C.JEMBATAN["jembatan-gantung"].level === 3);
 cek("4 aset v15 ada di disk", ["assets/buildings/building-terminal-feri.png", "assets/buildings/building-jembatan-gantung.png", "assets/vehicles/kapal-feri.png", "assets/vehicles/perahu-penyeberangan.png"].every(p => fs.existsSync(path.join(ROOT, p))));
-// Migrasi save lama (40x30) -> kepulauan
-const saveLama = { versi: 1, seed: 20261111, hari: 10, uang: 500000, kayu: 10, batu: 5, besi: 0, xp: 0, level: 1, akumulasi: 0,
-  komoditas: {}, bangunan: [{ id: "rumah-sederhana", x: 10, y: 10, rot: 0, selesai: true, progres: 1 }], jalan: [{ x: 10, y: 11, tipe: "jalan-tanah" }],
-  jembatan: [{ x: 25, y: 11, tipe: "jembatan-kecil" }], teknologi: {}, riset: null, misiSelesai: {},
-  statistik: { dibangun: {}, dibangunKat: {}, jalan: 1, jembatan: 1, produksi: {}, ekspor: 0, pendudukMax: 4, pendapatanHari: 0, pengeluaranHari: 0 },
-  bersih: [{ x: 5, y: 5 }], penduduk: { total: 4, bahagia: 60, bekerja: 0, menganggur: 0, cakupanPendidikan: 0, cakupanKesehatan: 0 }, log: [] };
-C.migrasiKepulauan(saveLama);
-cek("migrasi: bangunan digeser (+28,+21)", saveLama.bangunan[0].x === 38 && saveLama.bangunan[0].y === 31, JSON.stringify(saveLama.bangunan[0]));
-cek("migrasi: jalan & jembatan digeser", saveLama.jalan[0].x === 38 && saveLama.jembatan[0].x === 53 && saveLama.jembatan[0].y === 32);
-cek("migrasi: hutan ditebang digeser", saveLama.bersih[0].x === 33 && saveLama.bersih[0].y === 26);
-cek("migrasi: petaVersi 2, pulau & ruteFeri dibuat", saveLama.petaVersi === 2 && !!saveLama.pulau && Array.isArray(saveLama.ruteFeri));
+// DIHAPUS v17: migrasi save lama (40x30) -> kepulauan dengan penggeser
+// (+28,+21) dan migrasiKepulauan() — v17 TIDAK membawa bangunan/jalan/
+// jembatan lama (dunia baru 480x320), hanya modal uang + sumber daya.
+// Penggantinya: tes migrasi v17 di blok v17 (f) di bawah.
 // Jembatan Gantung: cari celah air nyata di peta (2 daratan sebaris, 2-8 petak air di antaranya)
 function cariCelahAir() {
   for (let y = 1; y < C.peta.H - 1; y++) for (let x = 1; x < C.peta.W - 9; x++) {
-    const darat = t => t !== "laut" && t !== "sungai" && t !== "rawa";
+    // v17: darat = bukan air (laut/sungai/kanal) dan bukan lahan basah
+    // (rawa/gambut/mangrove) — definisi ketat agar lolos di semua versi.
+    const darat = t => t !== "laut" && t !== "sungai" && t !== "kanal" && t !== "rawa" && t !== "gambut" && t !== "mangrove";
     if (!darat(C.terrainDi(C.peta, x, y))) continue;
     for (let j = 3; j <= 9; j++) {
       const x1 = x + j;
@@ -435,7 +467,9 @@ function cariPantai(pulauIdx) {
   }
   return null;
 }
-const pantaiUtama = cariPantai(0), pantaiRangsang = cariPantai(1);
+const idxUtama = C.peta.pulau.findIndex(p => p.id === "tebing-tinggi");
+const idxRangsang = C.peta.pulau.findIndex(p => p.id === "rangsang");
+const pantaiUtama = cariPantai(idxUtama), pantaiRangsang = cariPantai(idxRangsang);
 cek("ditemukan pantai di pulau utama & Rangsang", !!pantaiUtama && !!pantaiRangsang, JSON.stringify(pantaiUtama) + " / " + JSON.stringify(pantaiRangsang));
 if (pantaiUtama && pantaiRangsang) {
   C.S.bangunan.push({ id: "terminal-feri", x: pantaiUtama.x, y: pantaiUtama.y, rot: 0, selesai: true, progres: 1 });
@@ -447,11 +481,11 @@ if (pantaiUtama && pantaiRangsang) {
   cek("Rangsang terhubung", C.S.pulau["rangsang"].terhubung === true);
   cek("rute feri tercatat", C.S.ruteFeri.length === 1 && C.S.ruteFeri[0].pulauId === "rangsang");
   cek("buka rute yang sama ditolak", C.bukaRuteFeri("rangsang") === false);
-  cek("perdagangan Rangsang (besar) = Rp25.000/hari", C.perdaganganRute(C.peta.pulau[1]) === 25000, C.perdaganganRute(C.peta.pulau[1]));
+  cek("perdagangan Rangsang (besar) = Rp25.000/hari", C.perdaganganRute(C.peta.pulau[idxRangsang]) === 25000, C.perdaganganRute(C.peta.pulau[idxRangsang]));
   const uangK = C.S.uang;
   const okK = C.jalinKerjasama("rangsang");
   cek("jalin kerjasama berhasil (Rp100.000)", okK === true && C.S.uang === uangK - 100000);
-  cek("kerjasama level 1 -> perdagangan +50%", C.perdaganganRute(C.peta.pulau[1]) === 37500, C.perdaganganRute(C.peta.pulau[1]));
+  cek("kerjasama level 1 -> perdagangan +50%", C.perdaganganRute(C.peta.pulau[idxRangsang]) === 37500, C.perdaganganRute(C.peta.pulau[idxRangsang]));
   const kopraSebelum = C.S.komoditas.kopra || 0;
   C.hariBerikutnya();
   cek("perdagangan masuk rincian harian", (C.S.statistik.rincianHari.perdagangan || 0) === 37500, C.S.statistik.rincianHari.perdagangan);
@@ -482,7 +516,8 @@ let tileSentuh = null;
 outerS: for (const j of C.S.jalan) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
   const tx = j.x + dx, ty = j.y + dy;
   const t = C.terrainDi(C.peta, tx, ty);
-  if (C.TERRAIN[t].bangun && !C.adaBangunanDi(C.S, tx, ty) && !C.adaJalanDi(C.S, tx, ty)) { tileSentuh = { x: tx, y: ty }; break outerS; }
+  // v17: rumah tidak boleh di pantai / rawa / gambut
+  if (bisaBangun(t) && !C.TERRAIN[t].butuhBuka && t !== "pantai" && !C.adaBangunanDi(C.S, tx, ty) && !C.adaJalanDi(C.S, tx, ty)) { tileSentuh = { x: tx, y: ty }; break outerS; }
 }
 cek("ditemukan tile untuk uji ketuk sentuh", !!tileSentuh, JSON.stringify(tileSentuh));
 if (tileSentuh) {
@@ -500,7 +535,7 @@ if (tileSentuh) {
     const tx = j.x + dx, ty = j.y + dy;
     if (tx === tileSentuh.x && ty === tileSentuh.y) continue;
     const t = C.terrainDi(C.peta, tx, ty);
-    if (C.TERRAIN[t].bangun && !C.adaBangunanDi(C.S, tx, ty) && !C.adaJalanDi(C.S, tx, ty)) { tileLain2 = { x: tx, y: ty }; break outerL; }
+    if (bisaBangun(t) && !C.TERRAIN[t].butuhBuka && t !== "pantai" && !C.adaBangunanDi(C.S, tx, ty) && !C.adaJalanDi(C.S, tx, ty)) { tileLain2 = { x: tx, y: ty }; break outerL; }
   }
   if (tileLain2) {
     const jml2 = C.S.bangunan.length;
@@ -516,7 +551,7 @@ if (tileSentuh) {
   outerM: for (const j of C.S.jalan) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
     const tx = j.x + dx, ty = j.y + dy;
     const t = C.terrainDi(C.peta, tx, ty);
-    if (C.TERRAIN[t].bangun && !C.adaBangunanDi(C.S, tx, ty) && !C.adaJalanDi(C.S, tx, ty)) { tileMouse = { x: tx, y: ty }; break outerM; }
+    if (bisaBangun(t) && !C.TERRAIN[t].butuhBuka && t !== "pantai" && !C.adaBangunanDi(C.S, tx, ty) && !C.adaJalanDi(C.S, tx, ty)) { tileMouse = { x: tx, y: ty }; break outerM; }
   }
   if (tileMouse) {
     C.tanganiKetuk(tileMouse, 0, false);
@@ -568,7 +603,8 @@ const panggilSebelum = vm.runInContext('_panggilPanel', sandbox);
 let tileJalan = null;
 outerJ: for (let y = 0; y < C.peta.H; y++) for (let x = 0; x < C.peta.W; x++) {
   const t = C.terrainDi(C.peta, x, y);
-  if (C.TERRAIN[t].bangun && !C.adaJalanDi(C.S, x, y) && !C.adaBangunanDi(C.S, x, y)) { tileJalan = { x, y }; break outerJ; }
+  // v17: jalan di lahan darat biasa (bukan pantai/rawa/gambut)
+  if (bisaBangun(t) && !C.TERRAIN[t].butuhBuka && t !== "pantai" && !C.adaJalanDi(C.S, x, y) && !C.adaBangunanDi(C.S, x, y)) { tileJalan = { x, y }; break outerJ; }
 }
 if (tileJalan) {
   C.bangunJalanDi("jalan-tanah", tileJalan.x, tileJalan.y);
@@ -604,20 +640,35 @@ cek("permainan baru: tutorial aktif di langkah 0", C.S.tutorial.aktif === true &
 cek("bar atas: nama pemimpin tampil", vm.runInContext('$("namaPemimpin").textContent', sandbox) === "Pemimpin: Sukma");
 cek("bar atas: avatar wanita dipakai", vm.runInContext('$("avatarPemain").src', sandbox) === "assets/characters/pelanggan/idle.png");
 // Cari petak rumput kosong di samping jalan (untuk rumah) & petak jalan kosong
+// v17: lahan darat biasa untuk bangunan — bisa dibangun, tanpa biaya buka
+// lahan (rawa/gambut), bukan pantai (v17: bangunan non-pantai ditolak di
+// pantai), bukan hutan (tebang mengubah uang/kayu & terrain).
+function lahanDarat(x, y) {
+  const t = C.terrainDi(C.peta, x, y);
+  return !!C.TERRAIN[t] && bisaBangun(t) && !C.TERRAIN[t].butuhBuka && t !== "pantai" && t !== "hutan";
+}
 function cariTileRumah() {
   for (const j of C.S.jalan) {
     for (const d of [[1,0],[-1,0],[0,1],[0,-1]]) {
       const x = j.x + d[0], y = j.y + d[1];
-      const t = C.terrainDi(C.peta, x, y);
-      // Rumah boleh di rumput maupun pantai (kawasan pendaratan berpasir)
-      if ((t === "rumput" || t === "pantai") && !C.adaJalanDi(C.S, x, y) && !C.adaBangunanDi(C.S, x, y)) return { x, y };
+      if (lahanDarat(x, y) && !C.adaJalanDi(C.S, x, y) && !C.adaBangunanDi(C.S, x, y)) return { x, y };
+    }
+  }
+  // Cadangan: cari lahan darat di mana saja, bangun jalan di sampingnya dulu
+  for (let y = 1; y < C.peta.H - 1; y++) for (let x = 1; x < C.peta.W - 1; x++) {
+    if (!lahanDarat(x, y) || C.adaJalanDi(C.S, x, y) || C.adaBangunanDi(C.S, x, y)) continue;
+    for (const d of [[1,0],[-1,0],[0,1],[0,-1]]) {
+      const nx = x + d[0], ny = y + d[1];
+      if (lahanDarat(nx, ny) && !C.adaJalanDi(C.S, nx, ny) && !C.adaBangunanDi(C.S, nx, ny)) {
+        if (C.bangunJalanDi("jalan-tanah", nx, ny)) return { x, y };
+      }
     }
   }
   return null;
 }
 function cariTileJalan() {
   for (let y = 0; y < C.peta.H; y++) for (let x = 0; x < C.peta.W; x++) {
-    if (C.terrainDi(C.peta, x, y) === "rumput" && !C.adaJalanDi(C.S, x, y) && !C.adaBangunanDi(C.S, x, y)) return { x, y };
+    if (lahanDarat(x, y) && !C.adaJalanDi(C.S, x, y) && !C.adaBangunanDi(C.S, x, y)) return { x, y };
   }
   return null;
 }
@@ -625,7 +676,7 @@ function cariTileKebun() {
   for (let y = 0; y < C.peta.H - 1; y++) for (let x = 0; x < C.peta.W - 1; x++) {
     let ok = true;
     for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) {
-      if (C.terrainDi(C.peta, x + i, y + j) !== "rumput" || C.adaJalanDi(C.S, x + i, y + j) || C.adaBangunanDi(C.S, x + i, y + j)) ok = false;
+      if (!lahanDarat(x + i, y + j) || C.adaJalanDi(C.S, x + i, y + j) || C.adaBangunanDi(C.S, x + i, y + j)) ok = false;
     }
     if (!ok) continue;
     // butuh jalan di samping footprint 2x2
@@ -713,6 +764,9 @@ cek("alasan kunci Jembatan Gantung menyebut level + penelitian", C.alasanKunci(C
 const rumahZ = C.S.bangunan.find(b => b.id === "rumah-sederhana");
 cek("z-order: ada rumah untuk uji", !!rumahZ);
 if (rumahZ) {
+  // v17: peta 480x320 memakai chunk culling — pusatkan kamera ke rumah dulu,
+  // kalau tidak rumah di luar layar dan tidak digambar sama sekali.
+  vm.runInContext('kamera.cx = tileTengahDunia(' + rumahZ.x + ', ' + rumahZ.y + ').x; kamera.cy = tileTengahDunia(' + rumahZ.x + ', ' + rumahZ.y + ').y; kamera.zoom = 1;', sandbox);
   vm.runInContext('wargaVisual.push({ sprite: "petani", x: ' + rumahZ.x + ', y: ' + (rumahZ.y - 1) + ', arah: 0, fase: 0, jalan: true });', sandbox);
   vm.runInContext('gambarAset["assets/characters/petani/idle.png"] = { complete: true, naturalWidth: 100, naturalHeight: 130, _nama: "warga" }; gambarAset["assets/buildings/building-rumah-sederhana.png"] = { complete: true, naturalWidth: 300, naturalHeight: 200, _nama: "rumah" };', sandbox);
   vm.runInContext('var _urutanZ = []; var _drawAsli = ctx.drawImage; ctx.drawImage = function(img) { _urutanZ.push(img && img._nama ? img._nama : "?"); return _drawAsli.apply(ctx, arguments); };', sandbox);
@@ -722,5 +776,246 @@ if (rumahZ) {
   cek("z-order: warga di utara rumah digambar SEBELUM rumah (di belakang atap)", idxWarga !== -1 && idxRumah !== -1 && idxWarga < idxRumah, "urutan=" + urutanZ.slice(0, 10).join(","));
   vm.runInContext('ctx.drawImage = _drawAsli;', sandbox);
 }
+
+// ---- v17: MERANTI RISING — peta 480x320, 9 kecamatan, 27 pulau ----
+// Akses konstanta baru dijaga try/catch: bila modul v17 belum selesai,
+// getter bridge melempar ReferenceError — catat sebagai "menunggu modul",
+// bukan menggagalkan seluruh berkas tes.
+let kecDefs17 = null, pulauDefs17 = null, versiGame17 = null;
+try { kecDefs17 = C.KECAMATAN_DEFS; } catch (e) { kecDefs17 = null; }
+try { pulauDefs17 = C.PULAU_DEFS; } catch (e) { pulauDefs17 = null; }
+try { versiGame17 = C.VERSI_GAME; } catch (e) { versiGame17 = null; }
+const kecIds = kecDefs17 ? (Array.isArray(kecDefs17) ? kecDefs17.map(k => (typeof k === "string" ? k : k.id)) : Object.keys(kecDefs17)) : [];
+const kecHarap = ["tebing-tinggi-barat", "tebing-tinggi", "tebing-tinggi-timur", "rangsang-barat", "rangsang-pesisir", "rangsang", "merbau", "pulau-merbau", "tasik-putri-puyu"];
+
+// (a) konstanta, ukuran peta & cakupan kecamatan
+cek("CITY 480x320, seed 20261111", C.CITY.GRID_W === 480 && C.CITY.GRID_H === 320 && C.CITY.SEED === 20261111, C.CITY.GRID_W + "x" + C.CITY.GRID_H + " seed " + C.CITY.SEED);
+cek("CITY SAVE_KEY/SAVE_LAMA/PROFIL_KEY v17", C.CITY.SAVE_KEY === "merantiRisingWorldV1" && C.CITY.SAVE_LAMA === "saudagarSaguMerantiCityV1" && C.CITY.PROFIL_KEY === "merantiRisingProfilV1", C.CITY.SAVE_KEY + " / " + C.CITY.SAVE_LAMA + " / " + C.CITY.PROFIL_KEY);
+cek("VERSI_GAME v17", versiGame17 === "v17", versiGame17);
+cek("index.html memakai ?v=8/6/4/17", idxHtml.includes("css/city.css?v=8") && idxHtml.includes("js/city-data.js?v=6") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city.js?v=17"));
+cek("PULAU_DEFS 27 pulau", !!pulauDefs17 && pulauDefs17.length === 27, pulauDefs17 ? pulauDefs17.length : "tidak ada");
+cek("KECAMATAN_DEFS 9 kecamatan", kecIds.length === 9, kecIds.length);
+cek("9 id kecamatan sesuai kontrak", kecHarap.every(id => kecIds.includes(id)), kecIds.join(","));
+cek("peta 480x320 ter-generate", C.peta.W === 480 && C.peta.H === 320 && p1.W === 480 && p1.H === 320, C.peta.W + "x" + C.peta.H);
+cek("terrain 480 kolom x 320 baris", C.peta.terrain.length === 320 && C.peta.terrain.every(r => r.length === 480));
+if (typeof C.kecamatanDi === "function") {
+  const kecDilihat = new Set();
+  for (let y = 0; y < C.peta.H; y++) for (let x = 0; x < C.peta.W; x++) { const id = C.kecamatanDi(C.peta, x, y); if (id) kecDilihat.add(id); }
+  cek("semua 9 kecamatan punya daratan", kecHarap.every(id => kecDilihat.has(id)), [...kecDilihat].join(","));
+} else {
+  cek("semua 9 kecamatan punya daratan", false, "kecamatanDi belum ada — menunggu modul city-map.js v17");
+}
+cek("peta.kecamatanPusat berisi 9 pusat", !!C.peta.kecamatanPusat && Object.keys(C.peta.kecamatanPusat).length === 9, C.peta.kecamatanPusat ? Object.keys(C.peta.kecamatanPusat).length : "tidak ada");
+
+// (b) kecamatanDi benar
+if (typeof C.kecamatanDi === "function") {
+  cek("kecamatanDi Selatpanjang (240,215) = tebing-tinggi", C.kecamatanDi(C.peta, 240, 215) === "tebing-tinggi", C.kecamatanDi(C.peta, 240, 215));
+  cek("kecamatanDi Merbau (95,85) = merbau", C.kecamatanDi(C.peta, 95, 85) === "merbau", C.kecamatanDi(C.peta, 95, 85));
+  cek("kecamatanDi Tasik Putri Puyu (140,58) = tasik-putri-puyu", C.kecamatanDi(C.peta, 140, 58) === "tasik-putri-puyu", C.kecamatanDi(C.peta, 140, 58));
+  cek("peta.selatpanjang di (240,215)", !!C.peta.selatpanjang && C.peta.selatpanjang.x === 240 && C.peta.selatpanjang.y === 215, JSON.stringify(C.peta.selatpanjang));
+  let tileLautKec = null;
+  outerLautKec: for (let y = 0; y < C.peta.H; y++) for (let x = 0; x < C.peta.W; x++) if (C.terrainDi(C.peta, x, y) === "laut") { tileLautKec = { x: x, y: y }; break outerLautKec; }
+  cek("kecamatanDi di laut = null", !!tileLautKec && C.kecamatanDi(C.peta, tileLautKec.x, tileLautKec.y) === null, tileLautKec ? JSON.stringify(tileLautKec) + " -> " + C.kecamatanDi(C.peta, tileLautKec.x, tileLautKec.y) : "tidak ada laut");
+  const pusMerbau = C.peta.kecamatanPusat && C.peta.kecamatanPusat["merbau"];
+  const pusTasik = C.peta.kecamatanPusat && C.peta.kecamatanPusat["tasik-putri-puyu"];
+  const pusTebing = C.peta.kecamatanPusat && C.peta.kecamatanPusat["tebing-tinggi"];
+  cek("Tasik Putri Puyu berdekatan dengan Merbau (<100 petak)", !!pusMerbau && !!pusTasik && Math.hypot(pusMerbau.x - pusTasik.x, pusMerbau.y - pusTasik.y) < 100, pusMerbau && pusTasik ? Math.hypot(pusMerbau.x - pusTasik.x, pusMerbau.y - pusTasik.y).toFixed(1) : "pusat tidak ada");
+  cek("pusat kecamatan merbau dekat (95,85)", !!pusMerbau && Math.hypot(pusMerbau.x - 95, pusMerbau.y - 85) < 30, pusMerbau ? JSON.stringify(pusMerbau) : "tidak ada");
+  cek("pusat kecamatan tasik-putri-puyu dekat (140,58)", !!pusTasik && Math.hypot(pusTasik.x - 140, pusTasik.y - 58) < 30, pusTasik ? JSON.stringify(pusTasik) : "tidak ada");
+  // Pusat kecamatan tebing-tinggi ada di tengah pulau (240,160), bukan di
+  // Selatpanjang — yang penting pusatnya berada di dalam kecamatan itu.
+  cek("pusat kecamatan tebing-tinggi berada di kecamatan tebing-tinggi", !!pusTebing && C.kecamatanDi(C.peta, pusTebing.x, pusTebing.y) === "tebing-tinggi", pusTebing ? JSON.stringify(pusTebing) : "tidak ada");
+  if (typeof C.pusatkanKecamatan === "function" && pusTebing) {
+    C.pusatkanKecamatan("tebing-tinggi");
+    const wPus = vm.runInContext("tileTengahDunia(" + pusTebing.x + ", " + pusTebing.y + ")", sandbox);
+    cek("pusatkanKecamatan memusatkan kamera ke kecamatan", Math.abs(C.kamera.cx - wPus.x) < 200 && Math.abs(C.kamera.cy - wPus.y) < 200, "kamera " + Math.round(C.kamera.cx) + "," + Math.round(C.kamera.cy));
+  } else {
+    cek("pusatkanKecamatan memusatkan kamera ke kecamatan", false, "pusatkanKecamatan belum ada — menunggu modul city-map.js v17");
+  }
+} else {
+  cek("kecamatanDi Selatpanjang (240,215) = tebing-tinggi", false, "kecamatanDi belum ada — menunggu modul city-map.js v17");
+  cek("kecamatanDi Merbau (95,85) = merbau", false, "kecamatanDi belum ada — menunggu modul city-map.js v17");
+  cek("kecamatanDi Tasik Putri Puyu (140,58) = tasik-putri-puyu", false, "kecamatanDi belum ada — menunggu modul city-map.js v17");
+  cek("peta.selatpanjang di (240,215)", false, "kecamatanDi belum ada — menunggu modul city-map.js v17");
+  cek("kecamatanDi di laut = null", false, "kecamatanDi belum ada — menunggu modul city-map.js v17");
+  cek("Tasik Putri Puyu berdekatan dengan Merbau (<100 petak)", false, "kecamatanDi belum ada — menunggu modul city-map.js v17");
+  cek("pusat kecamatan merbau dekat (95,85)", false, "kecamatanDi belum ada — menunggu modul city-map.js v17");
+  cek("pusat kecamatan tasik-putri-puyu dekat (140,58)", false, "kecamatanDi belum ada — menunggu modul city-map.js v17");
+  cek("pusat kecamatan tebing-tinggi berada di kecamatan tebing-tinggi", false, "kecamatanDi belum ada — menunggu modul city-map.js v17");
+  cek("pusatkanKecamatan memusatkan kamera ke kecamatan", false, "pusatkanKecamatan belum ada — menunggu modul city-map.js v17");
+}
+
+// (c) terrain baru & aturan bangun
+const pertamaTerrain = {};
+for (let y = 0; y < C.peta.H; y++) for (let x = 0; x < C.peta.W; x++) {
+  const t = C.terrainDi(C.peta, x, y);
+  if (!pertamaTerrain[t]) pertamaTerrain[t] = { x: x, y: y };
+}
+cek("TERRAIN berisi 16 jenis", ["laut", "pantai", "pesisir", "hutan", "sagu", "kelapa", "karet", "kopi", "sawah", "rawa", "gambut", "mangrove", "sungai", "kanal", "permukiman", "industri"].every(t => !!C.TERRAIN[t]), Object.keys(C.TERRAIN).join(","));
+for (const t of ["mangrove", "rawa", "gambut", "kanal", "permukiman", "industri", "pesisir"]) {
+  cek("terrain " + t + " ada di peta", !!pertamaTerrain[t]);
+}
+cek("TERRAIN mangrove tidak bisa dibangun", !!(C.TERRAIN.mangrove && bisaBangun("mangrove") === false));
+cek("TERRAIN rawa butuhBuka Rp10.000", !!(C.TERRAIN.rawa && C.TERRAIN.rawa.butuhBuka && C.TERRAIN.rawa.butuhBuka.uang === 10000), JSON.stringify(C.TERRAIN.rawa && C.TERRAIN.rawa.butuhBuka));
+cek("TERRAIN gambut butuhBuka Rp15.000", !!(C.TERRAIN.gambut && C.TERRAIN.gambut.butuhBuka && C.TERRAIN.gambut.butuhBuka.uang === 15000), JSON.stringify(C.TERRAIN.gambut && C.TERRAIN.gambut.butuhBuka));
+cek("TERRAIN sungai/kanal/laut tidak bisa dibangun", !!(C.TERRAIN.sungai && bisaBangun("sungai") === false) && !!(C.TERRAIN.kanal && bisaBangun("kanal") === false) && bisaBangun("laut") === false);
+C.S.uang = 5000000; C.S.kayu = 100; C.S.batu = 100; C.S.besi = 100;
+vm.runInContext("S.level = 3;", sandbox);
+const defRumah17 = C.BANGUNAN_MAP["rumah-sederhana"];
+const defToko17 = C.BANGUNAN_MAP["toko"];
+const defDermaga17 = C.BANGUNAN_MAP["dermaga"];
+if (pertamaTerrain.mangrove) cek("cekBangun menolak rumah di mangrove", !C.cekBangun(defRumah17, pertamaTerrain.mangrove.x, pertamaTerrain.mangrove.y, 0).ok);
+if (pertamaTerrain.sungai) cek("cekBangun menolak rumah di sungai", !C.cekBangun(defRumah17, pertamaTerrain.sungai.x, pertamaTerrain.sungai.y, 0).ok);
+if (pertamaTerrain.kanal) cek("cekBangun menolak rumah di kanal", !C.cekBangun(defRumah17, pertamaTerrain.kanal.x, pertamaTerrain.kanal.y, 0).ok);
+// Jalan darurat di samping petak rawa/gambut (akses jalan untuk cekBangun)
+function jalanDarurat(tx, ty) {
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const nx = tx + dx, ny = ty + dy;
+    if (nx < 0 || ny < 0 || nx >= C.peta.W || ny >= C.peta.H) continue;
+    if (!C.adaBangunanDi(C.S, nx, ny) && !C.adaJalanDi(C.S, nx, ny)) {
+      C.S.jalan.push({ x: nx, y: ny, tipe: "jalan-tanah" });
+      return { x: nx, y: ny };
+    }
+  }
+  return null;
+}
+if (pertamaTerrain.rawa && !C.adaBangunanDi(C.S, pertamaTerrain.rawa.x, pertamaTerrain.rawa.y) && !C.adaJalanDi(C.S, pertamaTerrain.rawa.x, pertamaTerrain.rawa.y)) {
+  const jdRawa = jalanDarurat(pertamaTerrain.rawa.x, pertamaTerrain.rawa.y);
+  cek("cekBangun di rawa lolos (dengan akses jalan)", !!jdRawa && C.cekBangun(defToko17, pertamaTerrain.rawa.x, pertamaTerrain.rawa.y, 0).ok, jdRawa ? C.cekBangun(defToko17, pertamaTerrain.rawa.x, pertamaTerrain.rawa.y, 0).alasan : "tidak ada tetangga kosong");
+  if (jdRawa) {
+    const u0 = C.S.uang, k0 = C.S.kayu;
+    const okRawa = C.bangunDi(defToko17, pertamaTerrain.rawa.x, pertamaTerrain.rawa.y, 0);
+    cek("bangun di rawa: biaya +Rp10.000 buka lahan", okRawa === true && C.S.uang === u0 - 40000 - 10000 && C.S.kayu === k0 - 5, "uang=" + C.S.uang + " (awal " + u0 + ") kayu=" + C.S.kayu);
+  }
+} else {
+  cek("cekBangun di rawa lolos (dengan akses jalan)", false, "tidak ditemukan petak rawa kosong");
+  cek("bangun di rawa: biaya +Rp10.000 buka lahan", false, "tidak ditemukan petak rawa kosong");
+}
+if (pertamaTerrain.gambut && !C.adaBangunanDi(C.S, pertamaTerrain.gambut.x, pertamaTerrain.gambut.y) && !C.adaJalanDi(C.S, pertamaTerrain.gambut.x, pertamaTerrain.gambut.y)) {
+  const jdGambut = jalanDarurat(pertamaTerrain.gambut.x, pertamaTerrain.gambut.y);
+  cek("cekBangun di gambut lolos (dengan akses jalan)", !!jdGambut && C.cekBangun(defToko17, pertamaTerrain.gambut.x, pertamaTerrain.gambut.y, 0).ok, jdGambut ? C.cekBangun(defToko17, pertamaTerrain.gambut.x, pertamaTerrain.gambut.y, 0).alasan : "tidak ada tetangga kosong");
+  if (jdGambut) {
+    const u0 = C.S.uang, k0 = C.S.kayu;
+    const okGambut = C.bangunDi(defToko17, pertamaTerrain.gambut.x, pertamaTerrain.gambut.y, 0);
+    cek("bangun di gambut: biaya +Rp15.000 buka lahan", okGambut === true && C.S.uang === u0 - 40000 - 15000 && C.S.kayu === k0 - 5, "uang=" + C.S.uang + " (awal " + u0 + ") kayu=" + C.S.kayu);
+  }
+} else {
+  cek("cekBangun di gambut lolos (dengan akses jalan)", false, "tidak ditemukan petak gambut kosong");
+  cek("bangun di gambut: biaya +Rp15.000 buka lahan", false, "tidak ditemukan petak gambut kosong");
+}
+// Pantai: bangunan biasa ditolak, bangunan pantai (dermaga) lolos
+let pantaiPasangan = null;
+outerPantai: for (let y = 0; y < C.peta.H; y++) for (let x = 0; x < C.peta.W - 1; x++) {
+  if (C.terrainDi(C.peta, x, y) === "pantai" && C.terrainDi(C.peta, x + 1, y) === "pantai"
+    && !C.adaBangunanDi(C.S, x, y) && !C.adaBangunanDi(C.S, x + 1, y)
+    && !C.adaJalanDi(C.S, x, y) && !C.adaJalanDi(C.S, x + 1, y)) { pantaiPasangan = { x: x, y: y, rot: 0 }; break outerPantai; }
+}
+if (!pantaiPasangan) {
+  outerPantaiV: for (let y = 0; y < C.peta.H - 1; y++) for (let x = 0; x < C.peta.W; x++) {
+    if (C.terrainDi(C.peta, x, y) === "pantai" && C.terrainDi(C.peta, x, y + 1) === "pantai"
+      && !C.adaBangunanDi(C.S, x, y) && !C.adaBangunanDi(C.S, x, y + 1)
+      && !C.adaJalanDi(C.S, x, y) && !C.adaJalanDi(C.S, x, y + 1)) { pantaiPasangan = { x: x, y: y, rot: 1 }; break outerPantaiV; }
+  }
+}
+cek("ditemukan pasangan pantai untuk uji dermaga", !!pantaiPasangan);
+if (pantaiPasangan) {
+  cek("cekBangun menolak rumah di pantai", !C.cekBangun(defRumah17, pantaiPasangan.x, pantaiPasangan.y, 0).ok, C.cekBangun(defRumah17, pantaiPasangan.x, pantaiPasangan.y, 0).alasan);
+  const cekDermaga17 = C.cekBangun(defDermaga17, pantaiPasangan.x, pantaiPasangan.y, pantaiPasangan.rot);
+  cek("cekBangun meloloskan dermaga di pantai", cekDermaga17.ok, cekDermaga17.alasan);
+}
+
+// (d) chunk
+cek("chunk 30x20, tiap chunk 16x16", !!C.peta.chunk && C.peta.chunk.W === 30 && C.peta.chunk.H === 20 && C.peta.chunk.CW === 16 && C.peta.chunk.CH === 16, JSON.stringify(C.peta.chunk));
+if (typeof C.rentangChunkTerlihat === "function") {
+  vm.runInContext("kameraPusatkan(peta); kamera.zoom = 1;", sandbox);
+  const rent1 = C.rentangChunkTerlihat(800, 600);
+  cek("rentang chunk terlihat dalam batas 0..29/0..19 (zoom 1)", !!rent1 && rent1.cx0 >= 0 && rent1.cy0 >= 0 && rent1.cx1 <= 29 && rent1.cy1 <= 19, JSON.stringify(rent1));
+  vm.runInContext("kamera.zoom = 0.08;", sandbox);
+  // rentangChunkTerlihat memakai lebar/tinggi yang diberikan (layar 1200x800)
+  const rent008 = C.rentangChunkTerlihat(1200, 800);
+  cek("zoom 0.08: rentang chunk mencakup hampir seluruh dunia", !!rent008 && (rent008.cx1 - rent008.cx0) >= 28 && (rent008.cy1 - rent008.cy0) >= 18, JSON.stringify(rent008));
+} else {
+  cek("rentang chunk terlihat dalam batas 0..29/0..19 (zoom 1)", false, "rentangChunkTerlihat belum ada — menunggu modul city-map.js v17");
+  cek("zoom 0.08: rentang chunk mencakup hampir seluruh dunia", false, "rentangChunkTerlihat belum ada — menunggu modul city-map.js v17");
+}
+
+// (e) zoom 0.08 menampilkan hampir seluruh dunia (empat sudut layar)
+vm.runInContext("kameraPusatkan(peta); kamera.zoom = 0.08;", sandbox);
+const sudutLayar = [
+  vm.runInContext("layarKeDunia(0, 0, 800, 600)", sandbox),
+  vm.runInContext("layarKeDunia(800, 0, 800, 600)", sandbox),
+  vm.runInContext("layarKeDunia(0, 600, 800, 600)", sandbox),
+  vm.runInContext("layarKeDunia(800, 600, 800, 600)", sandbox),
+];
+const tileSudut = sudutLayar.map(p => vm.runInContext("duniaKeTile(" + p.x + ", " + p.y + ")", sandbox));
+let minTX = Infinity, maxTX = -Infinity, minTY = Infinity, maxTY = -Infinity;
+for (const t of tileSudut) { minTX = Math.min(minTX, t.x); maxTX = Math.max(maxTX, t.x); minTY = Math.min(minTY, t.y); maxTY = Math.max(maxTY, t.y); }
+minTX = Math.max(0, minTX); maxTX = Math.min(479, maxTX); minTY = Math.max(0, minTY); maxTY = Math.min(319, maxTY);
+const luasViewport = (maxTX - minTX) * (maxTY - minTY);
+cek("zoom 0.08: viewport mencakup >=80% luas dunia", luasViewport >= 0.8 * 480 * 320, "x " + minTX.toFixed(1) + ".." + maxTX.toFixed(1) + " y " + minTY.toFixed(1) + ".." + maxTY.toFixed(1) + " luas " + Math.round(luasViewport));
+cek("zoom 0.08: viewport mendekati tepi peta (toleransi 10%)", minTX <= 48 && maxTX >= 431 && minTY <= 32 && maxTY >= 287, "x " + minTX.toFixed(1) + ".." + maxTX.toFixed(1) + " y " + minTY.toFixed(1) + ".." + maxTY.toFixed(1));
+
+// (f) migrasi simpanan kota lama (v13-v16) ke dunia v17:
+// uang + sumber daya terbawa, bangunan/jalan lama TIDAK terbawa.
+store.set(C.CITY.SAVE_LAMA, JSON.stringify({
+  versi: 1, seed: 20261111, hari: 10, uang: 900000, kayu: 50, batu: 30, besi: 20, xp: 0, level: 1, akumulasi: 0,
+  komoditas: {}, bangunan: [{ id: "universitas", x: 100, y: 100, rot: 0, selesai: true, progres: 1 }],
+  jalan: [{ x: 101, y: 100, tipe: "jalan-tanah" }], jembatan: [], teknologi: {}, riset: null, misiSelesai: {},
+  statistik: { dibangun: {}, dibangunKat: {}, jalan: 1, jembatan: 0, produksi: {}, ekspor: 0, pendudukMax: 4, pendapatanHari: 0, pengeluaranHari: 0 },
+  bersih: [], penduduk: { total: 4, bahagia: 60, bekerja: 0, menganggur: 0, cakupanPendidikan: 0, cakupanKesehatan: 0 }, log: [],
+}));
+C.mulaiGame(true);
+cek("migrasi v17: uang awal 750.000 + min(900.000, 1.000.000)", C.S.uang === 1650000, C.S.uang);
+cek("migrasi v17: kayu/batu/besi terbawa", C.S.kayu === 110 && C.S.batu === 70 && C.S.besi === 30, C.S.kayu + "/" + C.S.batu + "/" + C.S.besi);
+cek("migrasi v17: bangunan lama tidak terbawa", !C.S.bangunan.some(b => b.id === "universitas") && C.S.bangunan.some(b => b.id === "dermaga") && C.S.bangunan.some(b => b.id === "rumah-sederhana"), C.S.bangunan.map(b => b.id + "@" + b.x + "," + b.y).join(" "));
+cek("migrasi v17: jalan lama tidak terbawa", !C.S.jalan.some(j => j.x === 101 && j.y === 100), C.S.jalan.length);
+const simpananBaru = JSON.parse(store.get(C.CITY.SAVE_KEY) || "null");
+cek("migrasi v17: simpanan baru tersimpan di SAVE_KEY baru", !!simpananBaru && simpananBaru.uang === 1650000, C.CITY.SAVE_KEY + " -> " + (simpananBaru ? simpananBaru.uang : "null"));
+
+// (g) rumah dibangun di koordinat tertentu, tetap ada setelah simpan/muat
+C.S.uang = 5000000; C.S.kayu = 100;
+const tRumah17 = cariTileRumah();
+cek("v17: ada petak valid untuk rumah", !!tRumah17, JSON.stringify(tRumah17));
+if (tRumah17) {
+  const okRumah17 = C.bangunDi(C.BANGUNAN_MAP["rumah-sederhana"], tRumah17.x, tRumah17.y, 0);
+  cek("v17: rumah berhasil dibangun", okRumah17 === true);
+  if (okRumah17) {
+    C.simpan();
+    const jmlBangunanSimpan = C.S.bangunan.length;
+    // Hapus dari state di memori dulu — bila muat gagal, rumah tetap hilang
+    // (tes ini benar-benar menguji round-trip simpanan, bukan state lama).
+    C.S.bangunan = C.S.bangunan.filter(b => !(b.id === "rumah-sederhana" && b.x === tRumah17.x && b.y === tRumah17.y));
+    C.mulaiGame(false);
+    const rumahMuat = C.S.bangunan.find(b => b.id === "rumah-sederhana" && b.x === tRumah17.x && b.y === tRumah17.y);
+    cek("v17: rumah tetap ada di koordinat sama setelah muat ulang", !!rumahMuat && C.S.bangunan.length === jmlBangunanSimpan, JSON.stringify(tRumah17) + " -> " + C.S.bangunan.filter(b => b.id === "rumah-sederhana").map(b => b.x + "," + b.y).join(" "));
+  }
+}
+
+// (h) render smoke test di peta besar
+try {
+  vm.runInContext("kameraPusatkan(peta); kamera.zoom = 0.5;", sandbox);
+  C.gambarPeta();
+  cek("render peta besar v17 (zoom 0.5, tanpa error)", true);
+} catch (e) { cek("render peta besar v17 (zoom 0.5, tanpa error)", false, e.message); }
+try {
+  const mmElH = C.document.getElementById("minimap");
+  mmElH.width = 220; mmElH.height = 132;
+  mmElH.getContext = () => buatCtx(); // pulihkan dari ctx perekam v14.3
+  C.gambarMinimap();
+  cek("render minimap peta besar v17 (tanpa error)", true);
+} catch (e) { cek("render minimap peta besar v17 (tanpa error)", false, e.message); }
+
+// (i) panel Kecamatan
+try {
+  vm.runInContext('panelKiri = "kecamatan";', sandbox);
+  C.renderPanelKiri();
+  const htmlKec = C.document.getElementById("panelKiriIsi").innerHTML || "";
+  const hilangKec = kecIds.filter(id => {
+    const d = Array.isArray(kecDefs17) ? kecDefs17.find(k => (k.id || k) === id) : (kecDefs17 && kecDefs17[id]);
+    const nama = (d && d.nama) || id;
+    return !htmlKec.includes(nama) && !htmlKec.includes(id);
+  });
+  cek("panel Kecamatan menampilkan 9 kecamatan", kecIds.length === 9 && hilangKec.length === 0, hilangKec.length ? "hilang: " + hilangKec.join(", ") : "html " + htmlKec.length + " karakter");
+} catch (e) { cek("panel Kecamatan menampilkan 9 kecamatan", false, e.message); }
 
 console.log(gagal === 0 ? "TEST_V13_OK" : "TEST_V13_GAGAL:" + gagal + " dari " + (lulus + gagal));

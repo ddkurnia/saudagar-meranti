@@ -6,6 +6,79 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v17 — WORLD MAP ENGINE: Dunia 120 × 80 km (2026-11-11)
+
+- **Dunia baru 480 × 320 petak (1 petak = 250 m → 120 km × 80 km).**
+  Peta lama 96×72 tidak dipertahankan; ini dunia baru. `CITY.SEED`
+  tetap 20261111 (deterministik — peta yang sama selalu dihasilkan).
+- **Geografi Kepulauan Meranti:** Pulau Tebing Tinggi di tengah
+  (terbesar, Selatpanjang di pantai selatannya sebagai ibu kota
+  kabupaten), Pulau Rangsang di timur, gugus Merbau di barat laut
+  (Pulau Merbau + Tasik Putri Puyu berdekatan, bukan pulau acak),
+  Pulau Padang di tenggara, plus pulau-pulau kecil tersebar.
+  **27 pulau** (25 lama + Tasik Putri Puyu & Pulau Merbau yang
+  ditambahkan untuk kecamatannya). Tanpa Pulau Bengkalis. Semua
+  pulau adalah daratan terpisah (diverifikasi flood fill — tidak ada
+  jembatan darat antar pulau besar).
+- **9 kecamatan administratif:** Tebing Tinggi Barat (Alai), Tebing
+  Tinggi (Selatpanjang), Tebing Tinggi Timur (Sungai Tohor),
+  Rangsang Barat (Bantar), Rangsang Pesisir (Telesung), Rangsang
+  (Tanjung Samak), Merbau (Teluk Belitung), Pulau Merbau (Semukut),
+  Tasik Putri Puyu (Bandul). Tebing Tinggi & Rangsang dibagi tiga
+  menurut posisi x; pulau kecil ikut kecamatan terdekat. **Panel
+  Kecamatan baru** (ikon 🏘️ ke-7 di rel kiri): daftar 9 kecamatan
+  (ibu kota, komoditas, penduduk, jumlah bangunan) + tombol
+  "Pusatkan", diurutkan berdasarkan penduduk. Setiap bangunan
+  menyimpan kecamatannya (`b.kecamatan`) saat dibangun.
+- **Terrain 16 jenis** (masing-masing punya warna, bisaBangun,
+  butuhBuka, des): laut, pantai (hanya bangunan pesisir), pesisir,
+  hutan (buka lahan +2 kayu), sagu, kelapa, karet, kopi (Liberika),
+  sawah, rawa (+Rp10.000 drainase), gambut (+Rp15.000 pengelolaan
+  air), mangrove (TIDAK bisa dibangun — lindung), sungai, kanal
+  (hanya jembatan), permukiman (desa awal), industri (zona dekat
+  Selatpanjang). Hutan/perkebunan berkelompok (noise frekuensi
+  rendah), mangrove di sebagian pantai, sungai di 3 pulau besar,
+  1-2 kanal lurus pendek dekat Selatpanjang.
+- **Chunk 16×16 petak (4×4 km), 30×20 chunk.** Renderer hanya
+  menggambar petak dalam chunk yang terlihat (culling) — bukan
+  seluruh 153.600 petak. Tidak ada ribuan objek DOM.
+- **Kamera/zoom 0.08–2.6:** zoom 0.08 menampilkan hampir seluruh
+  dunia (di layar 1200×800, viewport mencakup ~81% luas dunia),
+  zoom 2.6 sampai level rumah. Koordinat dunia tidak berubah saat
+  zoom; posisi bangunan tetap akurat.
+- **Minimap cache:** lapisan terrain digambar sekali ke canvas
+  offscreen, lalu tiap render hanya blit + overlay jalan/bangunan/
+  viewport. Minimap tetap menampilkan seluruh gugusan + klik untuk
+  pindah.
+- **Migrasi simpanan lama:** dunia baru — bangunan/jalan/jembatan
+  lama TIDAK dibawa. Hanya uang + sumber daya yang dibawa sebagai
+  modal awal (uang = Rp750.000 + min(uang lama, Rp1.000.000);
+  kayu/batu/besi lama ditambah, maks 200/jenis). Simpanan baru di
+  kunci `merantiRisingWorldV1`. Profil pemain
+  (`merantiRisingProfilV1`) & onboarding v16 tetap.
+- **Sistem lain tetap:** ekonomi/penduduk/pekerja/produksi/misi/
+  riset/level, feri antar pulau, jembatan gantung, kontrol sentuh,
+  Mode Bangun (grid hanya tampil di Mode Bangun).
+- Uji headless lolos (`TEST_V13_OK`, 229 cek).
+
+### Batas jujur v17
+1. **1 petak = 250 m adalah grid pembangunan.** Skala 10–25 m
+   diabstraksikan: peta 120×80 km tidak memungkinkan petak 25 m
+   (akan menjadi ~15 juta petak). Sebuah rumah menempati 1 petak
+   (250×250 m) di dunia ini — itu abstraksi permainan, bukan denah
+   sebenarnya.
+2. **Batas kecamatan mengikuti pulau/geografi, bukan koordinat
+   resmi BPS.** Pembagian tiga kecamatan di Tebing Tinggi & Rangsang
+   adalah sepertiga rentang x pulau; pulau kecil ikut kecamatan
+   terdekat. Jangan pakai sebagai peta administratif resmi.
+3. **Kanal hanya 1–2 ruas lurus pendek dekat Selatpanjang** (bukan
+   jaringan kanal menyeluruh).
+4. **Dunia baru — bangunan lama tidak dibawa, hanya modal awal**
+   (uang + sumber daya, lihat migrasi di atas).
+5. Ibu kota kecamatan memakai sumber terbaru (Rangsang Pesisir =
+   Telesung, Tebing Tinggi Barat = Alai); bila ada sumber resmi yang
+   berbeda, beri tahu.
+
 ## Yang baru di v16.1 — Perbaikan dari cek live desktop v15 (2026-11-11)
 
 - **BUG KRITIS — Dermaga/Pelabuhan/Bandara kini bisa dibangun:**
