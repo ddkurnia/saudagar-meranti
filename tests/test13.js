@@ -552,6 +552,25 @@ if (bUji) {
   C.tanganiKetuk({ x: 5, y: 5 }, 0, false, { x: 0, y: 0 });
   cek("ketuk petak kosong jauh tetap memilih petak", !!C.terpilih && C.terpilih.jenis === "tile" && C.terpilih.x === 5 && C.terpilih.y === 5);
 }
+// v15.1.3: tombol "Hari berikutnya" memulai hari baru pukul 06:00
+const hariAwal = C.S.hari;
+vm.runInContext('akumulasiHari = 8000; jamVisual = 22;', sandbox);
+C.hariBerikutnya();
+cek("hari berikutnya: jam direset ke 06:00", C.jamVisual === 6 && C.akumulasiHari === 0, "jam=" + C.jamVisual + " akumulasi=" + C.akumulasiHari);
+cek("hari berikutnya: hari bertambah 1", C.S.hari === hariAwal + 1);
+// v15.1.3: penghitung misi langsung diperbarui saat membangun jalan
+vm.runInContext('panelKiri = "misi"; var _panggilPanel = 0; var _asliPanel = renderPanelKiri; renderPanelKiri = function() { _panggilPanel++; return _asliPanel(); };', sandbox);
+const panggilSebelum = vm.runInContext('_panggilPanel', sandbox);
+let tileJalan = null;
+outerJ: for (let y = 0; y < C.peta.H; y++) for (let x = 0; x < C.peta.W; x++) {
+  const t = C.terrainDi(C.peta, x, y);
+  if (C.TERRAIN[t].bangun && !C.adaJalanDi(C.S, x, y) && !C.adaBangunanDi(C.S, x, y)) { tileJalan = { x, y }; break outerJ; }
+}
+if (tileJalan) {
+  C.bangunJalanDi("jalan-tanah", tileJalan.x, tileJalan.y);
+  cek("bangun jalan memanggil renderPanelKiri (misi langsung diperbarui)", vm.runInContext('_panggilPanel', sandbox) > panggilSebelum);
+}
+vm.runInContext('renderPanelKiri = _asliPanel;', sandbox);
 // Rel kiri: ketuk ikon yang sama lagi menutup panel
 vm.runInContext('panelKiri = "misi";', sandbox);
 const elKiri = vm.runInContext('$("panelKiri")', sandbox);

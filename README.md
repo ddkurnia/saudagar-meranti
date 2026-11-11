@@ -6,6 +6,21 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v15.1.3 — Perbaikan dari cek live HP (2026-11-11)
+
+- **Jam hari baru:** tombol "Hari berikutnya" kini memulai hari baru
+  pukul 06:00 (sebelumnya jam tertinggal di 19:00 seperti hari
+  sebelumnya, sehingga hari berikutnya jadi lebih pendek).
+- **Penghitung misi langsung diperbarui:** membangun jalan/jembatan/
+  bangunan kini langsung memperbarui angka misi di panel kiri
+  (sebelumnya "Jalan Pertama" tetap 0/10 sampai hari berganti).
+- **Nomor versi di layar mulai:** versi game kini tampil di layar
+  mulai ("Versi v15.1.3") supaya mudah dipastikan build mana yang
+  sedang dimainkan.
+- **Hit-test sprite lebih longgar:** inset kotak ketuk sprite
+  diperkecil 12% → 6%, jadi tepi atap bangunan lebih mudah diketuk.
+- Uji headless lolos (`TEST_V13_OK`, 142 cek).
+
 ## Yang baru di v15.1 — Ramah Layar Sentuh Android (2026-11-11)
 
 Game kini nyaman dimainkan di HP/tablet Android (dan iOS):

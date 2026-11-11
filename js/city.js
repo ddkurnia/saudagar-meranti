@@ -5,6 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
+const VERSI_GAME = "v15.1.3"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -374,6 +375,7 @@ function bangunDi(def, x, y, rot) {
   toast(def.nama + " mulai dibangun (" + def.waktu + " hari).", "ok");
   log("Membangun " + def.nama + " di (" + (x + 1) + "," + (y + 1) + ").");
   simpan(); renderHUD(); renderPanelKanan(); renderMenuBangun();
+  if (panelKiri === "misi") renderPanelKiri(); // penghitung misi langsung diperbarui
   return true;
 }
 function bangunJalanDi(tipe, x, y) {
@@ -384,6 +386,7 @@ function bangunJalanDi(tipe, x, y) {
   S.jalan.push({ x: x, y: y, tipe: tipe });
   S.statistik.jalan++;
   bunyiKlik(); simpan(); renderHUD();
+  if (panelKiri === "misi") renderPanelKiri(); // penghitung misi langsung diperbarui
   return true;
 }
 function bangunJembatanDi(tipe, x, y) {
@@ -394,6 +397,7 @@ function bangunJembatanDi(tipe, x, y) {
   S.statistik.jembatan++;
   bunyiSukses(); toast(JEMBATAN[tipe].nama + " dibangun.", "ok");
   simpan(); renderHUD();
+  if (panelKiri === "misi") renderPanelKiri(); // penghitung misi langsung diperbarui
   return true;
 }
 // ---------------- Jembatan Gantung (v15): membentang lurus 2-8 petak air ----------------
@@ -446,6 +450,7 @@ function bangunJembatanGantung(x0, y0, x1, y1) {
   toast("Jembatan Gantung dibangun (" + cek.n + " petak) — dua tepi kini terhubung!", "ok");
   log("Jembatan Gantung selesai (" + cek.n + " petak).");
   simpan(); renderHUD();
+  if (panelKiri === "misi") renderPanelKiri(); // penghitung misi langsung diperbarui
   return true;
 }
 function catatDibangun(def) {
@@ -591,6 +596,9 @@ function bonusEkspor() {
 
 function hariBerikutnya() {
   if (!S) return;
+  // Hari baru selalu mulai pagi (06:00) — tombol "Hari berikutnya" tidak
+  // boleh meninggalkan jam di 19:00 seperti hari sebelumnya.
+  akumulasiHari = 0; jamVisual = 6; S.akumulasi = 0;
   S.penduduk.kemarin = S.penduduk.total; // untuk "+N/hari" di kartu statistik
   const rincian = { pajak: 0, penjualan: 0, ekspor: 0, wisata: 0, bunga: 0, perdagangan: 0, upkeep: 0, gaji: 0 };
   // 1. Konstruksi
@@ -2218,8 +2226,8 @@ function kotakSpriteBangunan(b) {
     w = (k.w + k.h) * 32 * z;
     h = (k.w + k.h) * 16 * z + 20 * z;
   }
-  // Inset 12% agar sudut transparan sprite tidak ikut terpilih
-  const ix = w * 0.12, iy = h * 0.12;
+  // Inset 6% agar sudut transparan sprite tidak ikut terpilih
+  const ix = w * 0.06, iy = h * 0.06;
   return { x0: s.x - w / 2 + ix, x1: s.x + w / 2 - ix, y0: s.y + halfH - h + iy, y1: s.y + halfH - iy };
 }
 function bangunanDiLayar(px, py) {
@@ -2452,7 +2460,7 @@ window.addEventListener("DOMContentLoaded", () => {
   pasangTombol();
   aturUkuranKanvas();
   $("btnLanjut").style.display = adaSave() ? "inline-block" : "none";
-  $("infoSave").textContent = adaSave() ? "Simpanan ditemukan — lanjutkan pembangunan pulau Anda." : "Belum ada simpanan — mulai pulau baru.";
+  $("infoSave").textContent = (adaSave() ? "Simpanan ditemukan — lanjutkan pembangunan pulau Anda." : "Belum ada simpanan — mulai pulau baru.") + " · Versi " + VERSI_GAME;
   $("btnLanjut").onclick = () => { bunyiKlik(); mulaiGame(false); };
   $("btnBaru").onclick = () => {
     // Tanpa dialog confirm() (tidak muncul di sebagian browser/HP):
