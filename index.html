@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>MERANTI RISING — Ayo Membangun Meranti!</title>
-<link rel="stylesheet" href="css/city.css?v=9">
+<link rel="stylesheet" href="css/city.css?v=10">
 </head>
 <body>
 <!-- Layar mulai: pembuka sinematik MERANTI RISING -->
@@ -126,6 +126,8 @@
       <span class="sd" title="Tual Sagu">🌿 <b id="tualTeks">0</b></span>
       <span class="sd" title="Penduduk">👥 <b id="pendudukTeks">0 jiwa</b></span>
       <span class="sd" title="Kebahagiaan">😊 <b id="bahagiaTeks">0%</b></span>
+      <span class="sd sekunder" title="Listrik dipakai / kapasitas">⚡ <b id="listrikTeks">0/0 kW</b></span>
+      <span class="sd sekunder" title="Air dipakai / kapasitas">💧 <b id="airTeks">0/0 L</b></span>
     </div>
     <!-- Jam + kalender game di bar atas (v18-D): #ikonFase dipindah ke sini
          dari kartu #tglCuaca agar jam selalu terlihat; #tglCuaca tetap ada -->
@@ -156,10 +158,12 @@
       <div id="relKiri">
         <button data-tab="peta" title="Peta">🗺️</button>
         <button data-tab="misi" class="aktif" title="Misi">🎯</button>
+        <button data-tab="ekonomi" title="Ekonomi & APBD">💰</button>
+        <button data-tab="penduduk" title="Penduduk">👥</button>
         <button data-tab="pulau" title="Kepulauan">🏝️</button>
         <button data-tab="kecamatan" title="Kecamatan">🏘️</button>
         <button data-tab="riset" title="Penelitian">🧪</button>
-        <button data-tab="peradaban" title="Peradaban">🏛️</button>
+        <button data-tab="peradaban" title="Pemerintahan & Peradaban">🏛️</button>
         <button data-tab="berita" title="Berita Pulau">📰</button>
       </div>
       <aside id="panelKiri" class="kartuKaca">
@@ -204,6 +208,22 @@
         <div class="statIsi"><div class="statLabel">Peradaban</div><div class="statNilai"><b id="statPeradaban">Level 1</b></div></div>
         <button class="statBuka" data-tab="peradaban" title="Detail peradaban">›</button>
       </div>
+      <div class="statBaris">
+        <span class="statIkon">🚗</span>
+        <div class="statIsi"><div class="statLabel">Kemacetan</div><div class="statNilai"><b id="statMacet">—</b></div></div>
+      </div>
+      <div class="statBaris">
+        <span class="statIkon">🏥</span>
+        <div class="statIsi"><div class="statLabel">Layanan Publik</div><div class="statNilai"><b id="statLayanan">—</b></div></div>
+      </div>
+      <div class="statBaris">
+        <span class="statIkon">🌿</span>
+        <div class="statIsi"><div class="statLabel">Lingkungan</div><div class="statNilai"><b id="statLingkungan">—</b></div></div>
+      </div>
+      <div class="statBaris">
+        <span class="statIkon">✨</span>
+        <div class="statIsi"><div class="statLabel">Kualitas Hidup</div><div class="statNilai"><b id="statKualitas">—</b></div></div>
+      </div>
     </div>
     <aside id="panelKanan" class="kartuKaca" style="display:none"></aside>
   </div>
@@ -246,6 +266,9 @@
 
 <script src="js/city-data.js?v=7"></script>
 <script src="js/city-map.js?v=4"></script>
-<script src="js/city.js?v=18"></script>
+<script src="js/city-utilitas.js?v=1"></script>
+<script src="js/city-bahagia.js?v=1"></script>
+<script src="js/city-lalin.js?v=1"></script>
+<script src="js/city.js?v=20"></script>
 </body>
 </html>

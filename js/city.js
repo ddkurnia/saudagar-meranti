@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v18"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v19"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -28,7 +28,7 @@ const TUTORIAL = [
   { judul: "Bangun rumah pertama", des: "Buka menu bangun, pilih Rumah Sederhana (Rp25.000 + 4 kayu), lalu ketuk lahan kosong di samping jalan.", aksi: { label: "🏠 Buka menu bangun", fn: () => bukaMenuBangunUntuk("permukiman") } },
   { judul: "Buka jalan pertama", des: "Pilih Jalan Tanah di menu Jalan, lalu seret di peta untuk menggambar jalan. Bangunan butuh jalan di sampingnya.", aksi: { label: "🛣️ Pilih Jalan Tanah", fn: () => bukaMenuBangunUntuk("jalan", "jalan", "jalan-tanah") } },
   { judul: "Rekrut pekerja", des: "Penduduk yang tinggal di rumahmu siap bekerja. Biarkan waktu berjalan — atau percepat ke 2× — dan lihat pekerja dipekerjakan di dermaga.", aksi: { label: "⏩ Percepat ke 2×", fn: () => aturKecepatan(2) } },
-  { judul: "Bangun kebun sagu", des: "Buka menu Lahan, pilih Kebun Sagu (Rp50.000 + 2 kayu), lalu bangun di lahan kosong. Kebun menghasilkan 3 tual sagu per hari.", aksi: { label: "🌱 Pilih Kebun Sagu", fn: () => bukaMenuBangunUntuk("perkebunan", "bangun", "kebun-sagu") } },
+  { judul: "Bangun kebun sagu", des: "Buka menu Lahan, pilih Kebun Sagu (Rp50.000 + 2 kayu), lalu bangun di lahan kosong. Kebun menghasilkan 3 tual sagu per hari.", aksi: { label: "🌱 Pilih Kebun Sagu", fn: () => bukaMenuBangunUntuk("lahan", "bangun", "kebun-sagu") } },
   { judul: "Kembangkan permukiman", des: "Bangun satu bangunan lagi (apa saja) atau tunggu penduduk bertambah sampai 10 jiwa. Permukimanmu sudah berjalan — lanjutkan sampai menjadi kota!" },
 ];
 let tutorialKameraAwal = null, tutorialJalanAwal = 0, tutorialBangunanAwal = 0, tutorialRumahAwal = 0, tutorialWaktuAwal = 0;
@@ -272,8 +272,14 @@ function zonaTujuanWarga(jam) {
   return { kerja: 0.05, rumah: 0.85, sosial: 0.1 }; // 19-05 istirahat
 }
 // Bangunan selesai per zona: kerja = def.kerja > 0 (dermaga/kilang/pasar/
-// pelabuhan/dll.); rumah = def.rumah > 0; sosial = pasar/toko (kat
-// ekonomi) atau ruang terbuka (taman/lapangan/stadion).
+// pelabuhan/dll.); rumah = def.rumah > 0; sosial = pasar/toko/bank
+// (kat perkantoran), tempat rekreasi & hiburan (kat rekreasi/hiburan),
+// atau ruang terbuka (taman/lapangan/stadion — jenisAtap).
+// v19 Worker 4: kat "ekonomi" SUDAH TIDAK ADA (Worker 1 memetakan
+// ekonomi -> perkantoran); memakai "ekonomi" membuat zona sosial
+// kosong kecuali ruang terbuka — warga sore tidak pernah ke pasar,
+// toko, bioskop, atau taman. Fallback jenisAtap dipertahankan agar
+// taman (kat lingkungan) tetap jadi tujuan sosial.
 function bangunanZona(zona) {
   const out = [];
   if (!S) return out;
@@ -281,7 +287,7 @@ function bangunanZona(zona) {
     const def = BANGUNAN_MAP[b.id]; if (!def) continue;
     if (zona === "kerja" && (def.kerja || 0) > 0) out.push(b);
     else if (zona === "rumah" && (def.rumah || 0) > 0) out.push(b);
-    else if (zona === "sosial" && (def.kat === "ekonomi" || (def.vektor && (def.vektor.jenisAtap === "taman" || def.vektor.jenisAtap === "lapangan" || def.vektor.jenisAtap === "stadion")))) out.push(b);
+    else if (zona === "sosial" && (def.kat === "perkantoran" || def.kat === "rekreasi" || def.kat === "hiburan" || (def.vektor && (def.vektor.jenisAtap === "taman" || def.vektor.jenisAtap === "lapangan" || def.vektor.jenisAtap === "stadion")))) out.push(b);
   }
   return out;
 }
@@ -453,6 +459,15 @@ function namaKecamatan(id) {
   return id || "—";
 }
 
+// v19 Worker 5 (APBD): satu sumber kunci rincian ekonomi — dipakai
+// stateBaru, akrualJamGame, prosesPergantianHari & migrasi save lama.
+// Pendapatan: pajak, pajakProperti, penjualan, ekspor, wisata, bunga,
+// perdagangan, daurUlang, tiketBus, tiketRekreasi. Belanja: upkeep
+// (dipartisi jadi upkeepPendidikan/Kesehatan/Lingkungan/Infra/Lain —
+// jumlah kelimanya SELALU = upkeep, tanpa ganda hitung) + gaji.
+function rincianKosong() {
+  return { pajak: 0, pajakProperti: 0, penjualan: 0, ekspor: 0, wisata: 0, bunga: 0, perdagangan: 0, daurUlang: 0, upkeep: 0, upkeepPendidikan: 0, upkeepKesehatan: 0, upkeepLingkungan: 0, upkeepInfra: 0, upkeepLain: 0, gaji: 0, tiketBus: 0, tiketRekreasi: 0 };
+}
 function stateBaru(petaBaru) {
   const st = {
     versi: CITY.VERSI_SAVE, seed: CITY.SEED, hari: 1, cuaca: "Cerah",
@@ -465,15 +480,23 @@ function stateBaru(petaBaru) {
     // tiap pergantian hari menjadi rincianHari); akumulasiJual/Ekspor =
     // kuota jual/ekspor fraksional (maks harian / 24 per jam).
     akumulasiProduksi: {},
-    rincianBerjalan: { pajak: 0, penjualan: 0, ekspor: 0, wisata: 0, bunga: 0, perdagangan: 0, upkeep: 0, gaji: 0 },
+    rincianBerjalan: rincianKosong(),
+    tarifPajakProperti: 10, // v19 Worker 5: APBD — tarif pajak properti % (0-20, diubah di dashboard Ekonomi)
+    apbd: { hariDefisit: 0 }, // v19 Worker 5: hitung hari defisit berturut-turut (peringatan bila >= 3)
     akumulasiJual: 0, akumulasiEkspor: 0,
     misiSelesai: {}, statistik: { dibangun: {}, dibangunKat: {}, jalan: 0, jembatan: 0, produksi: {}, ekspor: 0, pendudukMax: 4, pendapatanHari: 0, pengeluaranHari: 0 },
     bersih: [], // tile hutan yang sudah ditebang (agar peta sama setelah reload)
     penduduk: { total: 4, bahagia: 60, bekerja: 0, menganggur: 0, cakupanPendidikan: 0, cakupanKesehatan: 0 },
     log: [],
-    petaVersi: 4, // v18-A: dunia v17 + mesin waktu (SAVE_KEY tetap merantiRisingWorldV1)
+    petaVersi: 5, // v19: dunia v17 + mesin waktu v18 + utilitas (SAVE_KEY tetap merantiRisingWorldV1)
     pulau: pulauStateBaru(),
     ruteFeri: [], // { id, pulauId, dari:{x,y}, ke:{x,y}, t, arah }
+    utilitas: utilitasDefault(), // v19 Worker 2: listrik/air/banjir/sampah (lihat js/city-utilitas.js)
+    bahagia: (typeof bahagiaDefault === "function" ? bahagiaDefault() : { nilai: 60, bonusZona: 0, rincian: {} }), // v19 Worker 3: {nilai, bonusZona, rincian 20 indikator}
+    bahagiaKecamatan: {}, // v19 Worker 3: {idKecamatan: {nilai, penduduk, rincian}} (nilai null = belum berpenghuni)
+    lingkungan: (typeof lingkunganDefault === "function" ? lingkunganDefault() : { polusi: 0, mangroveSehat: {}, gambutSehat: {}, pantaiTerabrasi: [], kebakaranAktif: [] }), // v19 Worker 3
+    zona: {}, // v19 Worker 3: peta jarang "x,y" -> id zona (hanya petak berzona)
+    lalin: (typeof lalinDefault === "function" ? lalinDefault() : null), // v19 Worker 4: lalu lintas + bus/taksi/rekreasi (js/city-lalin.js)
     pemimpin: profilPemain ? { nama: profilPemain.nama, gender: profilPemain.gender, avatar: profilPemain.avatar } : { nama: "Pemimpin", gender: "pria", avatar: AVATAR_KARAKTER.pria },
     tutorial: { aktif: profilPemain ? !profilPemain.tutorialSelesai : true, langkah: 0, selesai: profilPemain ? !!profilPemain.tutorialSelesai : false },
   };
@@ -672,7 +695,7 @@ function simpan() {
   sinkronJamVisual();
   S.waktuGame = waktuGame;
   S.kecepatan = kecepatan;
-  S.petaVersi = 4;
+  S.petaVersi = 5;
   S.akumulasi = akumulasiHari; // cermin lama, dipertahankan untuk kompatibilitas
   try { localStorage.setItem(CITY.SAVE_KEY, JSON.stringify(S)); } catch (e) {}
 }
@@ -684,7 +707,12 @@ function simpan() {
 // ada penambahan selisih waktu nyata sejak save).
 function migrasiWaktuV17(st) {
   if (!st) return 360;
-  if (st.petaVersi === 4 && typeof st.waktuGame === "number" && isFinite(st.waktuGame) && st.waktuGame >= 0) return st.waktuGame;
+  // v19: simpanan v18 (petaVersi 4) DAN v19 (petaVersi 5) sudah punya
+  // waktuGame — dipakai persis. Hanya simpanan v17 (petaVersi <= 3,
+  // tanpa waktuGame) yang dihitung dari hari/akumulasi (jalur ini
+  // kehilangan hingga 1 menit karena Math.floor float — hanya untuk
+  // simpanan lama, bukan untuk simpanan v18/v19).
+  if (st.petaVersi >= 4 && typeof st.waktuGame === "number" && isFinite(st.waktuGame) && st.waktuGame >= 0) return st.waktuGame;
   const hari = (typeof st.hari === "number" && st.hari >= 1) ? Math.floor(st.hari) : 1;
   let menitJam = 360; // default 06:00
   if (typeof st.akumulasi === "number" && st.akumulasi > 0) {
@@ -722,6 +750,7 @@ function muatSemuaGambar() {
   paths.add("assets/environment/pohon-rumbia.png");
   paths.add("assets/environment/pohon-kelapa.png");
   paths.add("assets/vehicles/truk-pengangkut.png");
+  paths.add("assets/vehicles/bus.png"); // v19 Worker 5: sprite bus (bukan lagi placeholder truk)
   paths.add("assets/vehicles/kapal-kargo.png");
   paths.add("assets/vehicles/perahu-kecil.png");
   // v15: kapal feri + jembatan gantung
@@ -828,6 +857,30 @@ function cekBangun(def, x, y, rot) {
     if (adaBangunanDi(S, tx, ty)) return { ok: false, alasan: "Sudah ada bangunan di sini." };
     if (adaJalanDi(S, tx, ty)) return { ok: false, alasan: "Sudah ada jalan di sini." };
   }
+  // v19 Worker 3: validasi zoning — bila footprint menyentuh petak
+  // berzona, kat bangunan harus diizinkan zona itu (protected &
+  // conservation menolak semua; waterfront hanya bangunan pantai).
+  if (typeof zonaCocokUntuk === "function") {
+    const zc = zonaCocokUntuk(def, x, y, rot);
+    if (!zc.ok) return { ok: false, alasan: zc.alasan };
+  }
+  // v19 Worker 2: intake hanya boleh di pantai/laut ATAU bersebelahan
+  // (4-arah) dengan sungai/kanal — pesisir kering tidak cukup, karena air
+  // bakunya harus diambil dari sungai/laut. (Aturan def.pantai di atas
+  // mengizinkan pesisir, jadi pemeriksaan ini dipasang setelah loop petak.)
+  if (def.id === "intake") {
+    let dekatAir = false;
+    for (let j = 0; j < k.h && !dekatAir; j++) for (let i = 0; i < k.w && !dekatAir; i++) {
+      const tx = x + i, ty = y + j;
+      const t = terrainDi(peta, tx, ty);
+      if (t === "pantai" || t === "laut") { dekatAir = true; break; }
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const tt = terrainDi(peta, tx + dx, ty + dy);
+        if (tt === "sungai" || tt === "kanal") { dekatAir = true; break; }
+      }
+    }
+    if (!dekatAir) return { ok: false, alasan: "Intake Air Baku harus dibangun di pantai/laut atau di samping sungai/kanal." };
+  }
   // Biaya tambahan rawa/gambut (di luar harga dasar) — ikut dicek
   // kecukupannya di sini, dipotong di bangunDi.
   const tambahan = def.pantai ? { uang: 0, des: "" } : biayaTambahanLahan(x, y, rot, def);
@@ -883,6 +936,9 @@ function cekJembatan(tipe, x, y) {
 function bangunDi(def, x, y, rot) {
   const cek = cekBangun(def, x, y, rot);
   if (!cek.ok) { toast(cek.alasan, "gagal"); bunyiGagal(); return false; }
+  // v19 Worker 3: catat dampak lingkungan SEBELUM petak hutan diubah
+  // (tebang hutan, bangun dekat mangrove, bangun di gambut).
+  if (typeof catatDampakLingkungan === "function") { try { catatDampakLingkungan(def, x, y, rot); } catch (e) {} }
   bayarBiaya(def.harga);
   if (cek.biayaTambahan) {
     S.uang -= cek.biayaTambahan;
@@ -1073,10 +1129,29 @@ function hitungRumah() {
   return kap;
 }
 function hitungLayanan() {
+  // v19 Worker 4: cakupan = min(1, SUM kapasitas fasilitas / penduduk)
+  // — KAPASITAS membatasi (bukan hanya radius): sebuah fasilitas hanya
+  // dihitung bila ada minimal 1 rumah dalam radius layanannya
+  // (pusat-ke-pusat, Euclid, dalam petak). Fasilitas yang tidak
+  // menjangkau satu pun rumah tidak terhitung — kapasitasnya tidak
+  // bisa dipakai warga. Apotek (layanan kesehatan, radius 3,
+  // kapasitas 20) ikut dihitung sebagai fasilitas kesehatan kecil
+  // lewat d.layanan — tanpa cabang khusus.
   let edu = 0, kes = 0, jmlLayanan = 0;
+  const rumah = bangunanSelesai().filter(b => { const d = BANGUNAN_MAP[b.id]; return d && d.rumah > 0; });
   for (const b of bangunanSelesai()) {
     const d = BANGUNAN_MAP[b.id];
     if (d.layanan) {
+      // v19 Worker 2: layanan di bangunan kebanjiran / tanpa listrik /
+      // tanpa air = 0 (tidak beroperasi).
+      if (typeof bangunanBeroperasi === "function" && !bangunanBeroperasi(b)) continue;
+      const pb = pusatBangunan(b);
+      let menjangkau = false;
+      for (const r of rumah) {
+        const pr = pusatBangunan(r);
+        if (Math.hypot(pr.x - pb.x, pr.y - pb.y) <= (d.layanan.radius || 0)) { menjangkau = true; break; }
+      }
+      if (!menjangkau) continue;
       jmlLayanan++;
       if (d.layanan.jenis === "pendidikan") edu += d.layanan.kapasitas;
       else kes += d.layanan.kapasitas;
@@ -1205,14 +1280,51 @@ function majuKonstruksi(menit) {
 // S.uang menjadi float internal; rp() sudah Math.round saat tampil, dan
 // S.komoditas tetap integer (produksi fraksional ditampung dulu di
 // S.akumulasiProduksi, baru dipindah floor-nya bila >= 1 unit).
+// v19 Worker 5 (APBD): efek tarif pajak properti ke kebahagiaan —
+// tarif 10% (default) netral; tiap 1% di atas 10 menurunkan kebahagiaan
+// 0,3 poin (maks -3 pada 20%), tiap 1% di bawah 10 menaikkannya 0,3
+// (maks +3 pada 0%). Diterapkan SETELAH hitungKebahagiaan() (Worker 3)
+// dihitung ulang — tanpa mengubah engine Worker 3.
+function efekPajakPropertiBahagia() {
+  const tarif = (S && typeof S.tarifPajakProperti === "number") ? S.tarifPajakProperti : 10;
+  return clamp((10 - tarif) * 0.3, -3, 3);
+}
+function terapkanEfekPajakKebahagiaan() {
+  if (!S || !S.bahagia || typeof S.bahagia.nilai !== "number") return;
+  const d = efekPajakPropertiBahagia();
+  if (!d) return;
+  S.bahagia.nilai = clamp(Math.round(S.bahagia.nilai + d), 0, 100);
+  S.penduduk.bahagia = S.bahagia.nilai;
+}
+// Ubah tarif pajak properti (0-20%) dari dashboard APBD (panel Ekonomi).
+function aturTarifPajak(n) {
+  if (!S) return;
+  const tarif = clamp(Math.round(Number(n) || 0), 0, 20);
+  S.tarifPajakProperti = tarif;
+  simpan(); renderPanelKiri(); renderHUD();
+  toast("Tarif pajak properti: " + tarif + "%" + (tarif > 10 ? " — pendapatan naik, kebahagiaan turun sedikit." : tarif < 10 ? " — kebahagiaan naik sedikit, pendapatan turun." : " (netral)."), "ok");
+  bunyiKlik();
+}
 function akrualJamGame() {
   if (!S) return;
   if (!S.akumulasiProduksi) S.akumulasiProduksi = {};
-  if (!S.rincianBerjalan) S.rincianBerjalan = { pajak: 0, penjualan: 0, ekspor: 0, wisata: 0, bunga: 0, perdagangan: 0, upkeep: 0, gaji: 0 };
+  if (!S.rincianBerjalan) S.rincianBerjalan = rincianKosong();
+  // Migrasi save lama: kunci rincian baru (pajakProperti, partisi upkeep)
+  // diisi 0 tanpa menimpa akrual hari berjalan yang sudah ada.
+  for (const k of Object.keys(rincianKosong())) if (typeof S.rincianBerjalan[k] !== "number") S.rincianBerjalan[k] = 0;
   if (typeof S.akumulasiJual !== "number") S.akumulasiJual = 0;
   if (typeof S.akumulasiEkspor !== "number") S.akumulasiEkspor = 0;
+  // v19 Worker 2: hitung ulang utilitas tiap jam game (konektivitas,
+  // pemadaman bergilir, banjir, tumpukan sampah) SEBELUM produksi.
+  if (typeof hitungUtilitas === "function") { try { hitungUtilitas(true); } catch (e) {} }
+  // v19 Worker 4: hitung ulang lalu lintas tiap jam game SEBELUM
+  // kebahagiaan — hitungKebahagiaan (Worker 3) membaca S.lalin.skor.
+  if (typeof hitungLalin === "function") { try { hitungLalin(); } catch (e) {} }
+  // v19 Worker 3: hitung ulang kebahagiaan (20 indikator) tiap jam game.
+  if (typeof hitungKebahagiaan === "function") { try { hitungKebahagiaan(); } catch (e) {} }
+  terapkanEfekPajakKebahagiaan(); // v19 Worker 5: efek tarif pajak properti
   const r = S.rincianBerjalan;
-  const j = { pajak: 0, penjualan: 0, ekspor: 0, wisata: 0, bunga: 0, perdagangan: 0, upkeep: 0, gaji: 0 };
+  const j = rincianKosong();
   const kapSimpan = kapasitasSimpan();
   const tk = hitungTenagaKerja(); // segarkan b.staf / b.efisiensi tiap jam
   const pengaliCuaca = S.cuaca === "Hujan" ? 1.2 : 1;
@@ -1223,6 +1335,10 @@ function akrualJamGame() {
     b.kurangBahan = false;
     const eff = b.efisiensi == null ? 1 : b.efisiensi;
     if (eff <= 0) continue;
+    // v19 Worker 2: bangunan tanpa listrik/air atau kebanjiran tidak
+    // beroperasi jam ini (produksi 0). Flag dihitung hitungUtilitas()
+    // di atas; bangunanBeroperasi defensif bila flag belum ada.
+    if (typeof bangunanBeroperasi === "function" && !bangunanBeroperasi(b)) continue;
     const prod = d.produksi;
     // Bahan baku: dikonsumsi fraksional lewat b.akumMasuk (per bangunan,
     // ikut tersimpan karena bagian dari S.bangunan). Utang bahan dibatasi
@@ -1248,7 +1364,7 @@ function akrualJamGame() {
     }
     for (const k of Object.keys(prod.keluar)) {
       let jmlJam = (prod.keluar[k] * eff * skala) / 24;
-      if (d.kat === "perkebunan") jmlJam *= pengaliCuaca;
+      if (d.kat === "lahan") jmlJam *= pengaliCuaca;
       S.akumulasiProduksi[k] = (S.akumulasiProduksi[k] || 0) + jmlJam;
       const utuh = Math.floor(S.akumulasiProduksi[k] + 1e-9);
       if (utuh >= 1) {
@@ -1320,15 +1436,46 @@ function akrualJamGame() {
     const d = BANGUNAN_MAP[b.id];
     if (d.wisata) j.wisata += d.wisata / 24;
     if (d.bunga) j.bunga += Math.min(20000, Math.round(S.uang * d.bunga)) / 24;
+    // v19 Worker 2: pendapatan bank sampah & pabrik daur ulang (Rp/hari / 24).
+    if (d.pendapatan && d.kapasitasSampah) j.daurUlang += d.pendapatan / 24;
+  }
+  // 4a. v19 Worker 5 (APBD): pajak properti — tarif% dari nilai bangunan
+  // (harga.uang) per bulan, diakru per jam: Σ harga.uang × tarif/100 / 30 / 24.
+  // Hanya properti hunian/komersial/industri (kat permukiman, perkantoran,
+  // industri) — fasilitas publik (sekolah, puskesmas, kantor pemerintah)
+  // tidak dipajaki. Tarif default 10% (0-20, diubah di dashboard Ekonomi).
+  const tarifPP = (typeof S.tarifPajakProperti === "number") ? S.tarifPajakProperti : 10;
+  for (const b of bangunanSelesai()) {
+    const d = BANGUNAN_MAP[b.id];
+    if (!d || !d.harga || !d.harga.uang) continue;
+    if (d.kat !== "permukiman" && d.kat !== "perkantoran" && d.kat !== "industri") continue;
+    j.pajakProperti += d.harga.uang * (tarifPP / 100) / 30 / 24;
+  }
+  // 4b. v19 Worker 4: tiket bus/taksi & tiket rekreasi (per jam).
+  // hitungRekreasi() menyegarkan b.pengunjung & S.lalin.rekreasi jam ini;
+  // bus/taksi sudah dihitung hitungLalin() di atas (S.lalin.bus/taksi).
+  if (typeof hitungRekreasi === "function") { try { hitungRekreasi(); } catch (e) {} }
+  if (S.lalin) {
+    if (S.lalin.bus) j.tiketBus += S.lalin.bus.pendapatanPerJam || 0;
+    if (S.lalin.taksi) j.tiketBus += S.lalin.taksi.pendapatanPerJam || 0;
+    if (S.lalin.rekreasi) j.tiketRekreasi += S.lalin.rekreasi.pendapatanPerJam || 0;
   }
   // 5. Upkeep + gaji (staf dari hitungTenagaKerja() di atas).
   for (const b of bangunanSelesai()) {
     const d = BANGUNAN_MAP[b.id];
-    j.upkeep += (d.upkeep || 0) / 24;
+    const up = (d.upkeep || 0) / 24;
+    j.upkeep += up;
+    // v19 Worker 5 (APBD): upkeep dipartisi per kategori belanja — jumlah
+    // kelima kategori SELALU = upkeep (tanpa ganda hitung).
+    if (d.kat === "pendidikan") j.upkeepPendidikan += up;
+    else if (d.kat === "kesehatan") j.upkeepKesehatan += up;
+    else if (d.kat === "lingkungan" || d.kat === "drainase") j.upkeepLingkungan += up;
+    else if (d.kat === "listrik" || d.kat === "air" || d.kat === "transportasi") j.upkeepInfra += up;
+    else j.upkeepLain += up;
     j.gaji += (b.staf || 0) * GAJI_PER_PEKERJA / 24;
   }
   for (const k of Object.keys(j)) r[k] = (r[k] || 0) + j[k];
-  S.uang += (j.pajak + j.penjualan + j.ekspor + j.wisata + j.bunga + j.perdagangan) - (j.upkeep + j.gaji);
+  S.uang += (j.pajak + j.pajakProperti + j.penjualan + j.ekspor + j.wisata + j.bunga + j.perdagangan + j.daurUlang + j.tiketBus + j.tiketRekreasi) - (j.upkeep + j.gaji);
 }
 // Feri berbasis waktu game (SATU jalur: majukanWaktu -> perbaruiFeriMenit
 // tiap menit). Durasi seberang 12,5 menit game = ~25 detik nyata pada 1x
@@ -1361,20 +1508,31 @@ function prosesPergantianHari() {
   // misi/level, log. (v18-A: reset akumulasi/jamVisual lama & S.hari++
   // dihapus — waktu kini berasal dari waktuGame; S.hari sudah disinkronkan
   // majukanWaktu.)
-  if (!S.rincianBerjalan) S.rincianBerjalan = { pajak: 0, penjualan: 0, ekspor: 0, wisata: 0, bunga: 0, perdagangan: 0, upkeep: 0, gaji: 0 };
+  if (!S.rincianBerjalan) S.rincianBerjalan = rincianKosong();
+  for (const k of Object.keys(rincianKosong())) if (typeof S.rincianBerjalan[k] !== "number") S.rincianBerjalan[k] = 0;
   S.penduduk.kemarin = S.penduduk.total; // untuk "+N/hari" di kartu statistik
   // 0. Rekap hari yang baru berakhir: rincianBerjalan (akrual per-jam
   // Modul C) menjadi rincianHari hari terakhir ("Pemasukan kemarin" di
   // panel Ekonomi); lalu hari baru mulai dari 0. Uang TIDAK diubah di sini
   // — sudah ditambah/dikurangi per jam di akrualJamGame().
   const rb = S.rincianBerjalan;
-  const rincian = { pajak: rb.pajak || 0, penjualan: rb.penjualan || 0, ekspor: rb.ekspor || 0, wisata: rb.wisata || 0, bunga: rb.bunga || 0, perdagangan: rb.perdagangan || 0, upkeep: rb.upkeep || 0, gaji: rb.gaji || 0 };
-  const masukTotal = rincian.pajak + rincian.penjualan + rincian.ekspor + rincian.wisata + rincian.bunga + rincian.perdagangan;
+  const rincian = {};
+  for (const k of Object.keys(rincianKosong())) rincian[k] = rb[k] || 0;
+  const masukTotal = rincian.pajak + rincian.pajakProperti + rincian.penjualan + rincian.ekspor + rincian.wisata + rincian.bunga + rincian.perdagangan + rincian.daurUlang + rincian.tiketBus + rincian.tiketRekreasi;
   const keluarTotal = rincian.upkeep + rincian.gaji;
   S.statistik.pendapatanHari = masukTotal;
   S.statistik.pengeluaranHari = keluarTotal;
   S.statistik.rincianHari = rincian;
-  S.rincianBerjalan = { pajak: 0, penjualan: 0, ekspor: 0, wisata: 0, bunga: 0, perdagangan: 0, upkeep: 0, gaji: 0 };
+  S.rincianBerjalan = rincianKosong();
+  // v19 Worker 5 (APBD): lacak defisit berturut-turut — peringatan bila
+  // pengeluaran > pendapatan selama 3 hari game berturut-turut.
+  if (!S.apbd || typeof S.apbd !== "object") S.apbd = { hariDefisit: 0 };
+  if (keluarTotal > masukTotal) S.apbd.hariDefisit = (S.apbd.hariDefisit || 0) + 1;
+  else S.apbd.hariDefisit = 0;
+  if (S.apbd.hariDefisit >= 3) {
+    log("⚠️ Defisit APBD " + S.apbd.hariDefisit + " hari berturut-turut — naikkan tarif pajak properti atau kurangi belanja.");
+    toast("⚠️ Defisit APBD " + S.apbd.hariDefisit + " hari berturut-turut!", "gagal");
+  }
   // 1. Riset — TETAP HARIAN (v18-C butir 5): S.riset.sisa-- per hari,
   // `waktu` TEKNOLOGI tetap dalam hari, tidak diubah.
   if (S.riset) {
@@ -1390,6 +1548,11 @@ function prosesPergantianHari() {
   }
   // 2. Tenaga kerja
   const tk = hitungTenagaKerja();
+  // 2b. Lingkungan & bencana (v19 Worker 3, HARIAN, probabilitas kecil):
+  // kebakaran hutan/bangunan, pemulihan api lama, abrasi pantai.
+  // Dijalankan sebelum cuaca diganti (langkah 5) agar kondisi "Cerah &
+  // musim kering" memakai cuaca hari yang baru berakhir.
+  if (typeof prosesBencanaHarian === "function") { try { prosesBencanaHarian(); } catch (e) {} }
   // 3. Perdagangan antar pulau (rute feri): HANYA kiriman komoditas yang
   // tetap harian (2/4/6 unit per hari menurut ukuran pulau) — uang
   // perdagangan sudah diakru per jam (harian/24) di akrualJamGame().
@@ -1404,17 +1567,16 @@ function prosesPergantianHari() {
     else if (k === "besi") S.besi += jml;
     else S.komoditas[k] = Math.min(kapSimpan, (S.komoditas[k] || 0) + jml);
   }
-  // 4. Penduduk & kebahagiaan
+  // 4. Penduduk & kebahagiaan (v19 Worker 3: engine 20 indikator dihitung
+  // PER JAM di akrualJamGame; di sini hanya dipakai nilai terakhirnya.
+  // Pertumbuhan penduduk memakai ambang LAMA: bahagia >= 50 naik,
+  // bahagia < 35 turun — dipertahankan.)
+  if (typeof hitungKebahagiaan === "function") { try { hitungKebahagiaan(); } catch (e) {} }
+  terapkanEfekPajakKebahagiaan(); // v19 Worker 5: efek tarif pajak properti
   const layanan = hitungLayanan();
   const rumahKap = hitungRumah();
   const pop = S.penduduk.total;
-  const tingkatKerja = tk.angkatan > 0 ? tk.bekerja / tk.angkatan : 1;
-  const tingkatNganggur = tk.angkatan > 0 ? tk.menganggur / tk.angkatan : 0;
-  const tingkatTunawisma = pop > 0 ? Math.max(0, pop - rumahKap) / pop : 0;
-  let bahagiaBangunan = 0;
-  for (const b of bangunanSelesai()) { const d = BANGUNAN_MAP[b.id]; bahagiaBangunan += d.bahagia || 0; }
-  let bahagia = 45 + 20 * layanan.edu + 15 * layanan.kes + 10 * tingkatKerja + Math.min(15, bahagiaBangunan) - 10 * tingkatNganggur - 8 * tingkatTunawisma;
-  bahagia = clamp(Math.round(bahagia), 0, 100);
+  const bahagia = (S.bahagia && typeof S.bahagia.nilai === "number") ? S.bahagia.nilai : 60;
   let popBaru = pop;
   if (pop < rumahKap && bahagia >= 50) popBaru = Math.min(rumahKap, pop + Math.max(1, Math.round(pop * 0.03)) + 2);
   else if (bahagia < 35) popBaru = Math.max(0, pop - Math.max(1, Math.round(pop * 0.02)));
@@ -1557,7 +1719,9 @@ function perbaruiWarga(dt) {
     if (!wargaAktifBergerak(w)) { w.jalan = false; continue; }
     // Kemudi halus (belok bertahap) mengikuti jalan; sampai di tile
     // tujuan -> pilih langkah berikut (belok kiri/kanan di persimpangan).
-    if (gerakAgen(w, dt, 5, 0.25)) {
+    // v19 Worker 4: macet = lebih lambat (faktorKecepatanLalin 0,5-1).
+    const fLalinW = (typeof faktorKecepatanLalin === "function") ? faktorKecepatanLalin() : 1;
+    if (gerakAgen(w, dt * fLalinW, 5, 0.25)) {
       if (!pilihLangkahWarga(w)) w.jalan = false;
     }
   }
@@ -1857,6 +2021,35 @@ function gambarSatuKendaraan(k, lebar, tinggi) {
         ctx.drawImage(img, s.x - w / 2, s.y + 8 * z - h, w, h);
       }
     }
+  } else if (k.tipe === "bus") {
+    // v19 Worker 5: bus memakai sprite bus sendiri (assets/vehicles/
+    // bus.png); bila belum termuat, fallback ke sprite truk + atap biru
+    // (placeholder lama Worker 4) agar bus tetap terlihat.
+    const t = tileTengahDunia(k.x, k.y);
+    const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
+    const imgBus = gambarAset["assets/vehicles/bus.png"];
+    const img = (imgBus && imgBus.complete && imgBus.naturalWidth) ? imgBus : gambarAset["assets/vehicles/truk-pengangkut.png"];
+    if (img && img.complete && img.naturalWidth) {
+      const w = 48 * z, h = w * (img.naturalHeight / img.naturalWidth);
+      const hadapKiri = (Math.cos(k.arah || 0) - Math.sin(k.arah || 0)) < 0;
+      if (hadapKiri) {
+        ctx.save(); ctx.translate(s.x, 0); ctx.scale(-1, 1);
+        ctx.drawImage(img, -w / 2, s.y + 8 * z - h, w, h);
+        ctx.restore();
+      } else {
+        ctx.drawImage(img, s.x - w / 2, s.y + 8 * z - h, w, h);
+      }
+      if (img === gambarAset["assets/vehicles/truk-pengangkut.png"]) {
+        ctx.fillStyle = "rgba(9,132,227,0.85)";
+        ctx.fillRect(s.x - w * 0.32, s.y + 8 * z - h - 4 * z, w * 0.64, Math.max(2, 3 * z));
+      }
+    } else {
+      ctx.fillStyle = "#0984e3";
+      ctx.fillRect(s.x - 22 * z, s.y - 10 * z, 44 * z, 14 * z);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = Math.max(8, 10 * z) + "px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("BUS", s.x, s.y + 2 * z);
+    }
   } else if (k.tipe === "kapal") {
     const t = tileTengahDunia(k.x, k.y + Math.sin(frame / 30) * 0.15);
     const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
@@ -1906,6 +2099,16 @@ function gambarPeta() {
       maxY = Math.min(peta.H - 1, (rc.cy1 + 1) * ch);
     }
   }
+  // v19 Worker 5 (perbaikan bug tint malam, cek live v18): state ctx
+  // direset di awal agar tint tidak tertutup globalAlpha /
+  // globalCompositeOperation / setLineDash yang tertinggal dari langkah
+  // sebelumnya, dan langkah 1-6 dibungkus try/catch agar SATU exception
+  // di lapisan mana pun (jalan, bangunan, feri, ghost, awan) TIDAK PERNAH
+  // bisa melewatkan langkah 7 (tint malam + lampu).
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = "source-over";
+  try { ctx.setLineDash([]); } catch (e) {}
+  try {
   // 1. Terrain
   for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) {
     const t = peta.terrain[y][x];
@@ -2103,6 +2306,9 @@ function gambarPeta() {
   for (const k of kendaraanVisual) lapisan.push({ k: k.x + k.y, f: () => gambarSatuKendaraan(k, lebar, tinggi) });
   lapisan.sort((a, b) => a.k - b.k);
   for (const item of lapisan) item.f();
+  // 3b. Overlay peta v19 (Worker 5): tint per petak DI ATAS bangunan agar
+  // terlihat jelas, DI BAWAH tint malam (langkah 7) agar malam tetap gelap.
+  if (typeof gambarOverlay === "function") { try { gambarOverlay(lebar, tinggi, minX, maxX, minY, maxY); } catch (e) {} }
   // 4. Feri antar pulau (di laut lepas, jauh dari bangunan)
   gambarFeri(lebar, tinggi);
   // 5. Hover & ghost
@@ -2142,27 +2348,47 @@ function gambarPeta() {
     const s = duniaKeLayar(a.x, a.y, lebar, tinggi);
     ctx.beginPath(); ctx.ellipse(s.x, s.y, 60 * kamera.zoom * a.skala, 18 * kamera.zoom * a.skala, 0, 0, Math.PI * 2); ctx.fill();
   }
-  // 7. Siang/malam (v18-B: tint mengikuti kegelapan yang diinterpolasi
+  } catch (e) {
+    // v19 Worker 5: render lapisan gagal di tengah jalan — satu frame
+    // rusak TIDAK BOLEH membunuh tint malam (dan loop rAF, lihat loop()).
+    // Tint di bawah tetap digambar; frame berikutnya mencoba lagi.
+    try { if (typeof console !== "undefined" && console.error) console.error("[gambarPeta] lapisan gagal:", e && e.message); } catch (e2) {}
+  }
+  // 7. Siang/malam — DIJAMIN berjalan apa pun yang terjadi di langkah
+  // 1-6 (lihat try/catch di atas): reset state ctx, lalu tint menutupi
+  // SELURUH canvas, lalu lampu DI ATAS tint. Tanpa jaminan ini, satu
+  // exception di lapisan bangunan/feri membuat peta membeku di frame
+  // siang terakhir — persis temuan cek live v18 (jam & label fase jalan,
+  // peta tetap terang, tidak ada lampu).
+  // (v18-B: tint mengikuti kegelapan yang diinterpolasi
   // halus; senja oranye paling kuat sekitar 18:00, memudar ke 16:30/19:30)
   if (gelap > 0) {
-    const jT = jamDesimal();
-    const senja = Math.max(0, 1 - Math.abs(jT - 18) / 1.5);
-    if (senja > 0) {
-      ctx.fillStyle = "rgba(255,140,60," + (0.10 * senja).toFixed(3) + ")";
+    try {
+      ctx.setTransform(skalaRender, 0, 0, skalaRender, 0, 0);
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+      ctx.setLineDash([]);
+      const jT = jamDesimal();
+      const senja = Math.max(0, 1 - Math.abs(jT - 18) / 1.5);
+      if (senja > 0) {
+        ctx.fillStyle = "rgba(255,140,60," + (0.10 * senja).toFixed(3) + ")";
+        ctx.fillRect(0, 0, lebar, tinggi);
+      }
+      ctx.fillStyle = "rgba(10,20,60," + (gelap * 0.45).toFixed(3) + ")";
       ctx.fillRect(0, 0, lebar, tinggi);
-    }
-    ctx.fillStyle = "rgba(10,20,60," + (gelap * 0.45).toFixed(3) + ")";
-    ctx.fillRect(0, 0, lebar, tinggi);
-    // Lampu malam di atas tint gelap agar cahayanya menembus kegelapan.
-    gambarLampuMalam(lebar, tinggi, gelap);
+      // Lampu malam di atas tint gelap agar cahayanya menembus kegelapan.
+      try { gambarLampuMalam(lebar, tinggi, gelap); } catch (eLampu) {}
+    } catch (e) {}
   }
   // 8. Hujan
+  try {
   if (S.cuaca === "Hujan") {
     ctx.strokeStyle = "rgba(174,214,241,0.6)"; ctx.lineWidth = 1;
     for (const t of hujanTetes) {
       ctx.beginPath(); ctx.moveTo(t.x, t.y); ctx.lineTo(t.x - 3, t.y + 12); ctx.stroke();
     }
   }
+  } catch (e) {}
 }
 function gambarGhost(lebar, tinggi) {
   // Di layar sentuh, pratinjau bertahan di petak yang diketuk sekali.
@@ -2276,7 +2502,9 @@ function perbaruiKendaraan(dt) {
     if (truk.tileX === undefined) { truk.tileX = Math.round(truk.x); truk.tileY = Math.round(truk.y); truk.dariX = truk.tileX; truk.dariY = truk.tileY; }
     // Truk mengikuti jaringan jalan (bukan terbang lurus ke target acak):
     // kemudi halus di tikungan, lajur kiri, belok di persimpangan.
-    if (gerakAgen(truk, dt, 3.5, 0.4)) {
+    // v19 Worker 4: macet = lebih lambat (faktorKecepatanLalin 0,5-1).
+    const fLalinT = (typeof faktorKecepatanLalin === "function") ? faktorKecepatanLalin() : 1;
+    if (gerakAgen(truk, dt * fLalinT, 3.5, 0.4)) {
       pilihJalanBerikut(truk); // buntu -> putar balik; parkir bila tak ada jalan
     }
   }
@@ -2354,6 +2582,131 @@ function pusatkanPulau(pulauId) {
   kamera.zoom = p.ukuran === "besar" ? 0.7 : p.ukuran === "sedang" ? 1 : 1.3;
   bunyiKlik();
 }
+// ---------------- Overlay peta v19 (Worker 5) ----------------
+// Satu overlay aktif dalam satu waktu (overlayAktif, null = tidak ada).
+// Digambar DI ATAS bangunan (langkah 3b gambarPeta) agar terlihat jelas,
+// DI BAWAH tint malam (langkah 7). Data HANYA DIBACA dari cache per jam
+// (S.utilitas / S.lalin / S.bahagiaKecamatan / S.zona) — tidak ada
+// hitung ulang per frame; cache dibangun ulang bila overlay, jam game,
+// jumlah bangunan/jalan, atau jumlah petak berzona berubah.
+let overlayAktif = null;
+const OVERLAY_DEFS = [
+  { id: "listrik", nama: "Listrik", ikon: "⚡", des: "Hijau = berlistrik, merah = padam, kuning = pembangkit." },
+  { id: "air", nama: "Air", ikon: "💧", des: "Biru = berair, merah = tidak berair, cyan = sumber air." },
+  { id: "drainase", nama: "Drainase", ikon: "🌊", des: "Biru tua = petak banjir saat hujan, hijau = bangunan drainase." },
+  { id: "traffic", nama: "Lalu Lintas", ikon: "🚗", des: "Hijau = lancar, kuning = padat, merah = macet (per petak jalan)." },
+  { id: "polusi", nama: "Polusi", ikon: "🏭", des: "Merah = bangunan berpolusi (makin gelap = makin tinggi)." },
+  { id: "kebahagiaan", nama: "Kebahagiaan", ikon: "😊", des: "Per kecamatan: hijau ≥70, kuning 50–69, merah <50." },
+  { id: "layanan", nama: "Layanan", ikon: "🏥", des: "Hijau = dalam radius layanan (pendidikan/kesehatan/keamanan/pemadam)." },
+  { id: "zona", nama: "Zona", ikon: "🎨", des: "Warna zona tata ruang per petak." },
+];
+function aturOverlay(id) {
+  if (id && !OVERLAY_DEFS.some(o => o.id === id)) return;
+  overlayAktif = id || null;
+  overlayCache = null;
+  bunyiKlik();
+  renderPanelKiri();
+}
+function heksaKeRgba(hex, alpha) {
+  if (!hex || hex[0] !== "#") return "rgba(136,136,136," + alpha + ")";
+  const n = parseInt(hex.slice(1), 16);
+  return "rgba(" + ((n >> 16) & 255) + "," + ((n >> 8) & 255) + "," + (n & 255) + "," + alpha + ")";
+}
+let overlayCache = null, overlayCacheKunci = "";
+function bangunCacheOverlay() {
+  const kunci = (overlayAktif || "tidak-ada") + "|" + Math.floor(waktuGame / 60) + "|" + S.bangunan.length + "|" + S.jalan.length + "|" + Object.keys(S.zona || {}).length;
+  if (overlayCache && overlayCacheKunci === kunci) return overlayCache;
+  const petaWarna = new Map();
+  const tandai = (x, y, warna) => { if (x >= 0 && y >= 0 && x < peta.W && y < peta.H) petaWarna.set(x + "," + y, warna); };
+  const jejak = (b, warna) => { if (typeof petakBangunan === "function") { for (const t of petakBangunan(b)) tandai(t.x, t.y, warna); } else tandai(b.x, b.y, warna); };
+  const selesai = (typeof bangunanSelesai === "function") ? bangunanSelesai() : S.bangunan.filter(b => b.selesai);
+  if (overlayAktif === "listrik") {
+    for (const b of selesai) {
+      const d = BANGUNAN_MAP[b.id]; if (!d) continue;
+      if (d.listrikProduksi) jejak(b, "rgba(251,191,36,0.4)");
+      else if ((d.listrik || 0) > 0) jejak(b, b.berlistrik ? "rgba(34,197,94,0.35)" : "rgba(231,76,60,0.45)");
+    }
+  } else if (overlayAktif === "air") {
+    for (const b of selesai) {
+      const d = BANGUNAN_MAP[b.id]; if (!d) continue;
+      if (d.airProduksi) jejak(b, "rgba(6,182,212,0.45)");
+      else if ((d.air || 0) > 0) jejak(b, b.berair ? "rgba(9,132,227,0.4)" : "rgba(231,76,60,0.45)");
+    }
+  } else if (overlayAktif === "drainase") {
+    for (const b of selesai) {
+      const d = BANGUNAN_MAP[b.id]; if (!d) continue;
+      if (d.radiusDrainase || d.olahLimbah) jejak(b, "rgba(0,184,148,0.4)");
+    }
+    for (const kunciTile of (S.utilitas && S.utilitas.banjir) || []) {
+      const parts = kunciTile.split(",");
+      tandai(parseInt(parts[0], 10), parseInt(parts[1], 10), "rgba(30,64,175,0.55)");
+    }
+  } else if (overlayAktif === "traffic") {
+    const per = (S.lalin && S.lalin.perPetak) || {};
+    for (const k of Object.keys(per)) {
+      const parts = k.split(",");
+      tandai(parseInt(parts[0], 10), parseInt(parts[1], 10), per[k] === 2 ? "rgba(231,76,60,0.5)" : per[k] === 1 ? "rgba(241,196,15,0.45)" : "rgba(34,197,94,0.35)");
+    }
+  } else if (overlayAktif === "polusi") {
+    for (const b of selesai) {
+      const d = BANGUNAN_MAP[b.id]; if (!d || !(d.polusi > 0)) continue;
+      jejak(b, "rgba(231,76,60," + (0.15 + 0.05 * d.polusi).toFixed(2) + ")");
+    }
+  } else if (overlayAktif === "kebahagiaan") {
+    const kota = (S.bahagia && typeof S.bahagia.nilai === "number") ? S.bahagia.nilai : 60;
+    for (const b of selesai) {
+      const d = BANGUNAN_MAP[b.id]; if (!d || !d.rumah) continue;
+      const kec = (typeof kecamatanBangunan === "function") ? kecamatanBangunan(b) : b.kecamatan;
+      const nk = (kec && S.bahagiaKecamatan && S.bahagiaKecamatan[kec] && typeof S.bahagiaKecamatan[kec].nilai === "number") ? S.bahagiaKecamatan[kec].nilai : kota;
+      jejak(b, nk >= 70 ? "rgba(34,197,94,0.4)" : nk >= 50 ? "rgba(241,196,15,0.4)" : "rgba(231,76,60,0.45)");
+    }
+  } else if (overlayAktif === "layanan") {
+    for (const b of selesai) {
+      const d = BANGUNAN_MAP[b.id]; if (!d) continue;
+      const rad = (d.layanan && d.layanan.radius) || d.radiusLayanan || 0;
+      if (!rad) continue;
+      const pb = (typeof pusatBangunan === "function") ? pusatBangunan(b) : { x: b.x, y: b.y };
+      const cx = Math.round(pb.x), cy = Math.round(pb.y);
+      for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) {
+        if (dx * dx + dy * dy > rad * rad) continue;
+        tandai(cx + dx, cy + dy, "rgba(34,197,94,0.16)");
+      }
+      jejak(b, "rgba(34,197,94,0.45)");
+    }
+  } else if (overlayAktif === "zona") {
+    for (const k of Object.keys(S.zona || {})) {
+      const parts = k.split(",");
+      tandai(parseInt(parts[0], 10), parseInt(parts[1], 10), heksaKeRgba(typeof warnaZona === "function" ? warnaZona(S.zona[k]) : "#888888", 0.45));
+    }
+  }
+  overlayCache = petaWarna; overlayCacheKunci = kunci;
+  return petaWarna;
+}
+function gambarOverlay(lebar, tinggi, minX, maxX, minY, maxY) {
+  if (!overlayAktif || !S || !peta) return;
+  const petaWarna = bangunCacheOverlay();
+  if (!petaWarna.size) return;
+  const z = kamera.zoom;
+  for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) {
+    const warna = petaWarna.get(x + "," + y);
+    if (!warna) continue;
+    const w = tileKeDunia(x, y);
+    const s = duniaKeLayar(w.x, w.y, lebar, tinggi);
+    ctx.fillStyle = warna;
+    poly([[s.x, s.y], [s.x + 32 * z, s.y + 16 * z], [s.x, s.y + 32 * z], [s.x - 32 * z, s.y + 16 * z]]);
+    ctx.fill();
+  }
+}
+// Pilih zona dari panel Peta (Worker 5): membungkus aturModeZona
+// (Worker 3) + refresh panel & HUD (chip zona).
+function aturModeZonaUI(id) {
+  if (typeof aturModeZona === "function") {
+    const ok = aturModeZona(id);
+    if (!ok) { toast("Zona tidak dikenal.", "gagal"); bunyiGagal(); return; }
+  }
+  bunyiKlik(); renderPanelKiri(); renderHUD();
+}
+
 // ---------------- Kecamatan (v17) ----------------
 // Alokasi penduduk per kecamatan: kapasitas rumah (def.rumah, bangunan
 // selesai) tiap kecamatan dihitung, lalu S.penduduk.total dibagi secara
@@ -2457,8 +2810,12 @@ function bar(persen, warna) {
 }
 
 // ---------------- HUD atas ----------------
+// Penghitung pemanggilan renderHUD (v19 Worker 5, untuk tes regresi
+// refresh HUD: harus naik tiap tick interval 500 ms).
+let jumlahRenderHUD = 0;
 function renderHUD() {
   if (!S) return;
+  jumlahRenderHUD++;
   const lvl = LEVEL_PERADABAN[S.level - 1];
   $("lvlTeks").textContent = "Lv. " + S.level + " · " + lvl.nama;
   if (S.pemimpin) $("namaPemimpin").textContent = "Pemimpin: " + S.pemimpin.nama;
@@ -2474,7 +2831,15 @@ function renderHUD() {
   const tualEl = $("tualTeks");
   if (tualEl) tualEl.textContent = S.komoditas.tual || 0;
   $("pendudukTeks").textContent = S.penduduk.total + " jiwa";
-  $("bahagiaTeks").textContent = S.penduduk.bahagia + "%";
+  // v19 Worker 5: kebahagiaan dari engine Worker 3 (S.bahagia.nilai),
+  // fallback ke S.penduduk.bahagia bila engine belum jalan.
+  const nilaiBahagiaHUD = (S.bahagia && typeof S.bahagia.nilai === "number") ? S.bahagia.nilai : S.penduduk.bahagia;
+  $("bahagiaTeks").textContent = nilaiBahagiaHUD + "%";
+  // v19 Worker 5: pill listrik/air di bar atas (dari status Worker 2).
+  const lsEl = $("listrikTeks");
+  if (lsEl && typeof statusListrik === "function") { const st = statusListrik(); lsEl.textContent = st.dipakaiKW + "/" + st.kapasitasKW + " kW"; }
+  const airEl = $("airTeks");
+  if (airEl && typeof statusAir === "function") { const st = statusAir(); airEl.textContent = st.dipakaiL + "/" + st.kapasitasL + " L"; }
   $("hariTeks").textContent = "Hari " + S.hari;
   // v18-A: tanggal KALENDER GAME (bukan tanggal nyata).
   const tglEl = $("tglTeks");
@@ -2503,21 +2868,47 @@ function renderHUD() {
     }
   }
   const sb = $("statBahagia");
-  if (sb) sb.textContent = S.penduduk.bahagia + "%";
+  if (sb) sb.textContent = nilaiBahagiaHUD + "%";
   const sbb = $("statBahagiaBar");
-  if (sbb) sbb.style.width = S.penduduk.bahagia + "%";
+  if (sbb) sbb.style.width = nilaiBahagiaHUD + "%";
   const se = $("statEkonomi");
   if (se) {
-    const r = S.statistik.rincianHari || { pajak: 0, penjualan: 0, ekspor: 0, wisata: 0, bunga: 0, upkeep: 0, gaji: 0 };
-    const net = (r.pajak + r.penjualan + r.ekspor + r.wisata + r.bunga) - (r.upkeep + r.gaji);
+    // v19 Worker 5: net memakai SEMUA kunci rincian (termasuk pajak
+    // properti, perdagangan, tiket) — sebelumnya perdagangan & tiket
+    // tidak dihitung sehingga net "/hari" salah.
+    const r = S.statistik.rincianHari || {};
+    const net = ((r.pajak || 0) + (r.pajakProperti || 0) + (r.penjualan || 0) + (r.ekspor || 0) + (r.wisata || 0) + (r.bunga || 0) + (r.perdagangan || 0) + (r.daurUlang || 0) + (r.tiketBus || 0) + (r.tiketRekreasi || 0)) - ((r.upkeep || 0) + (r.gaji || 0));
     se.textContent = (net >= 0 ? "" : "−") + rp(Math.abs(net)) + "/hari";
   }
   const spr = $("statPeradaban");
   if (spr) spr.textContent = "Level " + S.level + " (" + lvl.nama + ")";
+  // v19 Worker 5: statistik kota tambahan — kemacetan (skor lalin),
+  // layanan publik (cakupan pendidikan/kesehatan), lingkungan (polusi),
+  // kualitas hidup (rata-rata kebahagiaan, 100-polusi, kebersihan).
+  const sm = $("statMacet");
+  if (sm) sm.textContent = (S.lalin && typeof S.lalin.skor === "number") ? S.lalin.skor + "/100 · " + (S.lalin.skor >= 70 ? "Lancar" : S.lalin.skor >= 40 ? "Padat" : "Macet") : "—";
+  const sl = $("statLayanan");
+  if (sl) sl.textContent = S.penduduk.cakupanPendidikan + "% pend. · " + S.penduduk.cakupanKesehatan + "% kes.";
+  let lingHUD = null;
+  if (($("statLingkungan") || $("statKualitas")) && typeof statusLingkungan === "function") { try { lingHUD = statusLingkungan(); } catch (e) { lingHUD = null; } }
+  const sli = $("statLingkungan");
+  if (sli) sli.textContent = lingHUD ? ("Polusi " + (lingHUD.polusi || 0) + " · Mangrove " + (lingHUD.mangroveSehat || 0) + "%") : "—";
+  const sk = $("statKualitas");
+  if (sk) {
+    const pol = lingHUD ? (lingHUD.polusi || 0) : 0;
+    const ber = (S.utilitas && S.utilitas.sampah) ? (S.utilitas.sampah.kebersihan || 100) : 100;
+    sk.textContent = Math.round((nilaiBahagiaHUD + (100 - pol) + ber) / 3) + "%";
+  }
   renderBerita();
   const chip = $("modeChip");
   if (chip) {
-    if (mode.jenis === "pilih") { chip.style.display = "none"; }
+    // v19 Worker 5: zona aktif juga tampil di chip (mode pilih sekalipun).
+    if (mode.jenis === "pilih" && !(typeof modeZona !== "undefined" && modeZona)) { chip.style.display = "none"; }
+    else if (mode.jenis === "pilih") {
+      chip.style.display = "flex";
+      const zd = (typeof zonaDef === "function") ? zonaDef(modeZona) : null;
+      $("modeChipTeks").textContent = "🎨 Zona: " + (zd ? zd.nama : modeZona) + " — klik petak untuk mengecat · Esc batal";
+    }
     else {
       chip.style.display = "flex";
       let label = "";
@@ -2588,7 +2979,9 @@ function gambarMinimap() {
   for (const j of S.jalan) cx.fillRect(j.x * sx, j.y * sy, Math.ceil(sx), Math.ceil(sy));
   cx.fillStyle = "#8d6e63";
   for (const j of S.jembatan) cx.fillRect(j.x * sx, j.y * sy, Math.ceil(sx), Math.ceil(sy));
-  const WARNA_KAT = { permukiman: "#fdcb6e", infrastruktur: "#dfe6e9", pendidikan: "#6c5ce7", kesehatan: "#00b894", ekonomi: "#e17055", perkebunan: "#55efc4", industri: "#636e72", sosial: "#fd79a8" };
+  // v19 Worker 5: warna minimap untuk SEMUA 15 kat v19 (sebelumnya hanya
+  // 8 kat lama — kat baru jatuh ke putih). Warna lama dipertahankan.
+  const WARNA_KAT = { permukiman: "#fdcb6e", jalan: "#5a5a5a", transportasi: "#74b9ff", listrik: "#f1c40f", air: "#0984e3", drainase: "#00cec9", pendidikan: "#6c5ce7", kesehatan: "#00b894", keamanan: "#e74c3c", rekreasi: "#27ae60", hiburan: "#fd79a8", perkantoran: "#e17055", industri: "#636e72", lingkungan: "#55efc4", lahan: "#a3e635", infrastruktur: "#dfe6e9", ekonomi: "#e17055", perkebunan: "#55efc4", sosial: "#fd79a8" };
   for (const b of S.bangunan) {
     const def = BANGUNAN_MAP[b.id]; if (!def) continue;
     cx.fillStyle = WARNA_KAT[def.kat] || "#ffffff";
@@ -2642,10 +3035,18 @@ function previewBangunan(def, ukuran) {
       cx.fillStyle = "#b2bec3"; cx.fillRect(32, 16, 40, 30);
     }
   } else if (def.vektor) {
+    // v19 Worker 5: swap ctx global DENGAN try/finally — bila
+    // gambarBangunanVektor melempar di tengah, ctx HARUS kembali ke
+    // kanvas utama; tanpanya semua render berikutnya (termasuk tint
+    // malam) jatuh ke kanvas pratinjau yang terlepas & peta membeku
+    // di frame siang terakhir (kandidat akar bug tint cek live v18).
     const simpanCtx = ctx;
     ctx = cx;
-    gambarBangunanVektor(def, 52, 40, 0.55, 0, { rot: 0 }, 0);
-    ctx = simpanCtx;
+    try {
+      gambarBangunanVektor(def, 52, 40, 0.55, 0, { rot: 0 }, 0);
+    } finally {
+      ctx = simpanCtx;
+    }
   }
   return c;
 }
@@ -2680,7 +3081,10 @@ function renderMenuBangun() {
     kartu.onclick = () => { if (kunci) { toast(kunciAlasan, "gagal"); bunyiGagal(); return; } onKlik(); };
     itemEl.appendChild(kartu);
   };
-  // Tab Jalan — hanya jalan
+  // Tab Jalan — jalan + jembatan (v19 Worker 5: TAB_BANGUN tidak punya
+  // tab "jembatan" lagi, jadi kartu jembatan digabung ke tab Jalan di
+  // bawah kartu jalan; alur 2-klik Jembatan Gantung & misi jembatan
+  // tetap jalan seperti sebelumnya).
   if (kategoriBangun === "jalan") {
     for (const id of Object.keys(JALAN)) {
       const j = JALAN[id];
@@ -2698,9 +3102,6 @@ function renderMenuBangun() {
       }
       tambahKartu(j.nama, "Seret di peta untuk menggambar jalan.", hargaTeks(j.harga), kunci, alasan, () => { mode = { jenis: "jalan", id: id }; tilePratinjau = null; terpilih = null; bunyiKlik(); renderHUD(); renderMenuBangun(); }, c);
     }
-  }
-  // Tab Jembatan — hanya jembatan
-  if (kategoriBangun === "jembatan") {
     for (const id of Object.keys(JEMBATAN)) {
       const j = JEMBATAN[id];
       const kunci = ((j.level || 1) > S.level) || (j.tech && !S.teknologi[j.tech]);
@@ -2764,6 +3165,24 @@ function renderPanelKiri() {
       html += "<div class='barisStat kecil'><span><span style='display:inline-block;width:12px;height:12px;border-radius:3px;background:" + t.warna + ";vertical-align:-1px;margin-right:6px'></span>" + t.nama + "</span><span>" + ket + tambahan + "</span></div>";
     }
     html += "<button class='btnKecil' style='margin-top:8px' onclick='kameraPusatkan(peta);bunyiKlik();toast(\"Peta dipusatkan.\",\"ok\")'>◎ Pusatkan Peta</button>";
+    // v19 Worker 5: pemilih overlay + pemilih zona (di panel Peta, bersama
+    // legenda terrain). Zona dipilih di sini — menu bangun TIDAK ditambah
+    // tab baru agar TAB_BANGUN tetap 15 tab.
+    html += "<div class='judulPanel' style='margin-top:10px'>Overlay Peta</div>";
+    html += "<div class='misiDes'>Satu overlay aktif dalam satu waktu — digambar di atas peta, di bawah tint malam.</div>";
+    html += "<div class='barisAksi'>";
+    html += "<button class='btnKecil" + (!overlayAktif ? " aktif" : "") + "' onclick='aturOverlay(null)'>✕ Tanpa Overlay</button>";
+    for (const o of OVERLAY_DEFS) html += "<button class='btnKecil" + (overlayAktif === o.id ? " aktif" : "") + "' title='" + o.des + "' onclick='aturOverlay(\"" + o.id + "\")'>" + o.ikon + " " + o.nama + "</button>";
+    html += "</div>";
+    if (overlayAktif) { const od = OVERLAY_DEFS.find(o => o.id === overlayAktif); html += "<div class='misiDes'>" + (od ? od.ikon + " " + od.nama + " — " + od.des : "") + "</div>"; }
+    if (S.lalin && S.lalin.perPetakDiringkas) html += "<div class='catatan'>Overlay lalu lintas diringkas bila jalan sangat banyak (perPetak tidak disimpan).</div>";
+    html += "<div class='judulPanel' style='margin-top:10px'>🎨 Zona Tata Ruang</div>";
+    html += "<div class='misiDes'>Pilih zona, lalu klik petak di peta untuk mengecat. Bangunan di zona yang tidak sesuai ditolak saat dibangun.</div>";
+    html += "<div class='barisAksi'>";
+    html += "<button class='btnKecil" + (!modeZona ? " aktif" : "") + "' onclick='aturModeZonaUI(null)'>✕ Nonaktifkan</button>";
+    for (const z of ZONA_DEFS) html += "<button class='btnKecil" + (modeZona === z.id ? " aktif" : "") + "' title='" + z.des + "' onclick='aturModeZonaUI(\"" + z.id + "\")'><span style='display:inline-block;width:10px;height:10px;border-radius:3px;background:" + z.warna + ";margin-right:4px'></span>" + z.nama + "</button>";
+    html += "</div>";
+    if (typeof modeZona !== "undefined" && modeZona) { const zd = (typeof zonaDef === "function") ? zonaDef(modeZona) : null; html += "<div class='misiDes'>Zona aktif: <b>" + (zd ? zd.nama : modeZona) + "</b> — " + (zd ? zd.des : "") + "</div>"; }
     isi.innerHTML = html;
   } else if (panelKiri === "misi") {
     let html = "<div class='judulPanel'>Misi</div>";
@@ -2781,21 +3200,41 @@ function renderPanelKiri() {
     }
     isi.innerHTML = html;
   } else if (panelKiri === "ekonomi") {
-    const r = S.statistik.rincianHari || { pajak: 0, penjualan: 0, ekspor: 0, wisata: 0, bunga: 0, upkeep: 0, gaji: 0 };
-    const masuk = r.pajak + r.penjualan + r.ekspor + r.wisata + r.bunga;
-    const keluar = r.upkeep + r.gaji;
+    // v19 Worker 5: panel Ekonomi menampilkan BOTH akrual hari berjalan
+    // (S.rincianBerjalan — uang bergerak terlihat langsung; perbaikan
+    // temuan cek live v18 "Hari 1 tampil Rp0") DAN rekap kemarin
+    // (S.statistik.rincianHari), plus dashboard APBD.
+    const rb = S.rincianBerjalan || {};
+    const r = S.statistik.rincianHari || {};
+    const apbdDari = (o) => {
+      const masuk = { "Pajak penduduk": o.pajak || 0, "Pajak properti": o.pajakProperti || 0, "Pajak perdagangan": o.perdagangan || 0, "Pendapatan fasilitas": (o.wisata || 0) + (o.bunga || 0), "Pendapatan pelabuhan": o.ekspor || 0, "Pendapatan industri": (o.penjualan || 0) + (o.daurUlang || 0), "Tiket (bus/taksi/rekreasi)": (o.tiketBus || 0) + (o.tiketRekreasi || 0) };
+      const keluar = { "Gaji pegawai": o.gaji || 0, "Kesehatan": o.upkeepKesehatan || 0, "Pendidikan": o.upkeepPendidikan || 0, "Lingkungan": o.upkeepLingkungan || 0, "Infrastruktur": o.upkeepInfra || 0, "Pemeliharaan": o.upkeepLain || 0 };
+      const totMasuk = Object.values(masuk).reduce((a, b) => a + b, 0);
+      const totKeluar = Object.values(keluar).reduce((a, b) => a + b, 0);
+      return { masuk: masuk, keluar: keluar, totMasuk: totMasuk, totKeluar: totKeluar, saldo: totMasuk - totKeluar };
+    };
+    const apbdHariIni = apbdDari(rb);
+    const apbdKemarin = apbdDari(r);
+    const barisAPBD = (a, judul) => {
+      const labelSaldo = judul.indexOf("berjalan") >= 0 ? "hari ini" : "kemarin";
+      let h = "<div class='judulPanel' style='margin-top:10px'>" + judul + "</div>";
+      h += "<div class='barisStat'><span>Pendapatan</span><b class='hijau'>" + rp(a.totMasuk) + "</b></div>";
+      for (const k of Object.keys(a.masuk)) h += "<div class='barisStat kecil'><span>" + k + "</span><span>" + rp(a.masuk[k]) + "</span></div>";
+      h += "<div class='barisStat'><span>Belanja</span><b class='merah'>" + rp(a.totKeluar) + "</b></div>";
+      for (const k of Object.keys(a.keluar)) h += "<div class='barisStat kecil'><span>" + k + "</span><span>" + rp(a.keluar[k]) + "</span></div>";
+      h += "<div class='barisStat'><span>Saldo " + labelSaldo + "</span><b class='" + (a.saldo >= 0 ? "hijau" : "merah") + "'>" + rp(a.saldo) + "</b></div>";
+      return h;
+    };
     let html = "<div class='judulPanel'>Ekonomi — Hari " + S.hari + "</div>";
-    html += "<div class='barisStat'><span>Pemasukan kemarin</span><b class='hijau'>" + rp(masuk) + "</b></div>";
-    html += "<div class='barisStat kecil'><span>Pajak (" + S.penduduk.total + " jiwa)</span><span>" + rp(r.pajak) + "</span></div>";
-    html += "<div class='barisStat kecil'><span>Penjualan pasar</span><span>" + rp(r.penjualan) + "</span></div>";
-    html += "<div class='barisStat kecil'><span>Ekspor pelabuhan</span><span>" + rp(r.ekspor) + "</span></div>";
-    html += "<div class='barisStat kecil'><span>Perdagangan antar pulau</span><span>" + rp(r.perdagangan || 0) + "</span></div>";
-    html += "<div class='barisStat kecil'><span>Wisata</span><span>" + rp(r.wisata) + "</span></div>";
-    html += "<div class='barisStat kecil'><span>Bunga bank</span><span>" + rp(r.bunga) + "</span></div>";
-    html += "<div class='barisStat'><span>Pengeluaran kemarin</span><b class='merah'>" + rp(keluar) + "</b></div>";
-    html += "<div class='barisStat kecil'><span>Operasional bangunan</span><span>" + rp(r.upkeep) + "</span></div>";
-    html += "<div class='barisStat kecil'><span>Gaji pekerja</span><span>" + rp(r.gaji) + "</span></div>";
     html += "<div class='barisStat'><span>Saldo kas</span><b>" + rp(S.uang) + "</b></div>";
+    const tarifSekarang = (typeof S.tarifPajakProperti === "number") ? S.tarifPajakProperti : 10;
+    html += "<div class='barisStat'><span>Tarif pajak properti</span><b>" + tarifSekarang + "%</b></div>";
+    html += "<div class='misiDes'>Tarif 0–20% (default 10%): makin tinggi, pendapatan pajak properti naik tapi kebahagiaan turun 0,3 poin per 1% di atas 10 (maks −3); makin rendah, kebahagiaan naik sedikit tapi pendapatan turun.</div>";
+    html += "<div class='barisAksi'><button class='btnKecil' onclick='aturTarifPajak(" + (tarifSekarang - 1) + ")'>− 1%</button><input type='range' min='0' max='20' step='1' value='" + tarifSekarang + "' style='flex:1;min-width:80px' onchange='aturTarifPajak(this.value)'><button class='btnKecil' onclick='aturTarifPajak(" + (tarifSekarang + 1) + ")'>+ 1%</button></div>";
+    if (S.apbd && S.apbd.hariDefisit >= 3) html += "<div class='catatan merah'>⚠️ Defisit APBD " + S.apbd.hariDefisit + " hari berturut-turut — pengeluaran melebihi pendapatan. Naikkan tarif pajak properti atau kurangi belanja (hapus bangunan ber-upkeep tinggi).</div>";
+    else if (S.apbd && S.apbd.hariDefisit > 0) html += "<div class='catatan'>Defisit APBD " + S.apbd.hariDefisit + " hari berturut-turut (peringatan bila mencapai 3 hari).</div>";
+    html += barisAPBD(apbdHariIni, "APBD — Hari ini (berjalan)");
+    html += barisAPBD(apbdKemarin, "APBD — Kemarin");
     html += "<div class='judulPanel' style='margin-top:10px'>Komoditas (kapasitas " + kapasitasSimpan() + ")</div>";
     for (const k of Object.keys(KOMODITAS)) {
       const stok = S.komoditas[k] || 0;
@@ -2833,7 +3272,7 @@ function renderPanelKiri() {
     isi.innerHTML = html;
   } else if (panelKiri === "peradaban") {
     const lvl = LEVEL_PERADABAN[S.level - 1];
-    let html = "<div class='judulPanel'>Peradaban</div>";
+    let html = "<div class='judulPanel'>Pemerintahan & Peradaban</div>";
     html += "<div class='angkaBesar'>Lv. " + S.level + " <span>" + lvl.nama + "</span></div><div class='misiDes'>" + lvl.des + "</div>";
     if (S.level < 6) {
       const next = LEVEL_PERADABAN[S.level];
@@ -2930,7 +3369,14 @@ function renderPanelKanan() {
     html += "<div class='misiDes'>" + (terrainBisaBangun(t) ? "Lahan ini bisa dibangun." : "Lahan ini tidak bisa dibangun.") + (t === "hutan" ? " Menebang hutan memberi +2 kayu." : "") + (t === "rawa" ? " Membangun di rawa +Rp10.000 (drainase)." : "") + (t === "gambut" ? " Membangun di gambut +Rp15.000 (pengelolaan air)." : "") + "</div>";
     const kecTile = kecamatanDiPeta(peta, terpilih.x, terpilih.y);
     if (kecTile) html += "<div class='barisStat'><span>Kecamatan</span><span>" + namaKecamatan(kecTile) + "</span></div>";
-    if (jalan) html += "<div class='barisStat'><span>" + JALAN[jalan.tipe].nama + "</span><button class='btnKecil' onclick='hapusJalan(" + terpilih.x + "," + terpilih.y + ")'>Hapus</button></div>";
+    if (jalan) {
+      html += "<div class='barisStat'><span>" + JALAN[jalan.tipe].nama + "</span><button class='btnKecil' onclick='hapusJalan(" + terpilih.x + "," + terpilih.y + ")'>Hapus</button></div>";
+      // v19 Worker 5: kemacetan petak jalan (dari cache per jam Worker 4).
+      if (S.lalin && S.lalin.perPetak) {
+        const st = S.lalin.perPetak[terpilih.x + "," + terpilih.y];
+        html += "<div class='barisStat'><span>Kemacetan</span><span>" + (st === 2 ? "🔴 Macet" : st === 1 ? "🟡 Padat" : st === 0 ? "🟢 Lancar" : (S.lalin.perPetakDiringkas ? "data diringkas" : "—")) + "</span></div>";
+      }
+    }
     if (jemb) html += "<div class='barisStat'><span>" + JEMBATAN[jemb.tipe].nama + "</span><button class='btnKecil' onclick='hapusJembatan(" + terpilih.x + "," + terpilih.y + ")'>Hapus</button></div>";
     html += "<button class='btnKecil' onclick='tutupPanelKanan()'>Tutup</button>";
     el.innerHTML = html;
@@ -2942,6 +3388,12 @@ function renderPanelKanan() {
   let html = "<div class='judulPanel'>" + def.nama + "</div><div class='misiDes'>" + def.des + "</div>";
   if (b.kecamatan) html += "<div class='barisStat'><span>Kecamatan</span><span>" + namaKecamatan(b.kecamatan) + "</span></div>";
   html += "<div class='barisStat'><span>Status</span><b>" + (b.selesai ? "Beroperasi" : "Konstruksi " + Math.round(b.progres * 100) + "%") + "</b></div>";
+  // v19 Worker 5: status utilitas, banjir, zona & pengunjung bangunan terpilih.
+  html += "<div class='barisStat'><span>Listrik</span><span>" + (b.berlistrik === false ? "⚡ Padam" : b.berlistrik ? "⚡ Menyala" : "—") + "</span></div>";
+  html += "<div class='barisStat'><span>Air</span><span>" + (b.berair === false ? "💧 Tidak berair" : b.berair ? "💧 Berair" : "—") + "</span></div>";
+  if (b.kebanjiran) html += "<div class='barisStat'><span>Banjir</span><b class='merah'>🌊 Kebanjiran — tidak beroperasi</b></div>";
+  if (typeof zonaDi === "function") { const zid = zonaDi(b.x, b.y); if (zid) { const zd = (typeof zonaDef === "function") ? zonaDef(zid) : null; html += "<div class='barisStat'><span>Zona</span><span>" + (zd ? zd.nama : zid) + "</span></div>"; } }
+  if (typeof b.pengunjung === "number" && b.pengunjung > 0) html += "<div class='barisStat'><span>Pengunjung</span><span>" + b.pengunjung + " /jam</span></div>";
   if (!b.selesai) html += bar(b.progres * 100, "#fdcb6e");
   if (def.rumah) html += "<div class='barisStat'><span>Kapasitas rumah</span><span>" + def.rumah + " jiwa</span></div>";
   if (def.pekerja) {
@@ -3037,6 +3489,16 @@ function pointerKeTile(e) {
 // `layar` = titik ketuk dalam koordinat layar (untuk hit-test sprite).
 function tanganiKetuk(t, tombol, sentuh, layar) {
   if (tombol !== 0) return;
+  // v19 Worker 3: mode zona aktif — klik mengecat zona, bukan memilih
+  // atau membangun. (modeZona dideklarasi di js/city-bahagia.js.)
+  if (typeof modeZona !== "undefined" && modeZona) {
+    if (typeof tetapkanZona === "function") {
+      const hz = tetapkanZona(t.x, t.y, modeZona);
+      if (hz.ok) { toast("Zona " + (typeof zonaDef === "function" && zonaDef(modeZona) ? zonaDef(modeZona).nama : modeZona) + " diterapkan di (" + (t.x + 1) + "," + (t.y + 1) + ").", "ok"); bunyiKlik(); simpan(); }
+      else { toast(hz.alasan || "Zona tidak bisa diterapkan di sini.", "gagal"); bunyiGagal(); }
+    }
+    return;
+  }
   if (mode.jenis === "pilih") {
     let b = adaBangunanDi(S, t.x, t.y);
     // Ketuk pada gambar bangunan (sprite menjorok ke petak tetangga):
@@ -3201,7 +3663,7 @@ function pasangInput() {
     else if (e.key === "-") kameraZoomTombol(1 / 1.15, kanvas.clientWidth, kanvas.clientHeight);
     else if (e.key === " ") { e.preventDefault(); aturKecepatan(kecepatan === 0 ? 1 : 0); } // v18-A: spasi = toggle pause (bukan hari berikutnya)
     else if (e.key === "p" || e.key === "P") { aturKecepatan(kecepatan === 0 ? 1 : 0); }
-    else if (e.key === "Escape") { mode = { jenis: "pilih", id: null }; jembatanMulai = null; tilePratinjau = null; sedangPindah = null; terpilih = null; renderHUD(); renderMenuBangun(); renderPanelKanan(); }
+    else if (e.key === "Escape") { mode = { jenis: "pilih", id: null }; jembatanMulai = null; tilePratinjau = null; sedangPindah = null; terpilih = null; if (typeof aturModeZona === "function") aturModeZona(null); renderHUD(); renderMenuBangun(); renderPanelKanan(); renderPanelKiri(); }
   });
 }
 function aturKecepatan(k) {
@@ -3231,8 +3693,9 @@ function pasangTombol() {
   $("btnToggleKanan").onclick = () => { $("panelKanan").classList.toggle("tersembunyi"); bunyiKlik(); };
   if (window.innerWidth <= 820) { $("panelKiri").classList.add("tersembunyi"); $("panelKanan").classList.add("tersembunyi"); }
   $("btnLevelTutup").onclick = () => { $("modalLevel").style.display = "none"; renderHUD(); renderMenuBangun(); renderPanelKiri(); };
-  // Rel kiri (Peta / Misi / Riset / Peradaban / Berita) — ketuk ikon
-  // membuka panelnya; ketuk ikon yang sama lagi menutupnya (pola HP).
+  // Rel kiri (Peta / Misi / Ekonomi / Penduduk / Kepulauan / Kecamatan /
+  // Riset / Pemerintahan & Peradaban / Berita) — ketuk ikon membuka
+  // panelnya; ketuk ikon yang sama lagi menutupnya (pola HP).
   document.querySelectorAll("#relKiri button").forEach(b => {
     b.onclick = () => {
       const tab = b.dataset.tab;
@@ -3265,12 +3728,20 @@ function pasangTombol() {
 
 // ---------------- Loop utama ----------------
 let waktuTerakhir = 0;
+// v19 Worker 5: satu frame yang melempar TIDAK BOLEH membunuh loop —
+// requestAnimationFrame HARUS selalu dijadwalkan ulang (finally), kalau
+// tidak peta membeku di frame terakhir (siang) sementara HUD (interval
+// 500 ms, DOM) tetap jalan — persis gejala bug tint cek live v18.
+let loopErrorDilaporkan = false;
 function loop(waktu) {
+  try {
   const dt = Math.min(0.05, (waktu - waktuTerakhir) / 1000 || 0.016);
   waktuTerakhir = waktu;
   frame++;
   perbaruiWarga(dt);
   perbaruiKendaraan(dt);
+  // v19 Worker 4: bus menyusuri jalan menuju halte-halte rutenya.
+  if (typeof perbaruiBusVisual === "function") { try { perbaruiBusVisual(dt); } catch (e) {} }
   // v18-C: feri TIDAK lagi digerakkan di sini — hanya lewat majukanWaktu()
   // -> perbaruiFeriMenit(1) tiap menit game (satu jalur, anti-ganda).
   for (const a of awanVisual) { a.x += a.cepat * dt; if (a.x > 900) a.x = -600; }
@@ -3282,11 +3753,22 @@ function loop(waktu) {
   }
   gambarPeta();
   if (frame % 20 === 0) gambarMinimap();
-  requestAnimationFrame(loop);
+  } catch (e) {
+    // Satu frame gagal: laporkan sekali (anti-spam log), lanjutkan loop.
+    if (!loopErrorDilaporkan) { loopErrorDilaporkan = true; try { if (typeof console !== "undefined" && console.error) console.error("[loop] frame gagal (loop tetap jalan):", e && e.message); } catch (e2) {} }
+  } finally {
+    requestAnimationFrame(loop);
+  }
 }
 let waktuTickTerakhir = 0; // untuk interval waktu game (bukan rAF loop)
 let tickSimpanKe = 0; // simpan penuh tiap ~1 detik (2 tick x 500ms)
-setInterval(() => {
+// v19 Worker 5 (perbaikan "ekonomi datar" cek live v18): renderHUD()
+// SEBELUMNYA hanya dipanggil event diskrit (bangun, pergantian hari,
+// konstruksi selesai) — angka uang di layar basi berjam-jam lalu melonjak
+// sekaligus. Kini interval 500 ms memanggil renderHUD() tiap tick
+// (ringan: hanya HUD + jam, bukan menu/panel penuh). Fungsi bernama agar
+// bisa dipanggil langsung dari tes headless (interval di-stub di tes).
+function tickInterval500() {
   // v18-A: interval 500ms memajukan WAKTU GAME (bukan hari langsung).
   // dt nyata di-clamp maks 5 detik agar kembali dari tab idle tidak
   // melompat; pause (kecepatan 0) menghentikan simulasi, tapi render
@@ -3295,17 +3777,16 @@ setInterval(() => {
   const kini = Date.now();
   const dtNyataDetik = waktuTickTerakhir ? Math.min(5, (kini - waktuTickTerakhir) / 1000) : 0.5;
   waktuTickTerakhir = kini;
-  if (kecepatan === 0) return;
-  tickWaktuGame(dtNyataDetik);
-  // Jam di HUD diperbarui ringan tiap tick; simpan penuh tiap ~1 detik.
-  const el = $("jamTeks");
-  if (el) el.textContent = String(jamGame()).padStart(2, "0") + ":" + String(menitGame()).padStart(2, "0");
-  perbaruiJamAtas(); // v18-D: jam di bar atas ikut bergerak tiap tick
-  perbaruiIkonFase(); // v18-B: ikon fase ikut bergerak tiap tick, bukan hanya saat renderHUD
-  if (S) { S.waktuGame = waktuGame; S.kecepatan = kecepatan; S.petaVersi = 4; }
-  tickSimpanKe = (tickSimpanKe + 1) % 2;
-  if (tickSimpanKe === 0) simpan();
-}, 500);
+  if (kecepatan !== 0) {
+    tickWaktuGame(dtNyataDetik);
+    if (S) { S.waktuGame = waktuGame; S.kecepatan = kecepatan; S.petaVersi = 5; }
+    tickSimpanKe = (tickSimpanKe + 1) % 2;
+    if (tickSimpanKe === 0) simpan();
+  }
+  // HUD disegarkan tiap tick — termasuk saat pause (angka tetap benar).
+  renderHUD();
+}
+setInterval(tickInterval500, 500);
 
 // ---------------- Init & layar mulai ----------------
 function mulaiGame(baru) {
@@ -3323,7 +3804,22 @@ function mulaiGame(baru) {
     // TIDAK ada offline progress — dipakai nilai tersimpan persis.
     waktuGame = migrasiWaktuV17(S);
     S.waktuGame = waktuGame;
-    S.petaVersi = 4;
+    S.petaVersi = 5;
+    // v19 Worker 2: migrasi utilitas — simpanan v18 (tanpa S.utilitas)
+    // mendapat default & dihitung ulang di akhir mulaiGame; simpanan v19
+    // yang sudah punya utilitas dipakai persis (termasuk tumpukan sampah).
+    if (!S.utilitas) S.utilitas = utilitasDefault();
+    // v19 Worker 3: migrasi kebahagiaan/lingkungan/zona — simpanan lama
+    // tanpa ketiganya mendapat default (zona kosong, mangrove/gambut 100).
+    if (typeof pastikanBahagia === "function") pastikanBahagia();
+    else if (!S.bahagia) S.bahagia = { nilai: 60, bonusZona: 0, rincian: {} };
+    if (typeof pastikanLingkungan === "function") pastikanLingkungan();
+    // v19 Worker 4: migrasi lalu lintas — simpanan lama tanpa S.lalin
+    // mendapat default (skor 100, lancar) & dihitung ulang jam berikutnya.
+    if (typeof pastikanLalin === "function") pastikanLalin();
+    else if (!S.lalin) S.lalin = null;
+    if (typeof pastikanZona === "function") pastikanZona();
+    else if (!S.zona || typeof S.zona !== "object") S.zona = {};
     kecepatan = KECEPATAN_VALID.includes(S.kecepatan) ? S.kecepatan : 1;
     S.kecepatan = kecepatan;
     sisaMenitGame = 0;
@@ -3335,8 +3831,12 @@ function mulaiGame(baru) {
     // tidak ada, isi default (b.progres sudah bagian dari S.bangunan sejak
     // v13 dan dipertahankan sebagai fraksi; tidak ada migrasi khusus).
     if (!S.akumulasiProduksi) S.akumulasiProduksi = {};
-    if (!S.rincianBerjalan) S.rincianBerjalan = { pajak: 0, penjualan: 0, ekspor: 0, wisata: 0, bunga: 0, perdagangan: 0, upkeep: 0, gaji: 0 };
-    if (typeof S.akumulasiJual !== "number") S.akumulasiJual = 0;
+    if (!S.rincianBerjalan) S.rincianBerjalan = rincianKosong();
+    for (const k of Object.keys(rincianKosong())) if (typeof S.rincianBerjalan[k] !== "number") S.rincianBerjalan[k] = 0;
+    // v19 Worker 5 (APBD): migrasi save lama — tarif default 10%, penghitung defisit 0.
+    if (typeof S.tarifPajakProperti !== "number") S.tarifPajakProperti = 10;
+    if (!S.apbd || typeof S.apbd !== "object") S.apbd = { hariDefisit: 0 };
+    if (typeof S.apbd.hariDefisit !== "number") S.apbd.hariDefisit = 0;
     if (typeof S.akumulasiEkspor !== "number") S.akumulasiEkspor = 0;
     // Simpanan lama (sebelum v16) belum punya pemimpin/tutorial — isi dari profil, tutorial dianggap selesai
     if (!S.pemimpin && profilPemain) S.pemimpin = { nama: profilPemain.nama, gender: profilPemain.gender, avatar: profilPemain.avatar };
@@ -3358,7 +3858,17 @@ function mulaiGame(baru) {
   sinkronJamVisual();
   hitungTenagaKerja();
   sinkronWarga();
+  // v19 Worker 2: hitung utilitas awal (konektivitas, banjir, sampah) —
+  // tanpa akrual sampah (akrual hanya berjalan per jam game).
+  if (typeof hitungUtilitas === "function") { try { hitungUtilitas(false); } catch (e) {} }
+  // v19 Worker 3: hitung kebahagiaan & lingkungan awal (nilai awal
+  // permainan baru harus 45-60 — lihat hitungKebahagiaan).
+  if (typeof hitungKebahagiaan === "function") { try { hitungKebahagiaan(); } catch (e) {} }
+  terapkanEfekPajakKebahagiaan(); // v19 Worker 5: efek tarif pajak properti
   initKendaraan();
+  // v19 Worker 4: hitung lalu lintas awal (skor, bus, rekreasi) setelah
+  // kendaraan di-init — bus visual disinkronkan di sini.
+  if (typeof hitungLalin === "function") { try { hitungLalin(); } catch (e) {} }
   // Identitas pemimpin di bar atas
   if (S.pemimpin) {
     $("avatarPemain").src = S.pemimpin.avatar;

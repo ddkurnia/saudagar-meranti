@@ -6,6 +6,269 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v19 — Complete City Simulation Engine (2026-11-11)
+
+Kota kini benar-benar **disimulasikan ala SimCity beridentitas
+Meranti**: listrik, air, drainase, sampah, kebahagiaan 20 indikator,
+lingkungan & bencana, zoning, lalu lintas, transportasi umum, rekreasi,
+pemerintahan, dan APBD — semua digerakkan satu jam simulasi v18
+(`akrualJamGame()` tiap jam game; overlay hanya membaca cache per jam,
+tidak menghitung ulang per frame). Total **118 bangunan** dalam **15
+tab** menu bangun; **63 bangunan baru** (semua punya sprite PNG sendiri,
+lihat "Aset v19" di bawah).
+
+- **Listrik.** Kebutuhan dasar 0,5 kW/jiwa/jam (`LISTRIK_PER_JIWA_JAM`)
+  + kebutuhan tiap bangunan (`def.listrik`). Sumber: generator virtual
+  awal **100 kW (radius 8 petak)**; PLTD **5.000 kW** (polusi tinggi),
+  PLT Biomassa **2.000 kW** (polusi rendah), PLT Surya **1.000 kW**
+  (tanpa polusi, **hanya siang hari** — 0 kW pukul 00:00 & 18:00).
+  Jaringan disalurkan lewat gardu (radius 6). Bila permintaan >
+  kapasitas: **pemadaman bergilir** — daftar padam berotasi tiap jam,
+  rumah sakit diprioritaskan tetap menyala. Bangunan padam
+  (`b.berlistrik === false`) tidak beroperasi; panel kanan bangunan
+  menampilkan status listriknya.
+- **Air & PDAM.** Kebutuhan dasar 5 L/jiwa/jam (`AIR_PER_JIWA_JAM`).
+  Sumber: generator virtual awal **1.000 L (radius 8)**; Intake Air
+  Baku **3.000 L/jam** (hanya di pantai/sungai, kualitas 60), IPA
+  **5.000 L/jam** (kualitas 95), Reservoir menyimpan **20.000 L**,
+  Menara Air & Pompa Air menyalurkan (radius 6). Kualitas air &
+  kehilangan air dilaporkan `statusAir()` (tanpa reservoir: kualitas
+  IPA 95, kehilangan 15%). Kebun tanpa air produksinya 0.
+- **Drainase & sampah.** Petak rawa kebanjiran saat hujan; Kolam
+  Retensi dalam radius menghilangkan risiko banjir petak; Pompa Banjir
+  & IPAL melengkapi sistem. `S.utilitas.banjir` = daftar `"x,y"`
+  petak banjir (maks 200); bangunan kebanjiran (`b.kebanjiran`) tidak
+  beroperasi dan kebun kebanjiran produksinya 0. Sampah:
+  **0,7 kg/jiwa/hari**; tanpa TPS tumpukan bertambah tiap jam dan
+  kebersihan < 100; dengan TPA cukup kebersihan 100 & tumpukan
+  berkurang ke 0. TPS, TPS 3R, Bank Sampah, TPA & Pabrik Daur Ulang
+  (pendapatan `daurUlang`) mengelola sampah kota.
+- **Kebahagiaan (20 indikator, bobot total 100).** `hitungKebahagiaan()`
+  menghitung ulang tiap jam game dari `BOBOT_KEBAHAGIAAN`; nilai =
+  Σ(skor indikator 0–100 × bobot) / 100 + bonus zona, lalu
+  `S.penduduk.bahagia = nilai` (0–100). Tabel bobot:
+
+  | Indikator | Bobot | Indikator | Bobot |
+  |---|---|---|---|
+  | listrik | 8 | pekerjaan | 8 |
+  | air | 8 | pendidikan | 7 |
+  | sanitasi | 5 | kesehatan | 7 |
+  | drainase | 4 | pendapatan | 6 |
+  | kualitasJalan | 4 | keamanan | 5 |
+  | kemacetan | 4 | transportasi | 5 |
+  | kebersihan | 4 | lingkungan | 4 |
+  | ruangHijau | 4 | rekreasi | 4 |
+  | hiburan | 3 | hargaPokok | 3 |
+  | perumahan | 4 | pelayananPublik | 3 |
+
+  Bangunan di zona yang sesuai memberi `bonusZona` (≥ 1 poin).
+  Kebahagiaan dihitung per kecamatan juga (`S.bahagiaKecamatan`) dan
+  dipakai overlay kebahagiaan (≥ 70 hijau, 50–69 kuning, < 50 merah).
+  Cakupan layanan nyata: SD (kapasitas 60, radius layanan) & puskesmas
+  menaikkan cakupan pendidikan/kesehatan; tanpa sekolah cakupan 0.
+- **Lingkungan & bencana.** `statusLingkungan()` melaporkan polusi,
+  mangrove sehat, gambut sehat & kebakaran. Satu PLTD menaikkan polusi
+  ke **80** (skala 0–100) dan menurunkan indikator lingkungan; 2 taman
+  menurunkannya kembali. Membangun dekat mangrove menurunkan
+  `mangroveSehat` kecamatan; membangun di gambut tanpa mitigasi
+  menurunkan `gambutSehat`. Kebakaran hutan: probabilitas dasar
+  **0,001/hari**, pemadam kebakaran di dekatnya mengurangi **80%**;
+  kebakaran bangunan: dasar **0,0005/hari** — bangunan terbakar rusak
+  (`selesai=false`, `progres=0,5`, diperbaiki, bukan hancur); petak
+  terbakar pulih setelah `sisaHari` habis. Abrasi dihitung harian
+  (`prosesBencanaHarian`).
+- **Zoning (9 zona).** Mode zona dicat lewat panel Peta (bukan tab
+  baru — `TAB_BANGUN` tetap 15 tab); klik petak saat mode zona aktif
+  mengecatnya (`tanganiKetuk` sudah terhubung); Esc membatalkan mode
+  zona. Bangunan di zona yang tidak sesuai **ditolak** (pesan zona);
+  zona `protected` & `conservation` menolak semua bangunan; zona
+  `waterfront` hanya menerima bangunan pantai (`pantai: true`).
+
+  | Zona | Boleh dibangun (kat) |
+  |---|---|
+  | Residential | permukiman, pendidikan, kesehatan, keamanan, lingkungan |
+  | Commercial | perkantoran, transportasi, rekreasi, hiburan |
+  | Industrial | industri, drainase, listrik, air |
+  | Agricultural | lahan |
+  | Government | perkantoran, keamanan, pendidikan, kesehatan |
+  | Recreation | rekreasi, hiburan, lingkungan |
+  | Protected Forest | — (tidak bisa dibangun) |
+  | Conservation | — (tidak bisa dibangun) |
+  | Waterfront | transportasi, rekreasi, lahan — hanya bangunan pantai |
+
+- **Jalan & lalu lintas.** 9 jenis jalan (`JALAN`, kapasitas per
+  tipe). Volume per petak = 0,5 kendaraan/jam per penduduk dalam
+  radius 5 + 1 per bangunan di radius; pengali jam sibuk **×1,5**
+  (07–09 & 17–19), malam **×0,3** (19–05). Rasio = volume / kapasitas:
+  **< 0,6 lancar, 0,6–1,0 padat, > 1,0 macet** (`S.lalin.perPetak`
+  0/1/2; di atas 2.000 petak disimpan ringkas). Traffic-light −30%,
+  bundaran −50%, JPO −20% (efek terbesar dalam radius 2 petak).
+  Skor kota `S.lalin.skor` 0–100; kemacetan = 100 − skor; kemacetan
+  total → kendaraan melambat (`faktorKecepatanLalin()` 0,5). Warga
+  berjalan & truk mengikuti graf jalan, lajur kiri. Minimap memakai
+  `WARNA_KAT` untuk semua 15 kat (bukan putih lagi).
+- **Transportasi umum.** Terminal Bus + Halte → bus beroperasi
+  (maks 3 bus visual, 1 per terminal; rute terminal–halte–terminal,
+  sprite bus sungguhan `assets/vehicles/bus.png`); penumpang bus =
+  min(200, penduduk radius × 0,1), tarif **Rp2.000/penumpang**
+  (dibagi 24 per jam → `tiketBus`). Taksi Stand → taksi beroperasi,
+  penumpang = min(30, penduduk × 0,05), tarif **Rp5.000/penumpang**
+  (`tiketBus` juga menampung tiket taksi). Tiap bus mengurangi volume
+  lalu lintas total sebesar kapasitas penumpang terminal × 0,5.
+- **Rekreasi & hiburan.** Bioskop & Pasar Malam menaikkan indikator
+  hiburan/rekreasi ke 100 bila dekat rumah → kebahagiaan naik.
+  Pengunjung = 5% penduduk dalam radius (`b.pengunjung` per jam,
+  pengali sore ×1,5 pukul 17–23, pagi ×0,5 pukul 05–11); pendapatan
+  tiket bioskop masuk `tiketRekreasi`. Pukul 18:00 warga memilih zona
+  sosial & menuju bioskop. Panel kanan bangunan menampilkan jumlah
+  pengunjung bila ada.
+- **Pemerintahan & layanan publik.** Kantor Bupati (layanan 500 jiwa,
+  radius 14), Gedung DPRD (300/12), Kantor Kecamatan (200/10), Kantor
+  Dinas (200/8), Mal Pelayanan Publik (400/10), Kantor Desa (100/6),
+  Kantor Pos (150/8), Perkantoran Swasta (200/8), Gedung Perusahaan
+  (300/10), Kantor Polisi (cakupan keamanan), Pos Pemadam & Pemadam
+  Kebakaran (cakupan pemadam, mengurangi risiko kebakaran hutan 80%),
+  Apotek (kapasitas 20, radius 3 → cakupan kesehatan). Cakupan
+  pendidikan/kesehatan/keamanan/pemadam = penduduk terlayani / total
+  (kapasitas & radius nyata). Tab Peradaban kini berjudul
+  **"Pemerintahan & Peradaban"** dan bisa dibuka dari rel kiri 🏛️.
+- **APBD (dashboard di panel Ekonomi).** Pendapatan & belanja
+  dikategorikan dari `rincianBerjalan` (hari berjalan) dan
+  `rincianHari` (kemarin) — dua-duanya tampil agar uang terlihat
+  bergerak (perbaikan temuan cek live v18 "Hari 1 tampil Rp0"):
+
+  | Pendapatan | Sumber kunci | Belanja | Sumber kunci |
+  |---|---|---|---|
+  | Pajak penduduk | `pajak` (Rp200/jiwa/hari) | Gaji pegawai | `gaji` (Rp500/pekerja/hari) |
+  | Pajak properti | `pajakProperti` | Kesehatan | `upkeepKesehatan` |
+  | Pajak perdagangan | `perdagangan` | Pendidikan | `upkeepPendidikan` |
+  | Pendapatan fasilitas | `wisata` + `bunga` | Lingkungan | `upkeepLingkungan` |
+  | Pendapatan pelabuhan | `ekspor` | Infrastruktur | `upkeepInfra` |
+  | Pendapatan industri | `penjualan` + `daurUlang` | Pemeliharaan | `upkeepLain` |
+  | Tiket (bus/taksi/rekreasi) | `tiketBus` + `tiketRekreasi` | | |
+
+  Upkeep dipartisi per kategori di `akrualJamGame()` — jumlah kelima
+  kategori **selalu sama** dengan upkeep total (tanpa hitung ganda).
+  Saldo konsisten: delta uang 24 jam = total masuk − total keluar
+  (diuji headless). **Pajak properti:** per jam per bangunan
+  `harga.uang × (tarif/100) / 30 / 24`, hanya kat permukiman /
+  perkantoran / industri (fasilitas publik tidak kena pajak). Contoh:
+  rumah Rp25.000 × tarif 10% = **Rp83/hari**. Tarif
+  `S.tarifPajakProperti` default **10%**, diubah 0–20% via tombol
+  −1% / slider / +1% di dashboard. Efek kebahagiaan:
+  `clamp((10 − tarif) × 0,3, −3, +3)` poin — tarif 20% → −3 poin,
+  tarif 0% → +3 poin, tarif 10% netral. **Defisit:** bila pengeluaran
+  > pendapatan, `S.apbd.hariDefisit` naik tiap hari (reset bila
+  surplus); pada ≥ 3 hari berturut-turut panel Ekonomi menampilkan
+  peringatan merah "⚠️ Defisit APBD N hari berturut-turut".
+- **Overlay peta (panel Peta, satu aktif dalam satu waktu).**
+  Listrik (hijau = berlistrik, merah = padam), Air (biru),
+  Drainase (petak banjir biru tua), Traffic (hijau/kuning/merah per
+  `S.lalin.perPetak`), Polusi (skala dari jejak `def.polusi`),
+  Kebahagiaan (per kecamatan), Layanan (radius fasilitas, samar +
+  jejak fasilitas tegas), Zona (warna `warnaZona()`). Digambar di atas
+  bangunan, di bawah tint malam; data dibaca dari cache per jam
+  (`S.utilitas` / `S.lalin` / `S.bahagiaKecamatan` / `S.zona`).
+- **HUD & menu (Worker 5).** Bar atas: pill ⚡ listrik
+  (dipakai/kapasitas kW, dari `statusListrik()`), 💧 air (dipakai/
+  kapasitas L, dari `statusAir()`), 😊 kebahagiaan (dari
+  `S.bahagia.nilai`) — pill sekunder disembunyikan di layar ≤ 820px.
+  Rel kiri kini 9 ikon: Peta, Misi, **Ekonomi 💰, Penduduk 👥**,
+  Kepulauan, Kecamatan, Penelitian, Pemerintahan & Peradaban 🏛️,
+  Berita. Kartu statistik: Kemacetan (`S.lalin.skor`), Layanan Publik
+  (cakupan pendidikan/kesehatan), Lingkungan (polusi + mangrove%),
+  Kualitas Hidup = (bahagia + (100 − polusi) + kebersihan sampah) / 3.
+  Panel kanan bangunan: status Listrik/Air/Banjir, Zona
+  (`zonaDi`), Pengunjung; petak jalan: kemacetan petak.
+  **Kartu jembatan** (Jembatan Kecil/Besar/Gantung, alur 2-klik
+  Jembatan Gantung tetap jalan) kini tampil di bawah kartu jalan di
+  **tab Jalan** — tab "jembatan" yang lama dihapus; `TAB_BANGUN`
+  tetap 15 tab. Tutorial langkah 6 diperbaiki: membuka tab
+  **"lahan"** (tab "perkebunan" sudah tidak ada).
+- **Aset v19.** 63 PNG bangunan baru + sprite bus, dibuat sendiri
+  (metode v13.2: contact sheet → `split_sheet_auto.py` + rembg →
+  PNG transparan, gaya isometrik 2.5D yang sama): PLTD, PLT Biomassa,
+  PLT Surya, Gardu Induk/Distribusi, Tiang Listrik, IPA, Intake,
+  Reservoir, Menara Air, Pompa Air, PDAM, Kolam Retensi, Pompa
+  Banjir, IPAL, TPS, TPS 3R, Bank Sampah, TPA, Pabrik Daur Ulang,
+  Traffic Light, Bundaran, JPO, Terminal Bus, Halte, Taksi Stand,
+  Taman Bermain, Pasar Malam, Outbound, Kolam Renang, Waterpark,
+  Waterfront, Pantai Wisata, Resort, Marina, Bioskop, Pusat Hiburan,
+  Gedung Pertunjukan, Pusat Kesenian, Karaoke, Museum Melayu, Balai
+  Adat, Pusat Budaya, Ruang Seni, Lapangan Bola/Basket/Badminton,
+  Jogging Track, Pusat Kebugaran, Gelanggang, Kantor Bupati,
+  Kantor Kecamatan, Kantor Desa, Gedung DPRD, Kantor Dinas, Mal
+  Pelayanan, Kantor Pos, Perkantoran Swasta, Gedung Perusahaan,
+  Kantor Polisi, Pos Pemadam, Pemadam Kebakaran, Apotek
+  (`assets/buildings/building-<id>.png`, total 16,8 MB) +
+  `assets/vehicles/bus.png` (menggantikan placeholder truk Worker 4).
+  `assets/manifest.json` + `assets/preview.html` diregenerasi:
+  **201 file aset** (137 + 63 + 1). Dua sudut PNG dibersihkan dari
+  residu rembg (alpha 2–4/255, tak terlihat). Satu catatan visual:
+  tanda kecil "TAXI" pada rambu taksi-stand & ikon bus pada rambu
+  halte ikut tergambar (glyph rambu, bukan teks acak pada bangunan);
+  museum Melayu & balai adat mirip (keduanya rumah panggung Melayu)
+  tapi atap & ukirannya berbeda; kantor bupati & gedung DPRD mirip
+  (gedung DPRD berkubah, bupati bertiang bendera).
+
+### Perbaikan bug dari cek live v18 (2026-11-11, profil "Sukma")
+
+- **Peta tidak menggelap di malam hari (19:47/20:12/20:32).** Akar
+  masalah: ada **dua titik kegagalan tunggal** yang bisa membekukan
+  frame siang selamanya sementara jam HUD (interval 500 ms) tetap
+  berjalan — (a) `loop()` (rAF) tanpa pelindung: satu exception di
+  mana saja mematikan semua frame berikutnya selamanya; (b)
+  `previewBangunan()` menukar `ctx` global ke kanvas pratinjau tanpa
+  `try/finally` — exception di sana mengalihkan semua render (termasuk
+  tint) ke kanvas lepas selamanya. Kode tint langkah 7 sendiri benar
+  (`rgba(10,20,60, gelap×0,45)`; 19:47 → alpha 0,383 — dibuktikan
+  headless dengan recording-ctx). Perbaikan: `loop()` dibungkus
+  try/catch/finally dengan `requestAnimationFrame(loop)` selalu
+  di-arm ulang; `previewBangunan()` memakai try/finally untuk
+  mengembalikan `ctx`; `gambarPeta()` mereset state ctx di awal dan
+  langkah 1–6 dibungkus try/catch (log sekali) sehingga langkah 7
+  (tint + `gambarLampuMalam()` di atas tint) **dijamin** tercapai.
+  Tes regresi di `tests/test13.js` (v19-w5): fillRect gelap
+  `rgba(10,20,60,0.383)` dipanggil 19:47, 7 lampu tergambar setelah
+  tint, tidak ada tint pukul 12:00, dan tint tetap digambar saat
+  `gambarFeri` dipaksa melempar.
+- **HUD basi / "ekonomi datar".** `renderHUD()` dulu hanya dipanggil
+  pada event diskrit (bangun, ganti hari, konstruksi selesai), bukan
+  oleh interval 500 ms maupun loop rAF — angka uang basi berjam-jam
+  lalu melonjak sekaligus. Perbaikan: interval 500 ms
+  (`tickInterval500()`) kini **selalu** memanggil `renderHUD()` tiap
+  tick, termasuk saat pause. Diuji: setelah 1 jam game, teks uang di
+  HUD = `rp(S.uang)` yang baru.
+- **Panel Ekonomi tampil Rp0 di Hari 1.** Cabang "ekonomi" dulu hanya
+  menampilkan `S.statistik.rincianHari` ("Pemasukan kemarin").
+  Perbaikan: tampilkan JUGA akrual hari berjalan
+  (`S.rincianBerjalan`, "APBD — Hari ini (berjalan)") di samping
+  "APBD — Kemarin", lengkap dengan kunci baru `tiketBus`,
+  `tiketRekreasi`, `daurUlang`. Catatan: selisih kecil uang & waktu
+  saat reload (simpan 12:23 → kembali 12:28, −Rp134) adalah
+  **autosave saat tutup halaman yang lebih baru dari snapshot simpan
+  manual — BUKAN bug**.
+- **Belum terverifikasi live di profil baru:** tutorial langkah 4 v18
+  ("Percepat ke 2×") & langkah 6 (tab Lahan), tampilan HUD baru &
+  overlay di layar kecil (≤ 820px), dan performa kota besar
+  (ribuan petak jalan + ratusan bangunan). Semua diuji headless
+  (630 cek, `TEST_V13_OK`), belum dicek di browser nyata.
+
+### Batas jujur v19
+
+- Masih 2D isometrik (bukan model poligon 3D); sprite 2.5D
+  ditempatkan sebagai billboard — jangan diklaim native 3D.
+- Tanpa offline progress; NPC berbasis zona (bukan agen perorangan);
+  matahari/bulan hanya indikator; jalan/jembatan tetap instan
+  (durasi konstruksi hanya data); bunga bank per jam dihitung dari
+  saldo berjalan (selisih kecil bila saldo berubah banyak dalam
+  sejam); panel Ekonomi menampilkan rincian hari yang baru berakhir.
+- Overlay membaca cache per jam — perubahan dalam satu jam yang sama
+  baru terlihat setelah pergantian jam game.
+- `S.lalin.perPetak` di atas 2.000 petak disimpan ringkas
+  (`perPetakDiringkas=true`); panel Peta memberi catatan saat itu
+  terjadi.
+
 ## Yang baru di v18 — Real-Time Open World Clock & Simulation System (2026-11-11)
 
 Waktu kini berjalan **nyata dan kontinu**, bukan lompatan per hari:

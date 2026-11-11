@@ -209,6 +209,7 @@ button { font-family: inherit; cursor: pointer; }
   border-radius: 8px; padding: 6px 10px; font-size: 12px; margin-top: 6px;
 }
 .btnKecil:hover { background: rgba(255,255,255,.28); }
+.btnKecil.aktif { background: #16a34a; border-color: #4ade80; }
 .btnKecil:disabled { opacity: .45; cursor: default; }
 .btnKecil.bahaya { background: rgba(185, 28, 28, .8); border-color: #ef4444; }
 .barisAksi { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
@@ -342,6 +343,9 @@ button { font-family: inherit; cursor: pointer; }
   .sumberDaya { gap: 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   .sumberDaya::-webkit-scrollbar { display: none; }
   .sd { font-size: 12px; padding: 4px 8px; }
+  /* v19 Worker 5: pill sekunder (listrik/air) disembunyikan di layar
+     kecil — info tetap ada di kartu statistik & panel Ekonomi */
+  .sd.sekunder { display: none; }
   #menuBangun { left: 8px; right: 8px; bottom: 34px; }
   #btnModeBangun { width: 60px; height: 60px; font-size: 20px; bottom: 200px; }
   #btnModeBangun span { font-size: 9px; }
