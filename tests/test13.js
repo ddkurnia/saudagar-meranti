@@ -351,4 +351,16 @@ const kotak2 = rekam.isi.filter(r => r[0] === "stroke").pop();
 cek("kotak minimap berpindah mengikuti kamera", !!kotak2 && (Math.abs(kotak2[1] - kotak1[1]) > 2 || Math.abs(kotak2[2] - kotak1[2]) > 2), kotak2 ? kotak2.slice(1).map(v => Math.round(v)).join(",") : "tidak ada");
 C.kamera.zoom = 1; C.kamera.cx = tengahMini.x; C.kamera.cy = tengahMini.y;
 
+
+// v14.4: klik tepat di tengah wajik tile memilih tile itu (bukan tetangga)
+vm.runInContext('kamera.zoom = 1; kamera.cx = tileTengahDunia(20,15).x; kamera.cy = tileTengahDunia(20,15).y;', sandbox);
+const tC = vm.runInContext('tileTengahDunia(10, 10)', sandbox);
+const sC = vm.runInContext('duniaKeLayar(' + tC.x + ', ' + tC.y + ', 800, 600)', sandbox);
+const klik = vm.runInContext('pointerKeTile({ clientX: ' + sC.x + ', clientY: ' + sC.y + ' })', sandbox);
+cek("klik di tengah tile (10,10) memilih tile itu", klik.x === 10 && klik.y === 10, JSON.stringify(klik));
+const tC2 = vm.runInContext('tileTengahDunia(25, 11)', sandbox);
+const sC2 = vm.runInContext('duniaKeLayar(' + tC2.x + ', ' + tC2.y + ', 800, 600)', sandbox);
+const klik2 = vm.runInContext('pointerKeTile({ clientX: ' + sC2.x + ', clientY: ' + sC2.y + ' })', sandbox);
+cek("klik di tengah tile (25,11) memilih tile itu", klik2.x === 25 && klik2.y === 11, JSON.stringify(klik2));
+
 console.log(gagal === 0 ? "TEST_V13_OK" : "TEST_V13_GAGAL:" + gagal + " dari " + (lulus + gagal));

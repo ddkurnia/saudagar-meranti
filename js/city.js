@@ -1807,7 +1807,10 @@ function pointerKeTile(e) {
   const px = e.clientX - rect.left, py = e.clientY - rect.top;
   const w = layarKeDunia(px, py, rect.width, rect.height);
   const t = duniaKeTile(w.x, w.y);
-  return { x: Math.round(t.x), y: Math.round(t.y) };
+  // duniaKeTile memetakan belah ketupat tile (x,y) ke kotak [x,x+1]x[y,y+1],
+  // jadi tile yang diklik adalah floor — round menggeser setengah tile
+  // ke kanan-bawah (klik di tengah wajik memilih tile tetangga).
+  return { x: Math.floor(t.x), y: Math.floor(t.y) };
 }
 function pasangInput() {
   kanvas.addEventListener("contextmenu", e => e.preventDefault());
