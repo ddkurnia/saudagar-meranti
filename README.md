@@ -24,6 +24,10 @@ Game kini nyaman dimainkan di HP/tablet Android (dan iOS):
   tombol-tombol penting minimal 44px (standar Android), area aman
   poni (notch) dihormati, dan layar mulai kini menjelaskan cara main
   sentuh.
+- **Tanpa dialog `confirm()`:** tombol "＋ Pulau Baru" dan "Hapus"
+  bangunan kini memakai konfirmasi ketuk dua kali di dalam game —
+  dialog bawaan browser tidak selalu muncul di HP/browser tertentu,
+  sehingga tombol sempat terlihat tidak merespons.
 - Uji headless lolos (`TEST_V13_OK`, 129 cek): alur ketuk dua kali
   (pratinjau → bangun, pindah pratinjau, mouse sekali klik), viewport
   & aturan CSS sentuh.

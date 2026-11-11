@@ -2103,13 +2103,26 @@ function renderPanelKanan() {
       if (p) html += "<div class='barisStat kecil'><span>✓ " + p.nama + "</span><span>" + rp(perdaganganRute(p)) + "/hari</span></div>";
     }
   }
-  html += "<div class='barisAksi'><button class='btnKecil' onclick='aksiPindah()'>Pindah</button><button class='btnKecil' onclick='aksiPutar()'>Putar</button><button class='btnKecil bahaya' onclick='aksiHapus()'>Hapus</button><button class='btnKecil' onclick='tutupPanelKanan()'>Tutup</button></div>";
+  html += "<div class='barisAksi'><button class='btnKecil' onclick='aksiPindah()'>Pindah</button><button class='btnKecil' onclick='aksiPutar()'>Putar</button><button class='btnKecil bahaya' onclick='aksiHapus()'>" + (konfirmasiHapus ? "Yakin Hapus?" : "Hapus") + "</button><button class='btnKecil' onclick='tutupPanelKanan()'>Tutup</button></div>";
   el.innerHTML = html;
 }
-function tutupPanelKanan() { terpilih = null; renderPanelKanan(); }
+function tutupPanelKanan() { terpilih = null; konfirmasiHapus = false; renderPanelKanan(); }
 function aksiPindah() { if (terpilih && terpilih.jenis === "bangunan") pindahBangunanMulai(terpilih.idx); }
 function aksiPutar() { if (terpilih && terpilih.jenis === "bangunan") { putarBangunan(terpilih.idx); renderPanelKanan(); } }
-function aksiHapus() { if (terpilih && terpilih.jenis === "bangunan") { if (confirm("Hapus bangunan ini? Pengembalian 50% biaya.")) hapusBangunan(terpilih.idx); } }
+let konfirmasiHapus = false; // hapus bangunan: ketuk dua kali (tanpa dialog confirm)
+let konfirmasiBaru = false; // pulau baru: ketuk dua kali bila ada simpanan (tanpa dialog confirm)
+function aksiHapus() {
+  if (terpilih && terpilih.jenis === "bangunan") {
+    if (!konfirmasiHapus) {
+      konfirmasiHapus = true;
+      toast("Ketuk Hapus lagi untuk mengonfirmasi (pengembalian 50% biaya).", "ok");
+      bunyiKlik(); renderPanelKanan();
+      return;
+    }
+    konfirmasiHapus = false;
+    hapusBangunan(terpilih.idx);
+  }
+}
 function hapusJalan(x, y) {
   const i = S.jalan.findIndex(j => j.x === x && j.y === y);
   if (i >= 0) { S.jalan.splice(i, 1); S.statistik.jalan = Math.max(0, S.statistik.jalan - 1); toast("Jalan dihapus.", "ok"); simpan(); renderPanelKanan(); renderHUD(); }
@@ -2394,7 +2407,17 @@ window.addEventListener("DOMContentLoaded", () => {
   $("infoSave").textContent = adaSave() ? "Simpanan ditemukan — lanjutkan pembangunan pulau Anda." : "Belum ada simpanan — mulai pulau baru.";
   $("btnLanjut").onclick = () => { bunyiKlik(); mulaiGame(false); };
   $("btnBaru").onclick = () => {
-    if (adaSave() && !confirm("Mulai pulau baru akan menghapus simpanan saat ini. Lanjutkan?")) return;
+    // Tanpa dialog confirm() (tidak muncul di sebagian browser/HP):
+    // ketuk sekali = minta konfirmasi, ketuk kedua = jalankan.
+    if (adaSave() && !konfirmasiBaru) {
+      konfirmasiBaru = true;
+      $("btnBaru").textContent = "⚠️ Yakin? Simpanan lama dihapus";
+      toast("Ketuk ＋ Pulau Baru lagi untuk mengonfirmasi.", "ok");
+      setTimeout(() => { konfirmasiBaru = false; $("btnBaru").textContent = "＋ Pulau Baru"; }, 5000);
+      return;
+    }
+    konfirmasiBaru = false;
+    $("btnBaru").textContent = "＋ Pulau Baru";
     try { localStorage.removeItem(CITY.SAVE_KEY); } catch (e) {}
     bunyiKlik(); mulaiGame(true);
   };

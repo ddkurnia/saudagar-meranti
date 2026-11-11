@@ -520,5 +520,17 @@ if (tileSentuh) {
   }
   vm.runInContext('mode = { jenis: "pilih", id: null }; tilePratinjau = null;', sandbox);
 }
+// Konfirmasi hapus dua kali (tanpa dialog confirm)
+const idxHapus = C.S.bangunan.findIndex(b => b.id === "rumah-sederhana" && b.selesai);
+cek("ada bangunan selesai untuk uji hapus", idxHapus >= 0, idxHapus);
+if (idxHapus >= 0) {
+  const jmlH = C.S.bangunan.length;
+  vm.runInContext('terpilih = { jenis: "bangunan", idx: ' + idxHapus + ' }; konfirmasiHapus = false;', sandbox);
+  C.aksiHapus();
+  cek("ketuk Hapus pertama: belum terhapus, menunggu konfirmasi", C.S.bangunan.length === jmlH);
+  C.aksiHapus();
+  cek("ketuk Hapus kedua: bangunan terhapus", C.S.bangunan.length === jmlH - 1);
+  vm.runInContext('terpilih = null; konfirmasiHapus = false;', sandbox);
+}
 
 console.log(gagal === 0 ? "TEST_V13_OK" : "TEST_V13_GAGAL:" + gagal + " dari " + (lulus + gagal));
