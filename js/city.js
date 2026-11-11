@@ -1009,9 +1009,10 @@ function gambarPeta() {
     if (jembatan) {
       // --- Jembatan: dek per ruas yang tersambung, sedikit terangkat ---
       const cyD = cy - 2 * z;
-      const gelap = naungi(def.warna, -30);
-      const railing = naungi(def.warna, -48);
-      const hw = 11 * z; // setengah lebar dek
+      const gelap = naungi(def.warna, -32);
+      const pagarTerang = naungi(def.warna, 38); // pagar kontras terhadap dek
+      const pagarGelap = naungi(def.warna, -48);
+      const hw = 9 * z; // setengah lebar dek (lebih ramping dari petak)
       for (let d = 0; d < 4; d++) {
         if (!ada(d)) continue;
         const [px2, py2] = pt(d);
@@ -1023,27 +1024,31 @@ function gambarPeta() {
         ctx.fillStyle = def.warna;
         poly([[cx + nx * hw, cyD + ny * hw], [U[0] + nx * hw, U[1] + ny * hw], [U[0] - nx * hw, U[1] - ny * hw], [cx - nx * hw, cyD - ny * hw]]);
         ctx.fill();
-        // papan melintang (3 garis tegak lurus ruas)
-        ctx.strokeStyle = gelap; ctx.lineWidth = 1.2 * z;
-        for (const t of [0.3, 0.55, 0.8]) {
+        // papan melintang (5 garis tegak lurus ruas)
+        ctx.strokeStyle = gelap; ctx.lineWidth = 1.5 * z;
+        for (const t of [0.2, 0.35, 0.5, 0.65, 0.8]) {
           const mx = cx + ax * L * t, my = cyD + ay * L * t;
           ctx.beginPath(); ctx.moveTo(mx + nx * hw, my + ny * hw); ctx.lineTo(mx - nx * hw, my - ny * hw); ctx.stroke();
         }
-        // pagar di kedua sisi dek
-        ctx.strokeStyle = railing; ctx.lineWidth = 1.6 * z;
+        // pagar di kedua sisi dek (garis terang) + tiang-tiang pagar
+        ctx.strokeStyle = pagarTerang; ctx.lineWidth = 2 * z;
         ctx.beginPath(); ctx.moveTo(cx + nx * hw, cyD + ny * hw); ctx.lineTo(U[0] + nx * hw, U[1] + ny * hw); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(cx - nx * hw, cyD - ny * hw); ctx.lineTo(U[0] - nx * hw, U[1] - ny * hw); ctx.stroke();
-        // tiang pagar di ujung
-        ctx.fillStyle = railing;
-        ctx.beginPath(); ctx.arc(U[0] + nx * hw, U[1] + ny * hw - 2 * z, 1.6 * z, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(U[0] - nx * hw, U[1] - ny * hw - 2 * z, 1.6 * z, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = pagarGelap; ctx.lineWidth = 1.6 * z;
+        for (const t of [0.15, 0.5, 0.85]) {
+          const mx = cx + ax * L * t, my = cyD + ay * L * t;
+          ctx.beginPath(); ctx.moveTo(mx + nx * hw, my + ny * hw); ctx.lineTo(mx + nx * hw, my + ny * hw - 3.5 * z); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(mx - nx * hw, my - ny * hw); ctx.lineTo(mx - nx * hw, my - ny * hw - 3.5 * z); ctx.stroke();
+        }
       }
-      // sambungan di tengah + tiang penyangga di air
+      // sambungan di tengah + tiang penyangga di air (lebih jelas)
       ctx.fillStyle = def.warna;
       ctx.beginPath(); ctx.arc(cx, cyD, hw, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = "rgba(30,40,50,0.55)"; ctx.lineWidth = 2 * z;
-      ctx.beginPath(); ctx.moveTo(cx - 6 * z, cyD + hw * 0.7); ctx.lineTo(cx - 6 * z, cyD + hw * 0.7 + 7 * z); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(cx + 6 * z, cyD + hw * 0.7); ctx.lineTo(cx + 6 * z, cyD + hw * 0.7 + 7 * z); ctx.stroke();
+      ctx.strokeStyle = gelap; ctx.lineWidth = 1.5 * z;
+      ctx.beginPath(); ctx.moveTo(cx - hw, cyD); ctx.lineTo(cx + hw, cyD); ctx.stroke();
+      ctx.strokeStyle = "rgba(30,40,50,0.6)"; ctx.lineWidth = 2.5 * z;
+      ctx.beginPath(); ctx.moveTo(cx - 6 * z, cyD + hw * 0.7); ctx.lineTo(cx - 6 * z, cyD + hw * 0.7 + 9 * z); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx + 6 * z, cyD + hw * 0.7); ctx.lineTo(cx + 6 * z, cyD + hw * 0.7 + 9 * z); ctx.stroke();
       return;
     }
     // --- Jalan: permukaan penuh tile, tepi (curb) hanya di sisi yang

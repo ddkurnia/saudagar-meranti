@@ -17,14 +17,19 @@ dimainkan.
 - **Jembatan digambar benar:** dek kayu/beton per ruas yang
   tersambung, sedikit terangkat dari air, dengan papan melintang,
   pagar di kedua sisi, tiang pagar, dan tiang penyangga di air.
-  Ujung jembatan mencapai tepi darat.
+  Ujung jembatan mencapai tepi darat. (v13.3.1: dek lebih ramping,
+  pagar dibuat kontras dengan tiang-tiang yang jelas, papan 5 garis,
+  tiang penyangga lebih panjang — setelah cek live pertama
+  menunjukkan detail pagar/papan kurang terlihat.)
 - **Orang & kendaraan mengikuti jalan:** warga dan truk kini berjalan
   mengikuti jaringan jalan (bukan terbang lurus ke target acak) —
   belok kiri/kanan di tikungan dan persimpangan dengan kemudi halus
   (arah berputar bertahap, bukan patah 90°), di lajur kiri seperti
   lalu lintas Indonesia, dan sprite menghadap sesuai arah jalan.
   Truk yang sampai di ujung buntu putar balik; bila tak ada jalan,
-  ia parkir.
+  ia parkir. Warga boleh juga berjalan di rumput sekitar permukiman
+  (bobot lebih kecil dari jalan) — itu memang disengaja, seperti
+  orang berjalan di halaman; truk selalu di jalan.
 - Uji headless lolos (`TEST_V13_OK`, 65 cek): koneksi jalan
   (L/lurus/T/kosong/jembatan), agen mengikuti jalan L sampai ujung
   dengan belokan bertahap dan tetap di koridor jalan, truk mengikuti
