@@ -184,6 +184,10 @@ function pastikanBahagia() {
   if (typeof S.bahagia.nilai !== "number") S.bahagia.nilai = 60;
   if (typeof S.bahagia.bonusZona !== "number") S.bahagia.bonusZona = 0;
   if (!S.bahagia.rincian || typeof S.bahagia.rincian !== "object") S.bahagia.rincian = {};
+  // v24 Worker 4: ringkasan kebahagiaan per rumah (diisi
+  // perbaruiBahagiaRumahHarian) + hari terakhir pembaruan per rumah.
+  if (!S.bahagia.rumah || typeof S.bahagia.rumah !== "object") S.bahagia.rumah = { rata: null, jumlah: 0, hari: -1 };
+  if (typeof S.bahagia.hariRumahTerakhir !== "number") S.bahagia.hariRumahTerakhir = -1;
   if (!S.bahagiaKecamatan || typeof S.bahagiaKecamatan !== "object") S.bahagiaKecamatan = {};
   return S.bahagia;
 }
@@ -476,7 +480,17 @@ function hitungKebahagiaan() {
   for (const b of selesai) { if (bangunanDiZonaSesuai(b)) nZonaSesuai++; }
   const bonusZona = Math.min(BAHAGIA_KONFIG.bonusZonaMaks, nZonaSesuai * BAHAGIA_KONFIG.bonusZonaPerBangunan);
   const nilai = clamp(Math.round(_nilaiDariRincian(rincian)) + bonusZona, 0, 100);
-  S.bahagia = { nilai: nilai, bonusZona: bonusZona, rincian: rincian };
+  // v24 Worker 4: hitungKebahagiaan mengganti S.bahagia utuh tiap jam —
+  // field v24 (ringkasan rumah + hari terakhir pembaruan per rumah)
+  // HARUS dipertahankan, kalau tidak throttle harian hilang dan nilai
+  // rumah bergerak tiap jam, bukan tiap hari.
+  const rumahV24 = (S.bahagia && S.bahagia.rumah) || { rata: null, jumlah: 0, hari: -1 };
+  const hariRumahV24 = (S.bahagia && typeof S.bahagia.hariRumahTerakhir === "number") ? S.bahagia.hariRumahTerakhir : -1;
+  S.bahagia = { nilai: nilai, bonusZona: bonusZona, rincian: rincian, rumah: rumahV24, hariRumahTerakhir: hariRumahV24 };
+  // v24 Worker 4: kebahagiaan per rumah bergerak BERTAHAP menuju target
+  // (maks ±6 poin/hari game) — dihitung per jam di sini, diterapkan hanya
+  // saat hari game berganti (lihat perbaruiBahagiaRumahHarian).
+  try { perbaruiBahagiaRumahHarian(); } catch (e) {}
   S.penduduk.bahagia = nilai;
   S.penduduk.cakupanPendidikan = Math.round(layanan.edu * 100);
   S.penduduk.cakupanKesehatan = Math.round(layanan.kes * 100);
@@ -488,13 +502,13 @@ function hitungKebahagiaan() {
       const rumahKec = rumah.filter(b => (typeof kecamatanBangunan === "function" ? kecamatanBangunan(b) : b.kecamatan) === d.id);
       const bangKec = selesai.filter(b => (typeof kecamatanBangunan === "function" ? kecamatanBangunan(b) : b.kecamatan) === d.id);
       const pendKec = alokasi[d.id] || 0;
-      if (!pendKec && !rumahKec.length) { S.bahagiaKecamatan[d.id] = { nilai: null, penduduk: 0, rincian: null }; continue; }
+      if (!pendKec && !rumahKec.length) { S.bahagiaKecamatan[d.id] = { nilai: null, penduduk: 0, rincian: null, rumah: null }; continue; }
       const jalanKec = (S.jalan || []).filter(j => (j.kecamatan || (typeof kecamatanDiPeta === "function" ? kecamatanDiPeta(peta, j.x, j.y) : null)) === d.id);
       const rincKec = hitungRincian({
         rumah: rumahKec, bangunan: bangKec, penduduk: pendKec,
         uangPerJiwa: S.uang / Math.max(1, S.penduduk.total), jalan: jalanKec, kecamatan: d.id,
       }, global);
-      S.bahagiaKecamatan[d.id] = { nilai: clamp(Math.round(_nilaiDariRincian(rincKec)), 0, 100), penduduk: pendKec, rincian: rincKec };
+      S.bahagiaKecamatan[d.id] = { nilai: clamp(Math.round(_nilaiDariRincian(rincKec)), 0, 100), penduduk: pendKec, rincian: rincKec, rumah: rataBahagiaRumah(rumahKec) };
     }
   }
   return S.bahagia;
@@ -790,4 +804,248 @@ function statusLingkungan() {
     kebakaranAktif: (L.kebakaranAktif || []).slice(),
     kebakaranTotal: L.kebakaranTotal || 0,
   };
+}
+
+// =====================================================================
+// v24 Worker 4 — KEBAHAGIAAN PER RUMAH / LINGKUNGAN / KECAMATAN / KOTA
+// (perluasan, bukan pengganti: hitungKebahagiaan + statusBahagia di atas
+// tidak diubah perilakunya — hanya ditambah hook perbaruiBahagiaRumahHarian
+// dan field `rumah` di S.bahagiaKecamatan.)
+//
+// PRINSIP:
+//   - Semua skor berasal dari SIMULASI AKTUAL (flag berlistrik/berair,
+//     cakupan layanan dalam radius, rincian kota) — tidak ada angka acak
+//     atau dummy. Satu rumah memakai hitungRincian() yang sama dengan
+//     kota, kecuali pendidikan/kesehatan yang dihitung dari CAKUPAN
+//     radius (rumah jauh dari sekolah/puskesmas = 0, bukan skor kota).
+//   - Perubahan BERTAHAP: nilai tersimpan di b.bahagia bergerak menuju
+//     target maksimal ±6 poin per HARI GAME (lerp terbatas). Masalah yang
+//     berlanjut menurunkan nilai pelan-pelan; masalah yang diselesaikan
+//     menaikkan nilai pelan-pelan. Nilai awal rumah baru / save lama = 60.
+//   - Cache & frekuensi: target dihitung ulang maksimal 1x per hari game
+//     untuk SEMUA rumah (di dalam hitungKebahagiaan yang jalan per jam);
+//     pemanggilan bahagiaRumah() di luar itu menghitung target fresh
+//     (dipakai panel saat bangunan dipilih — murah, hanya 1 rumah).
+//   - API lama dipertahankan; fungsi baru:
+//       bahagiaRumah(b)            -> {nilai, target, rincian, emosi, alasan}
+//       targetBahagiaRumah(b)      -> {target, rincian} | null
+//       bahagiaLingkungan(x, y, r) -> {nilai, jumlahRumah, radius}
+//       bahagiaKecamatan(idKec)    -> {nilai, jumlahRumah, rincian, penduduk}
+//       bahagiaKota()              -> {nilai, rataRumah, jumlahRumah, perKecamatan}
+//       perbaruiBahagiaRumahHarian()-> {rata, jumlah, hari} | null
+//       rataBahagiaRumah(daftar)   -> number | null
+//       emosiBahagia(nilai)        -> emoji ; labelBahagia(nilai) -> teks
+//       alasanBahagiaRumah(b)      -> [{indikator, skor, saran}] (3 terburuk)
+//       ringkasanBahagiaRumah()    -> {rata, jumlah, tidakBahagia, sangatBahagia}
+// =====================================================================
+const BAHAGIA_RUMAH_KONFIG = {
+  maksPerHari: 6,       // perubahan maks per rumah per hari game
+  nilaiAwal: 60,        // rumah baru / save lama tanpa b.bahagia
+  ambangKritis: 25,     // di bawah ini = sangat tidak bahagia
+  ambangRendah: 40,
+  ambangSenang: 70,
+  ambangSangatSenang: 85,
+};
+const SARAN_BAHAGIA = {
+  listrik: "Bangun tiang/gardu listrik di dekat rumah.",
+  air: "Bangun pompa/menara air di dekat rumah.",
+  sanitasi: "Bangun IPAL / drainase di dekat permukiman.",
+  drainase: "Bangun pompa banjir / kolam retensi di dekat sini.",
+  kualitasJalan: "Aspal jalan di sekitar permukiman.",
+  kemacetan: "Lebarkan jalan / tambah rute bus di kawasan ini.",
+  pekerjaan: "Bangun tempat kerja (kebun, kilang, pasar, kantor).",
+  pendapatan: "Tingkatkan ekonomi — jual hasil kebun & industri.",
+  pendidikan: "Bangun sekolah dalam radius permukiman.",
+  kesehatan: "Bangun puskesmas dalam radius permukiman.",
+  keamanan: "Bangun kantor polisi di dekat permukiman.",
+  kebersihan: "Bangun tempat sampah / bank sampah di kawasan ini.",
+  lingkungan: "Kurangi polusi — tanam pohon / bangun taman.",
+  ruangHijau: "Bangun taman atau biarkan hutan di dekat rumah.",
+  rekreasi: "Bangun taman / lapangan di dekat permukiman.",
+  hiburan: "Bangun tempat hiburan di dekat permukiman.",
+  transportasi: "Bangun halte / dermaga di dekat permukiman.",
+  hargaPokok: "Bangun pasar / toko di dekat permukiman.",
+  perumahan: "Bangun rumah lagi — kapasitas kurang dari penduduk.",
+  pelayananPublik: "Bangun kantor pemerintah di dekat permukiman.",
+};
+// Rumah yang sudah selesai (punya penghuni).
+function _rumahSelesai() {
+  if (!S) return [];
+  const selesai = (typeof bangunanSelesai === "function") ? bangunanSelesai() : S.bangunan.filter(b => b.selesai);
+  return selesai.filter(b => {
+    const d = (typeof BANGUNAN_MAP !== "undefined" && BANGUNAN_MAP) ? BANGUNAN_MAP[b.id] : null;
+    return d && d.rumah > 0;
+  });
+}
+// Bangunan layanan (sekolah/puskesmas/dll.) yang beroperasi + radiusnya.
+function _penyediaLayanan(jenis) {
+  const out = [];
+  if (!S) return out;
+  const selesai = (typeof bangunanSelesai === "function") ? bangunanSelesai() : S.bangunan.filter(b => b.selesai);
+  for (const b of selesai) {
+    const d = (typeof BANGUNAN_MAP !== "undefined" && BANGUNAN_MAP) ? BANGUNAN_MAP[b.id] : null;
+    if (!d || !d.layanan || d.layanan.jenis !== jenis || !_beroperasi(b)) continue;
+    out.push({ b: b, radius: d.layanan.radius || 6 });
+  }
+  return out;
+}
+// Target kebahagiaan SATU rumah dari kebutuhan aktualnya (0-100) +
+// rincian 20 indikator yang sama dengan kota. Murni hitung — tidak
+// mengubah state. null bila bukan rumah / state belum ada.
+function targetBahagiaRumah(b) {
+  if (!b || !S) return null;
+  const def = (typeof BANGUNAN_MAP !== "undefined" && BANGUNAN_MAP) ? BANGUNAN_MAP[b.id] : null;
+  if (!def || !def.rumah) return null;
+  if (typeof hitungRincian !== "function" || typeof _nilaiDariRincian !== "function") return null;
+  const selesai = (typeof bangunanSelesai === "function") ? bangunanSelesai() : S.bangunan.filter(x => x.selesai);
+  const r = hitungRincian({
+    rumah: [b], bangunan: selesai, penduduk: S.penduduk.total,
+    uangPerJiwa: S.uang / Math.max(1, S.penduduk.total), jalan: S.jalan || [], kecamatan: null,
+  }, undefined);
+  // Pendidikan & kesehatan: skor kota HANYA bila rumah tercakup layanan
+  // dalam radius — rumah yang jauh dari sekolah/puskesmas = 0, bukan
+  // skor kota (skor kota dari kapasitas tidak mengenal jarak).
+  const kota = (S.bahagia && S.bahagia.rincian) || {};
+  const edu = _penyediaLayanan("pendidikan");
+  const kes = _penyediaLayanan("kesehatan");
+  r.pendidikan = ((_cakupanRumah([b], edu) || 0) > 0)
+    ? (typeof kota.pendidikan === "number" ? kota.pendidikan : r.pendidikan) : 0;
+  r.kesehatan = ((_cakupanRumah([b], kes) || 0) > 0)
+    ? (typeof kota.kesehatan === "number" ? kota.kesehatan : r.kesehatan) : 0;
+  return { target: clamp(Math.round(_nilaiDariRincian(r)), 0, 100), rincian: r };
+}
+// Emoji + label dari nilai 0-100 (dipakai wargaVisual & panel).
+function emosiBahagia(nilai) {
+  if (typeof nilai !== "number") return "😐";
+  if (nilai >= BAHAGIA_RUMAH_KONFIG.ambangSangatSenang) return "😍";
+  if (nilai >= BAHAGIA_RUMAH_KONFIG.ambangSenang) return "😊";
+  if (nilai >= 55) return "🙂";
+  if (nilai >= BAHAGIA_RUMAH_KONFIG.ambangRendah) return "😐";
+  if (nilai >= BAHAGIA_RUMAH_KONFIG.ambangKritis) return "😟";
+  return "😡";
+}
+function labelBahagia(nilai) {
+  if (typeof nilai !== "number") return "Belum ada data";
+  if (nilai >= BAHAGIA_RUMAH_KONFIG.ambangSangatSenang) return "Sangat bahagia";
+  if (nilai >= BAHAGIA_RUMAH_KONFIG.ambangSenang) return "Bahagia";
+  if (nilai >= 55) return "Cukup bahagia";
+  if (nilai >= BAHAGIA_RUMAH_KONFIG.ambangRendah) return "Biasa saja";
+  if (nilai >= BAHAGIA_RUMAH_KONFIG.ambangKritis) return "Tidak bahagia";
+  return "Sangat tidak bahagia";
+}
+// 3 indikator terburuk satu rumah (celah terbesar = (100-skor) x bobot),
+// masing-masing dengan saran tindakan. Dipakai panel diagnostik & advisor.
+function alasanBahagiaRumah(b, targetObj) {
+  const t = targetObj || targetBahagiaRumah(b);
+  if (!t || !t.rincian) return [];
+  const arr = [];
+  for (const k of Object.keys(BOBOT_KEBAHAGIAAN)) {
+    const skor = (typeof t.rincian[k] === "number") ? t.rincian[k] : 0;
+    arr.push({ indikator: k, skor: skor, celah: (100 - skor) * BOBOT_KEBAHAGIAAN[k], saran: SARAN_BAHAGIA[k] || "" });
+  }
+  arr.sort((a, c) => c.celah - a.celah);
+  return arr.filter(a => a.skor < 70).slice(0, 3);
+}
+// Kebahagiaan SATU rumah: nilai tersimpan (bergerak bertahap) + target
+// saat ini + rincian + emoji + 3 alasan terburuk.
+function bahagiaRumah(b) {
+  if (!b || !S) return { nilai: null, target: null, rincian: null, emosi: "😐", alasan: [] };
+  const t = targetBahagiaRumah(b);
+  const nilai = (typeof b.bahagia === "number")
+    ? clamp(Math.round(b.bahagia), 0, 100)
+    : BAHAGIA_RUMAH_KONFIG.nilaiAwal;
+  return { nilai: nilai, target: t ? t.target : null, rincian: t ? t.rincian : null, emosi: emosiBahagia(nilai), alasan: alasanBahagiaRumah(b, t) };
+}
+// Rata-rata nilai tersimpan dari daftar rumah (null bila tidak ada yang
+// punya nilai). Rumah tanpa b.bahagia (save lama) memakai nilai awal.
+function rataBahagiaRumah(daftar) {
+  if (!daftar || !daftar.length) return null;
+  let total = 0, jumlah = 0;
+  for (const b of daftar) {
+    if (typeof b.bahagia === "number") { total += clamp(Math.round(b.bahagia), 0, 100); jumlah++; }
+  }
+  if (!jumlah) return null;
+  return Math.round(total / jumlah);
+}
+// Terapkan pergerakan BERTAHAP semua rumah menuju targetnya — maksimal
+// 1x per hari game. Dipanggil dari hitungKebahagiaan (per jam game).
+// Mengembalikan ringkasan {rata, jumlah, hari} atau null bila belum
+// waktunya / state belum ada.
+function perbaruiBahagiaRumahHarian() {
+  if (!S) return null;
+  pastikanBahagia();
+  const hari = (typeof hariGame === "function") ? hariGame() : (S.hari || 1);
+  if (S.bahagia.hariRumahTerakhir === hari) return S.bahagia.rumah;
+  S.bahagia.hariRumahTerakhir = hari;
+  const rumah = _rumahSelesai();
+  let jumlah = 0, total = 0;
+  for (const b of rumah) {
+    const t = targetBahagiaRumah(b);
+    if (!t) continue;
+    const lama = (typeof b.bahagia === "number") ? b.bahagia : BAHAGIA_RUMAH_KONFIG.nilaiAwal;
+    const delta = clamp(t.target - lama, -BAHAGIA_RUMAH_KONFIG.maksPerHari, BAHAGIA_RUMAH_KONFIG.maksPerHari);
+    b.bahagia = clamp(Math.round(lama + delta), 0, 100);
+    jumlah++;
+    total += b.bahagia;
+  }
+  S.bahagia.rumah = { rata: jumlah ? Math.round(total / jumlah) : null, jumlah: jumlah, hari: hari };
+  return S.bahagia.rumah;
+}
+// Rata-rata kebahagiaan rumah dalam radius (petak, Euclidean dari pusat
+// rumah) di sekitar satu titik. null bila tidak ada rumah di radius.
+function bahagiaLingkungan(x, y, radius) {
+  if (!S || typeof x !== "number" || typeof y !== "number") return { nilai: null, jumlahRumah: 0, radius: radius || 6 };
+  const rad = (typeof radius === "number" && radius > 0) ? radius : 6;
+  const rumah = _rumahSelesai().filter(b => {
+    const p = _pusat(b);
+    return Math.hypot(p.x - x, p.y - y) <= rad;
+  });
+  return { nilai: rataBahagiaRumah(rumah), jumlahRumah: rumah.length, radius: rad };
+}
+// Kebahagiaan satu kecamatan: rata-rata rumah di kecamatan itu bila ada;
+// bila belum ada rumah, pakai nilai kecamatan dari hitungKebahagiaan.
+function bahagiaKecamatan(idKec) {
+  if (!S) return { nilai: null, jumlahRumah: 0, rincian: null, penduduk: 0 };
+  const kec = (S.bahagiaKecamatan && S.bahagiaKecamatan[idKec]) || null;
+  const rumah = _rumahSelesai().filter(b => {
+    if (typeof kecamatanBangunan === "function") { try { return kecamatanBangunan(b) === idKec; } catch (e) { return false; } }
+    return b.kecamatan === idKec;
+  });
+  const rataRumah = rataBahagiaRumah(rumah);
+  return {
+    nilai: (rataRumah !== null) ? rataRumah : (kec ? kec.nilai : null),
+    jumlahRumah: rumah.length,
+    rincian: kec ? kec.rincian : null,
+    penduduk: kec ? (kec.penduduk || 0) : 0,
+  };
+}
+// Kebahagiaan kota: nilai kota (20 indikator) + rata-rata rumah + peta
+// nilai per kecamatan (nilai = rata-rata rumah, null = belum berpenghuni).
+function bahagiaKota() {
+  if (!S) return { nilai: 60, rataRumah: null, jumlahRumah: 0, perKecamatan: {} };
+  pastikanBahagia();
+  const perKec = {};
+  if (typeof KECAMATAN_DEFS !== "undefined" && Array.isArray(KECAMATAN_DEFS)) {
+    for (const d of KECAMATAN_DEFS) perKec[d.id] = bahagiaKecamatan(d.id).nilai;
+  }
+  const rmh = (S.bahagia && S.bahagia.rumah) || {};
+  return {
+    nilai: S.bahagia.nilai,
+    rataRumah: (typeof rmh.rata === "number") ? rmh.rata : null,
+    jumlahRumah: rmh.jumlah || 0,
+    perKecamatan: perKec,
+  };
+}
+// Ringkasan cepat untuk badge/panel: rata-rata rumah + hitungan rumah
+// tidak bahagia (<40) & sangat bahagia (>=85).
+function ringkasanBahagiaRumah() {
+  const rumah = _rumahSelesai();
+  let tidak = 0, sangat = 0, total = 0, jumlah = 0;
+  for (const b of rumah) {
+    const n = (typeof b.bahagia === "number") ? b.bahagia : BAHAGIA_RUMAH_KONFIG.nilaiAwal;
+    total += n; jumlah++;
+    if (n < BAHAGIA_RUMAH_KONFIG.ambangRendah) tidak++;
+    if (n >= BAHAGIA_RUMAH_KONFIG.ambangSangatSenang) sangat++;
+  }
+  return { rata: jumlah ? Math.round(total / jumlah) : null, jumlah: jumlah, tidakBahagia: tidak, sangatBahagia: sangat };
 }

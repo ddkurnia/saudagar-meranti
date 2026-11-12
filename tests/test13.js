@@ -42,13 +42,15 @@ const sandbox = {
     setItem: (k, v) => store.set(k, v),
     removeItem: (k) => store.delete(k),
   },
+  // v24: addEventListener MENGGABUNG listener per event (seperti browser) —
+  // city.js DAN city-ui-v24.js sama-sama mendaftar DOMContentLoaded.
   document: {
     getElementById: (id) => { if (!elemen[id]) elemen[id] = buatEl(id); return elemen[id]; },
     querySelectorAll: () => [],
     createElement: (tag) => buatEl(tag),
-    addEventListener: (ev, fn) => { listeners[ev] = fn; },
+    addEventListener: (ev, fn) => { const lama = listeners[ev]; listeners[ev] = lama ? (...a) => { lama(...a); fn(...a); } : fn; },
   },
-  window: { addEventListener: (ev, fn) => { listeners[ev] = fn; }, devicePixelRatio: 1, innerWidth: 1200 },
+  window: { addEventListener: (ev, fn) => { const lama = listeners[ev]; listeners[ev] = lama ? (...a) => { lama(...a); fn(...a); } : fn; }, devicePixelRatio: 1, innerWidth: 1200 },
   Image: class { constructor() { this.complete = false; this.naturalWidth = 0; } set src(v) {} },
   confirm: () => true,
   Date: Date,
@@ -64,7 +66,13 @@ const src = fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-data
   + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-kendaraan.js", "utf8")
   + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-persimpangan.js", "utf8")
   + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-maritim.js", "utf8")
-  + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city.js", "utf8");
+  + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-warga.js", "utf8")
+  + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-bubble.js", "utf8")
+  + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-diagnostik.js", "utf8")
+  + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-advisor.js", "utf8")
+  + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city.js", "utf8")
+  + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-tutorial.js", "utf8")
+  + "\n" + fs.readFileSync("/home/hatch/workspace/saudagar-meranti/js/city-ui-v24.js", "utf8");
 vm.runInContext(src, sandbox);
 for (const nama of ["S", "peta", "BANGUNAN", "BANGUNAN_MAP", "TEKNOLOGI_MAP", "KATEGORI", "MISI", "LEVEL_PERADABAN", "KOMODITAS", "JALAN", "JEMBATAN", "TERRAIN", "CITY", "mode", "modeZona", "hover", "terpilih", "kecepatan", "kamera", "jamVisual", "akumulasiHari", "waktuGame", "wargaVisual", "kendaraanVisual", "TAB_BANGUN", "tilePratinjau", "jembatanMulai", "profilPemain", "TUTORIAL", "KECAMATAN_DEFS", "PULAU_DEFS", "VERSI_GAME", "BOBOT_KEBAHAGIAAN", "ZONA_DEFS", "SAMPAH_PER_JIWA_HARI", "AIR_PER_JIWA_JAM", "LISTRIK_PER_JIWA_JAM", "LALIN_KONFIG", "graphJalan", "versiGraph", "JALAN_KONFIG", "TIPE_KENDARAAN", "KENDARAAN_KONFIG", "daftarKendaraan", "RUTE_BUS_KONFIG", "LOGISTIK_KONFIG", "PERSIMPANGAN_KONFIG", "tabIdSaya", "berhentiDenyutMenu", "waktuInteraksiTerakhir", "modeDebug", "TAB_KUNCI", "LEASE_TAB_MS", "INTERAKSI_IDLE_MS", "TAB_ID_KUNCI", "MARITIM_KONFIG", "TAMAN_JALUR_IDS", "PEJALAN_KONFIG", "tampilJaringanJalan", "tampilRuteBus", "tampilJaringanPejalan", "tampilRuteLaut", "kendaraanTerpilihId", "panelKiri"]) {
   Object.defineProperty(sandbox, nama, { get: () => vm.runInContext(nama, sandbox), configurable: true });
@@ -747,45 +755,51 @@ function cariTileKebun() {
   }
   return null;
 }
-// Langkah 0: geser kamera (reset pilihan dulu — tes sebelumnya meninggalkan terpilih)
-vm.runInContext('terpilih = null;', sandbox);
-C.kameraGeser(100, 0);
-cek("tutorial langkah 0 → 1 setelah kamera digeser", C.S.tutorial.langkah === 1, "langkah=" + C.S.tutorial.langkah);
-// Langkah 1: pilih petak kosong
-vm.runInContext('terpilih = { jenis: "tile", x: 10, y: 10 }; cekTutorial();', sandbox);
-cek("tutorial langkah 1 → 2 setelah memilih petak", C.S.tutorial.langkah === 2, "langkah=" + C.S.tutorial.langkah);
-// Langkah 2: bangun rumah pertama
+// ---- v24: tutorial 12 langkah adaptif MENGAMBIL ALIH alur v16 ----
+// tampilkanTutorial()/cekTutorial() v16 didelegasikan ke window.Tutorial
+// (2 baris di city.js); S.tutorial.langkah (v16) tetap 0 selama v24 aktif.
+// Alur v16 LAMA tetap diuji sebagai jalur fallback di blok v18-D & v21-w5
+// (S.tutorial.v24.dilewati = true); aliran penuh 12 langkah ada di
+// tests/test24.js (dan /tmp/test-v24.js, 42 cek Worker 4).
+const Tut24 = vm.runInContext("window.Tutorial", sandbox);
+cek("v24: tutorial 12 langkah mengambil alih (langkah v24 0 = rumah)", !!Tut24 && Tut24.mengambilAlih() === true && Tut24.status().id === "rumah" && Tut24.status().langkah === 0, Tut24 && Tut24.status().id);
+// Langkah "rumah": bangun rumah ke-2 (target = 1 rumah perintis + 1).
+// Rumah masih dibangun -> langkah belum selesai (hitungRumah hanya rumah selesai).
 const tRumah = cariTileRumah();
 cek("tutorial: ada petak valid untuk rumah", !!tRumah);
 if (tRumah) {
   const ok = C.bangunDi(C.BANGUNAN_MAP["rumah-sederhana"], tRumah.x, tRumah.y, 0);
-  cek("tutorial langkah 2 → 3 setelah membangun rumah", ok === true && C.S.tutorial.langkah === 3, "ok=" + ok + " langkah=" + C.S.tutorial.langkah);
+  cek("v24: rumah ke-2 mulai dibangun", ok === true);
+  cek("v24: langkah rumah belum selesai saat rumah masih dibangun", Tut24.status().id === "rumah", Tut24.status().id);
+  majuSatuHari(); // rumah selesai (<=16 jam game walau pekerja sedikit) -> cekTutorial dari jalur waktu
+  cek("v24: langkah rumah selesai setelah rumah ke-2 selesai (+hadiah)", Tut24.status().langkah >= 1 && Tut24.status().id !== "rumah", "id=" + Tut24.status().id + " langkah=" + Tut24.status().langkah);
 }
-// Langkah 3: buka jalan pertama
+// Langkah "pekerjaan" ter-skip adaptif bila sudah ada yang bekerja
+// (dermaga mempekerjakan warga) -> lanjut ke "jalan".
+if (Tut24.status().id === "pekerjaan") { majuSatuHari(); }
+cek("v24: langkah pekerjaan ter-skip adaptif (ada yang bekerja) -> jalan", Tut24.status().id === "jalan", Tut24.status().id + " bekerja=" + C.hitungTenagaKerja().bekerja);
+// Langkah "jalan": bangun 1 petak jalan (target = jumlah saat tampil + 1).
 const tJalan = cariTileJalan();
 cek("tutorial: ada petak valid untuk jalan", !!tJalan);
 if (tJalan) {
   const ok = C.bangunJalanDi("jalan-tanah", tJalan.x, tJalan.y);
-  cek("tutorial langkah 3 → 4 setelah membangun jalan", ok === true && C.S.tutorial.langkah === 4, "ok=" + ok + " langkah=" + C.S.tutorial.langkah);
+  cek("v24: langkah jalan selesai setelah membangun jalan", ok === true && Tut24.status().id === "listrik", "ok=" + ok + " id=" + Tut24.status().id);
 }
-// Langkah 4 (v18-D): cukup 120 menit game berlalu + pekerja bekerja (bukan 1 hari penuh)
-const hariSblm = C.S.hari;
-majuSatuHari();
-cek("tutorial langkah 4 → 5 setelah 120 menit game & pekerja bekerja", C.S.hari === hariSblm + 1 && C.S.tutorial.langkah === 5, "hari=" + C.S.hari + " langkah=" + C.S.tutorial.langkah);
-// Langkah 5: bangun kebun sagu
+// Langkah "listrik" belum terpenuhi: kebun & rumah tidak menyelesaikannya.
 const tKebun = cariTileKebun();
 cek("tutorial: ada lahan 2x2 valid untuk kebun sagu", !!tKebun);
 if (tKebun) {
   const ok = C.bangunDi(C.BANGUNAN_MAP["kebun-sagu"], tKebun.x, tKebun.y, 0);
-  cek("tutorial langkah 5 → 6 setelah membangun kebun sagu", ok === true && C.S.tutorial.langkah === 6, "ok=" + ok + " langkah=" + C.S.tutorial.langkah);
+  cek("v24: kebun tidak menyelesaikan langkah listrik (urutan 12 langkah)", ok === true && Tut24.status().id === "listrik", "ok=" + ok + " id=" + Tut24.status().id);
 }
-// Langkah 6: bangun satu bangunan lagi → tutorial selesai
 const tRumah2 = cariTileRumah();
 if (tRumah2) {
   const ok = C.bangunDi(C.BANGUNAN_MAP["rumah-sederhana"], tRumah2.x, tRumah2.y, 0);
-  cek("tutorial selesai setelah membangun satu bangunan lagi", ok === true && C.S.tutorial.selesai === true && C.S.tutorial.aktif === false, "ok=" + ok + " selesai=" + C.S.tutorial.selesai);
+  cek("v24: rumah ke-3 tidak menyelesaikan langkah listrik", ok === true && Tut24.status().id === "listrik", "ok=" + ok + " id=" + Tut24.status().id);
 }
-cek("profil: tutorialSelesai tercatat permanen", C.profilPemain && C.profilPemain.tutorialSelesai === true);
+// Lewati sisa tutorial (aliran penuh 12 langkah ada di tests/test24.js).
+Tut24.lewati();
+cek("v24: lewati tutorial -> selesai + profil tercatat permanen", C.S.tutorial.selesai === true && C.S.tutorial.aktif === false && C.profilPemain && C.profilPemain.tutorialSelesai === true, "selesai=" + C.S.tutorial.selesai);
 // Simpanan lama tanpa pemimpin/tutorial dimigrasikan (tutorial dianggap selesai)
 const sLama = JSON.parse(store.get(C.CITY.SAVE_KEY));
 delete sLama.pemimpin; delete sLama.tutorial;
@@ -859,8 +873,8 @@ const kecHarap = ["tebing-tinggi-barat", "tebing-tinggi", "tebing-tinggi-timur",
 // (a) konstanta, ukuran peta & cakupan kecamatan
 cek("CITY 480x320, seed 20261111", C.CITY.GRID_W === 480 && C.CITY.GRID_H === 320 && C.CITY.SEED === 20261111, C.CITY.GRID_W + "x" + C.CITY.GRID_H + " seed " + C.CITY.SEED);
 cek("CITY SAVE_KEY/SAVE_LAMA/PROFIL_KEY v17", C.CITY.SAVE_KEY === "merantiRisingWorldV1" && C.CITY.SAVE_LAMA === "saudagarSaguMerantiCityV1" && C.CITY.PROFIL_KEY === "merantiRisingProfilV1", C.CITY.SAVE_KEY + " / " + C.CITY.SAVE_LAMA + " / " + C.CITY.PROFIL_KEY);
-cek("VERSI_GAME v23", versiGame17 === "v23", versiGame17);
-cek("index.html memakai refs v23 (css v=16, city-data v=9, city-map v=4, city-utilitas v=1, city-bahagia v=1, city-lalin v=2, city-jalan v=2, city-kendaraan v=4, city-persimpangan v=1, city-maritim v=1, city-suara.js v=1, city.js v=33)", idxHtml.includes("css/city.css?v=16") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=2") && idxHtml.includes("js/city-jalan.js?v=2") && idxHtml.includes("js/city-kendaraan.js?v=4") && idxHtml.includes("js/city-persimpangan.js?v=1") && idxHtml.includes("js/city-maritim.js?v=1") && idxHtml.includes("js/city-suara.js?v=1") && idxHtml.includes("js/city.js?v=33"));
+cek("VERSI_GAME v24", versiGame17 === "v24", versiGame17);
+cek("index.html memakai refs v24 (css v=17, city-data v=9, city-map v=4, city-utilitas v=1, city-bahagia v=1, city-lalin v=2, city-jalan v=2, city-kendaraan v=4, city-persimpangan v=1, city-maritim v=1, city-suara.js v=1, city-warga/bubble/diagnostik/advisor/tutorial/ui-v24 v=1, city.js v=34)", idxHtml.includes("css/city.css?v=17") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=2") && idxHtml.includes("js/city-jalan.js?v=2") && idxHtml.includes("js/city-kendaraan.js?v=4") && idxHtml.includes("js/city-persimpangan.js?v=1") && idxHtml.includes("js/city-maritim.js?v=1") && idxHtml.includes("js/city-suara.js?v=1") && idxHtml.includes("js/city.js?v=34"));
 cek("PULAU_DEFS 27 pulau", !!pulauDefs17 && pulauDefs17.length === 27, pulauDefs17 ? pulauDefs17.length : "tidak ada");
 cek("KECAMATAN_DEFS 9 kecamatan", kecIds.length === 9, kecIds.length);
 cek("9 id kecamatan sesuai kontrak", kecHarap.every(id => kecIds.includes(id)), kecIds.join(","));
@@ -1167,7 +1181,7 @@ cek("v17.1: helper cariTileKebunSagu ada", srcCityA.includes("function cariTileK
 cek("v17.1: panel legenda terrain ada", srcCityA.includes("Peta — Legenda Terrain"));
 cek("v17.1: auto-pan tutorial langkah 6 memakai cariTileKebunSagu", srcCityA.includes("cariTileKebunSagu()"));
 cek("v18-A: kontrol waktu baru di index.html (btnKec05, tanpa btnHari/btnKec3)", idxHtml.includes('id="btnKec05"') && !idxHtml.includes('id="btnHari"') && !idxHtml.includes('id="btnKec3"'));
-cek("v18-D: VERSI_GAME naik ke v23 (modul akhir)", C.VERSI_GAME === "v23", C.VERSI_GAME);
+cek("v18-D: VERSI_GAME naik ke v24 (modul akhir)", C.VERSI_GAME === "v24", C.VERSI_GAME);
 // Kembalikan ke permainan baru yang bersih setelah semua uji waktu
 C.mulaiGame(true);
 cek("v18-A: permainan baru mulai 06:00 hari ke-0", C.waktuGame === 360 && C.hariGame() === 0 && C.jamGame() === 6, C.waktuGame);
@@ -1290,7 +1304,7 @@ if (tRumahC) {
   cek("v18-C: rumah belum selesai setelah 2 jam", rumahC.selesai === false);
   C.majukanWaktu(120); // total 4 jam game
   cek("v18-C: rumah selesai tepat setelah 4 jam game", rumahC.selesai === true && rumahC.progres === 1, rumahC.progres + "/" + rumahC.selesai);
-  cek("v18-C: XP +10 saat konstruksi selesai", C.S.xp === xpSblmSelesai + 10, C.S.xp - xpSblmSelesai);
+  cek("v18-C: XP +10 saat konstruksi selesai", C.S.xp === xpSblmSelesai + 10, C.S.xp - xpSblmSelesai); // v24: profil SUDAH menyelesaikan tutorial di blok sebelumnya (stateBaru: tutorial nonaktif) -> hadiah langkah "rumah" TIDAK dibayar dua kali; +10 murni konstruksi
 }
 // (b) durasi efektif: teknologi beton & ketersediaan pekerja
 cek("v18-C: durasi rumah-susun tanpa riset beton = 24 jam", C.durasiKonstruksiEfektif(C.BANGUNAN_MAP["rumah-susun"], null) === 24, C.durasiKonstruksiEfektif(C.BANGUNAN_MAP["rumah-susun"], null));
@@ -1431,7 +1445,7 @@ cek("v18-C: riset tetap harian (olah-sagu 2 hari, konstruksi-beton 3 hari)", C.T
 cek("v18-C: prosesPergantianHari tetap memajukan riset per hari", srcCityB.includes("S.riset.sisa--"));
 cek("v18-C: tidak ada lagi progres konstruksi harian (b.progres += 1 / d.waktu)", !srcCityB.includes("b.progres += 1 / d.waktu"));
 cek("v18-C: loop utama tidak lagi memanggil perbaruiFeri(dt)", !srcCityB.includes("perbaruiFeri(dt);"));
-cek("v18-D: VERSI_GAME v23 (modul akhir)", C.VERSI_GAME === "v23", C.VERSI_GAME);
+cek("v18-D: VERSI_GAME v24 (modul akhir)", C.VERSI_GAME === "v24", C.VERSI_GAME);
 let mangroveC = 0;
 for (const baris of C.peta.terrain) for (const t of baris) if (t === "mangrove") mangroveC++;
 cek("v18-C: v17.1 mangrove > 1000 petak", mangroveC > 1000, mangroveC);
@@ -1440,8 +1454,8 @@ cek("v18-C: v17.1 cariTileKebunSagu menemukan petak valid", !!tkSaguC && C.cekBa
 cek("v18-C: v17.1 legenda terrain masih ada", srcCityB.includes("Peta — Legenda Terrain"));
 // ---- v18-D: UI jam/kalender bar atas + tutorial langkah 4 baru + hapus hariBerikutnya ----
 // (a) versi & refs di index.html (dibaca dari disk; harness sudah memakai fs)
-cek("v18-D: VERSI_GAME v23", C.VERSI_GAME === "v23", C.VERSI_GAME);
-cek("v18-D: index.html refs v23 (css v=16, city-data v=9, city-map v=4, city-utilitas v=1, city v=33) + city-bahagia v=1 + city-lalin v=2 + city-jalan v=2 + city-kendaraan v=4 + city-persimpangan v=1 + city-maritim v=1 + city-suara v=1 (v22-W5)", idxHtml.includes("css/city.css?v=16") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city.js?v=33") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=2") && idxHtml.includes("js/city-jalan.js?v=2") && idxHtml.includes("js/city-kendaraan.js?v=4") && idxHtml.includes("js/city-persimpangan.js?v=1") && idxHtml.includes("js/city-maritim.js?v=1") && idxHtml.includes("js/city-suara.js?v=1"));
+cek("v18-D: VERSI_GAME v24", C.VERSI_GAME === "v24", C.VERSI_GAME);
+cek("v18-D: index.html refs v24 (css v=17, city-data v=9, city-map v=4, city-utilitas v=1, city v=34) + city-bahagia v=1 + city-lalin v=2 + city-jalan v=2 + city-kendaraan v=4 + city-persimpangan v=1 + city-maritim v=1 + city-suara v=1 + modul v24 v=1 (v22-W5)", idxHtml.includes("css/city.css?v=17") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city.js?v=34") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=2") && idxHtml.includes("js/city-jalan.js?v=2") && idxHtml.includes("js/city-kendaraan.js?v=4") && idxHtml.includes("js/city-persimpangan.js?v=1") && idxHtml.includes("js/city-maritim.js?v=1") && idxHtml.includes("js/city-suara.js?v=1"));
 cek("v18-D: #jamAtas ada di bar atas (jam, hari, fase, cuaca)", idxHtml.includes('id="jamAtas"') && idxHtml.includes('id="jamAtasJam"') && idxHtml.includes('id="jamAtasHari"') && idxHtml.includes('id="jamAtasFase"') && idxHtml.includes('id="jamAtasCuaca"'));
 cek("v18-D: #ikonFase hanya satu (dipindah ke #jamAtas, tidak duplikat)", (idxHtml.match(/id="ikonFase"/g) || []).length === 1);
 cek("v18-D: tidak ada tombol Hari Berikutnya di index.html", !idxHtml.includes('id="btnHari"') && !idxHtml.includes('id="btnKec3"') && !/<button[^>]*>[^<]*Hari Berikutnya/.test(idxHtml) && !idxHtml.includes("⏭ Hari Berikutnya"));
@@ -1465,7 +1479,7 @@ cek("v18-D: aturKecepatan(3) ditolak -> 1", (() => { C.aturKecepatan(3); return 
 // tanpa menunggu aksi bangun berikutnya (cekTutorial kini dipanggil
 // dari majukanWaktu & aturKecepatan). Syarat lama (120 menit + pekerja
 // bekerja) tetap berlaku sebagai jalur kedua.
-C.S.tutorial = { aktif: true, selesai: false, langkah: 4 };
+C.S.tutorial = { aktif: true, selesai: false, langkah: 4, v24: { langkah: 0, selesai: {}, target: {}, lihat: {}, dilewati: true } }; // v24: fallback v16 (pemain live melihat tutorial v24)
 C.S.penduduk.total = 30; // angkatan kerja 16 jiwa
 C.S.bangunan.forEach(b => { b.selesai = true; b.progres = 1; }); // semua beroperasi (dermaga butuh 2 pekerja)
 // Isolasi langkah 4: kebun sagu sudah ada & penduduk 30 akan membuat
@@ -1487,7 +1501,7 @@ cek("v21-w5: langkah 4 SELESAI sendiri setelah 30 menit game pada 2x (cekTutoria
 // pada 1x (tanpa 2x) juga menyelesaikan langkah 4.
 C.S.bangunan.push.apply(C.S.bangunan, kebunSimpanD);
 C.S.penduduk.total = 30;
-C.S.tutorial = { aktif: true, selesai: false, langkah: 4 };
+C.S.tutorial = { aktif: true, selesai: false, langkah: 4, v24: { langkah: 0, selesai: {}, target: {}, lihat: {}, dilewati: true } }; // v24: fallback v16 (pemain live melihat tutorial v24)
 vm.runInContext("waktuGame = 360;", sandbox);
 C.tampilkanTutorial();
 C.aturKecepatan(1);
@@ -3080,9 +3094,9 @@ function buatKonteksGameW4() {
       getElementById: (id) => { if (!elemen2[id]) elemen2[id] = buatEl(id); return elemen2[id]; },
       querySelectorAll: () => [],
       createElement: (tag) => buatEl(tag),
-      addEventListener: (ev, fn) => { listeners2[ev] = fn; },
+      addEventListener: (ev, fn) => { const lama = listeners2[ev]; listeners2[ev] = lama ? (...a) => { lama(...a); fn(...a); } : fn; },
     },
-    window: { addEventListener: (ev, fn) => { listeners2[ev] = fn; }, devicePixelRatio: 1, innerWidth: 1200 },
+    window: { addEventListener: (ev, fn) => { const lama = listeners2[ev]; listeners2[ev] = lama ? (...a) => { lama(...a); fn(...a); } : fn; }, devicePixelRatio: 1, innerWidth: 1200 },
     Image: class { constructor() { this.complete = false; this.naturalWidth = 0; } set src(v) {} },
     confirm: () => true,
     Date: Date, Math: Math, JSON: JSON, Object: Object, Array: Array, parseInt: parseInt, parseFloat: parseFloat, isNaN: isNaN,
@@ -3193,7 +3207,7 @@ const idxMajuW5 = srcCityD.indexOf("function majukanWaktu");
 cek("v21-w5: majukanWaktu memanggil cekTutorial", srcCityD.indexOf("cekTutorial()", idxMajuW5) > 0 && srcCityD.indexOf("cekTutorial()", idxMajuW5) < idxMajuW5 + 2600);
 
 // --- (e) Tutorial langkah 6: kamera ke petak anchor valid ---
-C.S.tutorial = { aktif: true, selesai: false, langkah: 5 };
+C.S.tutorial = { aktif: true, selesai: false, langkah: 5, v24: { langkah: 0, selesai: {}, target: {}, lihat: {}, dilewati: true } }; // v24: fallback v16
 C.tampilkanTutorial();
 const tkW5 = C.cariTileKebunSagu();
 cek("v21-w5: tampilkanTutorial langkah 6 mengarahkan kamera ke petak anchor (bukan tengah footprint)", !!tkW5 && C.kamera.cx === C.tileTengahDunia(tkW5.x, tkW5.y).x && C.kamera.cy === C.tileTengahDunia(tkW5.x, tkW5.y).y, JSON.stringify(tkW5) + " kamera=" + C.kamera.cx + "," + C.kamera.cy);
@@ -3291,7 +3305,7 @@ cek("v21-w5: CSS portrait HP: minimap disembunyikan saat panel kiri terbuka (:ha
 // --- (l) v21 tetap jalan: regresi sistem inti ---
 if (typeof C.perbaruiDiagnostikRender === "function") C.perbaruiDiagnostikRender();
 cek("v21-w5: regresi — 19 kategori, overlay, profil, density, minimap besar, tutup panel, petaVersi 5, generasiSimpan, diagnostik render", C.TAB_BANGUN.length === 19 && typeof C.aturOverlay === "function" && typeof C.resetProfil === "function" && typeof C.aturDensity === "function" && typeof C.toggleMinimapBesar === "function" && typeof C.tutupSemuaPanel === "function" && C.S.petaVersi === 5 && typeof C.S.generasiSimpan === "number" && typeof vm.runInContext("window.__merantiRender", sandbox) === "object", "petaVersi=" + C.S.petaVersi + " gen=" + C.S.generasiSimpan);
-cek("v21-w5: VERSI_GAME v23 + refs v23 (css v=16, city.js v=33, city-jalan v=2, city-kendaraan v=4, city-maritim v=1)", C.VERSI_GAME === "v23" && idxHtml.includes("css/city.css?v=16") && idxHtml.includes("js/city.js?v=33") && idxHtml.includes("js/city-jalan.js?v=2") && idxHtml.includes("js/city-kendaraan.js?v=4") && idxHtml.includes("js/city-maritim.js?v=1"));
+cek("v21-w5: VERSI_GAME v24 + refs v24 (css v=17, city.js v=34, city-jalan v=2, city-kendaraan v=4, city-maritim v=1)", C.VERSI_GAME === "v24" && idxHtml.includes("css/city.css?v=17") && idxHtml.includes("js/city.js?v=34") && idxHtml.includes("js/city-jalan.js?v=2") && idxHtml.includes("js/city-kendaraan.js?v=4") && idxHtml.includes("js/city-maritim.js?v=1"));
 
 // --- (n) v22-W1: RoadGraph + A* + Lane System (js/city-jalan.js) ---
 // Jaringan uji (aspal): L utama (10,10)-(14,10)-(14,14) + cabang buntu
@@ -3406,9 +3420,9 @@ function buatKonteksW6(mapSession) {
       getElementById: (id) => { if (!elemen6[id]) elemen6[id] = buatEl(id); return elemen6[id]; },
       querySelectorAll: () => [],
       createElement: (tag) => buatEl(tag),
-      addEventListener: (ev, fn) => { listeners6[ev] = fn; },
+      addEventListener: (ev, fn) => { const lama = listeners6[ev]; listeners6[ev] = lama ? (...a) => { lama(...a); fn(...a); } : fn; },
     },
-    window: { addEventListener: (ev, fn) => { listeners6[ev] = fn; }, devicePixelRatio: 1, innerWidth: 1200 },
+    window: { addEventListener: (ev, fn) => { const lama = listeners6[ev]; listeners6[ev] = lama ? (...a) => { lama(...a); fn(...a); } : fn; }, devicePixelRatio: 1, innerWidth: 1200 },
     Image: class { constructor() { this.complete = false; this.naturalWidth = 0; } set src(v) {} },
     confirm: () => true,
     Date: Date, Math: Math, JSON: JSON, Object: Object, Array: Array, parseInt: parseInt, parseFloat: parseFloat, isNaN: isNaN,
@@ -4431,7 +4445,7 @@ const truk1W5 = C.kendaraanVisual.find(k => k.tipe === "truk");
 C.initKendaraan();
 const truk2W5 = C.kendaraanVisual.find(k => k.tipe === "truk");
 cek("v22-w5: initKendaraan deterministik — truk selalu di petak jalan pertama (bukan acak)", !!truk1W5 && !!truk2W5 && truk1W5.x === C.S.jalan[0].x && truk1W5.y === C.S.jalan[0].y && truk2W5.x === C.S.jalan[0].x && truk2W5.y === C.S.jalan[0].y, "truk=" + (truk1W5 && truk1W5.x + "," + truk1W5.y));
-cek("v22-w5: VERSI_GAME v23 + nav Lalu Lintas ada di index.html + overlay traffic terdaftar", C.VERSI_GAME === "v23" && idxHtml.indexOf('data-tab="lalin"') >= 0 && idxHtml.indexOf("js/city-maritim.js?v=1") >= 0);
+cek("v22-w5: VERSI_GAME v24 + nav Lalu Lintas ada di index.html + overlay traffic terdaftar", C.VERSI_GAME === "v24" && idxHtml.indexOf('data-tab="lalin"') >= 0 && idxHtml.indexOf("js/city-maritim.js?v=1") >= 0);
 
 // =====================================================================
 // v22-W7: PWA + Logo Resmi (Worker 7 — wilayah TERPISAH dari traffic
@@ -4453,7 +4467,7 @@ const swW7 = fs.readFileSync(ROOT_W7 + "/sw.js", "utf8");
 let swSyntaxOkW7 = false;
 try { require("child_process").execSync("node --check " + ROOT_W7 + "/sw.js", { stdio: "ignore" }); swSyntaxOkW7 = true; } catch (e) { swSyntaxOkW7 = false; }
 cek("v22-w7: sw.js lolos node --check", swSyntaxOkW7);
-cek("v22-w7: nama cache SW terikat v23 (meranti-rising-v23)", swW7.indexOf("meranti-rising-v23") !== -1);
+cek("v22-w7: nama cache SW terikat v24 (meranti-rising-v24)", swW7.indexOf("meranti-rising-v24") !== -1);
 cek("v22-w7: SW hapus cache lama saat activate + skipWaiting + clients.claim", swW7.indexOf("skipWaiting") !== -1 && swW7.indexOf("clients.claim") !== -1 && swW7.indexOf("caches.delete") !== -1);
 cek("v22-w7: SW network-first untuk index.html, cache-first untuk aset", swW7.indexOf("index.html") !== -1 && swW7.indexOf("fetch") !== -1 && swW7.indexOf("caches.match") !== -1);
 const daftarCacheW7 = (swW7.match(/const DAFTAR_CACHE = \[([\s\S]*?)\];/) || ["", ""])[1].split("\n").map(s => (s.match(/"([^"]+)"/) || [])[1]).filter(Boolean);
@@ -4472,7 +4486,7 @@ cek("v22-w7: tombol instal & muat-ulang display:none secara default di index.htm
 const cityW7 = fs.readFileSync(ROOT_W7 + "/js/city.js", "utf8");
 cek("v22-w7: city.js punya wiring PWA (beforeinstallprompt, register sw.js, fullscreen, toast update)", cityW7.indexOf("beforeinstallprompt") !== -1 && cityW7.indexOf('register("sw.js")') !== -1 && cityW7.indexOf("requestFullscreen") !== -1 && cityW7.indexOf("Versi baru tersedia") !== -1);
 cek("v22-w7: city.js mendaftarkan SW hanya via https/localhost", cityW7.indexOf('location.protocol === "https:"') !== -1 && cityW7.indexOf('"localhost"') !== -1);
-cek("v22-w7: VERSI_GAME v23 (dinaikkan v22.4 — finalizer v22.5, W7 tidak menyentuhnya; v23 menaikkannya lagi)", C.VERSI_GAME === "v23");
+cek("v22-w7: VERSI_GAME v24 (dinaikkan v22.4 — finalizer v22.5, W7 tidak menyentuhnya; v23 menaikkannya lagi; v24 finalizer)", C.VERSI_GAME === "v24");
 
 // ---------------- v22.3-W1: Kendaraan Bergerak + Warga Berjalan ----------------
 // Cek live v22 (?v=40): 1 truk "parking" selamanya + 0 mobil warga +
@@ -4882,7 +4896,7 @@ cek("v22.4 (e): panel menampilkan baris 'Kemacetan (nyata)' + 'Skor zona (estima
 vm.runInContext('panelKiri = "peta";', sandbox);
 // (f) konsistensi versi: SW cache + precache mengikuti ?v= baru.
 const swV224 = fs.readFileSync("/home/hatch/workspace/saudagar-meranti/sw.js", "utf8");
-cek("v22.5 (f): sw.js cache v23 + precache ?v= baru (city.js v=33, city-suara v=1, kendaraan v=4, jalan v=2, lalin v=2)", swV224.indexOf("meranti-rising-v23") !== -1 && swV224.indexOf("js/city.js?v=33") !== -1 && swV224.indexOf("js/city-suara.js?v=1") !== -1 && swV224.indexOf("js/city-kendaraan.js?v=4") !== -1 && swV224.indexOf("js/city-jalan.js?v=2") !== -1 && swV224.indexOf("js/city-lalin.js?v=2") !== -1);
+cek("v22.5 (f): sw.js cache v24 + precache ?v= baru (city.js v=34, city-suara v=1, kendaraan v=4, jalan v=2, lalin v=2)", swV224.indexOf("meranti-rising-v24") !== -1 && swV224.indexOf("js/city.js?v=34") !== -1 && swV224.indexOf("js/city-suara.js?v=1") !== -1 && swV224.indexOf("js/city-kendaraan.js?v=4") !== -1 && swV224.indexOf("js/city-jalan.js?v=2") !== -1 && swV224.indexOf("js/city-lalin.js?v=2") !== -1);
 cek("v22.5 (f): tidak ada sisa refs v22.4 di index.html/sw.js", !idxHtml.includes("v22.4") && !idxHtml.includes("city.js?v=31") && !idxHtml.includes("city-kendaraan.js?v=3") && !idxHtml.includes("city-jalan.js?v=1") && !swV224.includes("meranti-rising-v22.4") && !swV224.includes("city.js?v=31") && !swV224.includes("city-kendaraan.js?v=3") && !swV224.includes("city-jalan.js?v=1"));
 
 // =====================================================================
@@ -5036,9 +5050,9 @@ const swV23 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
 cek("v23: js/city-suara.js ADA + lolos node --check", fs.existsSync(ROOT + "/js/city-suara.js"));
 cek("v23: index.html memuat city-suara.js SEBELUM city.js",
   idxHtml.indexOf("js/city-suara.js?v=1") !== -1 &&
-  idxHtml.indexOf("js/city-suara.js?v=1") < idxHtml.indexOf("js/city.js?v=33"));
-cek("v23: refs v23 (css v=16, city.js v=33) + VERSI_GAME v23",
-  C.VERSI_GAME === "v23" && idxHtml.includes("css/city.css?v=16") && idxHtml.includes("js/city.js?v=33"));
+  idxHtml.indexOf("js/city-suara.js?v=1") < idxHtml.indexOf("js/city.js?v=34"));
+cek("v23: refs v24 (css v=17, city.js v=34) + VERSI_GAME v24 (fitur suara v23 tetap)",
+  C.VERSI_GAME === "v24" && idxHtml.includes("css/city.css?v=17") && idxHtml.includes("js/city.js?v=34"));
 cek("v23: city.js memanggil Suara.init + Suara.mulai + perbaruiAmbience",
   srcCityV23.includes("Suara.init(keadaanSuara)") && srcCityV23.includes("Suara.mulai()") &&
   srcCityV23.includes("Suara.perbaruiAmbience()"));
@@ -5050,8 +5064,60 @@ cek("v23: panel Pengaturan punya slider volume (musik/ambience/sfx)",
 cek("v23: tombol mute HUD (#btnSuara) + mute layar mulai ada",
   idxHtml.indexOf('id="btnSuara"') !== -1 && idxHtml.indexOf('id="btnMuteMulai"') !== -1);
 cek("v23: tests/test-suara.js ADA (harness terpisah)", fs.existsSync(ROOT + "/tests/test-suara.js"));
-cek("v23: sw.js cache meranti-rising-v23 + precache city-suara.js?v=1, audio .mp3 TIDAK di-precache",
-  swV23.indexOf("meranti-rising-v23") !== -1 && swV23.indexOf("js/city-suara.js?v=1") !== -1 &&
+cek("v23: sw.js cache meranti-rising-v24 + precache city-suara.js?v=1, audio .mp3 TIDAK di-precache",
+  swV23.indexOf("meranti-rising-v24") !== -1 && swV23.indexOf("js/city-suara.js?v=1") !== -1 &&
   !/DAFTAR_CACHE = \[([\s\S]*?)\];/.exec(swV23)[1].includes(".mp3"));
+
+// v24: Citizen Feedback, Building Intelligence & City Advisor Engine.
+// (Detail TEST 1-10 ada di tests/test24.js; di sini hanya smoke +
+// refs + kontrak antarmodul, supaya suite utama ikut menjaga integrasi.)
+const srcCityV24 = fs.readFileSync(path.join(ROOT, "js/city.js"), "utf8");
+const swV24 = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
+const W24 = vm.runInContext("window.Warga", sandbox);
+const B24 = vm.runInContext("window.Bubble", sandbox);
+const D24 = vm.runInContext("window.Diagnostik", sandbox);
+const A24 = vm.runInContext("window.Advisor", sandbox);
+const T24 = vm.runInContext("window.Tutorial", sandbox);
+const U24 = vm.runInContext("window.UIV24", sandbox);
+const N24 = vm.runInContext("window.Notifikasi", sandbox);
+cek("v24: modul Warga/Bubble/Diagnostik/Advisor/Tutorial/UIV24/Notifikasi termuat",
+  !!W24 && !!B24 && !!D24 && !!A24 && !!T24 && !!U24 && !!N24);
+cek("v24: index.html memuat 6 modul baru ?v=1 (warga/bubble/diagnostik/advisor SEBELUM city.js; tutorial/ui-v24 SETELAH)",
+  idxHtml.indexOf("js/city-warga.js?v=1") !== -1 && idxHtml.indexOf("js/city-bubble.js?v=1") !== -1 &&
+  idxHtml.indexOf("js/city-diagnostik.js?v=1") !== -1 && idxHtml.indexOf("js/city-advisor.js?v=1") !== -1 &&
+  idxHtml.indexOf("js/city-tutorial.js?v=1") !== -1 && idxHtml.indexOf("js/city-ui-v24.js?v=1") !== -1 &&
+  idxHtml.indexOf("js/city-advisor.js?v=1") < idxHtml.indexOf("js/city.js?v=34") &&
+  idxHtml.indexOf("js/city.js?v=34") < idxHtml.indexOf("js/city-tutorial.js?v=1") &&
+  idxHtml.indexOf("js/city-tutorial.js?v=1") < idxHtml.indexOf("js/city-ui-v24.js?v=1"));
+cek("v24: index.html punya #btnAdvisor + #drawerAdvisorV24 + #toastAksiV24 + #tutorialProgres/#tutorialHadiah",
+  idxHtml.indexOf('id="btnAdvisor"') !== -1 && idxHtml.indexOf('id="drawerAdvisorV24"') !== -1 &&
+  idxHtml.indexOf('id="toastAksiV24"') !== -1 && idxHtml.indexOf('id="tutorialProgres"') !== -1 &&
+  idxHtml.indexOf('id="tutorialHadiah"') !== -1);
+cek("v24: sw.js cache meranti-rising-v24 + precache 6 modul baru ?v=1",
+  swV24.indexOf("meranti-rising-v24") !== -1 && swV24.indexOf("js/city-warga.js?v=1") !== -1 &&
+  swV24.indexOf("js/city-bubble.js?v=1") !== -1 && swV24.indexOf("js/city-diagnostik.js?v=1") !== -1 &&
+  swV24.indexOf("js/city-advisor.js?v=1") !== -1 && swV24.indexOf("js/city-tutorial.js?v=1") !== -1 &&
+  swV24.indexOf("js/city-ui-v24.js?v=1") !== -1 && swV24.indexOf("js/city.js?v=34") !== -1 &&
+  swV24.indexOf("css/city.css?v=17") !== -1);
+cek("v24: tidak ada sisa pin v23 aktif di index.html/sw.js",
+  !idxHtml.includes("city.js?v=33") && !idxHtml.includes("meranti-rising-v23") &&
+  !swV24.includes("city.js?v=33") && !swV24.includes("meranti-rising-v23") &&
+  !idxHtml.includes("css/city.css?v=16"));
+cek("v24: city.js hook v24 (akrual invalidate + Bubble.perbarui + Bubble.gambar + saatBangunanDipilih + UIV24.perbarui + UIV24.init + klikBubble)",
+  srcCityV24.includes("Diagnostik.invalidateSemua()") && srcCityV24.includes("Bubble.perbarui(dtNyataDetik)") &&
+  srcCityV24.includes("Bubble.gambar(ctx)") && srcCityV24.includes("UIV24.saatBangunanDipilih(b)") &&
+  srcCityV24.includes("window.UIV24.perbarui()") && srcCityV24.includes("window.UIV24.init()") &&
+  srcCityV24.includes("Bubble.klikBubble(layar.x, layar.y)"));
+cek("v24: adapter kontrak — Diagnostik.diagnosis + statusBangunan; Advisor.pesan + ringkasan",
+  typeof D24.diagnosis === "function" && typeof D24.statusBangunan === "function" &&
+  typeof A24.pesan === "function" && typeof A24.ringkasan === "function");
+cek("v24: Diagnostik.MASALAH_TIDAK_TERDETEKSI mencatat guru-kurang + pasien-penuh (tidak dikarang)",
+  Array.isArray(D24.MASALAH_TIDAK_TERDETEKSI) &&
+  D24.MASALAH_TIDAK_TERDETEKSI.some(m => m.kode === "guru-kurang") &&
+  D24.MASALAH_TIDAK_TERDETEKSI.some(m => m.kode === "pasien-penuh"));
+cek("v24: UIV24.status() mengembalikan hitungan masalah (angka, bukan fallback)",
+  U24.status() && typeof U24.status().masalah === "number");
+cek("v24: Advisor.daftarMasalah() mengembalikan array (dari data aktual)",
+  Array.isArray(A24.daftarMasalah()));
 
 console.log(gagal === 0 ? "TEST_V13_OK" : "TEST_V13_GAGAL:" + gagal + " dari " + (lulus + gagal));

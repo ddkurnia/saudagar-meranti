@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v23"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v24"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -89,6 +89,9 @@ function cariTileKebunSagu() {
   return null;
 }
 function tampilkanTutorial() {
+  // v24 Worker 4: Tutorial 12 langkah adaptif (js/city-tutorial.js)
+  // mengambil alih kartu tutorial bila modul dimuat & tutorial aktif.
+  if (typeof window !== "undefined" && window.Tutorial && typeof window.Tutorial.tampilkan === "function" && window.Tutorial.mengambilAlih()) { window.Tutorial.tampilkan(); return; }
   if (!S || !S.tutorial || !S.tutorial.aktif || S.tutorial.selesai) { $("kartuTutorial").style.display = "none"; return; }
   const t = TUTORIAL[S.tutorial.langkah];
   if (!t) { selesaikanTutorial(); return; }
@@ -126,6 +129,8 @@ function tampilkanTutorial() {
   cekTutorial(); // langkah yang kondisinya sudah terpenuhi langsung dilewati
 }
 function cekTutorial() {
+  // v24 Worker 4: delegasi ke Tutorial 12 langkah (js/city-tutorial.js).
+  if (typeof window !== "undefined" && window.Tutorial && typeof window.Tutorial.cek === "function" && window.Tutorial.mengambilAlih()) { window.Tutorial.cek(); return; }
   if (!S || !S.tutorial || !S.tutorial.aktif || S.tutorial.selesai) return;
   const L = S.tutorial.langkah;
   let selesai = false;
@@ -1652,6 +1657,20 @@ function akrualJamGame() {
   if (typeof prosesKapalKargoPerJam === "function") { try { prosesKapalKargoPerJam(); } catch (e) {} }
   // v19 Worker 3: hitung ulang kebahagiaan (20 indikator) tiap jam game.
   if (typeof hitungKebahagiaan === "function") { try { hitungKebahagiaan(); } catch (e) {} }
+  // v24: cache diagnosa bangunan kadaluarsa tiap jam game + keluhan
+  // kritis baru diberitahukan (toast aksi, throttle 60 dtk/id di
+  // Notifikasi.kritis; bunyi gagal hanya bila toast benar-benar tampil).
+  if (typeof Diagnostik !== "undefined" && Diagnostik && typeof Diagnostik.invalidateSemua === "function") { try { Diagnostik.invalidateSemua(); } catch (e) {} }
+  if (typeof Advisor !== "undefined" && Advisor && typeof Advisor.daftarMasalah === "function" && typeof Notifikasi !== "undefined" && Notifikasi && typeof Notifikasi.kritis === "function") {
+    try {
+      const masalahV24 = Advisor.daftarMasalah();
+      const kritisV24 = masalahV24.find(m => m.prioritas === "CRITICAL");
+      if (kritisV24) {
+        const tampil = Notifikasi.kritis("🔴 " + kritisV24.judul + (kritisV24.penyebab ? " — " + kritisV24.penyebab : ""), { id: "kritis-" + kritisV24.id, label: "Lihat", aksi: function () { try { if (typeof UIV24 !== "undefined" && UIV24) UIV24.bukaAdvisor(); } catch (e2) {} } });
+        if (tampil && typeof bunyiGagal === "function") bunyiGagal();
+      }
+    } catch (e) {}
+  }
   terapkanEfekPajakKebahagiaan(); // v19 Worker 5: efek tarif pajak properti
   const r = S.rincianBerjalan;
   const j = rincianKosong();
@@ -2809,6 +2828,13 @@ function gambarPeta() {
     }
   }
   } catch (e) {}
+  // v24: bubble warga/bangunan + ikon peringatan + emotikon warga —
+  // setelah semua lapisan peta (termasuk hujan), sebelum penghitung frame.
+  if (typeof Bubble !== "undefined" && Bubble && typeof Bubble.gambar === "function") { try { Bubble.gambar(ctx); } catch (e) {} }
+  if (typeof window !== "undefined" && window.UIV24) {
+    try { window.UIV24.gambarSemuaPeringatan(lebar, tinggi); } catch (e) {}
+    try { window.UIV24.gambarEmosiSemuaWarga(lebar, tinggi); } catch (e) {}
+  }
   // v21 Worker 4: diagnostik render (lihat catatKesalahanRender di
   // bawah) — frame gambarPeta yang SELESAI + kegelapan terakhir, agar
   // cek live bisa membedakan "gambarPeta tidak jalan" dari "tint
@@ -3551,6 +3577,9 @@ function renderHUD() {
       $("modeChipTeks").textContent = label + " · klik kanan atau Esc untuk batal";
     }
   }
+  // v24: lencana jumlah masalah di tombol advisor (ringan; drawer hanya
+  // di-render ulang bila sedang terbuka).
+  if (typeof window !== "undefined" && window.UIV24 && typeof window.UIV24.perbarui === "function") { try { window.UIV24.perbarui(); } catch (e) {} }
 }
 
 // ---------------- Berita Pulau (ticker bawah) ----------------
@@ -4469,6 +4498,8 @@ function renderPanelKanan() {
   }
   html += "<div class='barisAksi'><button class='btnKecil' onclick='aksiPindah()'>Pindah</button><button class='btnKecil' onclick='aksiPutar()'>Putar</button><button class='btnKecil bahaya' onclick='aksiHapus()'>" + (konfirmasiHapus ? "Yakin Hapus?" : "Hapus") + "</button><button class='btnKecil' onclick='tutupPanelKanan()'>Tutup</button></div>";
   el.innerHTML = html;
+  // v24: seksi diagnostik di panel kanan (data Diagnostik / fallback lokal).
+  if (typeof window !== "undefined" && window.UIV24 && typeof window.UIV24.saatBangunanDipilih === "function") { try { window.UIV24.saatBangunanDipilih(b); } catch (e) {} }
 }
 function tutupPanelKanan() { terpilih = null; konfirmasiHapus = false; renderPanelKanan(); }
 function aksiPindah() { if (terpilih && terpilih.jenis === "bangunan") pindahBangunanMulai(terpilih.idx); }
@@ -4533,6 +4564,20 @@ function tanganiKetuk(t, tombol, sentuh, layar) {
     return;
   }
   if (mode.jenis === "pilih") {
+    // v24: ketuk bubble warga/bangunan memilih bangunannya (koordinat
+    // layar CSS px, sama seperti offsetX/offsetY event).
+    if (layar && typeof Bubble !== "undefined" && Bubble && typeof Bubble.klikBubble === "function") {
+      try {
+        const bBubble = Bubble.klikBubble(layar.x, layar.y);
+        if (bBubble) {
+          terpilih = { jenis: "bangunan", idx: S.bangunan.indexOf(bBubble) };
+          konfirmasiHapus = false;
+          bunyiKlik(); renderPanelKanan();
+          cekTutorial();
+          return;
+        }
+      } catch (e) {}
+    }
     let b = adaBangunanDi(S, t.x, t.y);
     // Ketuk pada gambar bangunan (sprite menjorok ke petak tetangga):
     // bila petak yang diketuk kosong, cek sprite yang menutupi titik layar.
@@ -5117,6 +5162,8 @@ function tickInterval500() {
   }
   // HUD disegarkan tiap tick — termasuk saat pause (angka tetap benar).
   renderHUD();
+  // v24: refresh bubble warga/bangunan (1 detik, diakumulasi di modul).
+  if (typeof Bubble !== "undefined" && Bubble && typeof Bubble.perbarui === "function") { try { Bubble.perbarui(dtNyataDetik); } catch (e) {} }
   // v22-W6: segarkan panel debug (bila Mode Debug aktif) dari state aktual.
   if (modeDebug) perbaruiPanelDebug();
   // v20 Worker 3 (temuan cek live v19 — tint malam "baru muncul setelah
@@ -5283,6 +5330,13 @@ function mulaiGame(baru) {
   tutupSemuaPanel();
   renderHUD(); renderMenuBangun(); renderPanelKiri(); renderPanelKanan(); renderBerita();
   tampilkanTutorial();
+  // v24: tombol + drawer advisor + pemantau lencana; bubble & cooldown
+  // warga direset supaya kota baru/lanjutan mulai bersih.
+  if (typeof window !== "undefined" && window.UIV24) {
+    try { window.UIV24.init(); window.UIV24.mulaiPemantau(); } catch (e) {}
+  }
+  if (typeof Bubble !== "undefined" && Bubble && typeof Bubble.bersihkan === "function") { try { Bubble.bersihkan(); } catch (e) {} }
+  if (typeof Warga !== "undefined" && Warga && typeof Warga.resetCooldown === "function") { try { Warga.resetCooldown(); } catch (e) {} }
   simpan();
   // v23: daftarkan penyedia keadaan ambience (idempotent; aman bila
   // city-suara.js tidak termuat).

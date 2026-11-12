@@ -6,6 +6,56 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v24 — Citizen Feedback, Building Intelligence & City Advisor Engine (2026-11-12)
+
+Warga kini bersuara dari **data aktual** kota, bukan acak: setiap rumah
+punya 11 kebutuhan terukur (listrik, air, sanitasi, jalan, kesehatan,
+pendidikan, rekreasi, pekerjaan, keamanan, sampah, polusi) dengan skor
+0–1 dan emoji emosi 😍😊😐😟😡; keluhan muncul sebagai speech bubble di
+peta (maks 8 zoom dekat / 4 zoom jauh, mode ikon saat zoom jauh,
+refresh 1 dtk, cooldown per pesan di memori). Setiap bangunan punya
+diagnostik status (Beroperasi / Bermasalah / Kritis / Tidak beroperasi /
+Konstruksi) dengan penyebab utama + skor listrik/air/pekerja/bahan
+(0–100). **City Advisor** (tombol penasihat di bar atas + drawer 300px)
+mengumpulkan masalah kota terurut prioritas (CRITICAL → HIGH → MEDIUM →
+LOW) dari data nyata — bangunan, sinyal kota (listrik/air/APBD/cakupan/
+lalu lintas), dan kendaraan yang diam ≥ 1 hari game — tiap masalah
+punya solusi dengan tombol **Ambil Tindakan** (membuka tab yang tepat,
+mis. IPA untuk air), **Lihat Lokasi** (kamera terbang ke bangunan), dan
+**Abaikan** (tersimpan di localStorage, muncul lagi bila memburuk).
+Kebahagiaan kini per rumah (`b.bahagia`, tersimpan di save; save lama
+tanpa field default 60; perubahan maks ±6 poin/hari) + per lingkungan /
+kecamatan / kota. Tutorial v16 diperluas menjadi **12 langkah adaptif**
+(membungkus alur lama; tombol Lewati; progres tersimpan di save).
+Notifikasi kritis: masalah CRITICAL pertama tiap jam game memunculkan
+toast aksi + bunyi gagal (throttle 60 dtk per masalah).
+
+Modul baru (urut index.html): `js/city-warga.js` (Warga),
+`js/city-bubble.js` (Bubble), `js/city-diagnostik.js` (Diagnostik),
+`js/city-advisor.js` (Advisor) sebelum `city.js`;
+`js/city-tutorial.js` (Tutorial) + `js/city-ui-v24.js` (UIV24 +
+Notifikasi) setelah `city.js`. `VERSI_GAME "v24"`; refs `css?v=17`,
+`city.js?v=34`, modul baru `?v=1`; cache SW `meranti-rising-v24`.
+Tes: `tests/test24.js` baru (86 cek, TEST_V24_OK — TEST 1–10:
+rumah tanpa listrik/air, kilang tanpa bahan baku, sekolah/RS,
+zoom out, panel bangunan, reload) + `tests/test13.js` (1270 cek,
+TEST_V13_OK) + `tests/test-suara.js` (28 cek, TEST_SUARA_OK).
+Catatan: tab panel kiri "penasihat" tidak dibuat — drawer + tombol
+adalah permukaan advisor (sesuai spesifikasi worker).
+
+Batas jujur: beberapa masalah **tidak bisa dideteksi** karena tidak
+ada modelnya di simulasi — guru/dokter/perawat/obat/pasien/ambulans/
+pelanggan/parkir/antrean/jadwal kapal (tercatat di
+`Diagnostik.MASALAH_TIDAK_TERDETEKSI`; angka-angka itu tidak dikarang,
+jadi sekolah/RS hanya bisa didiagnosis lewat listrik/air/pekerja/
+jarak layanan, bukan jumlah guru/pasien); kendaraan macet baru
+terdeteksi setelah diam ≥ 1 hari game dan snapshot posisi hilang saat
+reload (deteksi dimulai lagi dari nol); cooldown bubble hanya di
+memori — reset saat reload; emosi warga dihitung dari skor kebutuhan
++ kebahagiaan kota, jadi di kota baru tanpa fasilitas pun rumah
+sulit mencapai 😍; trek musik 2–3 v23 masih kosong — bukan bagian
+v24 (lihat batas v23 di bawah).
+
 ## Yang baru di v23 — Sistem Suara & Musik Melayu (2026-11-12)
 
 Musik latar instrumen Melayu (3 trek: tenang/siang, senja/mellow,

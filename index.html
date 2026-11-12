@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="48x48" href="assets/icons/favicon-48.png">
 <link rel="shortcut icon" href="assets/icons/favicon-32.png">
-<link rel="stylesheet" href="css/city.css?v=16">
+<link rel="stylesheet" href="css/city.css?v=17">
 </head>
 <body>
 <!-- Layar mulai: pembuka sinematik MERANTI RISING (v20: main menu ala game PC/console) -->
@@ -163,6 +163,7 @@
   <section id="panggung">
     <canvas id="peta"></canvas>
     <div id="toast" class="toast"></div>
+    <div id="toastAksiV24" class="toastAksiV24" style="display:none"></div>
     <!-- v22-W6: panel debug tint & lease (Mode Debug, diaktifkan dari
          Pengaturan) — menampilkan nilai aktual dari state, tanpa DevTools. -->
     <div id="panelDebug" class="panelDebug" style="display:none"></div>
@@ -174,6 +175,8 @@
       <div class="tutorialAtas"><span id="tutorialLangkah">Langkah 1 dari 7</span><span id="tutorialJudul"></span></div>
       <div class="tutorialBarLuar"><div id="tutorialBar" class="tutorialBarDalam"></div></div>
       <p id="tutorialDes"></p>
+      <p id="tutorialProgres" class="tutorialProgres"></p>
+      <p id="tutorialHadiah" class="tutorialHadiah"></p>
       <div class="tutorialTombol">
         <button id="btnTutorialAksi" class="btnTutorialAksi" style="display:none"></button>
         <button id="btnTutorialLewatiLangkah" class="btnTutorialKecil">Lewati langkah ›</button>
@@ -222,6 +225,7 @@
       <button id="btnPengaturan" class="btnIkon" title="Pengaturan"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.7M12 18.5v2.7M2.8 12h2.7M18.5 12h2.7M5.2 5.2l1.9 1.9M16.9 16.9l1.9 1.9M18.8 5.2l-1.9 1.9M7.1 16.9l-1.9 1.9"/></svg></button>
       <button id="btnToggleKiri" class="btnIkon" title="Panel kiri">☰</button>
       <button id="btnToggleKanan" class="btnIkon" title="Panel info">ℹ</button>
+      <button id="btnAdvisor" class="btnIkon" title="Penasihat Kota">🧭</button>
     </div>
   </header>
 
@@ -362,6 +366,9 @@
     </div>
   </footer>
 
+  <!-- v24: drawer Penasihat Kota (di-render UIV24.renderAdvisor()) -->
+  <aside id="drawerAdvisorV24" class="drawerAdvisorV24" style="display:none"></aside>
+
   <!-- Berita Pulau -->
   <div id="beritaPulau"><span class="beritaLabel"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M4 20V10M10 20V4M16 20v-8M21 20H3"/></svg> Berita Pulau</span><div class="beritaJalan"><span id="beritaTeks"></span></div></div>
 </div>
@@ -387,6 +394,12 @@
 <script src="js/city-persimpangan.js?v=1"></script>
 <script src="js/city-maritim.js?v=1"></script>
 <script src="js/city-suara.js?v=1"></script>
-<script src="js/city.js?v=33"></script>
+<script src="js/city-warga.js?v=1"></script>
+<script src="js/city-bubble.js?v=1"></script>
+<script src="js/city-diagnostik.js?v=1"></script>
+<script src="js/city-advisor.js?v=1"></script>
+<script src="js/city.js?v=34"></script>
+<script src="js/city-tutorial.js?v=1"></script>
+<script src="js/city-ui-v24.js?v=1"></script>
 </body>
 </html>
