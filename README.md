@@ -6,6 +6,89 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v27.1 — Perbaikan hadap NW/NE: truk tidak lagi miring, mobil tidak lagi mundur (2026-11-12)
+
+Laporan user dari cek live v27 (~20:54 WIB): "Kenapa truck jalan
+miring, ada mobil juga jalan mundur salah posisi." Audit independen
+membuktikan pemetaan kode BENAR (`pilihVarianArah` +
+`sektorVarian`, `js/city.js:2451–2514`, diuji numerik dengan fungsi
+asli; `gerakAgen` selalu bergerak sepanjang `k.arah`; histeresis 5°
+dan fallback cermin BUKAN penyebab; tidak ada penyebab kedua) —
+yang salah adalah 24/24 file gambar NW/NE, dengan mekanisme
+berbeda-beda. v27.1 memperbaiki gambarnya saja; logika pemetaan,
+save, ekonomi, menu fix v27, dan audio TIDAK disentuh.
+
+- **17 file tukar nama (tanpa regenerasi).** 8 tipe sudah menghadap
+  utara (tampak belakang 3/4) tetapi label NW↔NE tertukar —
+  angkot, bus, mobil-dinas, mobil-hatchback, mobil-pemadam,
+  mobil-pickup, mobil-polisi, truk-sampah (16 file) — ditukar
+  namanya lewat nama sementara agar tidak menimpa, lalu
+  diverifikasi tiap file dengan melihat langsung (hidung kiri-atas
+  = NW, kanan-atas = NE) + cocok hash SHA-256 sebelum/sesudah.
+  `truk-pengangkut-ne.png` ternyata gambar NW yang benar (salah
+  label) sehingga dipindah menjadi `-nw.png`, menimpa `-nw` lama
+  yang menghadap timur horizontal (sumbu −2,7° — inilah "truck
+  jalan miring"); slot `-ne` diisi file regenerasi.
+- **7 file regenerasi (nama tetap, gaya sama dengan SE/SW).**
+  sedan NW/NE 720×608 (tampak belakang 3/4, bagasi + kaca belakang
+  + lampu belakang + atap putih), ambulans NW/NE 780×682 (salib
+  merah di sisi + pintu belakang, light bar, bumper merah),
+  motor NW/NE 520×601 (skuter merah, pengendara helm merah garis
+  hijau, ransel abu-abu/hijau — tampak belakang 3/4), dan
+  truk-pengangkut NE 508×459 (kabin kanan-atas, bak kiri-bawah).
+  Prompt regenerasi eksplisit memakai jebakan yang gagal di v27
+  ("rear three-quarter view, driving AWAY toward upper-left/right,
+  we see the BACK, NOT a front view, NOT a side profile") — ketujuh
+  file benar pada percobaan pertama, diperiksa visual sebelum
+  postprocess. Postprocess script v27 (`--bg magenta` untuk
+  sedan/ambulans/truk beratap putih, `--bg white` untuk motor;
+  atap putih utuh terverifikasi — 26.098 px putih opak di sepertiga
+  atas sedan-nw; semua corner alpha 0).
+- **Bukti render 4 arah — game sungguhan, bukan harness.**
+  Playwright + server HTTP lokal, game dimuat dengan save nyata,
+  55 petak jalan lurus diinjeksikan ke `S.jalan` (salib di
+  (220,198), semua darat hutan), 48 kendaraan statis (12 tipe × 4
+  arah: SE/SW/NW/NE) dimasukkan ke `kendaraanVisual`, kamera ke
+  pusat salib zoom 0,9, game paused (`kecepatan=0`). In-page:
+  ke-48 kendaraan memakai file sprite yang benar menurut fungsi
+  seleksi asli (`pilihVarianArah` + `pilihGambarKendaraan`,
+  `cermin:false` semua). Screenshot: hidung segaris sumbu jalan di
+  keempat arah (SE 26,565°, SW 153,435°, NW 206,565°, NE 333,435°),
+  tidak miring, tidak mundur — termasuk 8 tipe hasil tukar nama
+  dan 7 file regenerasi. Bukti di
+  `~/workspace/v271-verifikasi/` (`render-4arah-game.png`,
+  `render-4arah-zoom.png`, `-b`, `-c`, `RINGKASAN.md`).
+  Ukur objektif (PCA sumbu mask alpha PNG): NW 10,5°–21,0° dan NE
+  151,2°–173,0° terhadap ideal 26,565°/153,435° (deviasi 0,6°–19,5°;
+  motor tidak terukur PCA karena siluet pengendara tegak
+  mendominasi) — deviasi ini TIDAK tampak sebagai miring di render
+  game (mis. polisi-ne deviasi PCA 19,5° terlihat sejajar jalan di
+  screenshot); PCA mengukur bentuk siluet, bukan sumbu bodi.
+- **Versi.** `VERSI_GAME "v27.1"`, `js/city.js?v=40`,
+  SW cache `meranti-rising-v27.1`, pill menu `v27.1`;
+  `menu.css` TETAP `?v=2`. Tes: seksi AB baru di
+  `tests/test24.js` (13 cek: 7 dimensi eksak file regenerasi +
+  4 render file baru dipakai + 1 manifest 24 file NW/NE + 1 tanpa
+  sisa pin v27) — test24 292 → 305 cek; semua pin v27 di
+  `test24.js` + `test13.js` dinaikkan ke v27.1 (termasuk perbaikan
+  tes banner PWA X4d: halaman kini v27.1, jadi SW "lebih baru" yang
+  diuji adalah v27.2 dan SW "sama" adalah v27.1). File teks yang
+  berubah: `js/city.js`, `index.html`, `sw.js`, `tests/test24.js`,
+  `tests/test13.js`, `README.md` (paths:
+  `~/workspace/saudagar-meranti-paths-v27-1-teks.txt`). File biner
+  (24 PNG NW/NE) TIDAK ikut push teks — diunggah via GitHub web UI
+  setelah code push (manifest:
+  `~/workspace/saudagar-meranti-aset-varian-arah-v27-1.txt`).
+
+| Batas v27.1 | Keterangan |
+| --- | --- |
+| Cek live BELUM dilakukan | Bukti render di atas memakai game sungguhan di Chromium headless (bukan live di tablet user): kendaraan statis di jalan injeksi, game paused. Yang HANYA bisa dinilai cek live: kendaraan BERGERAK belok di persimpangan normal (ganti varian tepat di tengah belokan, tanpa patah), kendaraan yang di-spawn sistem (bukan injeksi) di jalan buatan pemain, dan tampilan di tablet user. Daftar cek live untuk agen induk: (1) kota baru, percepat 2x: amati truk/motor/sedan belok di persimpangan 4 arah — bodi sejajar jalan, hidung sesuai arah gerak; (2) zoom 1x–2x di jalan lurus 4 arah; (3) Network: ke-48 file kendaraan termuat tanpa 404; (4) console tanpa error; SW cache baru `meranti-rising-v27.1` terinstal. |
+| Sisi kiri/kanan (caveat audit) | Sisi yang terlihat (kiri vs kanan) pada file hasil tukar nama tidak bisa dipastikan dari piksel — gambar nyaris simetris. Bukti render game (48 kendaraan) + cek live nanti yang memastikan; bila ada file yang sisi detailnya tampak salah di render/cek live, regenerasi file itu saja. |
+| Sudut gambar v27 tidak persis 26,565° | Sumbu PCA siluet varian NW/NE hasil tukar nama menyimpang 5,6°–19,5° dari diagonal isometri ideal (v27 digambar sedikit lebih landai dari SE/SW yang menyimpang 1,0°–6,8°). Di render game ke-12 tipe terlihat sejajar jalan, jadi ini dicatat sebagai batas pengukuran, bukan cacat — tetapi bila cek live menunjukkan satu tipe tampak miring, regenerasi tipe itu (bukan remap/cermin/rotasi). |
+| Fringe magenta kini 11 varian | Regenerasi v27.1 menambah sedan NW/NE (atap putih, latar magenta) ke daftar varian beratap putih dengan jejak fringe magenta 1px: truk-sampah ×3, truk-pengangkut ×3, ambulans ×3, sedan ×2. Nyaris tak terlihat di tepi atas; sama seperti catatan v27. |
+| Papan angkot SE masih "ANGKOT DAGO – KALAPA" | Batas lama dari v25, tidak disentuh v27.1 (di luar cakupan). |
+| Kapal / perahu: orientasi masih terbuka | Di luar cakupan v27.1, sama seperti v25/v27. |
+
 ## Yang baru di v27 — Varian Arah Kendaraan: belok tanpa "jumping" (2026-11-12)
 
 Pengganti rotasi sprite v25: tiap tipe kendaraan kini punya 4 sprite

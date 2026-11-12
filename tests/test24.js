@@ -103,19 +103,19 @@ function majuSatuHari() { for (let i = 0; i < 6; i++) C.majukanWaktu(240); }
 const idxHtml = fs.readFileSync(ROOT + "/index.html", "utf8");
 const swTxt = fs.readFileSync(ROOT + "/sw.js", "utf8");
 const srcCity = fs.readFileSync(ROOT + "/js/city.js", "utf8");
-cek("A1 VERSI_GAME v27", C.VERSI_GAME === "v27", C.VERSI_GAME);
+cek("A1 VERSI_GAME v27.1", C.VERSI_GAME === "v27.1", C.VERSI_GAME);
 cek("A2 index.html memuat 6 modul v24 dalam urutan benar (advisor + ui-v24 ?v=3, diagnostik + bubble ?v=2, lainnya ?v=1)",
   idxHtml.indexOf("js/city-warga.js?v=1") !== -1 && idxHtml.indexOf("js/city-bubble.js?v=2") !== -1 &&
   idxHtml.indexOf("js/city-diagnostik.js?v=2") !== -1 && idxHtml.indexOf("js/city-advisor.js?v=3") !== -1 &&
   idxHtml.indexOf("js/city-tutorial.js?v=1") !== -1 && idxHtml.indexOf("js/city-ui-v24.js?v=3") !== -1 &&
-  idxHtml.indexOf("js/city-advisor.js?v=3") < idxHtml.indexOf("js/city.js?v=39") &&
-  idxHtml.indexOf("js/city.js?v=39") < idxHtml.indexOf("js/city-tutorial.js?v=1"));
-cek("A3 index.html: #btnAdvisor + #drawerAdvisorV24 + #toastAksiV24 + css?v=18 + city.js?v=39",
+  idxHtml.indexOf("js/city-advisor.js?v=3") < idxHtml.indexOf("js/city.js?v=40") &&
+  idxHtml.indexOf("js/city.js?v=40") < idxHtml.indexOf("js/city-tutorial.js?v=1"));
+cek("A3 index.html: #btnAdvisor + #drawerAdvisorV24 + #toastAksiV24 + css?v=18 + city.js?v=40",
   idxHtml.indexOf('id="btnAdvisor"') !== -1 && idxHtml.indexOf('id="drawerAdvisorV24"') !== -1 &&
   idxHtml.indexOf('id="toastAksiV24"') !== -1 && idxHtml.includes("css/city.css?v=18") &&
-  idxHtml.includes("js/city.js?v=39"));
-cek("A4 sw.js cache meranti-rising-v27 + precache 6 modul baru",
-  swTxt.indexOf("meranti-rising-v27") !== -1 && swTxt.indexOf("js/city-warga.js?v=1") !== -1 &&
+  idxHtml.includes("js/city.js?v=40"));
+cek("A4 sw.js cache meranti-rising-v27.1 + precache 6 modul baru",
+  swTxt.indexOf("meranti-rising-v27.1") !== -1 && swTxt.indexOf("js/city-warga.js?v=1") !== -1 &&
   swTxt.indexOf("js/city-bubble.js?v=2") !== -1 && swTxt.indexOf("js/city-diagnostik.js?v=2") !== -1 &&
   swTxt.indexOf("js/city-advisor.js?v=3") !== -1 && swTxt.indexOf("js/city-tutorial.js?v=1") !== -1 &&
   swTxt.indexOf("js/city-ui-v24.js?v=3") !== -1);
@@ -802,13 +802,13 @@ Bbl.bersihkan();
 Dg.invalidateSemua();
 
 // ---- X4d: banner "Versi baru tersedia" hanya bila SW lebih baru ----
-cek("X4d bandingVersi: v24.2>v24.1, v24.1<v24.2, sama=0, v24.10>v24.2, v27.1>v27", ctxEval("bandingVersi('v24.2','v24.1')") === 1 && ctxEval("bandingVersi('v24.1','v24.2')") === -1 && ctxEval("bandingVersi('v24.2','v24.2')") === 0 && ctxEval("bandingVersi('v24.10','v24.2')") === 1 && ctxEval("bandingVersi('v27.1','v27')") === 1);
+cek("X4d bandingVersi: v24.2>v24.1, v24.1<v24.2, sama=0, v24.10>v24.2, v27.1>v27, v27.2>v27.1", ctxEval("bandingVersi('v24.2','v24.1')") === 1 && ctxEval("bandingVersi('v24.1','v24.2')") === -1 && ctxEval("bandingVersi('v24.2','v24.2')") === 0 && ctxEval("bandingVersi('v24.10','v24.2')") === 1 && ctxEval("bandingVersi('v27.1','v27')") === 1 && ctxEval("bandingVersi('v27.2','v27.1')") === 1);
 ctxEval("pwaTerimaVersiSW('v24.1')");
-cek("X4d SW v24.1 (lebih lama dari halaman v27) -> banner TIDAK tampil", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
+cek("X4d SW v24.1 (lebih lama dari halaman v27.1) -> banner TIDAK tampil", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
+ctxEval("pwaTerimaVersiSW('v27.2')");
+cek("X4d SW v27.2 (lebih baru) -> banner tampil", ctxEval("pwaUpdateTersedia") === true && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "");
 ctxEval("pwaTerimaVersiSW('v27.1')");
-cek("X4d SW v27.1 (lebih baru) -> banner tampil", ctxEval("pwaUpdateTersedia") === true && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "");
-ctxEval("pwaTerimaVersiSW('v27')");
-cek("X4d SW v27 (sama dengan halaman) -> banner basi disembunyikan lagi", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
+cek("X4d SW v27.1 (sama dengan halaman) -> banner basi disembunyikan lagi", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
 cek("X4d sw.js: postMessage versi + handler minta-versi", swTxt.indexOf("meranti-rising-minta-versi") !== -1 && swTxt.indexOf("meranti-rising-versi") !== -1 && swTxt.indexOf("VERSI_SW") !== -1);
 cek("X4d updatefound menanyakan versi SW dulu (bukan langsung menandai update)", srcCity.indexOf('baru.postMessage({ tipe: "meranti-rising-minta-versi" })') !== -1);
 
@@ -1139,11 +1139,11 @@ cek("Y-e2 spawn ke-41 mengembalikan null + sinkron tidak memaksa (sampah & warga
 bersihSemuaKendaraanV25();
 
 // ---- (g) refs v25 ----
-cek("Y-g1 VERSI_GAME v27 + index.html refs v27 (city.js v=39, kendaraan v=5, lalin v=3, css v=18 tetap)",
-  C.VERSI_GAME === "v27" && idxHtml.includes("js/city.js?v=39") && idxHtml.includes("js/city-kendaraan.js?v=5") &&
+cek("Y-g1 VERSI_GAME v27.1 + index.html refs v27.1 (city.js v=40, kendaraan v=5, lalin v=3, css v=18 tetap)",
+  C.VERSI_GAME === "v27.1" && idxHtml.includes("js/city.js?v=40") && idxHtml.includes("js/city-kendaraan.js?v=5") &&
   idxHtml.includes("js/city-lalin.js?v=3") && idxHtml.includes("css/city.css?v=18"));
-cek("Y-g2 sw.js cache meranti-rising-v27 + precache ?v= baru (city.js v=39, kendaraan v=5, lalin v=3)",
-  swTxt.indexOf("meranti-rising-v27") !== -1 && swTxt.indexOf("js/city.js?v=39") !== -1 &&
+cek("Y-g2 sw.js cache meranti-rising-v27.1 + precache ?v= baru (city.js v=40, kendaraan v=5, lalin v=3)",
+  swTxt.indexOf("meranti-rising-v27.1") !== -1 && swTxt.indexOf("js/city.js?v=40") !== -1 &&
   swTxt.indexOf("js/city-kendaraan.js?v=5") !== -1 && swTxt.indexOf("js/city-lalin.js?v=3") !== -1);
 
 // ---- pulihkan keadaan seksi Y ----
@@ -1157,8 +1157,8 @@ vm.runInContext("waktuGame = 12 * 60;", sandbox);
 
 // ---------------- Z: v26 Main Menu RISE OF MERANTI ----------------
 const menuCss = fs.readFileSync(ROOT + "/css/menu.css", "utf8");
-cek("Z1 VERSI_GAME v27 + index.html memuat css/menu.css?v=2 SETELAH city.css + city.js?v=39",
-  C.VERSI_GAME === "v27" && idxHtml.includes("css/menu.css?v=2") && idxHtml.includes("js/city.js?v=39") &&
+cek("Z1 VERSI_GAME v27.1 + index.html memuat css/menu.css?v=2 SETELAH city.css + city.js?v=40",
+  C.VERSI_GAME === "v27.1" && idxHtml.includes("css/menu.css?v=2") && idxHtml.includes("js/city.js?v=40") &&
   idxHtml.indexOf("css/city.css?v=18") < idxHtml.indexOf("css/menu.css?v=2"));
 cek("Z2 struktur DOM menu lengkap (header/logo/5 tombol/panel muat/promo/7 kategori/detail)",
   ["menuPillVersi", "btnMenuBantuan", "btnMenuProfil", "btnMenuPengaturan",
@@ -1216,8 +1216,8 @@ const logoInfo = infoPng(fs.readFileSync(ROOT + "/assets/menu/logo-rise-of-meran
 cek("Z4b logo RISE OF MERANTI RGBA 2172x724 (transparan, bukan JPEG latar putih)",
   !!logoInfo && logoInfo.lebar === 2172 && logoInfo.tinggi === 724 && logoInfo.tipeWarna === 6,
   JSON.stringify(logoInfo));
-cek("Z5 sw.js cache v27 + precache menu.css + 26 aset menu; arsip & pil palsu TIDAK di-precache",
-  swTxt.indexOf("meranti-rising-v27") !== -1 && swTxt.indexOf("css/menu.css?v=2") !== -1 &&
+cek("Z5 sw.js cache v27.1 + precache menu.css + 26 aset menu; arsip & pil palsu TIDAK di-precache",
+  swTxt.indexOf("meranti-rising-v27.1") !== -1 && swTxt.indexOf("css/menu.css?v=2") !== -1 &&
   ASET_MENU_DIPAKAI.every(f => swTxt.indexOf("./" + f) !== -1) &&
   ["menu-background.png", "menu-buttons.png", "category-icons.png", "category-cards.png",
    "header-icons.png", "google-save", "sinkron-cloud"].every(s => swTxt.indexOf(s) === -1));
@@ -1227,13 +1227,13 @@ cek("Z6 save key TIDAK berubah (merantiRisingWorldV1, VERSI_SAVE 1)",
 vm.runInContext('profilPemain = { nama: "Sukma", gender: "wanita", avatar: AVATAR_KARAKTER.wanita, tutorialSelesai: true, dibuat: "2026-11-11T00:00:00.000Z" }; simpanProfil();', sandbox);
 C.mulaiGame(true);
 C.kembaliKeMenuUtama();
-cek("Z7 menu: profil+save -> LANJUTKAN/MUAT/ikon tampil, MULAI sembunyi, pill versi v27",
+cek("Z7 menu: profil+save -> LANJUTKAN/MUAT/ikon tampil, MULAI sembunyi, pill versi v27.1",
   C.document.getElementById("btnLanjut").style.display === "inline-block" &&
   C.document.getElementById("btnMuat").style.display === "inline-block" &&
   C.document.getElementById("btnMenuProfil").style.display === "inline-block" &&
   C.document.getElementById("btnMenuPengaturan").style.display === "inline-block" &&
   C.document.getElementById("btnMulai").style.display === "none" &&
-  C.document.getElementById("menuPillVersi").textContent === "v27" &&
+  C.document.getElementById("menuPillVersi").textContent === "v27.1" &&
   C.document.getElementById("sambutanKembali").textContent.indexOf("Sukma") !== -1);
 cek("Z8 MUAT (ada save): panel tampil + detail simpanan nyata + tombol Muat aktif",
   (() => { C.document.getElementById("btnMuat").onclick(); return C.document.getElementById("menuPanelMuat").style.display === "block"; })() &&
@@ -1464,10 +1464,10 @@ cek("AA-g1 histeresis: varian SE dipertahankan saat sudutLayar 94° (<5° dari b
   (() => { const k = { _varianArah: "se" }; return C.pilihVarianArah(47 * Math.PI / 180, k) === "se" && k._varianArah === "se"; })());
 cek("AA-g2 histeresis: ganti ke SW saat sudutLayar ~96° (>5° dari batas) + bungkus 0°: NE dipertahankan di 317°",
   (() => { const k = { _varianArah: "se" }; const a = C.pilihVarianArah(48 * Math.PI / 180, k); const k2 = { _varianArah: "ne" }; const b = C.pilihVarianArah(317 * Math.PI / 180, k2); return a === "sw" && k._varianArah === "sw" && b === "ne" && k2._varianArah === "ne"; })());
-// ---- (h) refs v27 ----
-cek("AA-h1 VERSI_GAME v27 + index.html city.js?v=39 + pill v27 + sw.js cache meranti-rising-v27",
-  C.VERSI_GAME === "v27" && idxHtml.includes("js/city.js?v=39") && idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v27<') &&
-  swTxt.indexOf("meranti-rising-v27") !== -1 && swTxt.indexOf("js/city.js?v=39") !== -1);
+// ---- (h) refs v27.1 ----
+cek("AA-h1 VERSI_GAME v27.1 + index.html city.js?v=40 + pill v27.1 + sw.js cache meranti-rising-v27.1",
+  C.VERSI_GAME === "v27.1" && idxHtml.includes("js/city.js?v=40") && idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v27.1<') &&
+  swTxt.indexOf("meranti-rising-v27.1") !== -1 && swTxt.indexOf("js/city.js?v=40") !== -1);
 cek("AA-h2 sw.js TIDAK mem-precache 36 varian (runtime-cache seperti audio) + TIDAK ada sisa pin v26",
   !swTxt.includes("mobil-sedan-sw.png") && !swTxt.includes("bus-nw.png") &&
   !swTxt.includes("meranti-rising-v26") && !idxHtml.includes("city.js?v=38") && !swTxt.includes("city.js?v=38"));
@@ -1475,6 +1475,72 @@ cek("AA-h3 save key TIDAK berubah (merantiRisingWorldV1, VERSI_SAVE 1) + tipe ge
   C.CITY.SAVE_KEY === "merantiRisingWorldV1" && C.CITY.VERSI_SAVE === 1 && C.TIPE_KENDARAAN.mobil.sprite === null);
 cek("AA-h4 sudutPutarKendaraan TETAP ADA (fallback vektor) + tes v25 Y-b tidak berubah",
   typeof C.sudutPutarKendaraan === "function" && C.sudutPutarKendaraan(0).sudutLayar === Math.atan(0.5));
+
+// ---------------- AB: v27.1 Perbaikan NW/NE (laporan user 2026-11-12) ----------------
+// v27 live: truk miring + mobil mundur — diagnosis audit: pemetaan kode BENAR,
+// 24/24 file NW/NE salah hadap. Perbaikan: 17 file tukar nama (8 tipe NW<->NE
+// + truk-pengangkut-ne -> -nw) + 7 file regenerasi (sedan/ambulans/motor x NW+NE,
+// truk-pengangkut-ne). 13 cek baru (test24 292 -> 305):
+// AB-a 7 (dimensi eksak file regenerasi) + AB-b 4 (render file baru dipakai)
+// + AB-c 1 (24 file NW/NE ada) + AB-d 1 (tidak ada sisa pin v27).
+// ---- (a) 7 cek: dimensi eksak + RGBA file regenerasi ----
+const DIMENSI_REGEN_V271 = [
+  ["mobil-sedan-nw.png", 720, 608], ["mobil-sedan-ne.png", 720, 608],
+  ["ambulans-nw.png", 780, 682], ["ambulans-ne.png", 780, 682],
+  ["motor-nw.png", 520, 601], ["motor-ne.png", 520, 601],
+  ["truk-pengangkut-ne.png", 508, 459],
+];
+for (const [nama, lw, th] of DIMENSI_REGEN_V271) {
+  const info = infoPng(fs.readFileSync(ROOT + "/assets/vehicles/" + nama));
+  cek("AB-a regenerasi " + nama + ": " + lw + "x" + th + " RGBA",
+    !!info && info.lebar === lw && info.tinggi === th && info.tipeWarna === 6,
+    info ? info.lebar + "x" + info.tinggi + " tipeWarna=" + info.tipeWarna : "tidak terbaca");
+}
+// ---- (b) 4 cek: render memakai file baru (tanpa rotate/scale) ----
+sandbox.__recAB = ctxRekamAA();
+vm.runInContext("ctx = __recAB;", sandbox);
+function renderAB(tipe, arahDerajat) {
+  panggilAA.length = 0;
+  let ok = true;
+  try { C.gambarSatuKendaraan({ tipe: tipe, x: 10, y: 10, state: "cruising", arah: arahDerajat * Math.PI / 180 }, 800, 600); } catch (e) { ok = false; }
+  return { ok: ok, gambar: panggilAA.filter(c => c[0] === "drawImage").map(c => c[1]), rotate: panggilAA.filter(c => c[0] === "rotate").length, scale: panggilAA.filter(c => c[0] === "scale").length };
+}
+let rAB = renderAB("sedan", 180), rAB2 = renderAB("sedan", 270);
+cek("AB-b1 render sedan NW 180° -> mobil-sedan-nw.png + NE 270° -> mobil-sedan-ne.png, rotate 0, scale 0",
+  rAB.ok && rAB.gambar[0] === "mobil-sedan-nw.png" && rAB.rotate === 0 && rAB.scale === 0 &&
+  rAB2.ok && rAB2.gambar[0] === "mobil-sedan-ne.png" && rAB2.rotate === 0 && rAB2.scale === 0,
+  JSON.stringify([rAB, rAB2]));
+rAB = renderAB("ambulans", 180); rAB2 = renderAB("ambulans", 270);
+cek("AB-b2 render ambulans NW -> ambulans-nw.png + NE -> ambulans-ne.png, rotate 0, scale 0",
+  rAB.ok && rAB.gambar[0] === "ambulans-nw.png" && rAB.rotate === 0 && rAB.scale === 0 &&
+  rAB2.ok && rAB2.gambar[0] === "ambulans-ne.png" && rAB2.rotate === 0 && rAB2.scale === 0,
+  JSON.stringify([rAB, rAB2]));
+rAB = renderAB("motor", 180); rAB2 = renderAB("motor", 270);
+cek("AB-b3 render motor NW -> motor-nw.png + NE -> motor-ne.png, rotate 0, scale 0",
+  rAB.ok && rAB.gambar[0] === "motor-nw.png" && rAB.rotate === 0 && rAB.scale === 0 &&
+  rAB2.ok && rAB2.gambar[0] === "motor-ne.png" && rAB2.rotate === 0 && rAB2.scale === 0,
+  JSON.stringify([rAB, rAB2]));
+rAB = renderAB("truk", 180); rAB2 = renderAB("truk", 270);
+cek("AB-b4 render truk NW 180° -> truk-pengangkut-nw.png (relabeled, benar NW) + NE 270° -> truk-pengangkut-ne.png (regenerasi), rotate 0, scale 0",
+  rAB.ok && rAB.gambar[0] === "truk-pengangkut-nw.png" && rAB.rotate === 0 && rAB.scale === 0 &&
+  rAB2.ok && rAB2.gambar[0] === "truk-pengangkut-ne.png" && rAB2.rotate === 0 && rAB2.scale === 0,
+  JSON.stringify([rAB, rAB2]));
+vm.runInContext("ctx = kanvas.getContext('2d');", sandbox); // kembalikan ctx stub
+// ---- (c)+(d) ----
+cek("AB-c 24 file NW/NE hasil perbaikan ADA di disk + RGBA + lebar sama dgn SE (12 tipe x NW+NE)",
+  TIPE_SPRITE_V27.every(t => {
+    const se = C.TIPE_KENDARAAN[t].sprite;
+    const infoSE = infoPng(fs.readFileSync(ROOT + "/" + se));
+    return ["nw", "ne"].every(a => {
+      const p = ROOT + "/" + C.pathVarianKendaraan(se, a);
+      if (!fs.existsSync(p)) return false;
+      const info = infoPng(fs.readFileSync(p));
+      return !!info && info.tipeWarna === 6 && info.lebar === infoSE.lebar;
+    });
+  }), "tipe bersprite=" + TIPE_SPRITE_V27.length);
+cek("AB-d TIDAK ada sisa pin v27 (pill >v27< / cache meranti-rising-v27\" / city.js?v=39)",
+  !idxHtml.includes('>v27<') && !swTxt.includes('meranti-rising-v27"') &&
+  !idxHtml.includes("city.js?v=39") && !swTxt.includes("city.js?v=39"));
 
 // Pulihkan keadaan akhir bersih (profil + simpanan + menu sinematik).
 C.mulaiGame(true);
