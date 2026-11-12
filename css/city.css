@@ -740,8 +740,13 @@ h1, h2, h3 { line-height: 1.2; font-weight: 800; }
    lalu sembunyikan setelah 250ms agar transisi fade terlihat. */
 #layarMulai.memudar, #modalLevel.memudar { opacity: 0; }
 /* v20 Worker 3: menu boleh di-scroll vertikal di layar pendek
-   (HP landscape) — sebelumnya overflow hidden memotong tombol bawah. */
-#layarMulai { overflow-y: auto; }
+   (HP landscape) — sebelumnya overflow hidden memotong tombol bawah.
+   v27 menu-fix: tahap SINEMATIK dikunci (class .menu-terkunci,
+   di-toggle tampilkanTahap) — overflow vertikal di menu utama adalah
+   akar overflow + seam; tahap identitas/narasi/profil/pengaturan
+   tetap boleh scroll vertikal. */
+#layarMulai { overflow-y: auto; overflow-x: hidden; }
+#layarMulai.menu-terkunci { overflow: hidden; }
 .kartuMulai, .kartuModal {
   max-width: 520px; width: 100%; text-align: center;
   /* margin auto (bukan hanya justify/align center) supaya kartu tetap
@@ -802,7 +807,11 @@ h1, h2, h3 { line-height: 1.2; font-weight: 800; }
 .hadiah { color: #fdcb6e; font-weight: 700; margin: 10px 0 16px; }
 
 /* ---------- MERANTI RISING: pembuka sinematik ---------- */
-.latarSinematik { position: absolute; inset: -4%; z-index: 0; }
+/* v27 menu-fix: inset:-4% → inset:0 — latar 108% lebar viewport adalah
+   akar horizontal overflow; Ken Burns scale(1.12) sudah menutup
+   translasi -1,5%. overflow:hidden menampung awan/ombak (kini anak
+   .latarSinematik, index.html) agar tak bocor ke #layarMulai. */
+.latarSinematik { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
 .latarSinematik img { width: 100%; height: 100%; object-fit: cover; animation: kenBurns 36s ease-in-out infinite alternate; }
 @keyframes kenBurns { from { transform: scale(1) translate(0, 0); } to { transform: scale(1.12) translate(-1.5%, -1%); } }
 .awanSinematik { position: absolute; z-index: 1; pointer-events: none; height: 90px; border-radius: 50%; background: rgba(255, 255, 255, .55); filter: blur(28px); }
