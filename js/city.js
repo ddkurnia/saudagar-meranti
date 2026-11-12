@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v24"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v24.1"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -1666,7 +1666,15 @@ function akrualJamGame() {
       const masalahV24 = Advisor.daftarMasalah();
       const kritisV24 = masalahV24.find(m => m.prioritas === "CRITICAL");
       if (kritisV24) {
-        const tampil = Notifikasi.kritis("🔴 " + kritisV24.judul + (kritisV24.penyebab ? " — " + kritisV24.penyebab : ""), { id: "kritis-" + kritisV24.id, label: "Lihat", aksi: function () { try { if (typeof UIV24 !== "undefined" && UIV24) UIV24.bukaAdvisor(); } catch (e2) {} } });
+        // v24.1: toast rencana aksi terpandu (masalah + langkah 1–2
+        // ringkas + tombol "Lihat Rencana" ke drawer advisor).
+        // Anti-spam: rencana yang sama tidak diulang sampai masalahnya
+        // berubah (memori signature di Notifikasi.masalahKritis) +
+        // throttle 60 dtk/id di Notifikasi.kritis; bunyi gagal hanya
+        // bila toast benar-benar tampil.
+        let tampil = false;
+        if (typeof Notifikasi.masalahKritis === "function") tampil = Notifikasi.masalahKritis(kritisV24);
+        else tampil = Notifikasi.kritis("🔴 " + kritisV24.judul + (kritisV24.penyebab ? " — " + kritisV24.penyebab : ""), { id: "kritis-" + kritisV24.id, label: "Lihat", aksi: function () { try { if (typeof UIV24 !== "undefined" && UIV24) UIV24.bukaAdvisor(); } catch (e2) {} } });
         if (tampil && typeof bunyiGagal === "function") bunyiGagal();
       }
     } catch (e) {}

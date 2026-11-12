@@ -6,6 +6,94 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v24.1 — Notifikasi Aksi Terpandu (2026-11-12)
+
+Setiap masalah kota kini punya **Rencana Aksi bernomor** (langkah 1 =
+dampak terbesar), bukan sekadar saran teks: drawer Penasihat Kota dan
+panel Diagnostik bangunan menampilkan semua langkah lengkap, tiap
+langkah dengan tombolnya sendiri — **"Bangun \<Nama\>"** membuka
+katalog pada tab & kartu yang tepat (pra-pilih + sorot, mis. IPA di
+tab Air, Jalan Tanah di tab Jalan) atau **"Lihat Lokasi"**
+menggerakkan kamera ke masalahnya. Tombol tidak pernah membangun
+otomatis — pemain yang memutuskan dan membangun sendiri. Toast
+kritis tiap jam game kini ringkas: masalah + langkah 1–2 + tombol
+**"Lihat Rencana"** yang membuka drawer langsung pada masalah itu.
+Langkah 1 diturunkan dari penyebab utama: untuk air/listrik, urutan
+dibalik bila kapasitas sudah cukup tapi jaringan belum terhubung
+(dari status live kapasitas vs permintaan). Sebelum menawarkan
+langkah, kunci level/teknologi diperiksa — langkah terkunci tetap
+tampil beserta alasan kuncinya (mis. "butuh peradaban level 3"), dan
+bila ada alternatif tidak terkunci yang setara, alternatif itu yang
+ditawarkan (Intake Air Baku ganti IPA, Pasar Tradisional ganti
+Pelabuhan, Traffic Light ganti Bundaran). Anti-spam: rencana yang
+sama tidak ditampilkan lagi sampai masalahnya berubah (signature
+kode + dampak + jumlah + langkah 1) atau pemain menekan "Abaikan";
+kedua kunci abaikan v24 tetap dihormati. **Jalan lama TIDAK bisa
+ditimpa/diganti jenisnya** (`cekJalan` menolak petak yang sudah
+ber-jalan) — langkah kemacetan diubah menjadi "bangun jalan
+alternatif" di jalur baru, bukan "perlebar jalan lama".
+
+Diubah: `js/city-advisor.js` (builder `rencanaAksiUntuk` — satu sumber
+kebenaran rencana; `rekomendasiUntuk` diturunkan darinya dengan bentuk
+legacy dipertahankan; `ambilTindakan` menjalankan langkah yang
+diklik + memeriksa kunci; adapter UI tidak lagi membuang `target`),
+`js/city-ui-v24.js` (drawer + panel diagnostik render langkah
+bernomor + tombol per langkah; `Notifikasi.masalahKritis` dengan
+memori signature rencana), `js/city.js` (pemicu toast memakai
+`masalahKritis`). `VERSI_GAME "v24.1"`; refs `css?v=17` (tetap),
+`city.js?v=35`, `city-advisor.js?v=2`, `city-ui-v24.js?v=2`, modul
+v24 lain tetap `?v=1` (warga/bubble/diagnostik/tutorial); cache SW
+`meranti-rising-v24.1`. Tes: `tests/test24.js` (pin versi diperbarui
+ke v24.1; 33 cek baru rencana aksi) + `tests/test13.js` +
+`tests/test-suara.js`.
+
+Kasus tambahan v24.1 — **Penduduk tidak bertambah**: bila kapasitas
+rumah kosong (pop < `hitungRumah()`) tapi kebahagiaan < 50%,
+advisor menampilkan masalah baru `penduduk-tidak-bertambah` (HIGH,
+dampak 0,6; 0,8 bila bahagia < 35 karena populasi justru menurun)
+dengan rencana 3 langkah: 1. Bangun fasilitas untuk indikator
+kebahagiaan terburuk (ditentukan dari rata-rata rincian
+`bahagiaRumah()` semua rumah — di kota baru tanpa sekolah biasanya
+Sekolah Dasar; fallback cakupan layanan kota, lalu default
+pendidikan), 2. Pastikan semua rumah berlistrik + berair (tombol
+"Lihat Lokasi" ke rumah yang padam/kering bila ada), 3. Penjelasan
+hasil — setelah kebahagiaan ≥ 50%, penduduk bertambah tiap hari (+2
+jiwa + ~3% populasi, sekitar 3 jiwa/hari di kota kecil). Rumah saja
+tidak menaikkan kebahagiaan (Rumah Sederhana bahagia: 1), jadi
+membangun rumah saat kapasitas sudah kosong BUKAN solusinya.
+**Kilang multi-penyebab**: rencana bahan-baku kini satu rencana
+kilang yang mencakup semua penyebab kilang tidak beroperasi
+(bahan baku, pekerja, listrik, air, jalan, banjir) dari
+`Diagnostik.diagnosa` kilang, diurutkan dari penyebab utama (dampak
+terbesar — mis. air 1,0 di atas bahan 0,9), maks 4 langkah tanpa
+duplikat; bila diagnosa tak tersedia, dipakai rencana standar
+(Kebun Sagu → Jalan Tanah → Gudang). Rumus pertumbuhan penduduk
+dan ekonomi TIDAK diubah.
+
+Batas jujur: rencana aksi mencakup 33 kode masalah (11 masalah utama
++ kode terkait + kasus penduduk-tidak-bertambah); kode di luar tabel
+tidak punya langkah (rencana kosong). Banjir (Kolam Retensi → IPAL →
+Lihat Lokasi), polusi (Taman → IPAL), dan defisit APBD (Industri
+Ekspor) punya rencana spesifik — bukan generik. Pembangkit listrik
+pertama baru terbuka di level 3 (PLT Biomassa / PLT Surya) — di
+level 1–2 langkah 1 listrik terkunci dan hanya tampil beserta alasan
+kuncinya (tidak ada pembangkit level 1–2 di katalog); hal yang sama
+berlaku untuk IPA (level 3) dan Intake (level 2) di level 1 — hanya
+Pompa Air (level 1) yang langsung bisa dibangun. Intake Air Baku
+harus dibangun di tepi pantai (`pantai: true`). Urutan air/listrik
+memakai status live; bila data live belum ada (mis. sebelum jam game
+pertama), dipakai heuristik teks penyebab lalu default "kapasitas
+dulu". Rencana yang sama tidak diulang sampai masalah berubah —
+jejaknya hanya di memori runtime, jadi setelah reload rencana boleh
+tampil sekali lagi. Penentuan "indikator terburuk" untuk kasus
+penduduk memakai rata-rata kota (bukan per rumah) — rumah di
+kecamatan yang sudah lengkap bisa jadi tidak butuh fasilitas itu;
+bila skor seri, urutan peta memenangkan pendidikan dulu. Rencana
+kilang dibatasi 4 langkah — bila kilang punya 5+ penyebab
+sekaligus, penyebab berdampak terkecil tidak tampil sampai yang
+besar diperbaiki. Langkah 3 kasus penduduk bersifat informatif
+(tombolnya "Lihat Lokasi" ke rumah pertama, bukan aksi bangun).
+
 ## Yang baru di v24 — Citizen Feedback, Building Intelligence & City Advisor Engine (2026-11-12)
 
 Warga kini bersuara dari **data aktual** kota, bukan acak: setiap rumah

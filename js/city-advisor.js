@@ -101,7 +101,8 @@
     "sekolah-tak-menjangkau": "MEDIUM", "rs-tak-menjangkau": "MEDIUM",
     "sanitasi-buruk": "MEDIUM", "polusi": "MEDIUM",
     "tanpa-jalan": "HIGH", "anggaran-defisit": "HIGH",
-    "bahagia-rendah": "HIGH", "cakupan-pendidikan-rendah": "HIGH",
+    "bahagia-rendah": "HIGH", "penduduk-tidak-bertambah": "HIGH",
+    "cakupan-pendidikan-rendah": "HIGH",
     "cakupan-kesehatan-rendah": "HIGH", "kemacetan-berat": "HIGH",
     "akses-padat": "MEDIUM", "transportasi-sekolah": "MEDIUM",
     "rekreasi-jauh": "MEDIUM", "pasokan-kosong": "MEDIUM",
@@ -150,6 +151,7 @@
       case "rs-tidak-beroperasi": return "Rumah sakit tidak beroperasi";
       case "transportasi-sekolah": return "Sekolah sulit dijangkau transportasi umum";
       case "bahagia-rendah": return "Kepuasan warga rendah";
+      case "penduduk-tidak-bertambah": return "Penduduk tidak bertambah — kebahagiaan di bawah 50%";
       case "cakupan-pendidikan-rendah": return "Cakupan pendidikan rendah";
       case "cakupan-kesehatan-rendah": return "Cakupan kesehatan rendah";
       case "kemacetan-berat": return "Kemacetan berat di kota";
@@ -320,6 +322,20 @@
       if (st.bahagia && typeof st.bahagia.nilai === "number" && st.bahagia.nilai < 40) {
         _tambah({ kode: "bahagia-rendah", dampak: Math.min(0.8, (60 - st.bahagia.nilai) / 100 + 0.3), jumlah: st.penduduk ? st.penduduk.total : 0, lokasi: null, penyebab: "Tingkat kepuasan masyarakat " + st.bahagia.nilai + "% — di bawah ambang 40%.", contohNama: "Warga", bangunan: [] });
       }
+      // v24.1: Penduduk tidak bertambah — kapasitas rumah kosong tapi
+      // bahagia < 50% (aturan prosesPergantianHari: pop HANYA bertambah
+      // bila bahagia >= 50 DAN pop < rumahKap; 35–49 beku, <35 menurun).
+      // Rumah saja tidak menaikkan kebahagiaan (Rumah Sederhana
+      // bahagia: 1), jadi kota baru tanpa fasilitas jatuh ke ~40%.
+      try {
+        if (typeof hitungRumah === "function" && st.penduduk && typeof st.penduduk.total === "number") {
+          var kapRumah = hitungRumah();
+          var bahKota = (st.bahagia && typeof st.bahagia.nilai === "number") ? st.bahagia.nilai : 60;
+          if (kapRumah > 0 && st.penduduk.total < kapRumah && bahKota < 50) {
+            _tambah({ kode: "penduduk-tidak-bertambah", dampak: bahKota < 35 ? 0.8 : 0.6, jumlah: kapRumah - st.penduduk.total, lokasi: null, penyebab: "Kebahagiaan kota " + bahKota + "% — di bawah ambang 50% yang dibutuhkan agar penduduk bertambah. Kapasitas rumah kosong " + (kapRumah - st.penduduk.total) + " jiwa (" + st.penduduk.total + "/" + kapRumah + " terisi).", contohNama: "Penduduk", bangunan: [] });
+          }
+        }
+      } catch (e) {}
     }
 
     // 3) Kendaraan tidak bergerak (metode snapshot >=1 hari game).
@@ -347,6 +363,8 @@
         solusi: [],
       };
       masalah.solusi = rekomendasiUntuk(masalah);
+      // v24.1: rencana aksi bernomor (langkah terpandu) per masalah.
+      masalah.langkah = rencanaAksiUntuk(masalah);
       // Filter abaikan: sembunyikan kecuali memburuk signifikan.
       var ab = _diabaikan[masalah.id];
       if (ab) {
@@ -405,6 +423,473 @@
     return pesan.slice(0, 3);
   }
 
+  // ---------------- Rencana Aksi Terpandu (v24.1) ----------------
+  // SATU sumber kebenaran rencana aksi bernomor per kode masalah.
+  // Tiap langkah: {nomor, teks, tombol: "Bangun <Nama>" | "Lihat Lokasi",
+  //   ringkas, target: {tab, jenisMode, idMode} | null,
+  //   lokasi: {x,y} | null, terkunci, alasanKunci, masalahId}.
+  // jenisMode: "bangun" (idMode = ID bangunan), "jalan" (ID jalan),
+  // "jembatan" (ID jembatan), "jembatan-gantung" (ID "jembatan-gantung").
+  // ID/tab/harga SEMUA terverifikasi dari city-data.js (lihat laporan
+  // v24.1). TIDAK ada langkah yang membangun otomatis: tombol hanya
+  // membuka katalog (bukaMenuBangunUntuk) atau menggerakkan kamera.
+  // Kunci level/tech DIPERIKSA di sini (bukan di bukaMenuBangunUntuk):
+  // langkah terkunci tetap ditampilkan beserta alasan kuncinya, dan
+  // bila ada alternatif tidak terkunci yang setara, alternatif itu
+  // yang dipakai sebagai langkah (dicatat di teks).
+  function _namaTarget(target) {
+    if (!target || !target.idMode) return "";
+    try {
+      if (target.jenisMode === "bangun" && typeof BANGUNAN_MAP !== "undefined" && BANGUNAN_MAP && BANGUNAN_MAP[target.idMode]) return BANGUNAN_MAP[target.idMode].nama;
+      if (target.jenisMode === "jalan" && typeof JALAN !== "undefined" && JALAN && JALAN[target.idMode]) return JALAN[target.idMode].nama;
+      if ((target.jenisMode === "jembatan" || target.jenisMode === "jembatan-gantung") && typeof JEMBATAN !== "undefined" && JEMBATAN && JEMBATAN[target.idMode]) return JEMBATAN[target.idMode].nama;
+    } catch (e) {}
+    return target.idMode;
+  }
+  function _cekKunciTarget(target) {
+    if (!target || !target.idMode) return { terkunci: false, alasan: null };
+    var def = null, techKhusus = null;
+    try {
+      if (target.jenisMode === "bangun" && typeof BANGUNAN_MAP !== "undefined" && BANGUNAN_MAP) def = BANGUNAN_MAP[target.idMode];
+      else if (target.jenisMode === "jalan" && typeof JALAN !== "undefined" && JALAN) { def = JALAN[target.idMode]; if (target.idMode === "jalan-raya") techKhusus = "konstruksi-beton"; }
+      else if ((target.jenisMode === "jembatan" || target.jenisMode === "jembatan-gantung") && typeof JEMBATAN !== "undefined" && JEMBATAN) def = JEMBATAN[target.idMode];
+    } catch (e) {}
+    if (!def) return { terkunci: false, alasan: null };
+    var st = _S();
+    var level = (st && typeof st.level === "number") ? st.level : 1;
+    var bagian = [];
+    if ((def.level || 1) > level) bagian.push("butuh peradaban level " + def.level + " (saat ini level " + level + ")");
+    var tech = techKhusus || def.tech;
+    if (tech) {
+      var sudah = false;
+      try { sudah = !!(st && st.teknologi && st.teknologi[tech]); } catch (e) {}
+      if (!sudah) {
+        var namaTech = tech;
+        try { if (typeof TEKNOLOGI_MAP !== "undefined" && TEKNOLOGI_MAP && TEKNOLOGI_MAP[tech]) namaTech = TEKNOLOGI_MAP[tech].nama; } catch (e) {}
+        bagian.push("butuh penelitian: " + namaTech);
+      }
+    }
+    if (!bagian.length) return { terkunci: false, alasan: null };
+    return { terkunci: true, alasan: "Terkunci — " + bagian.join(" + ") + "." };
+  }
+  // Cabang akar masalah utilitas: "kapasitas" (pembangkit/IPA dulu) vs
+  // "jaringan" (gardu/menara dulu). Sinyal utama = status live
+  // (kapasitas vs permintaan); bila tidak ada data live, baca kata
+  // kunci penyebab; bila tetap ambigu, default "kapasitas".
+  function _cabangUtilitas(kode, masalah) {
+    try {
+      if (kode === "tanpa-listrik" && typeof statusListrik === "function") {
+        var sl = statusListrik();
+        if (sl && typeof sl.permintaanKW === "number" && sl.permintaanKW > 0) {
+          return (sl.kapasitasKW || 0) >= sl.permintaanKW ? "jaringan" : "kapasitas";
+        }
+      }
+      if (kode === "tanpa-air" && typeof statusAir === "function") {
+        var sa = statusAir();
+        if (sa && typeof sa.permintaanL === "number" && sa.permintaanL > 0) {
+          return (sa.kapasitasL || 0) >= sa.permintaanL ? "jaringan" : "kapasitas";
+        }
+      }
+    } catch (e) {}
+    var p = (masalah && typeof masalah.penyebab === "string") ? masalah.penyebab : "";
+    if (/tidak terhubung/i.test(p) && !/kapasitas[^.]*tidak mencukupi|kapasitas[^.]*di bawah/i.test(p)) return "jaringan";
+    return "kapasitas";
+  }
+  function _langkahBangun(tab, jenisMode, idMode, teks, ringkas, alternatif) {
+    var target = { tab: tab, jenisMode: jenisMode, idMode: idMode };
+    var kunci = _cekKunciTarget(target);
+    if (kunci.terkunci && alternatif) {
+      var altTarget = { tab: alternatif.tab, jenisMode: alternatif.jenisMode, idMode: alternatif.idMode };
+      var kunciAlt = _cekKunciTarget(altTarget);
+      if (!kunciAlt.terkunci) {
+        return { nomor: 0, teks: alternatif.teks + " (pengganti " + _namaTarget(target) + " yang masih terkunci — " + kunci.alasan + ")", tombol: "Bangun " + _namaTarget(altTarget), ringkas: alternatif.ringkas, target: altTarget, lokasi: null, terkunci: false, alasanKunci: null, alternatifDari: idMode };
+      }
+    }
+    return { nomor: 0, teks: teks, tombol: "Bangun " + _namaTarget(target), ringkas: ringkas, target: target, lokasi: null, terkunci: kunci.terkunci, alasanKunci: kunci.terkunci ? kunci.alasan : null };
+  }
+  // Alternatif tidak terkunci (dipakai _langkahBangun bila primer terkunci).
+  var ALT_INTAKE = { tab: "air", jenisMode: "bangun", idMode: "intake", teks: "Bangun Intake Air Baku — Rp150.000 · produksi 3.000 L/jam (kualitas 60, harus di tepi pantai)", ringkas: "Bangun Intake Air Baku (Rp150.000)" };
+  var ALT_PASAR = { tab: "komersial", jenisMode: "bangun", idMode: "pasar-tradisional", teks: "Bangun Pasar Tradisional — Rp120.000 · jual hasil lokal (maks 10/hari) untuk mengosongkan gudang", ringkas: "Bangun Pasar Tradisional (Rp120.000)" };
+  var ALT_TRAFFIC = { tab: "jalan", jenisMode: "bangun", idMode: "traffic-light", teks: "Bangun Traffic Light — Rp25.000 · efek lalu lintas 0,3 di persimpangan macet", ringkas: "Bangun Traffic Light (Rp25.000)" };
+  // v24.1 (kasus penduduk-tidak-bertambah): indikator kebahagiaan ->
+  // fasilitas yang memperbaikinya. Urutan = prioritas bila skor seri
+  // (pendidikan dulu). SEMUA id/tab/harga terverifikasi dari
+  // city-data.js. "perumahan" TIDAK dipetakan (kapasitas rumah justru
+  // kosong dalam kasus ini — bangun rumah bukan solusinya).
+  var PETA_INDIKATOR = [
+    { indikator: "pendidikan", tab: "pendidikan", jenisMode: "bangun", idMode: "sd", teks: "Bangun Sekolah Dasar — Rp80.000 · radius 6 petak, kapasitas 60 siswa", ringkas: "Bangun Sekolah Dasar (Rp80.000)" },
+    { indikator: "kesehatan", tab: "kesehatan", jenisMode: "bangun", idMode: "puskesmas", teks: "Bangun Puskesmas — Rp100.000 · radius 6 petak, kapasitas 80, level 2", ringkas: "Bangun Puskesmas (Rp100.000)" },
+    { indikator: "sanitasi", tab: "drainase", jenisMode: "bangun", idMode: "ipal", teks: "Bangun IPAL di dekat permukiman — Rp350.000 · level 3", ringkas: "Bangun IPAL (Rp350.000)" },
+    { indikator: "kebersihan", tab: "drainase", jenisMode: "bangun", idMode: "tps", teks: "Bangun TPS — Rp40.000 · olah 500 kg sampah/hari", ringkas: "Bangun TPS (Rp40.000)" },
+    { indikator: "rekreasi", tab: "lingkungan", jenisMode: "bangun", idMode: "taman", teks: "Bangun Taman Kota di dekat permukiman — Rp15.000", ringkas: "Bangun Taman Kota (Rp15.000)" },
+    { indikator: "ruangHijau", tab: "lingkungan", jenisMode: "bangun", idMode: "taman", teks: "Bangun Taman Kota di dekat permukiman — Rp15.000", ringkas: "Bangun Taman Kota (Rp15.000)" },
+    { indikator: "lingkungan", tab: "lingkungan", jenisMode: "bangun", idMode: "taman", teks: "Bangun Taman Kota di dekat permukiman — Rp15.000 · ruang hijau penyerap polusi", ringkas: "Bangun Taman Kota (Rp15.000)" },
+    { indikator: "listrik", tab: "listrik", jenisMode: "bangun", idMode: "tiang-listrik", teks: "Bangun Tiang Listrik — Rp10.000 · jaringan listrik 3 petak", ringkas: "Bangun Tiang Listrik (Rp10.000)" },
+    { indikator: "air", tab: "air", jenisMode: "bangun", idMode: "pompa-air", teks: "Bangun Pompa Air — Rp60.000 · jaringan air 6 petak", ringkas: "Bangun Pompa Air (Rp60.000)" },
+    { indikator: "pekerjaan", tab: "pertanian", jenisMode: "bangun", idMode: "kebun-sagu", teks: "Bangun Kebun Sagu — Rp50.000 · kerja 3", ringkas: "Bangun Kebun Sagu (Rp50.000)" },
+    { indikator: "transportasi", tab: "transportasi", jenisMode: "bangun", idMode: "halte", teks: "Bangun Halte — Rp15.000 · radius halte 4 petak", ringkas: "Bangun Halte (Rp15.000)" },
+    { indikator: "keamanan", tab: "keamanan", jenisMode: "bangun", idMode: "kantor-polisi", teks: "Bangun Kantor Polisi — Rp200.000 · radius keamanan 10 petak, level 2", ringkas: "Bangun Kantor Polisi (Rp200.000)" },
+    { indikator: "hargaPokok", tab: "komersial", jenisMode: "bangun", idMode: "pasar-tradisional", teks: "Bangun Pasar Tradisional — Rp120.000 · kerja 6", ringkas: "Bangun Pasar Tradisional (Rp120.000)" },
+    { indikator: "pelayananPublik", tab: "perkantoran", jenisMode: "bangun", idMode: "kantor-pemerintah", teks: "Bangun Kantor Pemerintahan — Rp500.000 · level 3", ringkas: "Bangun Kantor Pemerintahan (Rp500.000)" },
+    { indikator: "hiburan", tab: "hiburan", jenisMode: "bangun", idMode: "bioskop", teks: "Bangun Bioskop — Rp350.000 · level 3", ringkas: "Bangun Bioskop (Rp350.000)" },
+    { indikator: "drainase", tab: "drainase", jenisMode: "bangun", idMode: "kolam-retensi", teks: "Bangun Kolam Retensi — Rp100.000 · menampung banjir di zona rawan", ringkas: "Bangun Kolam Retensi (Rp100.000)" },
+    { indikator: "kualitasJalan", tab: "jalan", jenisMode: "jalan", idMode: "jalan-aspal", teks: "Bangun jalan alternatif dari Jalan Aspal — Rp2.000 + batu 1/petak · kapasitas 40", ringkas: "Bangun jalan alternatif (Jalan Aspal)" },
+    { indikator: "kemacetan", tab: "jalan", jenisMode: "jalan", idMode: "jalan-aspal", teks: "Bangun jalan alternatif dari Jalan Aspal — Rp2.000 + batu 1/petak · kapasitas 40", ringkas: "Bangun jalan alternatif (Jalan Aspal)" },
+    { indikator: "pendapatan", tab: "komersial", jenisMode: "bangun", idMode: "pasar-tradisional", teks: "Bangun Pasar Tradisional — Rp120.000 · kerja 6", ringkas: "Bangun Pasar Tradisional (Rp120.000)" },
+  ];
+  // Indikator kebahagiaan TERBURUK kota (untuk langkah 1 kasus
+  // penduduk-tidak-bertambah). Heuristik sederhana, dari data yang
+  // sudah ada: (1) rata-rata rincian bahagiaRumah() semua rumah
+  // selesai; (2) bila tidak ada rincian, bandingkan cakupan layanan
+  // kota (pendidikan vs kesehatan); (3) default pendidikan.
+  // Batas jujur: ini rata-rata kota, bukan per rumah — rumah di
+  // kecamatan yang sudah lengkap bisa jadi tidak butuh fasilitas itu.
+  function _indikatorTerburuk() {
+    try {
+      if (typeof bahagiaRumah === "function") {
+        var st = _S();
+        if (st && Array.isArray(st.bangunan)) {
+          var jumlah = {}, total = {};
+          for (var i = 0; i < st.bangunan.length; i++) {
+            var b = st.bangunan[i];
+            if (!b || !b.selesai) continue;
+            var hb = bahagiaRumah(b);
+            if (!hb || !hb.rincian) continue;
+            for (var k in hb.rincian) {
+              if (typeof hb.rincian[k] !== "number") continue;
+              total[k] = (total[k] || 0) + hb.rincian[k];
+              jumlah[k] = (jumlah[k] || 0) + 1;
+            }
+          }
+          var terbaik = null;
+          for (var p = 0; p < PETA_INDIKATOR.length; p++) {
+            var ind = PETA_INDIKATOR[p].indikator;
+            if (!jumlah[ind]) continue;
+            var rata = total[ind] / jumlah[ind];
+            if (!terbaik || rata < terbaik.skor) terbaik = { indikator: ind, skor: Math.round(rata), sumber: "rincian-rumah" };
+          }
+          if (terbaik) return terbaik;
+        }
+      }
+    } catch (e) {}
+    try {
+      var st2 = _S();
+      if (st2 && st2.penduduk) {
+        var cp = st2.penduduk.cakupanPendidikan, ck = st2.penduduk.cakupanKesehatan;
+        if (typeof cp === "number" && typeof ck === "number") {
+          return cp <= ck ? { indikator: "pendidikan", skor: cp, sumber: "cakupan-kota" } : { indikator: "kesehatan", skor: ck, sumber: "cakupan-kota" };
+        }
+      }
+    } catch (e) {}
+    return { indikator: "pendidikan", skor: null, sumber: "default" };
+  }
+  // Bangunan HIDUP (objek di S.bangunan) untuk suatu masalah: dari
+  // masalah.bangunan[0] atau masalah.lokasi, dicocokkan koordinat (+id
+  // bila ada). null bila tidak ketemu — pemanggil memakai rencana
+  // standar. Entri agregat daftarMasalah hanya {id,nama,x,y}, jadi
+  // diagnosa TIDAK boleh dipanggil pada entri itu langsung.
+  function _bangunanMasalah(masalah) {
+    if (!masalah) return null;
+    var x = null, y = null, id = null;
+    if (Array.isArray(masalah.bangunan) && masalah.bangunan.length && masalah.bangunan[0]) {
+      x = masalah.bangunan[0].x; y = masalah.bangunan[0].y; id = masalah.bangunan[0].id || null;
+    } else if (masalah.lokasi && typeof masalah.lokasi.x === "number") {
+      x = masalah.lokasi.x; y = masalah.lokasi.y;
+    }
+    if (typeof x !== "number" || typeof y !== "number") return null;
+    try {
+      var st = _S();
+      if (st && Array.isArray(st.bangunan)) {
+        for (var i = 0; i < st.bangunan.length; i++) {
+          var b = st.bangunan[i];
+          if (b && b.x === x && b.y === y && (!id || b.id === id)) return b;
+        }
+      }
+    } catch (e) {}
+    return null;
+  }
+  function rencanaAksiUntuk(masalah) {
+    if (!masalah || !masalah.kode) return [];
+    var kode = masalah.kode;
+    var lok = masalah.lokasi || null;
+    if (!lok && Array.isArray(masalah.bangunan) && masalah.bangunan[0] && typeof masalah.bangunan[0].x === "number") lok = { x: masalah.bangunan[0].x, y: masalah.bangunan[0].y };
+    function B(tab, jm, id, teks, ringkas, alt) { return _langkahBangun(tab, jm, id, teks, ringkas, alt); }
+    function L(teks) { return { nomor: 0, teks: teks, tombol: "Lihat Lokasi", ringkas: "Lihat lokasi masalah", target: null, lokasi: lok, terkunci: false, alasanKunci: null }; }
+    // Langkah perbaikan untuk SATU penyebab kilang tidak beroperasi.
+    // Listrik/air memakai langkah 1 rencana utilitasnya sendiri
+    // (rekursi aman: rencana utilitas tidak memanggil rencana kilang).
+    function _langkahUntukSebab(kodeSebab, mslh) {
+      var lokSebab = (mslh && mslh.lokasi) || null;
+      var penyebabSebab = (mslh && mslh.penyebab) || "";
+      switch (kodeSebab) {
+        case "bahan-baku-habis":
+        case "bahan-baku-menipis":
+          return B("pertanian", "bangun", "kebun-sagu", "Bangun Kebun Sagu — Rp50.000 · hasil 3 tual/hari, kerja 3 (minimal 2 kebun per 1 kilang — kilang butuh 4 tual/hari)", "Bangun Kebun Sagu (Rp50.000)");
+        case "tanpa-listrik": {
+          var rL = rencanaAksiUntuk({ kode: "tanpa-listrik", id: "m-tanpa-listrik", lokasi: lokSebab, penyebab: penyebabSebab });
+          return (rL && rL[0]) ? rL[0] : null;
+        }
+        case "tanpa-air": {
+          var rA = rencanaAksiUntuk({ kode: "tanpa-air", id: "m-tanpa-air", lokasi: lokSebab, penyebab: penyebabSebab });
+          return (rA && rA[0]) ? rA[0] : null;
+        }
+        case "pekerja-kurang":
+          return B("permukiman", "bangun", "rumah-sederhana", "Bangun Rumah Sederhana — Rp25.000 · menambah penduduk (angkatan kerja)", "Bangun Rumah Sederhana (Rp25.000)");
+        case "tanpa-jalan":
+          return B("jalan", "jalan", "jalan-tanah", "Bangun Jalan Tanah di samping bangunan — Rp500/petak", "Bangun Jalan Tanah (Rp500/petak)");
+        case "banjir":
+          return B("drainase", "bangun", "kolam-retensi", "Bangun Kolam Retensi — Rp100.000 · menampung banjir di zona rawan", "Bangun Kolam Retensi (Rp100.000)");
+        default:
+          return null;
+      }
+    }
+    // Rencana kilang multi-penyebab: urutkan penyebab dari diagnosa
+    // kilang menurut dampak (langkah 1 = penyebab utama), lalu isi
+    // dengan langkah standar sampai maks 4 langkah (tanpa duplikat).
+    function _rencanaKilang(mslh, standar) {
+      var kb = _bangunanMasalah(mslh);
+      if (!kb) return standar;
+      var defKb = null;
+      try { if (typeof BANGUNAN_MAP !== "undefined" && BANGUNAN_MAP) defKb = BANGUNAN_MAP[kb.id]; } catch (e) {}
+      if (!defKb || !defKb.produksi || !defKb.produksi.masuk) return standar;
+      var sebab = [];
+      try {
+        if (typeof Diagnostik !== "undefined" && Diagnostik && typeof Diagnostik.diagnosa === "function") {
+          var dk = Diagnostik.diagnosa(kb);
+          if (dk && Array.isArray(dk.masalah)) sebab = dk.masalah.slice();
+        }
+      } catch (e) {}
+      if (!sebab.length) return standar;
+      sebab.sort(function (a, b) { return (b.dampak || 0) - (a.dampak || 0); });
+      var hasil = [];
+      var ada = {};
+      function dorong(s) {
+        if (!s) return;
+        var kunci = s.target ? (s.target.tab + ":" + s.target.jenisMode + ":" + s.target.idMode) : ("lokasi:" + s.tombol);
+        if (ada[kunci]) return;
+        ada[kunci] = true;
+        hasil.push(s);
+      }
+      for (var i = 0; i < sebab.length && hasil.length < 4; i++) dorong(_langkahUntukSebab(sebab[i].kode, mslh));
+      for (var j = 0; j < standar.length && hasil.length < 4; j++) dorong(standar[j]);
+      return hasil.length ? hasil : standar;
+    }
+    var out = [];
+    switch (kode) {
+      case "tanpa-air": {
+        var cabA = _cabangUtilitas("tanpa-air", masalah);
+        var ipa = B("air", "bangun", "ipa", "Bangun Instalasi Pengolahan Air (IPA) — Rp500.000 · produksi 5.000 L/jam", "Bangun IPA (Rp500.000)", ALT_INTAKE);
+        var menara = B("air", "bangun", "menara-air", "Bangun Menara Air — Rp120.000 · jaringan air 8 petak", "Bangun Menara Air (Rp120.000)");
+        var pompa = B("air", "bangun", "pompa-air", "Bangun Pompa Air — Rp60.000 · jaringan air 6 petak (atau Kantor PDAM Rp200.000 · jaringan 10 petak)", "Bangun Pompa Air (Rp60.000)");
+        out = (cabA === "jaringan") ? [menara, ipa, pompa] : [ipa, menara, pompa];
+        break;
+      }
+      case "tanpa-listrik": {
+        var cabL = _cabangUtilitas("tanpa-listrik", masalah);
+        var bio = B("listrik", "bangun", "plt-biomassa", "Bangun PLT Biomassa — Rp600.000 · 2.000 kW, level 3 (atau PLTD Rp1.200.000 · 5.000 kW, level 4)", "Bangun PLT Biomassa (Rp600.000)");
+        var gardu = B("listrik", "bangun", "gardu-distribusi", "Bangun Gardu Distribusi — Rp80.000 · jaringan listrik 6 petak (atau Gardu Induk Rp300.000 · jaringan 12 petak, level 3)", "Bangun Gardu Distribusi (Rp80.000)");
+        var tiang = B("listrik", "bangun", "tiang-listrik", "Bangun Tiang Listrik — Rp10.000 · jaringan listrik 3 petak", "Bangun Tiang Listrik (Rp10.000)");
+        out = (cabL === "jaringan") ? [gardu, bio, tiang] : [bio, gardu, tiang];
+        break;
+      }
+      case "bahan-baku-habis":
+      case "bahan-baku-menipis": {
+        // v24.1 (perluasan kilang): satu rencana kilang mencakup SEMUA
+        // penyebab kilang tidak beroperasi, diurutkan dari penyebab
+        // utama (dampak terbesar dari Diagnostik.diagnosa kilang) —
+        // bahan baku, pekerja, listrik, air, jalan, banjir. Langkah 1
+        // = penyebab utama. Bila diagnosa tak tersedia, pakai rencana
+        // standar (kebun → jalan → gudang). Maks 4 langkah.
+        var standarBahan = [
+          B("pertanian", "bangun", "kebun-sagu", "Bangun Kebun Sagu — Rp50.000 · hasil 3 tual/hari, kerja 3 (minimal 2 kebun per 1 kilang — kilang butuh 4 tual/hari)", "Bangun Kebun Sagu (Rp50.000)"),
+          B("jalan", "jalan", "jalan-tanah", "Bangun Jalan Tanah — Rp500/petak · sambungkan kebun → kilang → gudang supaya truk logistik punya jalur", "Bangun Jalan Tanah (Rp500/petak)"),
+          B("industri", "bangun", "gudang", "Bangun Gudang — Rp80.000 · +500 unit penyimpanan bahan baku", "Bangun Gudang (Rp80.000)"),
+        ];
+        out = _rencanaKilang(masalah, standarBahan);
+        break;
+      }
+      case "penduduk-tidak-bertambah": {
+        // v24.1: kapasitas rumah kosong tapi bahagia < 50% — penduduk
+        // tidak bertambah (beku 35–49, menurun <35). Langkah 1 =
+        // fasilitas untuk indikator kebahagiaan terburuk (dari data
+        // bahagia/diagnostik yang sudah ada); langkah 2 = pastikan
+        // utilitas rumah; langkah 3 = penjelasan hasil (informatif —
+        // tombolnya "Lihat Lokasi" ke rumah pertama).
+        var terburuk = _indikatorTerburuk();
+        var peta = PETA_INDIKATOR[0];
+        for (var pi = 0; pi < PETA_INDIKATOR.length; pi++) {
+          if (PETA_INDIKATOR[pi].indikator === terburuk.indikator) { peta = PETA_INDIKATOR[pi]; break; }
+        }
+        var skorTxt = (typeof terburuk.skor === "number") ? (" (indikator kebahagiaan terburuk: " + terburuk.indikator + ", skor " + terburuk.skor + "/100 — rata-rata rumah)") : "";
+        var l1 = B(peta.tab, peta.jenisMode, peta.idMode, peta.teks + skorTxt, peta.ringkas);
+        var rumahUtil = null;
+        try {
+          var stU = _S();
+          if (stU && Array.isArray(stU.bangunan)) {
+            for (var ui = 0; ui < stU.bangunan.length; ui++) {
+              var bu = stU.bangunan[ui];
+              if (!bu || !bu.selesai) continue;
+              var defU = null;
+              try { if (typeof BANGUNAN_MAP !== "undefined" && BANGUNAN_MAP) defU = BANGUNAN_MAP[bu.id]; } catch (e2) {}
+              if (!defU || !defU.rumah) continue;
+              if (bu.berlistrik === false || bu.berair === false) { rumahUtil = bu; break; }
+              if (!rumahUtil) rumahUtil = bu;
+            }
+          }
+        } catch (e) {}
+        var l2;
+        if (rumahUtil && (rumahUtil.berlistrik === false || rumahUtil.berair === false)) {
+          var utilTxt = "Periksa rumah ini — " + (rumahUtil.berlistrik === false ? "listrik padam" : "") + ((rumahUtil.berlistrik === false && rumahUtil.berair === false) ? " dan " : "") + (rumahUtil.berair === false ? "air kering" : "") + " — lalu ikuti rencana aksi listrik/air di drawer Penasihat";
+          l2 = { nomor: 0, teks: utilTxt, tombol: "Lihat Lokasi", ringkas: "Periksa rumah tanpa listrik/air", target: null, lokasi: { x: rumahUtil.x, y: rumahUtil.y }, terkunci: false, alasanKunci: null };
+        } else if (rumahUtil) {
+          l2 = { nomor: 0, teks: "Pastikan semua rumah berlistrik dan berair — rumah di lokasi ini sudah teraliri keduanya (bila ada rumah yang padam/kering, ikuti rencana aksi listrik/air di drawer Penasihat)", tombol: "Lihat Lokasi", ringkas: "Periksa listrik + air rumah", target: null, lokasi: { x: rumahUtil.x, y: rumahUtil.y }, terkunci: false, alasanKunci: null };
+        } else {
+          l2 = L("Pastikan semua rumah berlistrik dan berair");
+        }
+        var bahTxt = "";
+        try { var stB = _S(); if (stB && stB.bahagia && typeof stB.bahagia.nilai === "number") bahTxt = " (saat ini " + stB.bahagia.nilai + "%)"; } catch (e) {}
+        var l3 = { nomor: 0, teks: "Setelah kebahagiaan mencapai ≥ 50%" + bahTxt + ", penduduk bertambah tiap hari (+2 jiwa + ~3% populasi — sekitar 3 jiwa/hari di kota kecil, makin cepat seiring populasi tumbuh) sampai kapasitas rumah penuh.", tombol: "Lihat Lokasi", ringkas: "Pantau kebahagiaan kota", target: null, lokasi: rumahUtil ? { x: rumahUtil.x, y: rumahUtil.y } : lok, terkunci: false, alasanKunci: null };
+        out = [l1, l2, l3];
+        break;
+      }
+      case "tanpa-jalan":
+        out = [
+          L("Lihat lokasi bangunan yang terputus aksesnya, lalu bangun jalan di sampingnya"),
+          B("jalan", "jalan", "jalan-tanah", "Bangun Jalan Tanah di samping bangunan — Rp500/petak", "Bangun Jalan Tanah (Rp500/petak)"),
+          B("jalan", "jalan", "jalan-aspal", "Bangun Jalan Aspal — Rp2.000 + batu 1/petak · kapasitas 40 (untuk akses yang lebih ramai)", "Bangun Jalan Aspal (Rp2.000/petak)"),
+        ];
+        break;
+      case "sampah-menumpuk":
+        out = [
+          B("drainase", "bangun", "tps", "Bangun TPS — Rp40.000 · olah 500 kg sampah/hari", "Bangun TPS (Rp40.000)"),
+          B("drainase", "bangun", "tps-3r", "Bangun TPS 3R — Rp90.000 · olah 800 kg/hari, level 2", "Bangun TPS 3R (Rp90.000)"),
+          B("drainase", "bangun", "bank-sampah", "Bangun Bank Sampah — Rp60.000 · olah 300 kg/hari + Rp2.000/hari (atau TPA Rp300.000 · 5.000 kg/hari, level 3, polusi 7 — jauh dari permukiman)", "Bangun Bank Sampah (Rp60.000)"),
+        ];
+        break;
+      case "sekolah-jauh":
+      case "cakupan-pendidikan-rendah":
+      case "sekolah-tak-menjangkau":
+        out = [
+          B("pendidikan", "bangun", "sd", "Bangun Sekolah Dasar — Rp80.000 · radius 6 petak, kapasitas 60 siswa", "Bangun Sekolah Dasar (Rp80.000)"),
+          B("pendidikan", "bangun", "paud", "Bangun PAUD — Rp30.000 · radius 4 petak, kapasitas 20", "Bangun PAUD (Rp30.000)"),
+          B("transportasi", "bangun", "halte", "Bangun Halte — Rp15.000 · radius halte 4 petak (atau SMP Rp150.000 · radius 7 bila SD sudah ada)", "Bangun Halte (Rp15.000)"),
+        ];
+        break;
+      case "kesehatan-jauh":
+      case "cakupan-kesehatan-rendah":
+      case "rs-tak-menjangkau":
+        out = [
+          B("kesehatan", "bangun", "puskesmas", "Bangun Puskesmas — Rp100.000 · radius 6 petak, kapasitas 80, level 2", "Bangun Puskesmas (Rp100.000)"),
+          B("kesehatan", "bangun", "posyandu", "Bangun Posyandu — Rp20.000 · radius 4 petak, kapasitas 30", "Bangun Posyandu (Rp20.000)"),
+          B("kesehatan", "bangun", "klinik", "Bangun Klinik — Rp150.000 · radius 5 petak, kapasitas 60, level 2 (atau Rumah Sakit Rp600.000 · radius 10, level 4)", "Bangun Klinik (Rp150.000)"),
+        ];
+        break;
+      case "faskes-tidak-beroperasi":
+      case "rs-tidak-beroperasi":
+        out = [
+          B("listrik", "bangun", "gardu-distribusi", "Periksa listrik — Bangun Gardu Distribusi (Rp80.000 · jaringan 6 petak) bila faskes padam", "Bangun Gardu Distribusi (Rp80.000)"),
+          B("air", "bangun", "ipa", "Periksa air — Bangun IPA (Rp500.000 · 5.000 L/jam) bila faskes kering", "Bangun IPA (Rp500.000)", ALT_INTAKE),
+          L("Lihat lokasi fasilitas kesehatan yang tidak beroperasi"),
+        ];
+        break;
+      case "pekerjaan-kurang":
+        out = [
+          B("pertanian", "bangun", "kebun-sagu", "Bangun Kebun Sagu — Rp50.000 · kerja 3 (bila banyak bangunan kekurangan pekerja, bangun Rumah Sederhana dulu — tab Permukiman, Rp25.000)", "Bangun Kebun Sagu (Rp50.000)"),
+          B("industri", "bangun", "kilang-sagu", "Bangun Kilang Sagu — Rp200.000 · kerja 8", "Bangun Kilang Sagu (Rp200.000)"),
+          B("komersial", "bangun", "pasar-tradisional", "Bangun Pasar Tradisional — Rp120.000 · kerja 6", "Bangun Pasar Tradisional (Rp120.000)"),
+        ];
+        break;
+      case "kemacetan-berat":
+      case "akses-macet":
+        out = [
+          B("jalan", "jalan", "jalan-aspal", "Bangun jalan alternatif dari Jalan Aspal — Rp2.000 + batu 1/petak · kapasitas 40 (jalan lama TIDAK bisa ditimpa/diganti jenisnya — bangun jalur baru di sampingnya; atau Jalan Utama Rp4.000 + batu 2, kapasitas 100, level 2)", "Bangun jalan alternatif (Jalan Aspal)"),
+          B("jalan", "bangun", "bundaran", "Bangun Bundaran — Rp150.000 · efek lalu lintas 0,5 di persimpangan macet", "Bangun Bundaran (Rp150.000)", ALT_TRAFFIC),
+          B("transportasi", "bangun", "terminal-bus", "Bangun Terminal Bus — Rp250.000 · 200 penumpang, level 2, lalu bangun Halte Rp15.000 di permukiman", "Bangun Terminal Bus (Rp250.000)"),
+        ];
+        break;
+      case "akses-padat":
+        out = [
+          B("jalan", "jalan", "jalan-aspal", "Bangun jalan alternatif dari Jalan Aspal — Rp2.000 + batu 1/petak · kapasitas 40 (jalan lama TIDAK bisa ditimpa/diganti jenisnya)", "Bangun jalan alternatif (Jalan Aspal)"),
+          L("Lihat ruas jalan yang padat"),
+        ];
+        break;
+      case "gudang-penuh":
+        out = [
+          B("industri", "bangun", "gudang", "Bangun Gudang — Rp80.000 · +500 unit (satu-satunya jenis gudang)", "Bangun Gudang (Rp80.000)"),
+          B("transportasi", "bangun", "pelabuhan", "Jual lewat Pelabuhan — Rp400.000 · level 3, harus di pantai, ekspor +20%", "Bangun Pelabuhan (Rp400.000)", ALT_PASAR),
+          B("industri", "bangun", "kilang-sagu", "Olah stok jadi barang — Bangun Kilang Sagu (Rp200.000) / Pabrik Mie Sagu (Rp350.000, level 2 + penelitian Olah Sagu)", "Bangun Kilang Sagu (Rp200.000)"),
+        ];
+        break;
+      case "logistik-terputus":
+      case "kendaraan-macet":
+        out = [
+          L("Lihat lokasi job logistik yang gagal / kendaraan yang tidak bergerak"),
+          B("jalan", "jalan", "jalan-tanah", "Sambungkan jalan yang terputus — Jalan Tanah Rp500/petak, di celah antara kebun/kilang/gudang/pelabuhan", "Bangun Jalan Tanah (Rp500/petak)"),
+          B("jembatan", "jembatan", "jembatan-kecil", "Bangun Jembatan bila terputus oleh air — Jembatan Kecil Rp15.000 + kayu 5 (atau Jembatan Gantung Rp50.000/petak, level 3 + penelitian Transportasi)", "Bangun Jembatan Kecil (Rp15.000)"),
+        ];
+        break;
+      case "banjir":
+        out = [
+          B("drainase", "bangun", "kolam-retensi", "Bangun Kolam Retensi — Rp100.000 · menampung banjir di zona rawan", "Bangun Kolam Retensi (Rp100.000)"),
+          B("drainase", "bangun", "ipal", "Bangun IPAL — Rp350.000 · memperbaiki drainase, level 3", "Bangun IPAL (Rp350.000)"),
+          L("Lihat lokasi bangunan yang kebanjiran"),
+        ];
+        break;
+      case "sanitasi-buruk":
+        out = [B("drainase", "bangun", "ipal", "Bangun IPAL di dekat permukiman — Rp350.000 · level 3", "Bangun IPAL (Rp350.000)")];
+        break;
+      case "polusi":
+        out = [
+          B("lingkungan", "bangun", "taman", "Bangun Taman Kota — Rp15.000 · ruang hijau penyerap polusi", "Bangun Taman Kota (Rp15.000)"),
+          B("drainase", "bangun", "ipal", "Bangun IPAL — Rp350.000 · menetralkan pencemaran industri, level 3", "Bangun IPAL (Rp350.000)"),
+        ];
+        break;
+      case "rekreasi-jauh":
+        out = [
+          B("lingkungan", "bangun", "taman", "Bangun Taman Kota di dekat permukiman — Rp15.000", "Bangun Taman Kota (Rp15.000)"),
+          B("rekreasi", "bangun", "lapangan", "Bangun Lapangan Olahraga — Rp40.000", "Bangun Lapangan Olahraga (Rp40.000)"),
+        ];
+        break;
+      case "pasokan-kosong":
+        out = [
+          B("pertanian", "bangun", "kebun-sagu", "Bangun Kebun Sagu untuk memasok pasar — Rp50.000 · 3 tual/hari", "Bangun Kebun Sagu (Rp50.000)"),
+          B("industri", "bangun", "kilang-sagu", "Bangun Kilang Sagu — Rp200.000 · olah tual jadi tepung", "Bangun Kilang Sagu (Rp200.000)"),
+        ];
+        break;
+      case "defisit-apbd":
+      case "anggaran-defisit":
+        out = [B("industri", "bangun", "industri-ekspor", "Bangun Industri Ekspor — Rp900.000 · level 4 + penelitian Industri Makanan, untuk menambah pemasukan ekspor", "Bangun Industri Ekspor (Rp900.000)")];
+        break;
+      case "pekerja-kurang":
+        out = [B("permukiman", "bangun", "rumah-sederhana", "Bangun Rumah Sederhana — Rp25.000 · menambah penduduk (angkatan kerja)", "Bangun Rumah Sederhana (Rp25.000)")];
+        break;
+      case "bahagia-rendah":
+        out = [B("permukiman", "bangun", "rumah-sederhana", "Bangun rumah dengan listrik dan air yang memadai — Rumah Sederhana Rp25.000", "Bangun Rumah Sederhana (Rp25.000)")];
+        break;
+      case "penumpang-menumpuk":
+      case "bus-penuh":
+        out = [B("transportasi", "bangun", "terminal-bus", "Tambah armada / buat rute bus baru dari Terminal Bus — Rp250.000 · level 2", "Bangun Terminal Bus (Rp250.000)")];
+        break;
+      case "rute-feri-kosong":
+        out = [B("transportasi", "bangun", "terminal-feri", "Bangun Terminal Feri — Rp200.000 · level 2 (bila belum ada)", "Bangun Terminal Feri (Rp200.000)")];
+        break;
+      case "rute-bus-kosong":
+        out = [B("transportasi", "bangun", "terminal-bus", "Bangun Terminal Bus — Rp250.000 · level 2 (bila belum ada)", "Bangun Terminal Bus (Rp250.000)")];
+        break;
+      case "transportasi-sekolah":
+        out = [B("transportasi", "bangun", "halte", "Bangun Halte di dekat sekolah — Rp15.000 · radius halte 4 petak", "Bangun Halte (Rp15.000)")];
+        break;
+      default:
+        out = [];
+        break;
+    }
+    for (var i = 0; i < out.length; i++) {
+      out[i].nomor = i + 1;
+      out[i].masalahId = masalah.id || null;
+    }
+    return out;
+  }
+
   // ---------------- Rekomendasi ----------------
   // target.tab = id tab TAB_BANGUN (city-data.js); target.bangunanId
   // = id bangunan untuk pra-pilih mode bangun. TIDAK ada aksi yang
@@ -419,128 +904,54 @@
     function penyebab(teks) {
       return { teks: teks || "Lihat penyebab masalah ini", tombol: "Lihat Penyebab", lokasi: lokasi, target: null, penyebab: masalah.penyebab || "" };
     }
-    function bangun(teks, tab, bangunanId) {
-      return { teks: teks, tombol: "Ambil Tindakan", lokasi: lokasi, target: { tab: tab, bangunanId: bangunanId || null, kategori: kode } };
-    }
     function abaikan() {
       return { teks: "Abaikan masalah ini untuk sementara", tombol: "Abaikan", lokasi: lokasi, target: null, masalahId: masalah.id };
     }
-    switch (kode) {
-      case "tanpa-listrik":
-        return [bangun("Bangun pembangkit listrik (PLTD / PLT Biomassa / PLT Surya)", "listrik", "pltd"),
-          bangun("Bangun gardu distribusi di dekat permukiman", "listrik", "gardu-distribusi"),
-          bangun("Periksa kapasitas — tambah tiang listrik penghubung", "listrik", "tiang-listrik"),
-          lihatLokasi(), abaikan()];
-      case "tanpa-air":
-        return [bangun("Bangun Instalasi Pengolahan Air (IPA)", "air", "ipa"),
-          bangun("Bangun menara air / pompa air di dekat permukiman", "air", "menara-air"),
-          bangun("Bangun Kantor PDAM untuk memperluas jaringan", "air", "pdam"),
-          lihatLokasi(), abaikan()];
-      case "banjir":
-        return [bangun("Bangun kolam retensi / pompa banjir di zona rawan", "drainase", "kolam-retensi"),
-          bangun("Bangun IPAL untuk memperbaiki drainase", "drainase", "ipal"),
-          lihatLokasi(), abaikan()];
-      case "bahan-baku-habis":
-      case "bahan-baku-menipis":
-        return [bangun("Bangun Kebun Sagu untuk menambah pasokan bahan baku", "pertanian", "kebun-sagu"),
-          bangun("Hubungkan jalan logistik kebun → kilang → gudang", "jalan", null),
-          bangun("Tambah gudang penyimpanan bahan baku", "industri", "gudang"),
-          lihatLokasi(), abaikan()];
-      case "gudang-penuh":
-        return [bangun("Bangun gudang tambahan (+500 unit)", "industri", "gudang"),
-          bangun("Jual komoditas lewat pelabuhan untuk mengosongkan gudang", "transportasi", "pelabuhan"),
-          lihatLokasi(), abaikan()];
-      case "logistik-terputus":
-        return [bangun("Sambungkan jalan yang terputus antara kebun, kilang, dan pelabuhan", "jalan", null),
-          lihatLokasi("Lihat lokasi job logistik yang gagal"), abaikan()];
-      case "kendaraan-macet":
-        return [lihatLokasi("Lihat kendaraan yang tidak bergerak"),
-          bangun("Periksa dan sambungkan jalan di sekitar kendaraan macet", "jalan", null),
-          penyebab("Kendaraan diam lebih dari 1 hari game — kemungkinan komponen jalan terputus atau tujuan tak terjangkau."),
-          abaikan()];
-      case "pekerja-kurang":
-        return [bangun("Bangun rumah agar penduduk (angkatan kerja) bertambah", "permukiman", "rumah-sederhana"),
-          penyebab("Bangunan ini butuh lebih banyak staf daripada yang tersedia."),
-          abaikan()];
-      case "pekerjaan-kurang":
-        return [bangun("Bangun industri / kebun untuk membuka lapangan kerja", "industri", "kilang-sagu"),
-          bangun("Bangun kebun sagu — menyerap pekerja", "pertanian", "kebun-sagu"),
-          abaikan()];
-      case "tanpa-jalan":
-        return [bangun("Bangun jalan di samping bangunan", "jalan", null),
-          lihatLokasi(), abaikan()];
-      case "sampah-menumpuk":
-        return [bangun("Bangun TPS / TPS 3R / TPA untuk menambah kapasitas olah sampah", "drainase", "tps"),
-          bangun("Bangun bank sampah (menghasilkan pendapatan)", "drainase", "bank-sampah"),
-          abaikan()];
-      case "sanitasi-buruk":
-        return [bangun("Bangun IPAL di dekat permukiman", "drainase", "ipal"),
-          abaikan()];
-      case "kesehatan-jauh":
-      case "rs-tak-menjangkau":
-      case "cakupan-kesehatan-rendah":
-        return [bangun("Bangun puskesmas di dekat permukiman", "kesehatan", "puskesmas"),
-          bangun("Bangun posyandu untuk jangkauan dasar", "kesehatan", "posyandu"),
-          lihatLokasi(), abaikan()];
-      case "sekolah-jauh":
-      case "sekolah-tak-menjangkau":
-      case "cakupan-pendidikan-rendah":
-        return [bangun("Bangun Sekolah Dasar di dekat permukiman", "pendidikan", "sd"),
-          bangun("Bangun PAUD untuk anak usia dini", "pendidikan", "paud"),
-          lihatLokasi(), abaikan()];
-      case "faskes-tidak-beroperasi":
-      case "rs-tidak-beroperasi":
-        return [bangun("Periksa listrik — bangun gardu / pembangkit bila padam", "listrik", "gardu-distribusi"),
-          bangun("Periksa air — bangun IPA / menara air bila kering", "air", "ipa"),
-          lihatLokasi(), abaikan()];
-      case "polusi":
-        return [bangun("Bangun taman kota / ruang hijau penyerap polusi", "lingkungan", "taman"),
-          bangun("Bangun IPAL untuk menetralkan pencemaran industri", "drainase", "ipal"),
-          abaikan()];
-      case "rekreasi-jauh":
-        return [bangun("Bangun taman kota di dekat permukiman", "lingkungan", "taman"),
-          bangun("Bangun lapangan olahraga", "rekreasi", "lapangan"),
-          abaikan()];
-      case "pasokan-kosong":
-        return [bangun("Bangun kebun untuk memasok pasar", "pertanian", "kebun-sagu"),
-          bangun("Bangun kilang / pabrik pengolah", "industri", "kilang-sagu"),
-          abaikan()];
-      case "defisit-apbd":
-      case "anggaran-defisit":
-        return [penyebab("Buka panel Ekonomi untuk melihat rincian pemasukan dan belanja — naikkan tarif pajak properti atau kurangi upkeep."),
-          bangun("Bangun industri ekspor untuk menambah pemasukan", "industri", "industri-ekspor"),
-          abaikan()];
-      case "kemacetan-berat":
-      case "akses-macet":
-        return [bangun("Perlebar jalan — ganti ke jalan aspal / jalan raya", "jalan", null),
-          bangun("Bangun jalan alternatif / bundaran di titik macet", "jalan", null),
-          bangun("Bangun terminal bus — alihkan warga ke transportasi umum", "transportasi", "terminal-bus"),
-          lihatLokasi(), abaikan()];
-      case "akses-padat":
-        return [bangun("Perlebar jalan di ruas padat", "jalan", null),
-          lihatLokasi(), abaikan()];
-      case "penumpang-menumpuk":
-      case "bus-penuh":
-        return [bangun("Tambah armada / buat rute bus baru dari terminal", "transportasi", "terminal-bus"),
-          abaikan()];
-      case "rute-feri-kosong":
-        return [bangun("Bangun terminal feri / dermaga bila belum ada", "transportasi", "terminal-feri"),
-          penyebab("Buat rute feri dari panel Infrastruktur — pilih pulau tujuan."),
-          abaikan()];
-      case "rute-bus-kosong":
-        return [bangun("Bangun terminal bus bila belum ada", "transportasi", "terminal-bus"),
-          penyebab("Buat rute bus dari panel Lalu Lintas — tambah halte lalu tentukan armada."),
-          abaikan()];
-      case "transportasi-sekolah":
-        return [bangun("Bangun halte di dekat sekolah", "transportasi", "halte"),
-          abaikan()];
-      case "bahagia-rendah":
-        return [penyebab("Buka panel Penduduk untuk melihat rincian kebahagiaan (listrik, air, pekerjaan, layanan)."),
-          bangun("Bangun rumah dengan listrik dan air yang memadai", "permukiman", "rumah-sederhana"),
-          abaikan()];
-      default:
-        return [lihatLokasi(), penyebab(), abaikan()];
+    // v24.1: solusi diturunkan dari rencana aksi bernomor (satu sumber
+    // kebenaran). Bentuk legacy DIPERTAHANKAN (tombol "Ambil Tindakan",
+    // target.tab/bangunanId) agar pemanggil lama + tes v24 tetap jalan;
+    // tiap entri juga membawa nomor, labelTombol ("Bangun <Nama>"),
+    // target jenisMode/idMode, dan status kunci.
+    var langkah = rencanaAksiUntuk(masalah);
+    if (!langkah.length) return [lihatLokasi(), penyebab(), abaikan()];
+    var out = [];
+    if (kode === "defisit-apbd" || kode === "anggaran-defisit") {
+      out.push(penyebab("Buka panel Ekonomi untuk melihat rincian pemasukan dan belanja — naikkan tarif pajak properti atau kurangi upkeep."));
     }
+    if (kode === "bahagia-rendah") {
+      out.push(penyebab("Buka panel Penduduk untuk melihat rincian kebahagiaan (listrik, air, pekerjaan, layanan)."));
+    }
+    for (var i = 0; i < langkah.length; i++) {
+      var s = langkah[i];
+      if (s.target) {
+        out.push({
+          teks: s.teks, tombol: "Ambil Tindakan", lokasi: lokasi,
+          target: { tab: s.target.tab, jenisMode: s.target.jenisMode, idMode: s.target.idMode, bangunanId: s.target.jenisMode === "bangun" ? s.target.idMode : null, kategori: kode },
+          masalahId: masalah.id, penyebab: masalah.penyebab || "",
+          nomor: s.nomor, labelTombol: s.tombol, terkunci: s.terkunci, alasanKunci: s.alasanKunci,
+        });
+      } else {
+        out.push({ teks: s.teks, tombol: "Lihat Lokasi", lokasi: s.lokasi || lokasi, target: null, masalahId: masalah.id, nomor: s.nomor, labelTombol: s.tombol });
+      }
+    }
+    if (kode === "kendaraan-macet") {
+      out.push(penyebab("Kendaraan diam lebih dari 1 hari game — kemungkinan komponen jalan terputus atau tujuan tak terjangkau."));
+    }
+    if (kode === "pekerja-kurang") {
+      out.push(penyebab("Bangunan ini butuh lebih banyak staf daripada yang tersedia."));
+    }
+    if (kode === "rute-feri-kosong") {
+      out.push(penyebab("Buat rute feri dari panel Infrastruktur — pilih pulau tujuan."));
+    }
+    if (kode === "rute-bus-kosong") {
+      out.push(penyebab("Buat rute bus dari panel Lalu Lintas — tambah halte lalu tentukan armada."));
+    }
+    // Lihat Lokasi penutup bila belum ada langkah lokasi di rencana.
+    var adaLokasi = false;
+    for (var j = 0; j < langkah.length; j++) if (!langkah[j].target) { adaLokasi = true; break; }
+    if (!adaLokasi) out.push(lihatLokasi());
+    out.push(abaikan());
+    return out;
   }
 
   // ---------------- Aksi ----------------
@@ -579,16 +990,27 @@
       } catch (e) {}
       return true;
     }
-    // Ambil Tindakan: HANYA buka katalog/menu terkait — pemain yang
-    // memilih dan membangun sendiri. TIDAK PERNAH membangun otomatis.
-    if (rekomendasi.tombol === "Ambil Tindakan" && rekomendasi.target && rekomendasi.target.tab) {
+    // v24.1: langkah terpandu — tombol "Bangun <Nama>" (langkah bernomor)
+    // atau legacy "Ambil Tindakan". HANYA membuka katalog/menu terkait
+    // (bukaMenuBangunUntuk dgn pasangan tab/jenisMode/idMode yang
+    // terverifikasi) — pemain yang memilih dan membangun sendiri.
+    // TIDAK PERNAH membangun otomatis. Langkah terkunci: beri tahu
+    // alasannya, jangan buka katalog.
+    var adalahBangun = (typeof rekomendasi.tombol === "string" && rekomendasi.tombol.indexOf("Bangun ") === 0) ||
+      rekomendasi.tombol === "Ambil Tindakan";
+    if (adalahBangun && rekomendasi.target && rekomendasi.target.tab) {
+      if (rekomendasi.terkunci) {
+        try {
+          if (typeof toast === "function") toast(rekomendasi.alasanKunci || "Bangunan ini masih terkunci.", "gagal");
+        } catch (e) {}
+        return false;
+      }
       try {
         if (typeof bukaMenuBangunUntuk === "function") {
-          if (rekomendasi.target.bangunanId) {
-            bukaMenuBangunUntuk(rekomendasi.target.tab, "bangun", rekomendasi.target.bangunanId);
-          } else {
-            bukaMenuBangunUntuk(rekomendasi.target.tab);
-          }
+          var t = rekomendasi.target;
+          if (t.jenisMode && t.idMode) bukaMenuBangunUntuk(t.tab, t.jenisMode, t.idMode);
+          else if (t.bangunanId) bukaMenuBangunUntuk(t.tab, "bangun", t.bangunanId);
+          else bukaMenuBangunUntuk(t.tab);
           return true;
         }
       } catch (e) { return false; }
@@ -647,7 +1069,10 @@
     if (Array.isArray(m.solusi)) {
       for (var i = 0; i < m.solusi.length; i++) {
         var s = m.solusi[i];
-        if (s && s.teks) rekomendasi.push({ label: s.tombol || "Tindakan", teks: s.teks, tombol: s.tombol || null });
+        // v24.1: PERTAHANKAN target (tab/jenisMode/idMode/bangunanId),
+        // nomor, labelTombol, dan status kunci — adapter lama membuang
+        // target sehingga tombol per langkah tidak bisa dibuka.
+        if (s && s.teks) rekomendasi.push({ label: s.labelTombol || s.tombol || "Tindakan", teks: s.teks, tombol: s.tombol || null, target: s.target || null, lokasi: s.lokasi || null, nomor: (typeof s.nomor === "number" ? s.nomor : null), labelTombol: s.labelTombol || null, terkunci: !!s.terkunci, alasanKunci: s.alasanKunci || null });
       }
     }
     return {
@@ -656,6 +1081,8 @@
       x: x, y: y, bangunanIdx: idx,
       penyebab: m.penyebab ? [m.penyebab] : [],
       rekomendasi: rekomendasi, aksi: null, mentah: m,
+      // v24.1: rencana aksi bernomor kanonis (untuk drawer/panel/toast).
+      langkah: Array.isArray(m.langkah) ? m.langkah : [],
     };
   }
   // Teks nasihat pertama penasihat (string) atau null bila tidak ada.
@@ -682,6 +1109,9 @@
     pesan: pesan,
     ringkasan: ringkasan,
     rekomendasiUntuk: rekomendasiUntuk,
+    // v24.1: rencana aksi bernomor per masalah (dipakai drawer, panel
+    // diagnostik, dan toast kritis).
+    rencanaAksi: rencanaAksiUntuk,
     lihatLokasi: lihatLokasi,
     ambilTindakan: ambilTindakan,
     abaikan: abaikan,
@@ -691,3 +1121,4 @@
   if (typeof window !== "undefined") window.Advisor = Advisor;
   if (typeof globalThis !== "undefined") globalThis.Advisor = Advisor;
 })();
+

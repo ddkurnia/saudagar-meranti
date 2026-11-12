@@ -103,26 +103,27 @@ function majuSatuHari() { for (let i = 0; i < 6; i++) C.majukanWaktu(240); }
 const idxHtml = fs.readFileSync(ROOT + "/index.html", "utf8");
 const swTxt = fs.readFileSync(ROOT + "/sw.js", "utf8");
 const srcCity = fs.readFileSync(ROOT + "/js/city.js", "utf8");
-cek("A1 VERSI_GAME v24", C.VERSI_GAME === "v24", C.VERSI_GAME);
-cek("A2 index.html memuat 6 modul v24 ?v=1 dalam urutan benar",
+cek("A1 VERSI_GAME v24.1", C.VERSI_GAME === "v24.1", C.VERSI_GAME);
+cek("A2 index.html memuat 6 modul v24 dalam urutan benar (advisor + ui-v24 ?v=2, lainnya ?v=1)",
   idxHtml.indexOf("js/city-warga.js?v=1") !== -1 && idxHtml.indexOf("js/city-bubble.js?v=1") !== -1 &&
-  idxHtml.indexOf("js/city-diagnostik.js?v=1") !== -1 && idxHtml.indexOf("js/city-advisor.js?v=1") !== -1 &&
-  idxHtml.indexOf("js/city-tutorial.js?v=1") !== -1 && idxHtml.indexOf("js/city-ui-v24.js?v=1") !== -1 &&
-  idxHtml.indexOf("js/city-advisor.js?v=1") < idxHtml.indexOf("js/city.js?v=34") &&
-  idxHtml.indexOf("js/city.js?v=34") < idxHtml.indexOf("js/city-tutorial.js?v=1"));
-cek("A3 index.html: #btnAdvisor + #drawerAdvisorV24 + #toastAksiV24 + css?v=17 + city.js?v=34",
+  idxHtml.indexOf("js/city-diagnostik.js?v=1") !== -1 && idxHtml.indexOf("js/city-advisor.js?v=2") !== -1 &&
+  idxHtml.indexOf("js/city-tutorial.js?v=1") !== -1 && idxHtml.indexOf("js/city-ui-v24.js?v=2") !== -1 &&
+  idxHtml.indexOf("js/city-advisor.js?v=2") < idxHtml.indexOf("js/city.js?v=35") &&
+  idxHtml.indexOf("js/city.js?v=35") < idxHtml.indexOf("js/city-tutorial.js?v=1"));
+cek("A3 index.html: #btnAdvisor + #drawerAdvisorV24 + #toastAksiV24 + css?v=17 + city.js?v=35",
   idxHtml.indexOf('id="btnAdvisor"') !== -1 && idxHtml.indexOf('id="drawerAdvisorV24"') !== -1 &&
   idxHtml.indexOf('id="toastAksiV24"') !== -1 && idxHtml.includes("css/city.css?v=17") &&
-  idxHtml.includes("js/city.js?v=34"));
-cek("A4 sw.js cache meranti-rising-v24 + precache 6 modul baru",
-  swTxt.indexOf("meranti-rising-v24") !== -1 && swTxt.indexOf("js/city-warga.js?v=1") !== -1 &&
+  idxHtml.includes("js/city.js?v=35"));
+cek("A4 sw.js cache meranti-rising-v24.1 + precache 6 modul baru",
+  swTxt.indexOf("meranti-rising-v24.1") !== -1 && swTxt.indexOf("js/city-warga.js?v=1") !== -1 &&
   swTxt.indexOf("js/city-bubble.js?v=1") !== -1 && swTxt.indexOf("js/city-diagnostik.js?v=1") !== -1 &&
-  swTxt.indexOf("js/city-advisor.js?v=1") !== -1 && swTxt.indexOf("js/city-tutorial.js?v=1") !== -1 &&
-  swTxt.indexOf("js/city-ui-v24.js?v=1") !== -1);
-cek("A5 tidak ada sisa pin v23 aktif (city.js?v=33 / meranti-rising-v23 / css?v=16)",
-  !idxHtml.includes("city.js?v=33") && !idxHtml.includes("meranti-rising-v23") &&
-  !idxHtml.includes("css/city.css?v=16") && !swTxt.includes("city.js?v=33") &&
-  !swTxt.includes("meranti-rising-v23"));
+  swTxt.indexOf("js/city-advisor.js?v=2") !== -1 && swTxt.indexOf("js/city-tutorial.js?v=1") !== -1 &&
+  swTxt.indexOf("js/city-ui-v24.js?v=2") !== -1);
+cek("A5 tidak ada sisa pin v24 aktif (city.js?v=34 / meranti-rising-v24 / advisor|ui-v24 ?v=1)",
+  !idxHtml.includes("city.js?v=34") && !idxHtml.includes("city-advisor.js?v=1") &&
+  !idxHtml.includes("city-ui-v24.js?v=1") && !swTxt.includes("city.js?v=34") &&
+  !swTxt.includes('"meranti-rising-v24"') && !swTxt.includes("city-advisor.js?v=1") &&
+  !swTxt.includes("city-ui-v24.js?v=1"));
 cek("A6 modul global termuat (Warga/Bubble/Diagnostik/Advisor/Tutorial/UIV24/Notifikasi)",
   !!W && !!Bbl && !!Dg && !!Adv && !!Tut && !!UI && !!Notif);
 cek("A7 adapter kontrak: Diagnostik.diagnosis = diagnosa + statusBangunan; Advisor.pesan + ringkasan",
@@ -441,6 +442,160 @@ cek("V6 abaikan(): masalah hilang dari daftar (disimpan di merantiRisingAbaikanV
 store.delete("merantiRisingAbaikanV1");
 cek("V7 Notifikasi.kritis tampil + throttle 60 dtk", Notif.kritis("Tes kritis v24 test24", { id: "tes-v24-24", label: "Lihat", aksi: function () {} }) === true && Notif.kritis("Tes kritis v24 test24", { id: "tes-v24-24" }) === false);
 cek("V8 Tutorial.daftar() 12 langkah", Tut.daftar().length === 12);
+
+// ---------------- v24.1: Rencana Aksi Terpandu ----------------
+// (a) Rumah tanpa air -> rencana aksi + cabang kapasitas-vs-jaringan.
+// (b) Kilang tanpa bahan baku -> langkah 1 Kebun Sagu (+ perluasan
+//     multi-penyebab: langkah 1 = penyebab utama).
+// (c) Klik "Bangun" -> katalog terbuka pada kategori yang tepat
+//     (state mode/kategoriBangun — BUKAN pembangunan sungguhan).
+// (d) Anti-spam: rencana yang sama tidak dikirim dua kali;
+//     lupakanRencana + 61 detik -> boleh tampil lagi.
+// (e) Langkah bernomor + tombol per langkah + target terverifikasi;
+//     kunci + swap alternatif; toast "Lihat Rencana"; render drawer +
+//     panel diagnostik; langkah terkunci ditolak.
+// (f) Kasus penduduk-tidak-bertambah (pop < kapasitas + bahagia < 50).
+const rumahAkhir = C.S.bangunan.find(b => C.BANGUNAN_MAP[b.id].rumah);
+cek("R0 ada rumah hidup di state akhir tes", !!rumahAkhir, JSON.stringify(rumahAkhir && { id: rumahAkhir.id, x: rumahAkhir.x, y: rumahAkhir.y }));
+
+// ---- R1: tanpa-air, cabang live (kapasitas >= permintaan -> jaringan) ----
+rumahAkhir.berair = false;
+Dg.invalidateSemua();
+const mAirR1 = Adv.daftarMasalah().find(m => m.kode === "tanpa-air");
+cek("R1a rumah tanpa air -> masalah tanpa-air (CRITICAL) terdaftar", !!mAirR1 && mAirR1.prioritas === "CRITICAL", JSON.stringify(mAirR1 && { prioritas: mAirR1.prioritas }));
+const rkAirR1 = Adv.rencanaAksi(mAirR1);
+cek("R1b cabang jaringan (kapasitas live >= permintaan): langkah 1 = Menara Air, lalu IPA, lalu Pompa Air", rkAirR1.length === 3 && rkAirR1[0].target.idMode === "menara-air" && rkAirR1[1].target.idMode === "ipa" && rkAirR1[2].target.idMode === "pompa-air", JSON.stringify(rkAirR1.map(s => s.target && s.target.idMode)));
+cek("R1c level 1: Menara Air + IPA terkunci, Pompa Air tidak terkunci", rkAirR1[0].terkunci === true && rkAirR1[1].terkunci === true && rkAirR1[2].terkunci === false, JSON.stringify(rkAirR1.map(s => s.terkunci)));
+// Cabang kapasitas: stub statusAir (kapasitas < permintaan) + level 3.
+const statusAirAsli = sandbox.statusAir;
+C.S.level = 3;
+sandbox.statusAir = function () { return { kapasitasL: 10, permintaanL: 500, dipakaiL: 10 }; };
+const rkAirKap = Adv.rencanaAksi(mAirR1);
+cek("R1d cabang kapasitas (stub kapasitas < permintaan, level 3): langkah 1 = IPA, tidak terkunci", rkAirKap[0].target.idMode === "ipa" && rkAirKap[0].terkunci === false, JSON.stringify(rkAirKap[0]));
+sandbox.statusAir = statusAirAsli;
+// Swap IPA -> Intake bila IPA terkunci (level 2).
+C.S.level = 2;
+const rkAirL2 = Adv.rencanaAksi(mAirR1);
+cek("R1e level 2: IPA terkunci -> langkah 2 diganti Intake (alternatifDari ipa)", rkAirL2[1].target.idMode === "intake" && rkAirL2[1].alternatifDari === "ipa" && rkAirL2[0].target.idMode === "menara-air" && rkAirL2[0].terkunci === false, JSON.stringify(rkAirL2.map(s => (s.target && s.target.idMode) + ":" + s.terkunci)));
+C.S.level = 1;
+
+// ---- R3: klik "Bangun" pada langkah rencana -> katalog (state mode/tab) ----
+const mNormAir = UI.ambilMasalah().find(m => m.id === "m-tanpa-air");
+cek("R3a drawer menormalisasi tanpa-air + 3 langkah bernomor", !!mNormAir && mNormAir.langkah.length === 3 && mNormAir.langkah[0].nomor === 1 && mNormAir.langkah[2].nomor === 3, JSON.stringify(mNormAir && mNormAir.langkah.map(s => s.nomor + ":" + s.tombol)));
+const jmlBangunanSebelum = C.S.bangunan.length;
+UI.ambilTindakan(mNormAir, mNormAir.langkah[2]); // Pompa Air (tidak terkunci)
+cek("R3b klik Bangun Pompa Air -> mode bangun/pompa-air + tab air + katalog terbuka", ctxEval("mode").jenis === "bangun" && ctxEval("mode").id === "pompa-air" && ctxEval("kategoriBangun") === "air" && ctxEval('$("menuBangun").classList.contains("tersembunyi")') === false, JSON.stringify(ctxEval("mode")) + " tab=" + ctxEval("kategoriBangun"));
+cek("R3c klik Bangun TIDAK membangun sungguhan (jumlah bangunan tetap)", C.S.bangunan.length === jmlBangunanSebelum, String(C.S.bangunan.length) + " vs " + jmlBangunanSebelum);
+cek("R3d langkah terkunci ditolak (Adv.ambilTindakan false + mode tidak berubah)", Adv.ambilTindakan(mNormAir.langkah[1]) === false && ctxEval("mode").id === "pompa-air", JSON.stringify(ctxEval("mode")));
+
+// ---- R4: anti-spam rencana + toast "Lihat Rencana" ----
+cek("R4a masalahKritis pertama tampil", Notif.masalahKritis(mAirR1) === true);
+cek("R4b rencana yang sama tidak dikirim dua kali berurutan", Notif.masalahKritis(mAirR1) === false);
+const toastEl = ctxEval('$("toastAksiV24")');
+const toastBtn = toastEl && toastEl.lastElementChild;
+cek("R4c toast kritis tampil (flex) + tombol 'Lihat Rencana'", toastEl.style.display === "flex" && !!toastBtn && toastBtn.textContent === "Lihat Rencana", String(toastEl.style.display) + " / " + (toastBtn && toastBtn.textContent));
+toastBtn.onclick();
+cek("R4d klik 'Lihat Rencana' membuka drawer advisor", ctxEval('$("drawerAdvisorV24").style.display') === "block", String(ctxEval('$("drawerAdvisorV24").style.display')));
+const drawerR4 = String(ctxEval('$("drawerAdvisorV24").innerHTML'));
+cek("R4e drawer menampilkan 'Rencana Aksi' + tombol per langkah (Bangun Pompa Air), tanpa tombol tunggal 'Ambil Tindakan'", drawerR4.indexOf("Rencana Aksi") !== -1 && drawerR4.indexOf("Bangun Pompa Air") !== -1 && drawerR4.indexOf("Ambil Tindakan") === -1, drawerR4.slice(0, 200));
+UI.tutupAdvisor();
+Notif.lupakanRencana(mAirR1.id);
+cek("R4f setelah lupakanRencana tapi <60 dtk: masih ditahan throttle kritis", Notif.masalahKritis(mAirR1) === false);
+const nowAsli = Date.now;
+const t0R4 = nowAsli();
+let tampilLagiR4 = false;
+try {
+  vm.runInContext("Date.now = function(){ return " + (t0R4 + 61000) + "; }", sandbox);
+  tampilLagiR4 = Notif.masalahKritis(mAirR1);
+} finally {
+  Date.now = nowAsli;
+}
+cek("R4g setelah lupakanRencana + 61 detik: rencana boleh tampil lagi", tampilLagiR4 === true, String(tampilLagiR4));
+rumahAkhir.berair = true; // pulihkan
+Dg.invalidateSemua();
+
+// ---- R7: sapuan semua kode rencana (nomor + tombol + target terverifikasi) ----
+const TAB_IDS = ctxEval("TAB_BANGUN.map(function(t){ return t.id; })");
+function targetAda(t) {
+  if (!t || !t.tab || !t.jenisMode || !t.idMode) return false;
+  if (TAB_IDS.indexOf(t.tab) === -1) return false;
+  if (t.jenisMode === "bangun") return !!ctxEval("BANGUNAN_MAP['" + t.idMode + "']");
+  if (t.jenisMode === "jalan") return !!ctxEval("JALAN['" + t.idMode + "']");
+  if (t.jenisMode === "jembatan" || t.jenisMode === "jembatan-gantung") return !!ctxEval("JEMBATAN['" + t.idMode + "']");
+  return false;
+}
+const KODE_UJI = ["tanpa-air", "tanpa-listrik", "bahan-baku-habis", "bahan-baku-menipis", "tanpa-jalan", "sampah-menumpuk", "sekolah-jauh", "sekolah-tak-menjangkau", "cakupan-pendidikan-rendah", "kesehatan-jauh", "cakupan-kesehatan-rendah", "faskes-tidak-beroperasi", "rs-tidak-beroperasi", "pekerjaan-kurang", "pekerja-kurang", "kemacetan-berat", "akses-macet", "akses-padat", "gudang-penuh", "logistik-terputus", "kendaraan-macet", "banjir", "sanitasi-buruk", "polusi", "rekreasi-jauh", "pasokan-kosong", "defisit-apbd", "bahagia-rendah", "penduduk-tidak-bertambah", "penumpang-menumpuk", "rute-feri-kosong", "rute-bus-kosong", "transportasi-sekolah"];
+let sapuanOk = true, sapuanInfo = "";
+for (const kode of KODE_UJI) {
+  const rk = Adv.rencanaAksi({ kode: kode, id: "m-" + kode, lokasi: { x: 10, y: 10 }, penyebab: "Uji rencana " + kode + "." });
+  if (!Array.isArray(rk) || rk.length === 0) { sapuanOk = false; sapuanInfo = kode + ": tanpa langkah"; break; }
+  for (let i = 0; i < rk.length; i++) {
+    const s = rk[i];
+    if (s.nomor !== i + 1) { sapuanOk = false; sapuanInfo = kode + ": nomor langkah " + s.nomor + " != " + (i + 1); break; }
+    if (!(s.tombol === "Lihat Lokasi" || (typeof s.tombol === "string" && s.tombol.indexOf("Bangun ") === 0))) { sapuanOk = false; sapuanInfo = kode + ": tombol aneh '" + s.tombol + "'"; break; }
+    if (s.target && !targetAda(s.target)) { sapuanOk = false; sapuanInfo = kode + ": target tak terverifikasi " + JSON.stringify(s.target); break; }
+    if (typeof s.terkunci !== "boolean") { sapuanOk = false; sapuanInfo = kode + ": terkunci bukan boolean"; break; }
+  }
+  if (!sapuanOk) break;
+}
+cek("R7 sapuan 33 kode masalah: langkah bernomor + tombol Bangun/Lihat Lokasi + target (tab/id) terverifikasi di city-data.js", sapuanOk, sapuanInfo);
+const rkSampah = Adv.rencanaAksi({ kode: "sampah-menumpuk", id: "m-sampah-menumpuk", lokasi: { x: 10, y: 10 }, penyebab: "x" });
+const rkSekolah = Adv.rencanaAksi({ kode: "sekolah-jauh", id: "m-sekolah-jauh", lokasi: { x: 10, y: 10 }, penyebab: "x" });
+const rkSehat = Adv.rencanaAksi({ kode: "kesehatan-jauh", id: "m-kesehatan-jauh", lokasi: { x: 10, y: 10 }, penyebab: "x" });
+const rkKerja = Adv.rencanaAksi({ kode: "pekerjaan-kurang", id: "m-pekerjaan-kurang", lokasi: { x: 10, y: 10 }, penyebab: "x" });
+const rkMacet = Adv.rencanaAksi({ kode: "kemacetan-berat", id: "m-kemacetan-berat", lokasi: { x: 10, y: 10 }, penyebab: "x" });
+const rkGudang = Adv.rencanaAksi({ kode: "gudang-penuh", id: "m-gudang-penuh", lokasi: { x: 10, y: 10 }, penyebab: "x" });
+const rkLogistik = Adv.rencanaAksi({ kode: "logistik-terputus", id: "m-logistik-terputus", lokasi: { x: 10, y: 10 }, penyebab: "x" });
+cek("R7b langkah 1 tiap masalah utama sesuai tabel v24.1 (sampah TPS, sekolah SD, kesehatan Puskesmas, kerja Kebun Sagu, macet Jalan Aspal, gudang Gudang)", rkSampah[0].target.idMode === "tps" && rkSekolah[0].target.idMode === "sd" && rkSehat[0].target.idMode === "puskesmas" && rkKerja[0].target.idMode === "kebun-sagu" && rkMacet[0].target.idMode === "jalan-aspal" && rkGudang[0].target.idMode === "gudang", JSON.stringify([rkSampah[0].target.idMode, rkSekolah[0].target.idMode, rkSehat[0].target.idMode, rkKerja[0].target.idMode, rkMacet[0].target.idMode, rkGudang[0].target.idMode]));
+cek("R7c kemacetan level 1: Bundaran terkunci -> langkah 2 diganti Traffic Light (bukan 'perlebar jalan')", rkMacet[1].target.idMode === "traffic-light" && rkMacet[1].alternatifDari === "bundaran" && rkMacet[0].teks.indexOf("alternatif") !== -1, JSON.stringify(rkMacet.map(s => (s.target && s.target.idMode) + ":" + (s.alternatifDari || ""))));
+cek("R7d tanpa-jalan + logistik: langkah 1 Lihat Lokasi, langkah 2 Jalan Tanah", rkLogistik[0].tombol === "Lihat Lokasi" && rkLogistik[1].target.idMode === "jalan-tanah" && Adv.rencanaAksi({ kode: "tanpa-jalan", id: "m-tanpa-jalan", lokasi: { x: 10, y: 10 }, penyebab: "x" })[1].target.idMode === "jalan-tanah", JSON.stringify(rkLogistik.map(s => s.tombol)));
+cek("R7e gudang penuh level 1: Pelabuhan terkunci -> langkah 2 diganti Pasar Tradisional", rkGudang[1].target.idMode === "pasar-tradisional" && rkGudang[1].alternatifDari === "pelabuhan", JSON.stringify(rkGudang.map(s => (s.target && s.target.idMode) + ":" + (s.alternatifDari || ""))));
+
+// ---- R2: kilang tanpa bahan baku (+ perluasan multi-penyebab) ----
+const tkKilangR2 = petakBangunDekatJalan(2, 2);
+cek("R2a ada petak kilang uji di samping jalan", !!tkKilangR2, JSON.stringify(tkKilangR2));
+const kilangR2 = tambahBangunan("kilang-sagu", tkKilangR2.x, tkKilangR2.y, { berlistrik: true, berair: true, staf: 8 });
+C.S.komoditas.tual = 0;
+Dg.invalidateSemua();
+const mBahanR2 = Adv.daftarMasalah().find(m => m.kode === "bahan-baku-habis");
+cek("R2b kilang tanpa tual -> masalah bahan-baku-habis terdaftar", !!mBahanR2, JSON.stringify(mBahanR2 && mBahanR2.judul));
+const rkBahanR2 = Adv.rencanaAksi(mBahanR2);
+cek("R2c kilang tanpa tual -> langkah 1 = Bangun Kebun Sagu (pertanian/bangun/kebun-sagu)", rkBahanR2.length >= 1 && rkBahanR2[0].target && rkBahanR2[0].target.tab === "pertanian" && rkBahanR2[0].target.jenisMode === "bangun" && rkBahanR2[0].target.idMode === "kebun-sagu" && rkBahanR2[0].tombol === "Bangun Kebun Sagu", JSON.stringify(rkBahanR2.map(s => s.tombol)));
+cek("R2d rencana kilang maks 4 langkah, tanpa target duplikat", rkBahanR2.length <= 4 && new Set(rkBahanR2.filter(s => s.target).map(s => s.target.tab + ":" + s.target.idMode)).size === rkBahanR2.filter(s => s.target).length, JSON.stringify(rkBahanR2.map(s => (s.target && s.target.idMode) || s.tombol)));
+kilangR2.berair = false;
+Dg.invalidateSemua();
+const rkBahanMulti = Adv.rencanaAksi(Adv.daftarMasalah().find(m => m.kode === "bahan-baku-habis"));
+cek("R2e kilang multi-penyebab (air mati, dampak 1,0 > bahan 0,9): langkah 1 = perbaikan air (Menara Air, cabang jaringan), Kebun Sagu tetap ada", rkBahanMulti[0].target.idMode === "menara-air" && rkBahanMulti.some(s => s.target && s.target.idMode === "kebun-sagu"), JSON.stringify(rkBahanMulti.map(s => s.tombol)));
+kilangR2.berair = true;
+Dg.invalidateSemua();
+
+// ---- R5b: panel diagnostik kilang menampilkan "Rencana Aksi" ----
+// (sebelum tual dipulihkan: penyebab utama kilang masih bahan baku)
+UI.saatBangunanDipilih(kilangR2);
+const panelR5 = String(ctxEval('$("panelKanan").innerHTML'));
+cek("R5 panel diagnostik menampilkan 'Rencana Aksi' + tombol Bangun Kebun Sagu", panelR5.indexOf("Rencana Aksi") !== -1 && panelR5.indexOf("Bangun Kebun Sagu") !== -1, panelR5.slice(0, 400));
+C.S.komoditas.tual = 12;
+Dg.invalidateSemua();
+
+// ---- R6: penduduk tidak bertambah (pop < kapasitas + bahagia < 50) ----
+const bahagiaAwalR6 = C.S.bahagia.nilai;
+const popAwalR6 = C.S.penduduk.total;
+const kapR6 = ctxEval("hitungRumah()");
+C.S.penduduk.total = Math.max(1, kapR6 - 2);
+C.S.bahagia.nilai = 40;
+const mPendR6 = Adv.daftarMasalah().find(m => m.kode === "penduduk-tidak-bertambah");
+cek("R6a pop < kapasitas + bahagia 40% -> masalah penduduk-tidak-bertambah (HIGH)", !!mPendR6 && mPendR6.prioritas === "HIGH" && mPendR6.judul.indexOf("tidak bertambah") !== -1, JSON.stringify(mPendR6 && { prioritas: mPendR6.prioritas, judul: mPendR6.judul, jumlah: mPendR6.jumlah }));
+const rkPendR6 = Adv.rencanaAksi(mPendR6);
+cek("R6b langkah 1 = fasilitas indikator terburuk (pendidikan skor 0 -> Bangun Sekolah Dasar)", rkPendR6.length === 3 && rkPendR6[0].target.idMode === "sd" && rkPendR6[0].teks.indexOf("pendidikan") !== -1 && rkPendR6[0].teks.indexOf("skor 0/100") !== -1, JSON.stringify(rkPendR6.map(s => s.tombol)));
+cek("R6c langkah 2 = Lihat Lokasi (pastikan listrik+air rumah), langkah 3 menyebut ambang 50%", rkPendR6[1].tombol === "Lihat Lokasi" && rkPendR6[1].teks.indexOf("berlistrik") !== -1 && rkPendR6[2].teks.indexOf("50%") !== -1 && rkPendR6[2].teks.indexOf("3 jiwa/hari") !== -1, JSON.stringify(rkPendR6.map(s => s.teks.slice(0, 60))));
+C.S.bahagia.nilai = 60;
+cek("R6d bahagia >= 50% -> masalah penduduk-tidak-bertambah hilang", !Adv.daftarMasalah().some(m => m.kode === "penduduk-tidak-bertambah"));
+C.S.bahagia.nilai = 40;
+C.S.penduduk.total = kapR6;
+cek("R6e kapasitas penuh (pop = kapasitas) -> masalah penduduk-tidak-bertambah hilang", !Adv.daftarMasalah().some(m => m.kode === "penduduk-tidak-bertambah"));
+C.S.penduduk.total = popAwalR6;
+C.S.bahagia.nilai = bahagiaAwalR6;
+Dg.invalidateSemua();
 
 // ---------------- Ringkasan ----------------
 console.log("\nHASIL v24: lulus " + lulus + ", gagal " + gagal);

@@ -58,6 +58,8 @@
   var terakhirRenderAdvisor = 0;
   var intervalPemantau = null;
   var terakhirKritis = {}; // id -> timestamp ms (throttle toast kritis)
+  var rencanaTerakhir = {}; // v24.1: id masalah -> signature rencana yang sudah ditampilkan (anti-spam)
+  var diagLangkahAktif = null; // v24.1: langkah panel diagnostik yang sedang tampil (untuk wiring tombol)
 
   function adaS() { return (typeof S !== "undefined" && S); }
   function el(id) {
@@ -131,6 +133,26 @@
     }
     var rekomendasi = Array.isArray(m.rekomendasi) ? m.rekomendasi : (m.rekomendasi ? [m.rekomendasi] : []);
     if (!rekomendasi.length && Array.isArray(m.solusi)) rekomendasi = m.solusi;
+    // v24.1: pertahankan target/nomor/labelTombol/status kunci tiap
+    // rekomendasi (adapter lama membuang target) + langkah bernomor
+    // kanonis (m.langkah / mentah.langkah; bila tidak ada, turunkan
+    // dari rekomendasi bernomor).
+    rekomendasi = rekomendasi.map(function (r) {
+      if (typeof r === "string") return { label: r, teks: r, tombol: null, target: null, lokasi: null, nomor: null, labelTombol: null, terkunci: false, alasanKunci: null };
+      return { label: r.labelTombol || r.label || r.tombol || "Tindakan", teks: r.teks || "", tombol: r.tombol || null, target: r.target || null, lokasi: r.lokasi || null, nomor: (typeof r.nomor === "number" ? r.nomor : null), labelTombol: r.labelTombol || null, terkunci: !!r.terkunci, alasanKunci: r.alasanKunci || null };
+    });
+    var langkah = [];
+    if (Array.isArray(m.langkah)) langkah = m.langkah;
+    else if (m.mentah && Array.isArray(m.mentah.langkah)) langkah = m.mentah.langkah;
+    else {
+      for (var li = 0; li < rekomendasi.length; li++) {
+        var rr = rekomendasi[li];
+        if (rr && typeof rr.nomor === "number" && (rr.tombol === "Ambil Tindakan" || rr.tombol === "Lihat Lokasi")) {
+          langkah.push({ nomor: rr.nomor, teks: rr.teks, tombol: rr.labelTombol || (rr.tombol === "Lihat Lokasi" ? "Lihat Lokasi" : "Bangun"), ringkas: rr.teks, target: rr.target || null, lokasi: rr.lokasi || null, terkunci: rr.terkunci, alasanKunci: rr.alasanKunci, masalahId: m.id || null });
+        }
+      }
+      langkah.sort(function (a, b) { return a.nomor - b.nomor; });
+    }
     var des = m.des || m.deskripsi || m.pesan || "";
     if (!des && typeof m.penyebab === "string") des = m.penyebab;
     return {
@@ -144,6 +166,7 @@
       bangunanIdx: bangunanIdx,
       penyebab: Array.isArray(m.penyebab) ? m.penyebab : (m.penyebab ? [m.penyebab] : []),
       rekomendasi: rekomendasi,
+      langkah: langkah,
       aksi: m.aksi || null,
       mentah: m,
     };
@@ -295,10 +318,21 @@
       html += "<div class='misiDes'><b>Disarankan:</b> " + m.rekomendasi.map(function (r) { return esc(typeof r === "string" ? r : (r.label || r.teks || "")); }).join("; ") + "</div>";
     }
     html += "</div>";
+    // v24.1: Rencana Aksi terpandu — semua langkah bernomor, tiap langkah
+    // dengan tombolnya sendiri ("Bangun <Nama>" / "Lihat Lokasi").
+    // Langkah terkunci menampilkan alasan kuncinya.
+    if (m.langkah && m.langkah.length) {
+      html += "<div class='misiDes' style='margin-top:6px'><b>📋 Rencana Aksi:</b></div>";
+      for (var li = 0; li < m.langkah.length; li++) {
+        var st = m.langkah[li];
+        html += "<div class='misiDes'>" + st.nomor + ". " + esc(st.teks) + "</div>";
+        html += "<div class='barisAksi v24Aksi'><button class='btnKecil' data-v24-langkah='" + li + "'>" + (st.terkunci ? "🔒 " : "") + esc(st.tombol) + "</button></div>";
+        if (st.terkunci && st.alasanKunci) html += "<div class='misiDes'>⚠️ " + esc(st.alasanKunci) + "</div>";
+      }
+    }
     html += "<div class='barisAksi v24Aksi'>";
     html += "<button class='btnKecil' data-v24-aksi='lokasi'>📍 Lihat Lokasi</button>";
     html += "<button class='btnKecil' data-v24-aksi='penyebab'>🔍 Lihat Penyebab</button>";
-    html += "<button class='btnKecil' data-v24-aksi='tindakan'>✓ Ambil Tindakan</button>";
     html += "<button class='btnKecil' data-v24-aksi='abaikan'>✕ Abaikan</button>";
     html += "</div></div>";
     return html;
@@ -329,12 +363,41 @@
         };
       })(tombol[i]);
     }
+    // v24.1: tombol per langkah rencana aksi — menjalankan langkah YANG
+    // DIKLIK (bukan selalu langkah pertama).
+    var langkahBtns = itemEl.querySelectorAll ? itemEl.querySelectorAll("[data-v24-langkah]") : [];
+    for (var li = 0; li < langkahBtns.length; li++) {
+      (function (btn) {
+        btn.onclick = function () {
+          var m = cari();
+          if (!m) return;
+          var idx = parseInt(btn.getAttribute ? btn.getAttribute("data-v24-langkah") : "", 10);
+          var st = m.langkah && m.langkah[idx];
+          if (st) ambilTindakan(m, st);
+        };
+      })(langkahBtns[li]);
+    }
   }
-  function bukaAdvisor() {
+  // v24.1: masalahId opsional — buka drawer langsung pada masalah itu
+  // (detail penyebab dibuka + digulir ke tampilan), dipakai tombol
+  // "Lihat Rencana" pada toast kritis.
+  function bukaAdvisor(masalahId) {
     var d = pastikanDrawer();
     if (!d) return false;
     renderAdvisor();
     d.style.display = "block";
+    if (masalahId) {
+      try {
+        if (d.querySelector) {
+          var item = d.querySelector("[data-v24-masalah='" + masalahId + "']");
+          if (item) {
+            var det = item.querySelector ? item.querySelector(".v24Detail") : null;
+            if (det) det.style.display = "block";
+            if (typeof item.scrollIntoView === "function") item.scrollIntoView();
+          }
+        }
+      } catch (e) {}
+    }
     return true;
   }
   function tutupAdvisor() {
@@ -374,10 +437,30 @@
     toastAman("Lokasi masalah ini tidak tercatat di peta.", "info");
     return false;
   }
-  function ambilTindakan(m) {
+  // v24.1: langkah = langkah rencana aksi YANG DIKLIK (objek langkah
+  // {nomor, tombol, target/lokasi, terkunci}). Tanpa langkah: jalankan
+  // langkah bernomor pertama yang tidak terkunci (bukan solusi legacy
+  // pertama) — fallback legacy hanya bila masalah tanpa langkah.
+  function ambilTindakan(m, langkah) {
     if (!m) return;
     try {
       if (typeof Advisor !== "undefined" && Advisor && typeof Advisor.ambilTindakan === "function") {
+        if (langkah) {
+          Advisor.ambilTindakan(langkah);
+          renderAdvisor();
+          return;
+        }
+        var daftarLangkah = Array.isArray(m.langkah) ? m.langkah : (m.mentah && Array.isArray(m.mentah.langkah) ? m.mentah.langkah : null);
+        if (daftarLangkah && daftarLangkah.length) {
+          var pilihLangkah = null;
+          for (var li = 0; li < daftarLangkah.length; li++) {
+            if (!daftarLangkah[li].terkunci) { pilihLangkah = daftarLangkah[li]; break; }
+          }
+          if (!pilihLangkah) pilihLangkah = daftarLangkah[0];
+          Advisor.ambilTindakan(pilihLangkah);
+          renderAdvisor();
+          return;
+        }
         // v24-finalizer: Advisor.ambilTindakan(rekomendasi) — BUKAN
         // masalah. Ambil solusi "Ambil Tindakan" pertama dari masalah
         // (bentuk W3: mentah.solusi[]); bila tidak ada, solusi pertama.
@@ -415,6 +498,10 @@
     } catch (e) {}
     muatAbaikan().add(id);
     simpanAbaikan();
+    // v24.1: rencana yang diabaikan boleh tampil lagi bila masalahnya
+    // muncul kembali (memburuk) — hapus jejak rencana yang sudah
+    // ditampilkan untuk masalah ini.
+    try { if (typeof Notifikasi !== "undefined" && Notifikasi && typeof Notifikasi.lupakanRencana === "function") Notifikasi.lupakanRencana(id); } catch (e) {}
     toastAman("Masalah diabaikan — tidak akan muncul lagi di daftar.", "info");
     renderAdvisor();
     perbaruiLencana();
@@ -487,16 +574,28 @@
     return { status: label[d.status] || d.status || "Beroperasi", skor: skor, penyebab: penyebab, rekomendasi: rekomendasi };
   }
   function diagnosisBangunan(b) {
+    var hasil = null;
     try {
       if (typeof Diagnostik !== "undefined" && Diagnostik) {
         // v24-finalizer: statusBangunan SUDAH berbentuk UI — pakai dulu;
         // diagnosis/diagnosa mentah dipetakan lewat normalisasiDiagnosa.
-        if (typeof Diagnostik.statusBangunan === "function") { var d0 = Diagnostik.statusBangunan(b); if (d0) return d0; }
-        if (typeof Diagnostik.diagnosis === "function") { var d1 = Diagnostik.diagnosis(b); if (d1) return normalisasiDiagnosa(d1, b); }
-        if (typeof Diagnostik.diagnosa === "function") { var d3 = Diagnostik.diagnosa(b); if (d3) return normalisasiDiagnosa(d3, b); }
+        if (typeof Diagnostik.statusBangunan === "function") { var d0 = Diagnostik.statusBangunan(b); if (d0) hasil = d0; }
+        if (!hasil && typeof Diagnostik.diagnosis === "function") { var d1 = Diagnostik.diagnosis(b); if (d1) hasil = normalisasiDiagnosa(d1, b); }
+        if (!hasil && typeof Diagnostik.diagnosa === "function") { var d3 = Diagnostik.diagnosa(b); if (d3) hasil = normalisasiDiagnosa(d3, b); }
       }
     } catch (e) {}
-    return diagnosisLokal(b);
+    if (!hasil) hasil = diagnosisLokal(b);
+    // v24.1: lampirkan rencana aksi bernomor dari penyebab utama
+    // (kode + penyebab) — dipakai panel diagnostik untuk tombol
+    // per langkah. Bila tidak ada penyebab utama, langkah kosong.
+    try {
+      if (hasil && hasil.penyebabUtama && typeof Advisor !== "undefined" && Advisor && typeof Advisor.rencanaAksi === "function") {
+        var utama = hasil.penyebabUtama;
+        var rk = Advisor.rencanaAksi({ kode: utama.kode, id: "m-" + utama.kode, lokasi: { x: b.x, y: b.y }, penyebab: utama.penyebab || utama.teks || "" });
+        if (Array.isArray(rk) && rk.length) hasil.langkah = rk;
+      }
+    } catch (e) {}
+    return hasil;
   }
   // Dipanggil finalizer dari akhir renderPanelKanan (cabang bangunan),
   // SETELAH el.innerHTML = html. Menambah seksi diagnostik di panel kanan.
@@ -539,7 +638,20 @@
     } else if (b.selesai) {
       html += "<div class='misiDes'>✅ Tidak ada masalah terdeteksi pada bangunan ini.</div>";
     }
-    if (d.rekomendasi && d.rekomendasi.length) {
+    // v24.1: rencana aksi bernomor (dari penyebab utama) — tiap langkah
+    // dengan tombolnya sendiri. Bila tidak ada langkah (diagnosis lokal),
+    // tampilkan rekomendasi teks biasa seperti sebelumnya.
+    if (d.langkah && d.langkah.length) {
+      diagLangkahAktif = d.langkah;
+      html += "<div class='misiDes'><b>Disarankan — Rencana Aksi:</b></div>";
+      for (var li = 0; li < d.langkah.length; li++) {
+        var st = d.langkah[li];
+        html += "<div class='misiDes'>" + st.nomor + ". " + esc(st.teks) + "</div>";
+        html += "<div class='barisAksi v24Aksi'><button class='btnKecil' data-v24-diag='" + li + "'>" + (st.terkunci ? "🔒 " : "") + esc(st.tombol) + "</button></div>";
+        if (st.terkunci && st.alasanKunci) html += "<div class='misiDes'>⚠️ " + esc(st.alasanKunci) + "</div>";
+      }
+    } else if (d.rekomendasi && d.rekomendasi.length) {
+      diagLangkahAktif = null;
       html += "<div class='misiDes'><b>Disarankan:</b> " + d.rekomendasi.map(function (r) { return esc(typeof r === "string" ? r : (r.label || r.teks || "")); }).join("; ") + "</div>";
     }
     html += "</div>";
@@ -552,6 +664,19 @@
         else panel.innerHTML += html;
       } else panel.innerHTML += html;
     } catch (e) { try { panel.innerHTML += html; } catch (e2) {} }
+    // v24.1: wire tombol per langkah panel diagnostik.
+    try {
+      var btnsDiag = panel.querySelectorAll ? panel.querySelectorAll("[data-v24-diag]") : [];
+      for (var di = 0; di < btnsDiag.length; di++) {
+        (function (btn) {
+          btn.onclick = function () {
+            var idx = parseInt(btn.getAttribute ? btn.getAttribute("data-v24-diag") : "", 10);
+            var st2 = diagLangkahAktif && diagLangkahAktif[idx];
+            if (st2 && typeof Advisor !== "undefined" && Advisor && typeof Advisor.ambilTindakan === "function") Advisor.ambilTindakan(st2);
+          };
+        })(btnsDiag[di]);
+      }
+    } catch (e) {}
   }
   // Perlu peringatan di canvas? {ikon, alasan} | null. Dipakai
   // gambarSemuaPeringatan() + panel advisor (ikon kecil saja bila tidak
@@ -720,6 +845,10 @@
   // toast aksi (pesan + tombol "Lihat") 8 detik; bila elemen toast-aksi
   // belum ada, jatuh kembali ke toast() biasa. Throttle: 1x per id per
   // 60 detik supaya masalah kritis tidak membanjiri layar.
+  // v24.1: Notifikasi.masalahKritis menampilkan rencana aksi terpandu
+  // (langkah 1–2 ringkas + tombol "Lihat Rencana" ke drawer) dan TIDAK
+  // mengulang rencana yang sama sampai masalahnya berubah (memori
+  // rencanaTerakhir: signature kode+dampak+jumlah+langkah 1).
   var Notifikasi = {
     info: function (pesan) { toastAman(pesan, "info"); },
     ok: function (pesan) { toastAman(pesan, "ok"); },
@@ -761,11 +890,38 @@
     masalahKritis: function (m) {
       if (!m) return false;
       var mm = normalisasiMasalah(m, 0) || { id: "kritis", judul: "Masalah kritis", des: "" };
-      return Notifikasi.kritis("🔴 " + mm.judul + (mm.des ? " — " + mm.des : ""), {
+      // v24.1: anti-spam rencana — jangan tampilkan lagi rencana yang
+      // SAMA sampai masalahnya berubah (signature: kode + dampak +
+      // jumlah + langkah 1 + jumlah langkah) atau pemain menekan
+      // "Abaikan" (yang menghapus jejak via lupakanRencana).
+      var mentah = mm.mentah || mm;
+      var langkah = mm.langkah || [];
+      var l1 = "";
+      if (langkah.length && langkah[0]) {
+        var t0 = langkah[0].target;
+        l1 = t0 ? (t0.tab + ":" + t0.jenisMode + ":" + t0.idMode) : (langkah[0].tombol || "");
+      }
+      var sig = (mentah.kode || mm.id || "") + "|" + (mentah.dampak != null ? mentah.dampak : "") + "|" + (mentah.jumlah != null ? mentah.jumlah : "") + "|" + l1 + "|" + langkah.length;
+      if (rencanaTerakhir[mm.id] === sig) return false;
+      // Toast ringkas: masalah + langkah 1–2 (bentuk pendek) saja.
+      var teksLangkah = "";
+      if (langkah.length) {
+        teksLangkah = " — 1. " + (langkah[0].ringkas || langkah[0].teks || "");
+        if (langkah.length > 1) teksLangkah += " · 2. " + (langkah[1].ringkas || langkah[1].teks || "");
+      }
+      var tampil = Notifikasi.kritis("🔴 " + mm.judul + teksLangkah, {
         id: "kritis-" + mm.id,
-        label: "Lihat",
-        aksi: function () { lihatLokasi(mm.x, mm.y, mm.bangunanIdx); bukaAdvisor(); },
+        label: "Lihat Rencana",
+        aksi: function () { bukaAdvisor(mm.id); },
       });
+      if (tampil) rencanaTerakhir[mm.id] = sig;
+      return tampil;
+    },
+    // v24.1: hapus jejak rencana yang sudah ditampilkan (dipanggil saat
+    // pemain menekan "Abaikan", supaya rencana boleh tampil lagi bila
+    // masalahnya muncul kembali).
+    lupakanRencana: function (id) {
+      try { delete rencanaTerakhir[id]; } catch (e) {}
     },
   };
 
