@@ -103,19 +103,19 @@ function majuSatuHari() { for (let i = 0; i < 6; i++) C.majukanWaktu(240); }
 const idxHtml = fs.readFileSync(ROOT + "/index.html", "utf8");
 const swTxt = fs.readFileSync(ROOT + "/sw.js", "utf8");
 const srcCity = fs.readFileSync(ROOT + "/js/city.js", "utf8");
-cek("A1 VERSI_GAME v25", C.VERSI_GAME === "v25", C.VERSI_GAME);
+cek("A1 VERSI_GAME v26", C.VERSI_GAME === "v26", C.VERSI_GAME);
 cek("A2 index.html memuat 6 modul v24 dalam urutan benar (advisor + ui-v24 ?v=3, diagnostik + bubble ?v=2, lainnya ?v=1)",
   idxHtml.indexOf("js/city-warga.js?v=1") !== -1 && idxHtml.indexOf("js/city-bubble.js?v=2") !== -1 &&
   idxHtml.indexOf("js/city-diagnostik.js?v=2") !== -1 && idxHtml.indexOf("js/city-advisor.js?v=3") !== -1 &&
   idxHtml.indexOf("js/city-tutorial.js?v=1") !== -1 && idxHtml.indexOf("js/city-ui-v24.js?v=3") !== -1 &&
-  idxHtml.indexOf("js/city-advisor.js?v=3") < idxHtml.indexOf("js/city.js?v=37") &&
-  idxHtml.indexOf("js/city.js?v=37") < idxHtml.indexOf("js/city-tutorial.js?v=1"));
+  idxHtml.indexOf("js/city-advisor.js?v=3") < idxHtml.indexOf("js/city.js?v=38") &&
+  idxHtml.indexOf("js/city.js?v=38") < idxHtml.indexOf("js/city-tutorial.js?v=1"));
 cek("A3 index.html: #btnAdvisor + #drawerAdvisorV24 + #toastAksiV24 + css?v=18 + city.js?v=37",
   idxHtml.indexOf('id="btnAdvisor"') !== -1 && idxHtml.indexOf('id="drawerAdvisorV24"') !== -1 &&
   idxHtml.indexOf('id="toastAksiV24"') !== -1 && idxHtml.includes("css/city.css?v=18") &&
-  idxHtml.includes("js/city.js?v=37"));
-cek("A4 sw.js cache meranti-rising-v25 + precache 6 modul baru",
-  swTxt.indexOf("meranti-rising-v25") !== -1 && swTxt.indexOf("js/city-warga.js?v=1") !== -1 &&
+  idxHtml.includes("js/city.js?v=38"));
+cek("A4 sw.js cache meranti-rising-v26 + precache 6 modul baru",
+  swTxt.indexOf("meranti-rising-v26") !== -1 && swTxt.indexOf("js/city-warga.js?v=1") !== -1 &&
   swTxt.indexOf("js/city-bubble.js?v=2") !== -1 && swTxt.indexOf("js/city-diagnostik.js?v=2") !== -1 &&
   swTxt.indexOf("js/city-advisor.js?v=3") !== -1 && swTxt.indexOf("js/city-tutorial.js?v=1") !== -1 &&
   swTxt.indexOf("js/city-ui-v24.js?v=3") !== -1);
@@ -127,12 +127,15 @@ cek("A5 tidak ada sisa pin v24.1/v24.2 aktif (city.js?v=35/36 / meranti-rising-v
   !swTxt.includes("city-advisor.js?v=2") && !swTxt.includes("city-ui-v24.js?v=2") &&
   !swTxt.includes("city-diagnostik.js?v=1") && !swTxt.includes("city-bubble.js?v=1") &&
   !swTxt.includes("css/city.css?v=17") &&
-  // v25: tidak ada sisa pin v24.2 aktif (city.js?v=36 / cache v24.2 /
-  // kendaraan ?v=4 / lalin ?v=2).
+  // v26: tidak ada sisa pin v24.2 aktif (city.js?v=36 / cache v24.2 /
+  // kendaraan ?v=4 / lalin ?v=2) — pin v25 ditambahkan di bawah.
   !idxHtml.includes("city.js?v=36") && !idxHtml.includes("js/city-kendaraan.js?v=4") &&
   !idxHtml.includes("js/city-lalin.js?v=2") && !swTxt.includes("city.js?v=36") &&
   !swTxt.includes('"meranti-rising-v24.2"') && !swTxt.includes("js/city-kendaraan.js?v=4") &&
-  !swTxt.includes("js/city-lalin.js?v=2"));
+  !swTxt.includes("js/city-lalin.js?v=2") &&
+  // v26: tidak ada sisa pin v25 aktif (city.js?v=37 / cache v25).
+  !idxHtml.includes("city.js?v=37") && !idxHtml.includes("meranti-rising-v25") &&
+  !swTxt.includes("city.js?v=37") && !swTxt.includes("meranti-rising-v25"));
 cek("A6 modul global termuat (Warga/Bubble/Diagnostik/Advisor/Tutorial/UIV24/Notifikasi)",
   !!W && !!Bbl && !!Dg && !!Adv && !!Tut && !!UI && !!Notif);
 cek("A7 adapter kontrak: Diagnostik.diagnosis = diagnosa + statusBangunan; Advisor.pesan + ringkasan",
@@ -796,13 +799,13 @@ Bbl.bersihkan();
 Dg.invalidateSemua();
 
 // ---- X4d: banner "Versi baru tersedia" hanya bila SW lebih baru ----
-cek("X4d bandingVersi: v24.2>v24.1, v24.1<v24.2, sama=0, v24.10>v24.2, v25.1>v25", ctxEval("bandingVersi('v24.2','v24.1')") === 1 && ctxEval("bandingVersi('v24.1','v24.2')") === -1 && ctxEval("bandingVersi('v24.2','v24.2')") === 0 && ctxEval("bandingVersi('v24.10','v24.2')") === 1 && ctxEval("bandingVersi('v25.1','v25')") === 1);
+cek("X4d bandingVersi: v24.2>v24.1, v24.1<v24.2, sama=0, v24.10>v24.2, v26.1>v26", ctxEval("bandingVersi('v24.2','v24.1')") === 1 && ctxEval("bandingVersi('v24.1','v24.2')") === -1 && ctxEval("bandingVersi('v24.2','v24.2')") === 0 && ctxEval("bandingVersi('v24.10','v24.2')") === 1 && ctxEval("bandingVersi('v26.1','v26')") === 1);
 ctxEval("pwaTerimaVersiSW('v24.1')");
-cek("X4d SW v24.1 (lebih lama dari halaman v25) -> banner TIDAK tampil", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
-ctxEval("pwaTerimaVersiSW('v25.1')");
-cek("X4d SW v25.1 (lebih baru) -> banner tampil", ctxEval("pwaUpdateTersedia") === true && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "");
-ctxEval("pwaTerimaVersiSW('v25')");
-cek("X4d SW v25 (sama dengan halaman) -> banner basi disembunyikan lagi", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
+cek("X4d SW v24.1 (lebih lama dari halaman v26) -> banner TIDAK tampil", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
+ctxEval("pwaTerimaVersiSW('v26.1')");
+cek("X4d SW v26.1 (lebih baru) -> banner tampil", ctxEval("pwaUpdateTersedia") === true && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "");
+ctxEval("pwaTerimaVersiSW('v26')");
+cek("X4d SW v26 (sama dengan halaman) -> banner basi disembunyikan lagi", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
 cek("X4d sw.js: postMessage versi + handler minta-versi", swTxt.indexOf("meranti-rising-minta-versi") !== -1 && swTxt.indexOf("meranti-rising-versi") !== -1 && swTxt.indexOf("VERSI_SW") !== -1);
 cek("X4d updatefound menanyakan versi SW dulu (bukan langsung menandai update)", srcCity.indexOf('baru.postMessage({ tipe: "meranti-rising-minta-versi" })') !== -1);
 
@@ -1133,11 +1136,11 @@ cek("Y-e2 spawn ke-41 mengembalikan null + sinkron tidak memaksa (sampah & warga
 bersihSemuaKendaraanV25();
 
 // ---- (g) refs v25 ----
-cek("Y-g1 VERSI_GAME v25 + index.html refs v25 (city.js v=37, kendaraan v=5, lalin v=3, css v=18 tetap)",
-  C.VERSI_GAME === "v25" && idxHtml.includes("js/city.js?v=37") && idxHtml.includes("js/city-kendaraan.js?v=5") &&
+cek("Y-g1 VERSI_GAME v26 + index.html refs v26 (city.js v=38, kendaraan v=5, lalin v=3, css v=18 tetap)",
+  C.VERSI_GAME === "v26" && idxHtml.includes("js/city.js?v=38") && idxHtml.includes("js/city-kendaraan.js?v=5") &&
   idxHtml.includes("js/city-lalin.js?v=3") && idxHtml.includes("css/city.css?v=18"));
-cek("Y-g2 sw.js cache meranti-rising-v25 + precache ?v= baru (city.js v=37, kendaraan v=5, lalin v=3)",
-  swTxt.indexOf("meranti-rising-v25") !== -1 && swTxt.indexOf("js/city.js?v=37") !== -1 &&
+cek("Y-g2 sw.js cache meranti-rising-v26 + precache ?v= baru (city.js v=38, kendaraan v=5, lalin v=3)",
+  swTxt.indexOf("meranti-rising-v26") !== -1 && swTxt.indexOf("js/city.js?v=38") !== -1 &&
   swTxt.indexOf("js/city-kendaraan.js?v=5") !== -1 && swTxt.indexOf("js/city-lalin.js?v=3") !== -1);
 
 // ---- pulihkan keadaan seksi Y ----
@@ -1148,6 +1151,143 @@ C.S.penduduk.total = popV25Lama;
 C.bangunGraphJalan();
 vm.runInContext("_hitungSinkronMobil = 0;", sandbox);
 vm.runInContext("waktuGame = 12 * 60;", sandbox);
+
+// ---------------- Z: v26 Main Menu RISE OF MERANTI ----------------
+const menuCss = fs.readFileSync(ROOT + "/css/menu.css", "utf8");
+cek("Z1 VERSI_GAME v26 + index.html memuat css/menu.css?v=1 SETELAH city.css + city.js?v=38",
+  C.VERSI_GAME === "v26" && idxHtml.includes("css/menu.css?v=1") && idxHtml.includes("js/city.js?v=38") &&
+  idxHtml.indexOf("css/city.css?v=18") < idxHtml.indexOf("css/menu.css?v=1"));
+cek("Z2 struktur DOM menu lengkap (header/logo/5 tombol/panel muat/promo/7 kategori/detail)",
+  ["menuPillVersi", "btnMenuBantuan", "btnMenuProfil", "btnMenuPengaturan",
+   "btnMulai", "btnLanjut", "btnBaru", "btnMuat", "btnProfil", "btnPengaturanMulai", "btnInstalMulai",
+   "menuPanelMuat", "btnMuatMuatkan", "btnMuatTutup", "muatNama", "muatLevel", "muatHari", "muatPenduduk", "muatUang", "muatStatus",
+   "menuDetailKategori", "menuDetailGambar", "menuDetailJudul", "menuDetailDes", "btnMenuDetailBuka", "btnMenuDetailTutup",
+   "menuKatInfrastruktur", "menuKatEkonomi", "menuKatMasyarakat", "menuKatPendidikan", "menuKatKesehatan", "menuKatLingkungan", "menuKatTransportasi",
+   "sambutanKembali", "infoSave", "caraMain"].every(id => idxHtml.includes('id="' + id + '"')) &&
+  idxHtml.includes('class="menu-logo" src="assets/menu/logo-rise-of-meranti.png"') &&
+  idxHtml.includes('src="assets/menu/partner-logos.png"') &&
+  idxHtml.includes('src="assets/menu/menu-background.jpg"') &&
+  idxHtml.includes('src="assets/menu/promo-mini-city.png"') &&
+  idxHtml.includes("BANGUN, KELOLA, DAN MAJUKAN MERANTI"));
+cek("Z3 kejujuran header: TANPA Google Save / Sinkron Cloud / trofi / lonceng + TANPA logo lama di sinematik",
+  idxHtml.indexOf("google-save") === -1 && idxHtml.indexOf("Google Save") === -1 &&
+  idxHtml.indexOf("sinkron-cloud") === -1 && idxHtml.indexOf("Sinkron Cloud") === -1 &&
+  idxHtml.toLowerCase().indexOf("trofi") === -1 && idxHtml.indexOf("header-pil-versi") === -1 &&
+  idxHtml.indexOf('class="logoUtama"') === -1 && idxHtml.indexOf("pembuka-meranti.webp") === -1);
+// Z4: aset menu yang dipakai ADA di disk + format benar (PNG RGBA / JPG).
+function infoPng(buf) {
+  if (buf.length < 30 || buf[0] !== 0x89 || buf[1] !== 0x50) return null;
+  return { lebar: buf.readUInt32BE(16), tinggi: buf.readUInt32BE(20), tipeWarna: buf[25] };
+}
+const ASET_MENU_DIPAKAI = [
+  "assets/menu/menu-background.jpg", "assets/menu/logo-rise-of-meranti.png",
+  "assets/menu/partner-logos.png", "assets/menu/promo-mini-city.png",
+  "assets/menu/crop/kategori-infrastruktur.png", "assets/menu/crop/kategori-ekonomi.png",
+  "assets/menu/crop/kategori-masyarakat.png", "assets/menu/crop/kategori-pendidikan.png",
+  "assets/menu/crop/kategori-kesehatan.png", "assets/menu/crop/kategori-lingkungan.png",
+  "assets/menu/crop/kategori-transportasi.png",
+  "assets/menu/crop/kartu-infrastruktur.png", "assets/menu/crop/kartu-ekonomi.png",
+  "assets/menu/crop/kartu-masyarakat.png", "assets/menu/crop/kartu-pendidikan.png",
+  "assets/menu/crop/kartu-kesehatan.png", "assets/menu/crop/kartu-lingkungan.png",
+  "assets/menu/crop/kartu-transportasi.png",
+  "assets/menu/crop/tombol-lanjutkan-v1-kiri-ikon-polos.png",
+  "assets/menu/crop/tombol-baru-v1-kiri-ikon-polos.png",
+  "assets/menu/crop/tombol-muat-v1-kiri-ikon-polos.png",
+  "assets/menu/crop/tombol-profil-v1-kiri-ikon-polos.png",
+  "assets/menu/crop/tombol-pengaturan-v1-kiri-ikon-polos.png",
+  "assets/menu/crop/header-ikon-lingkaran-bantuan-kecil.png",
+  "assets/menu/crop/header-ikon-lingkaran-pengaturan-kecil.png",
+  "assets/menu/crop/header-ikon-lingkaran-profil-besar.png",
+];
+const asetHilang = ASET_MENU_DIPAKAI.filter(f => !fs.existsSync(ROOT + "/" + f));
+const asetFormatSalah = ASET_MENU_DIPAKAI.filter(f => {
+  const buf = fs.readFileSync(ROOT + "/" + f);
+  if (f.endsWith(".jpg")) return !(buf[0] === 0xFF && buf[1] === 0xD8);
+  const info = infoPng(buf);
+  return !info || info.tipeWarna !== 6; // RGBA
+});
+cek("Z4 26 aset menu yang dipakai ADA di disk + format benar (PNG RGBA / JPG)",
+  asetHilang.length === 0 && asetFormatSalah.length === 0,
+  "hilang=" + asetHilang.join(",") + " format=" + asetFormatSalah.join(","));
+const logoInfo = infoPng(fs.readFileSync(ROOT + "/assets/menu/logo-rise-of-meranti.png"));
+cek("Z4b logo RISE OF MERANTI RGBA 2172x724 (transparan, bukan JPEG latar putih)",
+  !!logoInfo && logoInfo.lebar === 2172 && logoInfo.tinggi === 724 && logoInfo.tipeWarna === 6,
+  JSON.stringify(logoInfo));
+cek("Z5 sw.js cache v26 + precache menu.css + 26 aset menu; arsip & pil palsu TIDAK di-precache",
+  swTxt.indexOf("meranti-rising-v26") !== -1 && swTxt.indexOf("css/menu.css?v=1") !== -1 &&
+  ASET_MENU_DIPAKAI.every(f => swTxt.indexOf("./" + f) !== -1) &&
+  ["menu-background.png", "menu-buttons.png", "category-icons.png", "category-cards.png",
+   "header-icons.png", "google-save", "sinkron-cloud"].every(s => swTxt.indexOf(s) === -1));
+cek("Z6 save key TIDAK berubah (merantiRisingWorldV1, VERSI_SAVE 1)",
+  C.CITY.SAVE_KEY === "merantiRisingWorldV1" && C.CITY.VERSI_SAVE === 1);
+// Z7-Z14: wiring hidup (headless) — profil + simpanan dibuat dulu.
+vm.runInContext('profilPemain = { nama: "Sukma", gender: "wanita", avatar: AVATAR_KARAKTER.wanita, tutorialSelesai: true, dibuat: "2026-11-11T00:00:00.000Z" }; simpanProfil();', sandbox);
+C.mulaiGame(true);
+C.kembaliKeMenuUtama();
+cek("Z7 menu: profil+save -> LANJUTKAN/MUAT/ikon tampil, MULAI sembunyi, pill versi v26",
+  C.document.getElementById("btnLanjut").style.display === "inline-block" &&
+  C.document.getElementById("btnMuat").style.display === "inline-block" &&
+  C.document.getElementById("btnMenuProfil").style.display === "inline-block" &&
+  C.document.getElementById("btnMenuPengaturan").style.display === "inline-block" &&
+  C.document.getElementById("btnMulai").style.display === "none" &&
+  C.document.getElementById("menuPillVersi").textContent === "v26" &&
+  C.document.getElementById("sambutanKembali").textContent.indexOf("Sukma") !== -1);
+cek("Z8 MUAT (ada save): panel tampil + detail simpanan nyata + tombol Muat aktif",
+  (() => { C.document.getElementById("btnMuat").onclick(); return C.document.getElementById("menuPanelMuat").style.display === "block"; })() &&
+  C.document.getElementById("muatNama").textContent === "Sukma" &&
+  C.document.getElementById("muatLevel").textContent.indexOf("Lv. ") === 0 &&
+  C.document.getElementById("muatPenduduk").textContent.indexOf("jiwa") !== -1 &&
+  C.document.getElementById("btnMuatMuatkan").disabled === false &&
+  C.document.getElementById("muatStatus").textContent.indexOf("Simpanan ditemukan") === 0);
+C.document.getElementById("btnMuatTutup").onclick();
+cek("Z8b MUAT: tombol Tutup menyembunyikan panel",
+  C.document.getElementById("menuPanelMuat").style.display === "none");
+store.delete(C.CITY.SAVE_KEY);
+cek("Z9 MUAT (belum ada save): jujur 'Belum ada simpanan' + tombol Muat nonaktif",
+  (() => { C.tampilkanPanelMuat(); return C.document.getElementById("muatStatus").textContent.indexOf("Belum ada simpanan") === 0; })() &&
+  C.document.getElementById("btnMuatMuatkan").disabled === true &&
+  C.document.getElementById("muatNama").textContent === "—");
+C.sembunyikanPanelMuat();
+C.mulaiGame(true); // pulihkan simpanan untuk Z10
+C.kembaliKeMenuUtama();
+cek("Z10 kategori: klik chip Pendidikan -> kartu detail (gambar kartu-pendidikan.png)",
+  (() => { C.document.getElementById("menuKatPendidikan").onclick(); return C.document.getElementById("menuDetailKategori").style.display === "flex"; })() &&
+  C.document.getElementById("menuDetailJudul").textContent === "Pendidikan" &&
+  C.document.getElementById("menuDetailGambar").src.indexOf("kartu-pendidikan.png") !== -1);
+cek("Z10b kategori: 'Buka di Game' -> lanjutkan + drawer bangun tab Pendidikan terbuka",
+  (() => { C.document.getElementById("btnMenuDetailBuka").onclick(); return true; })() &&
+  C.document.getElementById("aplikasi").style.display === "flex" &&
+  vm.runInContext("kategoriBangun", sandbox) === "pendidikan" &&
+  !C.document.getElementById("menuBangun").classList.contains("tersembunyi"));
+C.kembaliKeMenuUtama();
+cek("Z11 kategori tanpa profil: masuk identitas + tab tertunda (bukan langsung main)",
+  (() => { vm.runInContext("profilPemain = null;", sandbox); C.menuMasukKategori("kesehatan"); return true; })() &&
+  C.document.getElementById("tahapIdentitas").style.display === "block" &&
+  vm.runInContext("menuKategoriTertunda", sandbox) === "kesehatan");
+vm.runInContext('profilPemain = { nama: "Sukma", gender: "wanita", avatar: AVATAR_KARAKTER.wanita, tutorialSelesai: true, dibuat: "2026-11-11T00:00:00.000Z" }; simpanProfil();', sandbox);
+C.tampilkanTahap("sinematik");
+cek("Z11b kembali ke sinematik membatalkan kategori tertunda",
+  vm.runInContext("menuKategoriTertunda", sandbox) === null);
+cek("Z12 ikon '?': klik membuka lalu menutup konten Cara bermain (nyata, bukan dekorasi)",
+  (() => { C.document.getElementById("btnMenuBantuan").onclick(); return C.document.getElementById("caraMain").open === true; })() &&
+  (() => { C.document.getElementById("btnMenuBantuan").onclick(); return C.document.getElementById("caraMain").open === false; })());
+cek("Z13 ikon header: gear -> tahap Pengaturan; profil -> tahap Profil (nama Sukma)",
+  (() => { C.document.getElementById("btnMenuPengaturan").onclick(); return C.document.getElementById("tahapPengaturan").style.display === "block"; })() &&
+  (() => { C.document.getElementById("btnMenuProfil").onclick(); return C.document.getElementById("tahapProfil").style.display === "block" && C.document.getElementById("profilNama").textContent === "Sukma"; })());
+C.tampilkanTahap("sinematik");
+cek("Z14 PERMAINAN BARU dua-ketuk: ketuk-1 konfirmasi (class, save utuh) -> ketuk-2 hapus save + narasi",
+  (() => { C.permainanBaru(); return vm.runInContext("konfirmasiBaru", sandbox) === true && C.document.getElementById("btnBaru").classList.contains("menu-konfirmasi") && store.has(C.CITY.SAVE_KEY); })() &&
+  (() => { C.permainanBaru(); return !store.has(C.CITY.SAVE_KEY) && C.document.getElementById("tahapNarasi").style.display === "block"; })());
+cek("Z15 KATEGORI_MENU: 7 entri, tiap tab ada di TAB_BANGUN, tiap ikon+kartu ada di disk",
+  (() => { const km = vm.runInContext("KATEGORI_MENU", sandbox); const tb = vm.runInContext("TAB_BANGUN", sandbox); return Array.isArray(km) && km.length === 7 && km.every(k => tb.some(t => t.id === k.tab) && fs.existsSync(ROOT + "/" + k.ikon) && fs.existsSync(ROOT + "/" + k.kartu)); })());
+cek("Z16 menu.css terpisah: selector menu-*, tombol crop, breakpoint tablet/portrait, tanpa ubah city.css",
+  menuCss.indexOf(".menu-btn-lanjutkan") !== -1 && menuCss.indexOf("tombol-lanjutkan-v1-kiri-ikon-polos.png") !== -1 &&
+  menuCss.indexOf("@media (max-width: 1400px)") !== -1 && menuCss.indexOf("@media (max-width: 1100px)") !== -1 &&
+  menuCss.indexOf("@media (max-width: 820px)") !== -1 && menuCss.indexOf("@media (max-height: 560px)") !== -1 &&
+  fs.readFileSync(ROOT + "/css/city.css", "utf8").indexOf("menu-btn") === -1);
+// Pulihkan keadaan akhir bersih (profil + simpanan + menu sinematik).
+C.mulaiGame(true);
+C.kembaliKeMenuUtama();
 
 // ---------------- Ringkasan ----------------
 console.log("\nHASIL v24: lulus " + lulus + ", gagal " + gagal);

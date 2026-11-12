@@ -6,6 +6,112 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v26 — Main Menu RISE OF MERANTI (2026-11-12)
+
+Restruktur layar mulai ke layout referensi (panorama full-screen,
+header partner + versi, logo RISE OF MERANTI, 5 tombol nav vertikal,
+panel promo kanan bawah, 7 kartu kategori bawah) — tanpa mengubah
+gameplay, save key, ekonomi, peta, atau sistem apa pun di dalam game.
+Semua tombol menu memanggil fungsi nyata; tidak ada tombol dekorasi.
+
+- **Struktur lama yang dipakai/dipertahankan.** Tahap
+  sinematik/identitas/narasi/profil/pengaturan + `tampilkanTahap()`,
+  `aturLayarMulai()`, `mulaiGame()`, `tampilkanProfil()`,
+  `resetProfil()`, `muat()`/`adaSave()`/`simpanProfil()` tetap utuh;
+  `btnMulai` dipertahankan sebagai entri "PERMAINAN BARU" saat BELUM
+  ada profil (→ identitas) dan `btnBaru` sebagai tombol yang sama
+  saat profil SUDAH ada (dua-ketuk hapus save → narasi) — hanya satu
+  yang tampil, ikut `aturLayarMulai()`, sehingga cek lama test13
+  (`btnMulai` tampil/sembunyi) tetap berlaku. `btnInstalMulai` tetap
+  memakai class/atribut persis seperti sebelumnya (cek v22-W7).
+  `css/city.css` TIDAK diubah (`.btnUtama`/`.kartuMulai` dipakai
+  bersama `#modalLevel`); semua gaya menu baru ada di `css/menu.css`
+  (dimuat setelah `city.css`), selector berawalan `menu-` /
+  `#tahapSinematik`.
+- **Tombol nav (visual = crop v1 `menu-buttons.png`, teks sudah di
+  dalam gambar; label teks tetap di DOM + `aria-label`).**
+  Dipilih v1 (ikon polos), bukan v2 (ikon dalam lingkaran bercahaya)
+  — v1 lebih bersih di ukuran tombol tablet. LANJUTKAN → 
+  `mulaiGame(false)`, sembunyi bila tidak ada simpanan (aturan lama);
+  PERMAINAN BARU → `permainanBaru()` (dua-ketuk lama; konfirmasi kini
+  overlay class `.menu-konfirmasi`, bukan `textContent`, supaya gambar
+  tombol tidak tertimpa teks); MUAT (baru) → `tampilkanPanelMuat()`
+  berisi detail simpanan NYATA dari `muat()` (pemimpin, level, hari,
+  penduduk, kas) + tombol "Muat Simpanan" → `mulaiGame(false)`; bila
+  belum ada simpanan, panel berkata jujur "Belum ada simpanan" dan
+  tombol Muat nonaktif; PROFIL → `tampilkanProfil()`; PENGATURAN →
+  `tampilkanTahap("pengaturan")`.
+- **Header (jujur).** Kiri: `partner-logos.png` utuh (kedua logo +
+  separator sudah di dalam gambar). Kanan: pill versi = TEKS dari
+  `VERSI_GAME` (diisi `aturLayarMulai()`), bukan crop pil "v2.4.2";
+  ikon "?" → `menuToggleBantuan()` membuka/menutup konten "Cara
+  bermain" yang nyata (`<details id="caraMain">`); ikon profil →
+  `tampilkanProfil()`; gear → `tampilkanTahap("pengaturan")`.
+  TIDAK ADA pill Google Save / Sinkron Cloud (tidak ada integrasi
+  Google / sinkron cloud di kode — grep 0 hit), TIDAK ADA trofi
+  (tidak ada sistem achievement — grep 0 hit), TIDAK ADA lonceng di
+  menu (berita hanya in-game, panel kiri "berita" dari `S.log`;
+  di menu `S` belum ada), TIDAK ADA pil status palsu
+  (Menyimpan/Tersimpan/Offline/Perlu Login Ulang). Ikon profil +
+  gear mengikuti aturan lama: sembunyi bila belum ada profil.
+- **Kategori bawah (7).** Chip bergambar crop `kategori-*.png`
+  (label sudah di dalam gambar). Klik chip membuka kartu detail
+  (`menuPilihKategori()` — gambar `kartu-*.png` + deskripsi +
+  tombol "Buka di Game"); "Buka di Game" → `menuMasukKategori()`:
+  ada simpanan → `mulaiGame(false)` lalu `bukaMenuBangunUntuk(tab)`;
+  belum ada profil/simpanan → alur identitas/bar baru dan tab
+  dibuka begitu permainan dimulai (`menuKategoriTertunda`, dibatalkan
+  bila kembali ke sinematik). Pemetaan ke `TAB_BANGUN`:
+  Infrastruktur→jalan, Ekonomi→komersial, Masyarakat→permukiman,
+  Pendidikan→pendidikan, Kesehatan→kesehatan, Lingkungan→lingkungan,
+  Transportasi→transportasi. `category-cards.png` dipakai di kartu
+  detail ini (bukan di menu utama) — lembar arsipnya tidak
+  ditampilkan utuh.
+- **Background & promo.** Background = `menu-background.jpg`
+  (445 KB, kualitas 90) sebagai pengganti `menu-background.png`
+  (2,4 MB, foto 5,4× lebih besar tanpa manfaat visual); PNG hanya
+  cadangan lokal, tidak di-precache. Ken Burns halus dari city.css
+  dipertahankan. Promo kanan bawah: `promo-mini-city.png` +
+  "BANGUN, KELOLA, DAN MAJUKAN MERANTI" + deskripsi sesuai brief.
+- **Responsive.** Breakpoint nyata: 1920×1080, 1366×768/1280×800
+  (`max-width: 1400px`), 1024×768 (`max-width: 1100px`), portrait
+  phone (`max-width: 820px` — promo jadi bagian alur, kategori bisa
+  digeser horizontal, detail jadi lembar bawah), layar pendek
+  (`max-height: 560px` — promo disembunyikan karena hanya materi
+  pemasaran). Tombol min 44px (tinggi tombol nav ~70–89px).
+- **Refs:** `VERSI_GAME "v26"`; `css/menu.css?v=1` (baru, setelah
+  `city.css?v=18`); `city.js?v=38`; modul lain tidak berubah; SW
+  cache `meranti-rising-v26` + precache 26 aset menu yang dipakai.
+
+### Hasil tes headless v26
+
+Suite: `node tests/test24.js` — **236 cek, 0 gagal** (216 lama + 20
+baru seksi Z: struktur DOM, kejujuran header, 26 aset di disk +
+format RGBA/JPG, precache SW, save key, wiring LANJUTKAN/MUAT/
+kategori/bantuan/ikon header/PERMAINAN BARU dua-ketuk, `menu.css`
+terpisah), 3 run. `node tests/test13.js` — **TEST_V13_OK**, 3 run
+(jumlah cek sama dengan v25, 1270 — tidak ada cek yang
+ditambah/dihapus; hanya pin versi v25→v26, `city.js?v=37`→`v38`, dan
+1 cek logo ditulis ulang ke logo menu baru). `node
+tests/test-suara.js` — **TEST_SUARA_OK** (28 cek), 2 run. Tidak ada
+cek flaky baru di 8 run ini.
+
+### Batas jujur v26
+
+| Batas | Keterangan |
+| --- | --- |
+| Verifikasi visual live BELUM dilakukan | Subagent tidak bisa memakai browser live; di VM ini tidak ada Chromium/Firefox/Playwright (`which` kosong). Yang terverifikasi: struktur DOM + wiring headless (seksi Z), aset di disk + format/transparansi logo (alpha RGBA 2172×724), HTML lolos parser tanpa tag tak tertutup / id duplikat, dan matematika layout statis (nav 400px, 7 chip × 104px + gap muat di 1920/1280/1024). Tampilan nyata (apakah logo/tombol/promo/kategori sejajar seperti referensi, apakah panorama tidak tertutup panel, apakah tidak ada overflow di tablet) HANYA bisa dinilai cek live — lihat daftar cek live di bawah. |
+| Daftar cek live untuk agen induk | (1) Buka menu 1920×1080: header partner kiri + pill "v26" + ikon ?, profil, gear kanan; logo RISE OF MERANTI utuh di atas nav; 5 tombol vertikal (LANJUTKAN lime + glow paling menonjol); promo kanan bawah tidak menumpuk tombol; 7 kategori sejajar di bawah tanpa overflow. (2) Tablet landscape 1280×800 & 1024×768: komposisi sama, proporsional (bukan sekadar mengecil); tombol mudah disentuh; tanpa horizontal overflow. (3) Portrait phone: promo di bawah nav, kategori bisa digeser horizontal. (4) Klik tiap tombol: LANJUTKAN (ada/tidak ada save), PERMAINAN BARU (tanpa profil → identitas; dengan profil + save → konfirmasi dua-ketuk → narasi), MUAT (dengan save → detail benar + Muat masuk game; tanpa save → "Belum ada simpanan" + tombol nonaktif), PROFIL, PENGATURAN, ikon ? (buka/tutup Cara bermain), ikon profil/gear. (5) Klik chip kategori → kartu detail muncul (gambar kartu + deskripsi) → "Buka di Game" masuk game + drawer bangun terbuka di tab yang benar; tanpa profil → identitas dulu lalu tab terbuka setelah mulai. (6) Console: tanpa error; SW cache baru `meranti-rising-v26` terinstal; aset menu termuat (Network tanpa 404). (7) Mainkan sebentar lalu kembali ke menu: menu tampil normal, LANJUTKAN tetap berfungsi. |
+| Header tanpa Google Save / Sinkron Cloud / trofi / lonceng | Bukan kekurangan tampilan — fitur itu memang belum ada di game (tidak ada integrasi Google, sinkron cloud, sistem achievement, atau berita di menu). Menampilkannya akan menjadi klaim palsu. |
+| MUAT selalu tampil bila ada profil | Sengaja: tombolnya tampil agar pengguna bisa melihat status simpanan; yang jujur adalah isi panelnya (detail nyata vs "Belum ada simpanan" + tombol nonaktif). LANJUTKAN tetap sembunyi bila tidak ada simpanan. |
+| Tombol nav memakai gambar (teks di dalam crop) | Teks tombol tidak bisa diubah via CSS/`textContent` (mis. konfirmasi PERMAINAN BARU memakai overlay, bukan ganti teks). Bila teks tombol perlu diubah, aset crop harus diregenerasi. |
+| Logo lama `logo-meranti-rising.png` | Tetap ada di repo + precache SW (1,9 MB) meski tidak lagi dipakai di layar mulai; aturan CSS `.logoUtama` di `city.css` juga tetap ada (tak terpakai). Sengaja tidak dihapus di v26 (aman dihapus di rilis berikut bila diputuskan). |
+| `menu-background.png` (2,4 MB) & 4 lembar arsip | Hanya cadangan/arsip lokal, tidak dipakai game dan tidak di-precache; tidak perlu diupload. Background aktif adalah JPG. |
+| Promo hilang di layar sangat pendek | Di tinggi viewport <560px (mis. HP landscape) panel promo disembunyikan agar tidak menumpuk nav/kategori; promo hanya materi pemasaran, bukan fungsi. |
+| Kategori Infrastruktur → tab Jalan | Pemetaan jujur yang paling dekat: tidak ada tab bangun bernama "Infrastruktur" di `TAB_BANGUN`; jalan + jembatan adalah infrastruktur dasar. Deskripsi kartu menjelaskannya. |
+| Musik `musik-melayu-2/3.mp3` masih hilang | Batas lama dari v23/v24.2, tidak disentuh v26 (fallback playlist tetap jalan). |
+| Flaky lama test13 (1 dari 20 run di v25) | Tidak terulang di 8 run v26 (3× test13 hijau); penyebabnya tetap belum terbukti (lihat batas v25). |
+
 ## Yang baru di v25 — Armada Kendaraan (2026-11-12)
 
 Perbaikan orientasi kendaraan + 9 tipe kendaraan baru dengan sprite (ambulans yang sudah ada kini bersprite)

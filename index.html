@@ -16,43 +16,107 @@
 <link rel="icon" type="image/png" sizes="48x48" href="assets/icons/favicon-48.png">
 <link rel="shortcut icon" href="assets/icons/favicon-32.png">
 <link rel="stylesheet" href="css/city.css?v=18">
+<link rel="stylesheet" href="css/menu.css?v=1">
 </head>
 <body>
-<!-- Layar mulai: pembuka sinematik MERANTI RISING (v20: main menu ala game PC/console) -->
+<!-- Layar mulai: pembuka sinematik MERANTI RISING (v20: main menu ala game PC/console; v26: layout RISE OF MERANTI — panorama + header + logo + 5 tombol nav + promo + 7 kategori, lihat css/menu.css) -->
 <div id="layarMulai">
-  <div class="latarSinematik"><img src="assets/images/pembuka-meranti.webp" alt="Kepulauan Meranti yang masih alami"></div>
+  <div class="latarSinematik"><img src="assets/menu/menu-background.jpg" alt="Panorama Kepulauan Meranti — jembatan, laut, dan kota Selatpanjang"></div>
   <div class="awanSinematik awan1"></div>
   <div class="awanSinematik awan2"></div>
   <div class="ombakSinematik"></div>
-  <!-- Tahap 1: sinematik -->
+  <!-- Tahap 1: sinematik — menu utama v26 -->
   <div id="tahapSinematik" class="kartuMulai">
-    <!-- v22-W7: logo resmi (gambar sudah memuat judul "MERANTI RISING"
-         + tagline "AYO MEMBANGUN MERANTI!") — menggantikan logo SVG +
-         h1 + tagline teks agar tidak ada duplikasi judul. -->
-    <img class="logoUtama" src="assets/images/logo-meranti-rising.png" alt="MERANTI RISING — Ayo Membangun Meranti!">
-    <p class="subMulai">Island City Builder · Simulasi Ekonomi · Peradaban Kepulauan Meranti</p>
-    <p id="sambutanKembali" class="sambutanKembali" style="display:none"></p>
-    <div class="tombolMulai">
-      <button id="btnMulai" class="btnUtama">▶ MULAI PERMAINAN</button>
-      <button id="btnLanjut" class="btnUtama">▶ LANJUTKAN PERMAINAN</button>
-      <button id="btnBaru" class="btnUtama sekunder">＋ PERMAINAN BARU</button>
-      <button id="btnProfil" class="btnUtama sekunder"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.5 3.5-5 7-5s6.2 1.5 7 5"/></svg> PROFIL PEMAIN</button>
-      <button id="btnPengaturanMulai" class="btnUtama sekunder">⚙️ PENGATURAN</button>
-      <!-- v22-W7: tombol instal PWA — display:none secara default, hanya
-           muncul saat event beforeinstallprompt datang (lihat city.js). -->
-      <button id="btnInstalMulai" class="btnUtama sekunder" style="display:none">⬇ INSTAL APLIKASI</button>
+    <div class="menu-overlay" aria-hidden="true"></div>
+    <div class="menu-layar">
+      <!-- Header v26: kiri logo partner, kanan pill versi (teks dari VERSI_GAME) + ikon BERFUNGSI. TIDAK ADA pill sinkronisasi awan / penyimpanan akun Google / status simpan palsu / piala pencapaian — belum ada integrasinya di game (lihat README v26). Lonceng berita juga TIDAK ada di menu — berita hanya in-game (panelKiri "berita", dari S.log). -->
+      <header class="menu-header">
+        <div class="menu-partner"><img src="assets/menu/partner-logos.png" alt="KEDAI MEDIA — kedaimedia.com, dan MALAKA DIGITAL HUB"></div>
+        <div class="menu-header-kanan">
+          <span id="menuPillVersi" class="menu-pill-versi">v26</span>
+          <button id="btnMenuBantuan" type="button" class="menu-ikon-btn" title="Cara bermain" aria-label="Cara bermain"><img src="assets/menu/crop/header-ikon-lingkaran-bantuan-kecil.png" alt=""></button>
+          <button id="btnMenuProfil" type="button" class="menu-ikon-btn" title="Profil Pemain" aria-label="Profil Pemain"><img src="assets/menu/crop/header-ikon-lingkaran-profil-besar.png" alt=""></button>
+          <button id="btnMenuPengaturan" type="button" class="menu-ikon-btn" title="Pengaturan" aria-label="Pengaturan"><img src="assets/menu/crop/header-ikon-lingkaran-pengaturan-kecil.png" alt=""></button>
+        </div>
+      </header>
+      <div class="menu-utama">
+        <div class="menu-kiri">
+          <!-- v26: logo game baru (gambar sudah memuat judul "RISE OF MERANTI" + tagline) — JANGAN tambah teks judul via CSS. Logo lama assets/images/logo-meranti-rising.png tetap ada di repo + precache SW. -->
+          <img class="menu-logo" src="assets/menu/logo-rise-of-meranti.png" alt="RISE OF MERANTI — City, People, Prosperity">
+          <p class="subMulai">Island City Builder · Simulasi Ekonomi · Peradaban Kepulauan Meranti</p>
+          <p id="sambutanKembali" class="sambutanKembali" style="display:none"></p>
+          <!-- 5 tombol nav v26: visual = crop tombol v1 (teks sudah di dalam gambar; label teks disembunyikan visual tapi tetap di DOM + aria-label). btnMulai = entri "PERMAINAN BARU" saat BELUM ada profil (→ identitas); btnBaru = tombol yang sama saat profil SUDAH ada (dua-ketuk hapus save → narasi). Hanya satu yang tampil — ikut aturLayarMulai(). -->
+          <nav class="menu-nav" aria-label="Menu utama">
+            <button id="btnLanjut" type="button" class="menu-btn menu-btn-lanjutkan" aria-label="Lanjutkan Permainan"><span class="menu-btn-label">Lanjutkan Permainan</span></button>
+            <button id="btnMulai" type="button" class="menu-btn menu-btn-baru" aria-label="Permainan Baru"><span class="menu-btn-label">Permainan Baru</span></button>
+            <button id="btnBaru" type="button" class="menu-btn menu-btn-baru" aria-label="Permainan Baru"><span class="menu-btn-label">Permainan Baru</span><span class="menu-btn-konfirmasi" aria-hidden="true">Yakin? Ketuk lagi — simpanan lama dihapus</span></button>
+            <button id="btnMuat" type="button" class="menu-btn menu-btn-muat" aria-label="Muat Permainan"><span class="menu-btn-label">Muat Permainan</span></button>
+            <button id="btnProfil" type="button" class="menu-btn menu-btn-profil" aria-label="Profil Pemain"><span class="menu-btn-label">Profil Pemain</span></button>
+            <button id="btnPengaturanMulai" type="button" class="menu-btn menu-btn-pengaturan" aria-label="Pengaturan"><span class="menu-btn-label">Pengaturan</span></button>
+            <!-- v22-W7: tombol instal PWA — display:none secara default, hanya
+                 muncul saat event beforeinstallprompt datang (lihat city.js). -->
+            <button id="btnInstalMulai" class="btnUtama sekunder" style="display:none">⬇ INSTAL APLIKASI</button>
+          </nav>
+          <!-- Panel MUAT v26: detail simpanan nyata dari muat(); bila belum ada simpanan, tampil jujur + tombol Muat nonaktif. -->
+          <div id="menuPanelMuat" class="menu-panel-muat" style="display:none">
+            <h3>Muat Permainan</h3>
+            <p id="muatStatus" class="menu-muat-status"></p>
+            <dl class="menu-muat-detail">
+              <div><dt>Pemimpin</dt><dd id="muatNama">—</dd></div>
+              <div><dt>Level</dt><dd id="muatLevel">—</dd></div>
+              <div><dt>Hari</dt><dd id="muatHari">—</dd></div>
+              <div><dt>Penduduk</dt><dd id="muatPenduduk">—</dd></div>
+              <div><dt>Kas</dt><dd id="muatUang">—</dd></div>
+            </dl>
+            <div class="menu-muat-tombol">
+              <button id="btnMuatMuatkan" type="button" class="menu-muat-muatkan">▶ Muat Simpanan</button>
+              <button id="btnMuatTutup" type="button" class="menu-muat-tutup">Tutup</button>
+            </div>
+          </div>
+          <p id="infoSave" class="infoSave"></p>
+          <details id="caraMain" class="caraMain">
+            <summary>Cara bermain</summary>
+            <span>🖱️ Seret peta untuk menggeser · roda mouse untuk zoom</span>
+            <span>👆 Di HP/tablet: seret 1 jari untuk menggeser · cubit 2 jari untuk zoom · geser 2 jari untuk menggeser saat zoom</span>
+            <span>🏠 Pilih bangunan di menu bawah, lalu ketuk lokasi di peta (ketuk 2× untuk membangun — ketukan pertama hanya pratinjau)</span>
+            <span>🛣️ Bangunan butuh jalan di sampingnya · jembatan hanya di atas air</span>
+            <span>👷 Bangunan butuh pekerja — penduduk tumbuh bila ada rumah &amp; layanan</span>
+            <span>⏱️ 1 hari game = 48 menit nyata · tombol ⏸ / 0.5× / 1× / 2× di kanan bawah untuk jeda &amp; percepat waktu</span>
+            <span>⏸️ Spasi / P = jeda · Esc = batal</span>
+          </details>
+        </div>
+      </div>
+      <!-- Panel promo v26 kanan bawah: gambar kota mini + teks (judul + deskripsi sesuai brief). -->
+      <aside class="menu-promo" aria-label="Tentang MERANTI RISING">
+        <img class="menu-promo-gambar" src="assets/menu/promo-mini-city.png" alt="Kota mini Kepulauan Meranti">
+        <div class="menu-promo-teks">
+          <h2>BANGUN, KELOLA, DAN MAJUKAN MERANTI</h2>
+          <p>Game simulasi pembangunan kepulauan untuk melatih kepemimpinan, strategi, ekonomi, dan pengelolaan daerah.</p>
+        </div>
+      </aside>
+      <!-- 7 kategori v26: chip bergambar (label sudah di dalam gambar crop) — klik membuka kartu detail (gambar kartu-*.png + tombol "Buka di Game"), bukan dekorasi. -->
+      <nav class="menu-kategori" aria-label="Kategori pembangunan">
+        <button id="menuKatInfrastruktur" type="button" class="menu-kat" aria-label="Infrastruktur"><img src="assets/menu/crop/kategori-infrastruktur.png" alt=""></button>
+        <button id="menuKatEkonomi" type="button" class="menu-kat" aria-label="Ekonomi"><img src="assets/menu/crop/kategori-ekonomi.png" alt=""></button>
+        <button id="menuKatMasyarakat" type="button" class="menu-kat" aria-label="Masyarakat"><img src="assets/menu/crop/kategori-masyarakat.png" alt=""></button>
+        <button id="menuKatPendidikan" type="button" class="menu-kat" aria-label="Pendidikan"><img src="assets/menu/crop/kategori-pendidikan.png" alt=""></button>
+        <button id="menuKatKesehatan" type="button" class="menu-kat" aria-label="Kesehatan"><img src="assets/menu/crop/kategori-kesehatan.png" alt=""></button>
+        <button id="menuKatLingkungan" type="button" class="menu-kat" aria-label="Lingkungan"><img src="assets/menu/crop/kategori-lingkungan.png" alt=""></button>
+        <button id="menuKatTransportasi" type="button" class="menu-kat" aria-label="Transportasi"><img src="assets/menu/crop/kategori-transportasi.png" alt=""></button>
+      </nav>
     </div>
-    <p id="infoSave" class="infoSave"></p>
-    <details class="caraMain">
-      <summary>Cara bermain</summary>
-      <span>🖱️ Seret peta untuk menggeser · roda mouse untuk zoom</span>
-      <span>👆 Di HP/tablet: seret 1 jari untuk menggeser · cubit 2 jari untuk zoom · geser 2 jari untuk menggeser saat zoom</span>
-      <span>🏠 Pilih bangunan di menu bawah, lalu ketuk lokasi di peta (ketuk 2× untuk membangun — ketukan pertama hanya pratinjau)</span>
-      <span>🛣️ Bangunan butuh jalan di sampingnya · jembatan hanya di atas air</span>
-      <span>👷 Bangunan butuh pekerja — penduduk tumbuh bila ada rumah &amp; layanan</span>
-      <span>⏱️ 1 hari game = 48 menit nyata · tombol ⏸ / 0.5× / 1× / 2× di kanan bawah untuk jeda &amp; percepat waktu</span>
-      <span>⏸️ Spasi / P = jeda · Esc = batal</span>
-    </details>
+    <!-- Kartu detail kategori v26 (gambar kartu-*.png): muncul saat chip kategori diketuk. -->
+    <div id="menuDetailKategori" class="menu-detail-kategori" style="display:none" role="dialog" aria-label="Detail kategori">
+      <img id="menuDetailGambar" src="assets/menu/crop/kartu-infrastruktur.png" alt="">
+      <div class="menu-detail-isi">
+        <h3 id="menuDetailJudul">Infrastruktur</h3>
+        <p id="menuDetailDes"></p>
+        <div class="menu-detail-tombol">
+          <button id="btnMenuDetailBuka" type="button" class="menu-detail-buka">Buka di Game</button>
+          <button id="btnMenuDetailTutup" type="button" class="menu-detail-tutup">Tutup</button>
+        </div>
+      </div>
+    </div>
   </div>
   <!-- Tahap 2: identitas pemain -->
   <div id="tahapIdentitas" class="kartuMulai" style="display:none">
@@ -398,7 +462,7 @@
 <script src="js/city-bubble.js?v=2"></script>
 <script src="js/city-diagnostik.js?v=2"></script>
 <script src="js/city-advisor.js?v=3"></script>
-<script src="js/city.js?v=37"></script>
+<script src="js/city.js?v=38"></script>
 <script src="js/city-tutorial.js?v=1"></script>
 <script src="js/city-ui-v24.js?v=3"></script>
 </body>

@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v25"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v26"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -5478,6 +5478,9 @@ function mulaiGame(baru) {
   // city-suara.js tidak termuat).
   if (typeof Suara !== "undefined") Suara.init(keadaanSuara);
   if (typeof Suara !== "undefined") { bunyiAktif = !Suara.pengaturan.mute; aturIkonSuara(); }
+  // v26: kategori menu yang dipilih sebelum alur identitas/bar baru —
+  // buka drawer bangun pada tab itu begitu permainan dimulai.
+  if (menuKategoriTertunda) { const t = menuKategoriTertunda; menuKategoriTertunda = null; try { bukaMenuBangunUntuk(t); } catch (e) {} }
   bunyiSukses();
 }
 // =====================================================================
@@ -5708,22 +5711,31 @@ window.addEventListener("DOMContentLoaded", () => {
   $("btnMulaiNarasi").onclick = () => { bunyiKlik(); mulaiGame(true); };
   // Lanjutkan / permainan baru / profil
   $("btnLanjut").onclick = () => { bunyiKlik(); mulaiGame(false); };
-  $("btnBaru").onclick = () => {
-    // Tanpa dialog confirm() (tidak muncul di sebagian browser/HP):
-    // ketuk sekali = minta konfirmasi, ketuk kedua = jalankan.
-    if (adaSave() && !konfirmasiBaru) {
-      konfirmasiBaru = true;
-      $("btnBaru").textContent = "Yakin? Simpanan lama dihapus";
-      toast("Ketuk ＋ Permainan Baru lagi untuk mengonfirmasi.", "ok");
-      setTimeout(() => { konfirmasiBaru = false; $("btnBaru").textContent = "＋ PERMAINAN BARU"; }, 5000);
-      return;
-    }
-    konfirmasiBaru = false;
-    $("btnBaru").textContent = "＋ PERMAINAN BARU";
-    try { localStorage.removeItem(CITY.SAVE_KEY); } catch (e) {}
-    bunyiKlik();
-    tampilkanTahap("narasi"); // profil sudah ada — langsung ke narasi, tanpa isi nama lagi
-  };
+  // v26: btnBaru → permainanBaru() (dua-ketuk lama, overlay class);
+  // btnMulai (tanpa profil) → identitas. MUAT → panel detail simpanan.
+  $("btnBaru").onclick = () => permainanBaru();
+  const bmuat = $("btnMuat");
+  if (bmuat) bmuat.onclick = () => { bunyiKlik(); tampilkanPanelMuat(); };
+  const bmm = $("btnMuatMuatkan");
+  if (bmm) bmm.onclick = () => { bunyiKlik(); mulaiGame(false); };
+  const bmt = $("btnMuatTutup");
+  if (bmt) bmt.onclick = () => { bunyiKlik(); sembunyikanPanelMuat(); };
+  // v26: ikon header — bantuan (konten caraMain nyata), profil, pengaturan.
+  const bmb = $("btnMenuBantuan");
+  if (bmb) bmb.onclick = () => menuToggleBantuan();
+  const bmpH = $("btnMenuProfil");
+  if (bmpH) bmpH.onclick = () => { bunyiKlik(); tampilkanProfil(); };
+  const bmgH = $("btnMenuPengaturan");
+  if (bmgH) bmgH.onclick = () => { bunyiKlik(); tampilkanTahap("pengaturan"); };
+  // v26: 7 chip kategori → kartu detail (bukan langsung masuk game).
+  for (const k of KATEGORI_MENU) {
+    const el = $("menuKat" + k.kunci);
+    if (el) el.onclick = () => { bunyiKlik(); menuPilihKategori(k.id); };
+  }
+  const bmdb = $("btnMenuDetailBuka");
+  if (bmdb) bmdb.onclick = () => { bunyiKlik(); menuMasukKategori(menuKategoriTerpilih); };
+  const bmdt = $("btnMenuDetailTutup");
+  if (bmdt) bmdt.onclick = () => { bunyiKlik(); sembunyikanDetailKategori(); };
   $("btnProfil").onclick = () => { bunyiKlik(); tampilkanProfil(); };
   $("btnTutupProfil").onclick = () => { bunyiKlik(); tampilkanTahap("sinematik"); };
   // v21 Worker 5 (cacat 14): Pengaturan di layar mulai + hapus profil
@@ -5779,6 +5791,9 @@ function tampilkanTahap(nama) {
   if (nama === "pengaturan") tandaiDensity();
   if (nama === "pengaturan") perbaruiTombolPWA(); // v22-W7: segarkan tombol fullscreen/instal/update
   if (nama === "pengaturan") sinkronSuaraMulai();
+  // v26: kembali ke sinematik membatalkan kategori tertunda (pengguna
+  // memilih keluar dari alur identitas/bar baru lewat "Kembali").
+  if (nama === "sinematik") menuKategoriTertunda = null;
   if (nama === "sinematik") aturLayarMulai();
 }
 // v20: kembali ke menu utama — simpan dulu, sembunyikan aplikasi,
@@ -5888,17 +5903,151 @@ function resetProfil() {
   tutupSemuaPanel();
   kembaliKeMenuUtama();
 }
+// ---------------- Menu utama v26: RISE OF MERANTI ----------------
+// 7 kategori bawah menu (label + gambar dari crop category-icons /
+// category-cards). `tab` = id TAB_BANGUN (js/city-data.js) yang dibuka
+// di drawer bangun saat pengguna masuk game lewat kartu detail.
+// Klik chip HANYA membuka kartu detail (menuPilihKategori) — masuk
+// game terjadi lewat tombol "Buka di Game" (menuMasukKategori).
+const KATEGORI_MENU = [
+  { id: "infrastruktur", kunci: "Infrastruktur", nama: "Infrastruktur", tab: "jalan", ikon: "assets/menu/crop/kategori-infrastruktur.png", kartu: "assets/menu/crop/kartu-infrastruktur.png", des: "Jalan, jembatan, dan jaringan dasar kota. Membuka tab Jalan di menu bangun." },
+  { id: "ekonomi", kunci: "Ekonomi", nama: "Ekonomi", tab: "komersial", ikon: "assets/menu/crop/kategori-ekonomi.png", kartu: "assets/menu/crop/kartu-ekonomi.png", des: "Pasar, toko, dan kantor dagang. Membuka tab Komersial di menu bangun." },
+  { id: "masyarakat", kunci: "Masyarakat", nama: "Masyarakat", tab: "permukiman", ikon: "assets/menu/crop/kategori-masyarakat.png", kartu: "assets/menu/crop/kartu-masyarakat.png", des: "Rumah warga dan permukiman. Membuka tab Permukiman di menu bangun." },
+  { id: "pendidikan", kunci: "Pendidikan", nama: "Pendidikan", tab: "pendidikan", ikon: "assets/menu/crop/kategori-pendidikan.png", kartu: "assets/menu/crop/kartu-pendidikan.png", des: "Sekolah hingga universitas. Membuka tab Pendidikan di menu bangun." },
+  { id: "kesehatan", kunci: "Kesehatan", nama: "Kesehatan", tab: "kesehatan", ikon: "assets/menu/crop/kategori-kesehatan.png", kartu: "assets/menu/crop/kartu-kesehatan.png", des: "Puskesmas dan rumah sakit. Membuka tab Kesehatan di menu bangun." },
+  { id: "lingkungan", kunci: "Lingkungan", nama: "Lingkungan", tab: "lingkungan", ikon: "assets/menu/crop/kategori-lingkungan.png", kartu: "assets/menu/crop/kartu-lingkungan.png", des: "Taman, penghijauan, dan kebersihan kota. Membuka tab Lingkungan di menu bangun." },
+  { id: "transportasi", kunci: "Transportasi", nama: "Transportasi", tab: "transportasi", ikon: "assets/menu/crop/kategori-transportasi.png", kartu: "assets/menu/crop/kartu-transportasi.png", des: "Pelabuhan, feri, dan angkutan umum. Membuka tab Transportasi di menu bangun." },
+];
+let menuKategoriTerpilih = null; // id KATEGORI_MENU yang kartu detailnya sedang tampil
+let menuKategoriTertunda = null; // tab TAB_BANGUN yang dibuka begitu mulaiGame selesai (alur identitas/bar baru)
+// PERMAINAN BARU (v26: logika btnBaru lama, dipindah ke fungsi bernama
+// supaya bisa dites): dua-ketuk tanpa dialog confirm — ketuk sekali =
+// minta konfirmasi (overlay .menu-konfirmasi di tombol, BUKAN
+// textContent — teks tombol ada di dalam gambar crop), ketuk kedua =
+// hapus simpanan lalu ke narasi. Tanpa simpanan langsung ke narasi.
+function permainanBaru() {
+  if (adaSave() && !konfirmasiBaru) {
+    konfirmasiBaru = true;
+    const b = $("btnBaru");
+    if (b && b.classList) b.classList.add("menu-konfirmasi");
+    toast("Ketuk Permainan Baru lagi untuk mengonfirmasi.", "ok");
+    setTimeout(() => { konfirmasiBaru = false; const b2 = $("btnBaru"); if (b2 && b2.classList) b2.classList.remove("menu-konfirmasi"); }, 5000);
+    return;
+  }
+  konfirmasiBaru = false;
+  const b = $("btnBaru");
+  if (b && b.classList) b.classList.remove("menu-konfirmasi");
+  try { localStorage.removeItem(CITY.SAVE_KEY); } catch (e) {}
+  bunyiKlik();
+  tampilkanTahap("narasi"); // profil sudah ada — langsung ke narasi, tanpa isi nama lagi
+}
+// Panel MUAT (v26): isi dari muat() — data simpanan NYATA (bukan
+// contoh). Bila belum ada simpanan / simpanan rusak: tampil jujur +
+// tombol Muat nonaktif.
+function tampilkanPanelMuat() {
+  const panel = $("menuPanelMuat");
+  if (!panel) return;
+  sembunyikanDetailKategori();
+  const s = muat(); // null bila belum ada simpanan / simpanan rusak
+  const isi = (id, v) => { const el = $(id); if (el) el.textContent = v; };
+  isi("muatNama", s ? ((s.pemimpin && s.pemimpin.nama) || (profilPemain ? profilPemain.nama : "—")) : "—");
+  isi("muatLevel", s ? ("Lv. " + s.level) : "—");
+  isi("muatHari", s ? ("Hari " + s.hari) : "—");
+  isi("muatPenduduk", s && s.penduduk && typeof s.penduduk.total === "number" ? (s.penduduk.total + " jiwa") : "—");
+  isi("muatUang", s ? rp(s.uang) : "—");
+  const st = $("muatStatus");
+  if (st) st.textContent = s ? "Simpanan ditemukan — lanjutkan pembangunan pulau Anda." : "Belum ada simpanan — mulai pulau baru dulu.";
+  const tombol = $("btnMuatMuatkan");
+  if (tombol) tombol.disabled = !s;
+  panel.hidden = false;
+  panel.style.display = "block";
+}
+function sembunyikanPanelMuat() {
+  const panel = $("menuPanelMuat");
+  if (!panel) return;
+  panel.hidden = true;
+  panel.style.display = "none";
+}
+// Ikon "?" di header (v26): buka/tutup konten "Cara bermain" yang
+// nyata (<details id="caraMain">) — bukan halaman bantuan dekoratif.
+function menuToggleBantuan() {
+  const cm = $("caraMain");
+  if (!cm) return;
+  cm.open = !cm.open;
+  if (cm.open && typeof cm.scrollIntoView === "function") { try { cm.scrollIntoView({ block: "nearest" }); } catch (e) {} }
+  bunyiKlik();
+}
+// Kartu detail kategori (v26): isi dari KATEGORI_MENU + gambar
+// kartu-*.png. Chip sendiri tidak langsung masuk game.
+function menuPilihKategori(idKategori) {
+  const kat = KATEGORI_MENU.find(k => k.id === idKategori) || null;
+  if (!kat) return;
+  sembunyikanPanelMuat();
+  menuKategoriTerpilih = kat.id;
+  for (const k of KATEGORI_MENU) {
+    const el = $("menuKat" + k.kunci);
+    if (el && el.classList) el.classList.toggle("menu-kat-aktif", k.id === kat.id);
+  }
+  const gbr = $("menuDetailGambar");
+  if (gbr) gbr.src = kat.kartu;
+  const jdl = $("menuDetailJudul");
+  if (jdl) jdl.textContent = kat.nama;
+  const des = $("menuDetailDes");
+  if (des) des.textContent = kat.des;
+  const panel = $("menuDetailKategori");
+  if (panel) panel.style.display = "flex";
+}
+function sembunyikanDetailKategori() {
+  menuKategoriTerpilih = null;
+  for (const k of KATEGORI_MENU) {
+    const el = $("menuKat" + k.kunci);
+    if (el && el.classList) el.classList.remove("menu-kat-aktif");
+  }
+  const panel = $("menuDetailKategori");
+  if (panel) panel.style.display = "none";
+}
+// Masuk game dari kartu detail kategori (v26): bila ada simpanan,
+// lanjutkan lalu buka drawer bangun pada tab kategori itu; bila belum
+// ada profil/simpanan, arahkan ke alur identitas/bar baru dan buka
+// tab itu begitu permainan dimulai (menuKategoriTertunda).
+function menuMasukKategori(idKategori) {
+  const kat = KATEGORI_MENU.find(k => k.id === idKategori) || null;
+  if (!kat) return;
+  sembunyikanDetailKategori();
+  if (!profilPemain) { menuKategoriTertunda = kat.tab; tampilkanTahap("identitas"); return; }
+  if (!adaSave()) { menuKategoriTertunda = kat.tab; tampilkanTahap("narasi"); return; }
+  mulaiGame(false);
+  if ($("aplikasi") && $("aplikasi").style.display === "flex") bukaMenuBangunUntuk(kat.tab);
+}
 // Atur tombol layar mulai sesuai profil & simpanan (profil tidak ditanya ulang)
 function aturLayarMulai() {
   const adaProfil = !!profilPemain;
+  const adaSimpanan = adaSave();
+  // v26: btnMulai = entri PERMAINAN BARU saat BELUM ada profil (→
+  // identitas); btnBaru = tombol yang sama saat profil SUDAH ada.
+  // Hanya satu yang tampil — cek lama test13 (btnMulai) tetap berlaku.
   $("btnMulai").style.display = adaProfil ? "none" : "inline-block";
-  $("btnLanjut").style.display = (adaProfil && adaSave()) ? "inline-block" : "none";
+  $("btnLanjut").style.display = (adaProfil && adaSimpanan) ? "inline-block" : "none";
   $("btnBaru").style.display = adaProfil ? "inline-block" : "none";
+  // v26: MUAT selalu tampil bila ada profil (panelnya yang berkata
+  // jujur bila belum ada simpanan); LANJUTKAN tetap sembunyi bila
+  // tidak ada simpanan, ikut aturan lama.
+  const bmu = $("btnMuat");
+  if (bmu) bmu.style.display = adaProfil ? "inline-block" : "none";
   $("btnProfil").style.display = adaProfil ? "inline-block" : "none";
   // v21 Worker 5 (cacat 14): tombol Pengaturan di layar mulai — jalan
   // menuju hapus profil tanpa harus masuk ke dalam game dulu.
   const bp = $("btnPengaturanMulai");
   if (bp) bp.style.display = adaProfil ? "inline-block" : "none";
+  // v26: ikon header mengikuti aturan yang sama (tanpa profil hanya
+  // "?" yang tampil — bantuan statis tidak butuh profil).
+  const bmp = $("btnMenuProfil");
+  if (bmp) bmp.style.display = adaProfil ? "inline-block" : "none";
+  const bmg = $("btnMenuPengaturan");
+  if (bmg) bmg.style.display = adaProfil ? "inline-block" : "none";
+  // v26: pill versi header = teks dari VERSI_GAME (bukan crop v2.4.2).
+  const pv = $("menuPillVersi");
+  if (pv) pv.textContent = VERSI_GAME;
   const sambutan = $("sambutanKembali");
   if (adaProfil) { sambutan.style.display = "block"; sambutan.textContent = "Selamat datang kembali, " + profilPemain.nama + "!"; }
   else sambutan.style.display = "none";
