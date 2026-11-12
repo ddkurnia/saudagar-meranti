@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v22.5"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v23"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -204,6 +204,52 @@ function jamGame() { return Math.floor(waktuGame % 1440 / 60); }
 function menitGame() { return Math.floor(waktuGame % 60); }
 function hariGame() { return Math.floor(waktuGame / 1440); } // 0 = hari pertama
 function jamDesimal() { return (waktuGame % 1440) / 60; } // float 0-24
+// v23: penyedia keadaan untuk Suara.perbaruiAmbience() — dihitung dari
+// posisi kamera + jam + cuaca + bangunan. Dipanggil ~1 detik sekali
+// dari tickInterval500 (bukan tiap frame). Semua hasil 0-1; bila S
+// belum ada, kembalikan default aman (siang, cerah, jauh dari semua).
+function keadaanSuara() {
+  if (!S) return { jam: 12, hujan: false, dekatPantai: 0, dekatPasar: 0, dekatKonstruksi: 0, dekatPelabuhan: 0 };
+  var jam = jamDesimal();
+  var hujan = S.cuaca === "Hujan";
+  // Tile tengah kamera.
+  var tengah = { x: 0, y: 0 };
+  try { tengah = duniaKeTile(kamera.cx, kamera.cy); } catch (e) {}
+  var cx = Math.round(tengah.x), cy = Math.round(tengah.y);
+  // Jarak terdekat (Chebyshev, dalam petak) ke tiap kategori bangunan.
+  var jPasar = 1e9, jKonstruksi = 1e9, jPelabuhan = 1e9;
+  var ID_PASAR = { "pasar-tradisional": 1, "pasar-modern": 1, "toko": 1, "supermarket": 1, "kedai-liberika": 1 };
+  var ID_PELABUHAN = { "pelabuhan": 1, "dermaga": 1, "terminal-feri": 1 };
+  for (var i = 0; i < S.bangunan.length; i++) {
+    var b = S.bangunan[i];
+    var j = Math.max(Math.abs(b.x - cx), Math.abs(b.y - cy));
+    if (ID_PASAR[b.id] && j < jPasar) jPasar = j;
+    if (ID_PELABUHAN[b.id] && j < jPelabuhan) jPelabuhan = j;
+    if (!b.selesai && j < jKonstruksi) jKonstruksi = j;
+  }
+  // Pantai/laut terdekat: pindai jendela 25x25 di sekitar kamera.
+  var jPantai = 1e9;
+  try {
+    for (var y = Math.max(0, cy - 12); y <= Math.min(peta.terrain.length - 1, cy + 12); y++) {
+      for (var x = Math.max(0, cx - 12); x <= Math.min(peta.terrain[y].length - 1, cx + 12); x++) {
+        var t = peta.terrain[y][x];
+        if (t === "pantai" || t === "laut" || t === "pesisir") {
+          var jj = Math.max(Math.abs(x - cx), Math.abs(y - cy));
+          if (jj < jPantai) jPantai = jj;
+        }
+      }
+    }
+  } catch (e) {}
+  function dekat(j, radius) { return j >= 1e9 ? 0 : Math.max(0, 1 - j / radius); }
+  return {
+    jam: jam,
+    hujan: hujan,
+    dekatPantai: dekat(jPantai, 12),
+    dekatPasar: dekat(jPasar, 20),
+    dekatKonstruksi: dekat(jKonstruksi, 20),
+    dekatPelabuhan: dekat(jPelabuhan, 20)
+  };
+}
 // Menit game yang maju per detik nyata pada kecepatan k (1x = 0,5).
 function menitGamePerDetikNyata(k) { return 0.5 * (k || 0); }
 // Sinkronkan cermin lama + S.hari dari waktuGame (satu-satunya sumber waktu).
@@ -473,6 +519,7 @@ function aturIkonSuara() {
 // v20: toggle suara — dipakai tombol di bar atas & panel Pengaturan.
 function toggleSuara() {
   bunyiAktif = !bunyiAktif;
+  if (typeof Suara !== "undefined") Suara.setelMute(!bunyiAktif);
   aturIkonSuara();
   if (bunyiAktif) bunyiKlik();
   if (panelKiri === "pengaturan") renderPanelKiri();
@@ -1003,10 +1050,10 @@ function bunyi(freq, dur, type) {
     o.start(); o.stop(audioCtx.currentTime + dur);
   } catch (e) {}
 }
-function bunyiKlik() { bunyi(600, 0.06); }
-function bunyiSukses() { bunyi(660, 0.08); setTimeout(() => bunyi(880, 0.12), 90); }
-function bunyiGagal() { bunyi(160, 0.18, "sawtooth"); }
-function bunyiKoin() { bunyi(990, 0.07); setTimeout(() => bunyi(1320, 0.1), 70); }
+function bunyiKlik() { if (typeof Suara !== "undefined") { Suara.klik(); return; } bunyi(600, 0.06); }
+function bunyiSukses() { if (typeof Suara !== "undefined") { Suara.bangunSelesai(); return; } bunyi(660, 0.08); setTimeout(() => bunyi(880, 0.12), 90); }
+function bunyiGagal() { if (typeof Suara !== "undefined") { Suara.gagal(); return; } bunyi(160, 0.18, "sawtooth"); }
+function bunyiKoin() { if (typeof Suara !== "undefined") { Suara.koin(); return; } bunyi(990, 0.07); setTimeout(() => bunyi(1320, 0.1), 70); }
 
 // ---------------- Ekonomi: biaya & sumber daya ----------------
 function hargaTeks(harga) {
@@ -1771,9 +1818,20 @@ function perbaruiFeriMenit(menit) {
   for (const rute of S.ruteFeri) {
     if (rute.t === undefined) rute.t = 0;
     if (rute.arah === undefined) rute.arah = 1;
+    const tSebelum = rute.t;
     rute.t += (rute.arah * menit) / 12.5;
     if (rute.t >= 1) { rute.t = 1; rute.arah = -1; }
     else if (rute.t <= 0) { rute.t = 0; rute.arah = 1; }
+    // v23: klakson saat feri berlabuh (t menyentuh ujung), maks 1x
+    // per 60 menit game per rute.
+    const berlabuh = (tSebelum < 1 && rute.t === 1) || (tSebelum > 0 && rute.t === 0);
+    if (berlabuh && typeof Suara !== "undefined") {
+      if (typeof rute.klaksonTerakhir !== "number") rute.klaksonTerakhir = -1e9;
+      if (waktuGame - rute.klaksonTerakhir >= 60) {
+        rute.klaksonTerakhir = waktuGame;
+        Suara.klaksonFeri();
+      }
+    }
   }
 }
 
@@ -1901,7 +1959,7 @@ function cekMisi() {
       S.xp += m.hadiah.xp || 0;
       toast("Misi selesai: " + m.nama + " — +" + rp(m.hadiah.uang || 0) + " & +" + (m.hadiah.xp || 0) + " XP", "ok");
       log("Misi selesai: " + m.nama + " (+" + rp(m.hadiah.uang || 0) + ").");
-      bunyiKoin();
+      if (typeof Suara !== "undefined") { Suara.misiSelesai(); Suara.koin(); } else bunyiKoin();
     }
   }
 }
@@ -1923,7 +1981,7 @@ function cekLevel() {
     S.uang += next.hadiah.uang || 0;
     tampilLevelUp(next);
     log("Peradaban naik ke level " + next.level + ": " + next.nama + " (+" + rp(next.hadiah.uang || 0) + ").");
-    bunyiSukses();
+    if (typeof Suara !== "undefined") { Suara.levelNaik(); Suara.rayakan(); } else bunyiSukses();
   }
 }
 function mulaiRiset(id) {
@@ -4231,8 +4289,18 @@ function renderPanelKiri() {
   } else if (panelKiri === "pengaturan") {
     // v20: panel Pengaturan (dibuka tombol ⚙️ di bar atas).
     let html = "<div class='judulPanel'>Pengaturan</div>";
-    html += "<div class='barisStat'><span>Suara</span><button class='btnKecil' onclick='toggleSuara()'>" + (bunyiAktif ? "Aktif" : "Mati") + "</button></div>";
-    html += "<div class='misiDes'>Suara efek klik & notifikasi.</div>";
+    html += "<div class='barisStat'><span>Suara &amp; Musik Melayu</span><button class='btnKecil' onclick='toggleSuara()'>" + (bunyiAktif ? "Aktif" : "Mati") + "</button></div>";
+    html += "<div class='misiDes'>Musik Melayu + ombak, angin, burung, pasar, konstruksi. Mute mematikan semua suara.</div>";
+    if (typeof Suara !== "undefined") {
+      var pg = Suara.pengaturan;
+      html += "<div class='barisStat'><span>Volume Musik</span><span>" + pg.musik + "</span></div>";
+      html += "<input type='range' min='0' max='100' value='" + pg.musik + "' style='width:100%' oninput='Suara.setelVolumeMusik(this.value);renderPanelKiri();'>";
+      html += "<div class='barisStat'><span>Volume Ambience</span><span>" + pg.ambience + "</span></div>";
+      html += "<input type='range' min='0' max='100' value='" + pg.ambience + "' style='width:100%' oninput='Suara.setelVolumeAmbience(this.value);renderPanelKiri();'>";
+      html += "<div class='barisStat'><span>Volume Efek Suara</span><span>" + pg.sfx + "</span></div>";
+      html += "<input type='range' min='0' max='100' value='" + pg.sfx + "' style='width:100%' oninput='Suara.setelVolumeSfx(this.value);renderPanelKiri();'>";
+      if (Suara.fileHilang.length) html += "<div class='misiDes'>File audio hilang: " + Suara.fileHilang.join(", ") + " — game tetap jalan tanpa file itu.</div>";
+    }
     html += "<div class='barisStat'><span>Kecepatan simulasi</span><span>" + (kecepatan === 0 ? "Jeda" : kecepatan + "×") + "</span></div>";
     html += "<div class='barisAksi'><button class='btnKecil' onclick='aturKecepatan(0)'>Jeda</button><button class='btnKecil' onclick='aturKecepatan(0.5)'>0.5×</button><button class='btnKecil' onclick='aturKecepatan(1)'>1×</button><button class='btnKecil' onclick='aturKecepatan(2)'>2×</button></div>";
     // v21 Worker 5 (lingkup M): pemilih density — Compact (default,
@@ -4662,6 +4730,18 @@ function aturDensity(mode) {
   if (panelKiri === "pengaturan") renderPanelKiri();
   bunyiKlik();
 }
+// v23: sinkronkan slider + tombol mute layar mulai dengan pengaturan Suara.
+function sinkronSuaraMulai() {
+  if (typeof Suara === "undefined") return;
+  var pg = Suara.pengaturan;
+  var atur = function (id, nilai) { var el = $(id); if (el) el.value = nilai; };
+  var teks = function (id, nilai) { var el = $(id); if (el) el.textContent = nilai; };
+  atur("volMusikMulai", pg.musik); teks("nilaiVolMusikMulai", pg.musik);
+  atur("volAmbMulai", pg.ambience); teks("nilaiVolAmbMulai", pg.ambience);
+  atur("volSfxMulai", pg.sfx); teks("nilaiVolSfxMulai", pg.sfx);
+  var b = $("btnMuteMulai");
+  if (b) b.textContent = pg.mute ? "🔇 Suara: Mati" : "🔊 Suara: Aktif";
+}
 function tandaiDensity() {
   // Tandai tombol [data-density] yang aktif (pengaturan di dalam game
   // & tahap Pengaturan di layar mulai). querySelectorAll mengembalikan
@@ -5066,11 +5146,17 @@ function tickInterval500() {
   if (S && typeof gambarPeta === "function" && (Date.now() - waktuFrameTerakhir > 1000 || Date.now() - waktuGambarPetaTerakhir > 1000)) {
     try { gambarPeta(); } catch (e) { catatKesalahanRender("penjaga-interval", e); }
   }
+  // v23: ambience 1 detik sekali (tick ke-2 dari interval 500 ms).
+  // Memakai penghitung yang sudah ada (tickSimpanKe berganti 0/1).
+  if (typeof Suara !== "undefined" && S && tickSimpanKe === 0) Suara.perbaruiAmbience();
 }
 setInterval(tickInterval500, 500);
 
 // ---------------- Init & layar mulai ----------------
 function mulaiGame(baru) {
+  // v23: klik MULAI/LANJUTKAN adalah interaksi — audio aktif tepat saat
+  // permainan dimulai (AudioContext hanya boleh dibuat dari interaksi).
+  if (typeof Suara !== "undefined") Suara.mulai();
   // v22-W6: permainan dimulai lagi — denyut/autosave jalan kembali,
   // dan klaim lease SEBELUM muat() supaya tab lain tidak menimpa di
   // tengah jalan. Permainan baru juga langsung menimpa simpanan lama
@@ -5198,6 +5284,10 @@ function mulaiGame(baru) {
   renderHUD(); renderMenuBangun(); renderPanelKiri(); renderPanelKanan(); renderBerita();
   tampilkanTutorial();
   simpan();
+  // v23: daftarkan penyedia keadaan ambience (idempotent; aman bila
+  // city-suara.js tidak termuat).
+  if (typeof Suara !== "undefined") Suara.init(keadaanSuara);
+  if (typeof Suara !== "undefined") { bunyiAktif = !Suara.pengaturan.mute; aturIkonSuara(); }
   bunyiSukses();
 }
 // =====================================================================
@@ -5410,6 +5500,17 @@ window.addEventListener("DOMContentLoaded", () => {
   // v22-W6: toggle Mode Debug dari layar mulai (panel debug tint & lease).
   const bdbg = $("btnModeDebugMulai");
   if (bdbg) bdbg.onclick = () => { bunyiKlik(); aturModeDebug(!modeDebug); };
+  // v23: wiring tombol mute layar mulai.
+  var bm = $("btnMuteMulai");
+  if (bm) bm.onclick = function () { if (typeof Suara !== "undefined") { Suara.setelMute(!Suara.pengaturan.mute); } else { toggleSuara(); } sinkronSuaraMulai(); };
+  // v23: AudioContext hanya boleh dibuat dari interaksi pengguna
+  // (kebijakan autoplay). Sekali saja — mulai() idempotent.
+  if (typeof Suara !== "undefined" && !window.__suaraMulaiTerpasang) {
+    window.__suaraMulaiTerpasang = true;
+    var mulaiSuaraSekali = function () { Suara.mulai(); };
+    document.addEventListener("pointerdown", mulaiSuaraSekali, { once: true });
+    document.addEventListener("keydown", mulaiSuaraSekali, { once: true });
+  }
   perbaruiTombolDebugMulai();
   const bkpm = $("btnKembaliPengaturanMulai");
   if (bkpm) bkpm.onclick = () => { bunyiKlik(); tampilkanTahap("sinematik"); };
@@ -5443,6 +5544,7 @@ function tampilkanTahap(nama) {
   tutupSemuaPanel();
   if (nama === "pengaturan") tandaiDensity();
   if (nama === "pengaturan") perbaruiTombolPWA(); // v22-W7: segarkan tombol fullscreen/instal/update
+  if (nama === "pengaturan") sinkronSuaraMulai();
   if (nama === "sinematik") aturLayarMulai();
 }
 // v20: kembali ke menu utama — simpan dulu, sembunyikan aplikasi,

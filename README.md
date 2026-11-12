@@ -6,6 +6,33 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v23 — Sistem Suara & Musik Melayu (2026-11-12)
+
+Musik latar instrumen Melayu (3 trek: tenang/siang, senja/mellow,
+meriah untuk perayaan — crossfade ~2 dtk, loop playlist) + 8
+lapisan ambience loop (ombak, angin, burung, jangkrik, hujan, pasar,
+konstruksi, camar — gain dihitung dari keadaan game tiap detik:
+jam, cuaca, posisi kamera) + 7 SFX (klik, koin, selesai, level,
+misi, gagal, klakson feri). Mesin: `js/city-suara.js` (Web Audio
+API, tanpa library; satu global `Suara`; AudioContext lazy pada
+interaksi pertama; pengaturan mute + volume musik/ambience/SFX
+tersimpan di localStorage `merantiRisingSuaraV1`; file hilang
+dicatat di `Suara.fileHilang` dan dilewati — game tidak error).
+Harness terpisah `tests/test-suara.js` (28 cek, TEST_SUARA_OK).
+`VERSI_GAME "v23"`; refs `css?v=16`, `city.js?v=33`,
+`city-suara.js?v=1`; cache SW `meranti-rising-v23`.
+
+Batas jujur: trek 2–3 masih kosong — yang terisi baru trek 1
+(`musik-melayu-1.mp3`, 5:44, "Free Instrument Melayu No
+Copyright"), jadi playlist me-loop trek 1; trek musik belum
+dipastikan instrumental tanpa vokal — HARUS didengar live
+(lihat assets/audio/SUMBER.md); `pasar.mp3` adalah ambience
+supermarket (bukan pasar tradisional); loop ambience hanya
+semulus file sumbernya; audio mulai setelah interaksi pertama
+(autoplay browser); musik + ambience tetap jalan saat pause
+(keputusan desain); audio TIDAK di-precache service worker
+(streaming + runtime-cache, lihat bawah).
+
 ## Yang baru di v22.5 — Kendaraan Benar-Benar Bergerak Live (2026-11-12)
 
 Perbaikan atas temuan cek live v22.4 (`?v=42`): kendaraan TIDAK PERNAH

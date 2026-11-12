@@ -116,6 +116,26 @@
       <button id="btnModeDebugMulai" type="button" class="btnUtama sekunder">🔍 Mode Debug: Mati</button>
     </div>
     <p class="infoSave">Mode Debug menampilkan panel kecil di dalam game berisi kegelapan malam, frame peta, fase siang/malam &amp; status lease — untuk verifikasi tint tanpa DevTools.</p>
+    <p class="labelForm">Suara &amp; Musik Melayu</p>
+    <div class="tombolMulai">
+      <button id="btnMuteMulai" type="button" class="btnUtama sekunder">🔊 Suara: Aktif</button>
+    </div>
+    <p class="labelForm">Volume Musik <span id="nilaiVolMusikMulai">70</span></p>
+    <div class="tombolMulai">
+      <input id="volMusikMulai" type="range" min="0" max="100" value="70" style="width:100%"
+        oninput="if(window.Suara){Suara.setelVolumeMusik(this.value);document.getElementById('nilaiVolMusikMulai').textContent=this.value;}">
+    </div>
+    <p class="labelForm">Volume Ambience <span id="nilaiVolAmbMulai">60</span></p>
+    <div class="tombolMulai">
+      <input id="volAmbMulai" type="range" min="0" max="100" value="60" style="width:100%"
+        oninput="if(window.Suara){Suara.setelVolumeAmbience(this.value);document.getElementById('nilaiVolAmbMulai').textContent=this.value;}">
+    </div>
+    <p class="labelForm">Volume Efek Suara <span id="nilaiVolSfxMulai">80</span></p>
+    <div class="tombolMulai">
+      <input id="volSfxMulai" type="range" min="0" max="100" value="80" style="width:100%"
+        oninput="if(window.Suara){Suara.setelVolumeSfx(this.value);document.getElementById('nilaiVolSfxMulai').textContent=this.value;}">
+    </div>
+    <p class="infoSave">Musik Melayu + suara ombak, angin, burung, pasar, dan konstruksi. Audio mulai setelah interaksi pertama (ketentuan autoplay browser). Mute mematikan semua suara.</p>
     <!-- v22-W7 (PWA + Logo Resmi): fullscreen, instal, update. Tombol
          instal & muat-ulang display:none secara default — hanya muncul
          bila kondisinya terpenuhi (lihat perbaruiTombolPWA di city.js);
@@ -366,6 +386,7 @@
 <script src="js/city-kendaraan.js?v=4"></script>
 <script src="js/city-persimpangan.js?v=1"></script>
 <script src="js/city-maritim.js?v=1"></script>
-<script src="js/city.js?v=32"></script>
+<script src="js/city-suara.js?v=1"></script>
+<script src="js/city.js?v=33"></script>
 </body>
 </html>

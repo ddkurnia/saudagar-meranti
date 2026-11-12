@@ -1,6 +1,6 @@
 // =====================================================================
 // Service worker MERANTI RISING — v22-W7 (PWA + Logo Resmi).
-// Nama cache TERIKAT VERSI_GAME ("v22.5"): naikkan bersama VERSI_GAME di
+// Nama cache TERIKAT VERSI_GAME ("v23"): naikkan bersama VERSI_GAME di
 // js/city.js setiap rilis, supaya deploy baru tidak pernah menyajikan
 // build basi dari cache lama.
 // Strategi:
@@ -17,9 +17,12 @@
 //    lama — cache aplikasi lain di origin yang sama (mis. repo lain di
 //    GitHub Pages) TIDAK dihapus.
 // =====================================================================
-const NAMA_CACHE = "meranti-rising-v22.5";
+const NAMA_CACHE = "meranti-rising-v23";
 // Shell game yang di-precache. Nilai ?v= mengikuti index.html saat
 // v22 ditulis; bila ?v= berubah di deploy berikut, fetch handler
+// v23: file audio .mp3 TIDAK di-precache (total ~14 MB; musik-melayu-1.mp3
+// saja 8,26 MB) — streaming + runtime-cache SW sudah menangani sesi kedua
+// (termasuk offline) tanpa memperberat instal PWA / muat pertama.
 // tetap mengambil URL baru dari network (cache-first + runtime put),
 // jadi daftar ini tidak perlu dikejar setiap bump kecil.
 const DAFTAR_CACHE = [
@@ -35,7 +38,8 @@ const DAFTAR_CACHE = [
   "./js/city-kendaraan.js?v=4",
   "./js/city-persimpangan.js?v=1",
   "./js/city-maritim.js?v=1",
-  "./js/city.js?v=32",
+  "./js/city.js?v=33",
+  "./js/city-suara.js?v=1",
   "./manifest.json",
   "./assets/images/logo-meranti-rising.png",
   "./assets/icons/badge-mr.png",
