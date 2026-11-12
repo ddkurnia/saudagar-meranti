@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v24.2"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v25"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -1028,6 +1028,17 @@ function muatSemuaGambar() {
   paths.add("assets/environment/pohon-kelapa.png");
   paths.add("assets/vehicles/truk-pengangkut.png");
   paths.add("assets/vehicles/bus.png"); // v19 Worker 5: sprite bus (bukan lagi placeholder truk)
+  // v25 Armada Kendaraan: 10 sprite baru (ambulans kini bersprite).
+  paths.add("assets/vehicles/mobil-sedan.png");
+  paths.add("assets/vehicles/mobil-hatchback.png");
+  paths.add("assets/vehicles/mobil-pickup.png");
+  paths.add("assets/vehicles/motor.png");
+  paths.add("assets/vehicles/angkot.png");
+  paths.add("assets/vehicles/mobil-dinas.png");
+  paths.add("assets/vehicles/mobil-polisi.png");
+  paths.add("assets/vehicles/mobil-pemadam.png");
+  paths.add("assets/vehicles/ambulans.png");
+  paths.add("assets/vehicles/truk-sampah.png");
   paths.add("assets/vehicles/kapal-kargo.png");
   paths.add("assets/vehicles/perahu-kecil.png");
   // v15: kapal feri + jembatan gantung
@@ -2400,6 +2411,39 @@ function gambarSatuWarga(w, lebar, tinggi) {
     ctx.beginPath(); ctx.arc(s.x, s.y - 6 * z - bob, 4 * z, 0, Math.PI * 2); ctx.fill();
   }
 }
+// v25 — Orientasi sprite kendaraan (perbaikan "jalan miring ke
+// samping"). Sprite kendaraan (bus/truk/dll.) digambar menghadap
+// kanan-bawah, yaitu sudut sumbu atan(0,5) ≈ 26,565° pada layar
+// isometri. Arah gerak tile a = k.arah dipetakan ke sudut layar:
+//   sudutLayar = atan2((cos a + sin a) * 0,5, cos a − sin a)
+// Sudut putar gambar θ = sudutLayar − atan(0,5); bila |θ| > 90°,
+// sprite dicerminkan horizontal dan θ_flip = sudutLayar −
+// (π − atan(0,5)), dinormalisasi ke (−π, π]. Urutan canvas di
+// gambarSatuKendaraan: translate → rotate(θ) → scale(−1,1) bila flip
+// → drawImage — dengan urutan ini arah hadap hasil = sudutLayar
+// (terbukti headless untuk 8 arah). BATAS GEOMETRI: arah tile 225°
+// (layar lurus ke atas) berjarak 116,565° dari hadap asli sprite,
+// jadi |θ| = 116,565° di arah itu saja — hadap tetap tepat, tapi bodi
+// miring melewati horizontal; 7 arah lain |θ| ≤ 90° dan atap tetap
+// di atas. Lihat tes v25 (test24.js) + batas jujur README.
+const SUDUT_SPRITE_KENDARAAN = Math.atan(0.5);
+function normalisasiSudutKendaraan(a) {
+  let s = a;
+  while (s <= -Math.PI) s += Math.PI * 2;
+  while (s > Math.PI) s -= Math.PI * 2;
+  return s;
+}
+function sudutPutarKendaraan(arah) {
+  const ca = Math.cos(arah || 0), sa = Math.sin(arah || 0);
+  const sudutLayar = Math.atan2((ca + sa) * 0.5, ca - sa);
+  let theta = normalisasiSudutKendaraan(sudutLayar - SUDUT_SPRITE_KENDARAAN);
+  let flip = false;
+  if (Math.abs(theta) > Math.PI / 2) {
+    flip = true;
+    theta = normalisasiSudutKendaraan(sudutLayar - (Math.PI - SUDUT_SPRITE_KENDARAAN));
+  }
+  return { sudutLayar: sudutLayar, theta: theta, flip: flip };
+}
 // Gambar satu kendaraan (truk/kapal/perahu) — dipakai lapisan gabungan
 function gambarSatuKendaraan(k, lebar, tinggi) {
   const z = kamera.zoom;
@@ -2419,30 +2463,52 @@ function gambarSatuKendaraan(k, lebar, tinggi) {
     ctx.lineWidth = Math.max(1.5, 2 * z);
     ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
   };
-  if (k.tipe === "truk") {
+  // v25: SEMUA kendaraan jalan memakai SATU cabang sprite generik
+  // (TIPE_KENDARAAN[k.tipe].sprite) — cabang truk/bus/mobil/ambulans
+  // lama yang masing-masing berdiri sendiri kini satu jalur.
+  // AKAR MASALAH "jalan miring ke samping": cabang truk/bus lama hanya
+  // flip horizontal (hadapKiri dari cos−sin) dan TIDAK PERNAH memutar
+  // sprite mengikuti arah gerak — sprite yang menghadap kanan-bawah
+  // digambar dengan sumbu yang sama walau kendaraan bergerak ke arah
+  // diagonal lain, sehingga bodi tampak miring/crab-walking.
+  // Perbaikan: sprite DIPUTAR mengikuti sudut layar (sudutPutarKendaraan
+  // di atas) — θ = sudutLayar − atan(0,5); bila |θ| > 90° pakai cermin
+  // horizontal + θ_flip = sudutLayar − (π − atan(0,5)). Bayangan +
+  // sorotan tetap digambar DI LUAR rotasi. Lebar render proporsional
+  // panjangPetak: w = 64*z * (panjangPetak/1,6) — bus tetap 64*z,
+  // sedan 44*z, motor 28*z, pemadam 60*z.
+  const T = (typeof TIPE_KENDARAAN !== "undefined" && TIPE_KENDARAAN[k.tipe]) || null;
+  if (T && T.sprite) {
     const t = tileTengahDunia(k.x, k.y);
     const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
-    const img = gambarAset["assets/vehicles/truk-pengangkut.png"];
-    const w = 64 * z;
+    let img = gambarAset[T.sprite];
+    // v19: bus yang spritenya belum termuat memakai sprite truk +
+    // atap biru (placeholder lama) agar tetap terlihat.
+    const pakaiTruk = (k.tipe === "bus") && (!img || !img.complete || !img.naturalWidth);
+    if (pakaiTruk) img = gambarAset["assets/vehicles/truk-pengangkut.png"];
+    const w = 64 * z * ((T.panjangPetak || 1.6) / 1.6);
     bayangan(s.x, s.y + 8 * z, w * 0.55, w * 0.16);
     sorotan(s.x, s.y + 8 * z, w * 0.62, w * 0.22);
     if (img && img.complete && img.naturalWidth) {
       const h = w * (img.naturalHeight / img.naturalWidth);
-      const hadapKiri = (Math.cos(k.arah || 0) - Math.sin(k.arah || 0)) < 0;
-      if (hadapKiri) {
-        ctx.save(); ctx.translate(s.x, 0); ctx.scale(-1, 1);
-        ctx.drawImage(img, -w / 2, s.y + 8 * z - h, w, h);
-        ctx.restore();
-      } else {
-        ctx.drawImage(img, s.x - w / 2, s.y + 8 * z - h, w, h);
+      const putar = sudutPutarKendaraan(k.arah || 0);
+      ctx.save();
+      ctx.translate(s.x, s.y + 8 * z);
+      ctx.rotate(putar.theta);
+      if (putar.flip) ctx.scale(-1, 1);
+      ctx.drawImage(img, -w / 2, -h, w, h);
+      if (pakaiTruk) {
+        ctx.fillStyle = "rgba(9,132,227,0.85)";
+        ctx.fillRect(-w * 0.32, -h - 4 * z, w * 0.64, Math.max(2, 3 * z));
       }
+      ctx.restore();
     } else {
-      // v22.4: fallback vektor bila sprite truk belum termuat — truk
-      // selalu terlihat (mengikuti pola fallback "BUS" di cabang bus).
+      // v22.4: fallback vektor bila sprite belum termuat — kendaraan
+      // selalu terlihat; memakai T.warna (pola lama cabang truk).
       const hT = 20 * z;
-      ctx.fillStyle = "#e67e22";
+      ctx.fillStyle = T.warna || "#e67e22";
       ctx.fillRect(s.x - w / 2, s.y + 8 * z - 14 * z, w * 0.68, 14 * z);
-      ctx.fillStyle = "#d35400";
+      ctx.fillStyle = "rgba(0,0,0,0.30)";
       ctx.fillRect(s.x + w * 0.18, s.y + 8 * z - hT, w * 0.32, hT);
       ctx.fillStyle = "#2d3436";
       for (const wx of [-w * 0.32, -w * 0.02, w * 0.32]) {
@@ -2450,81 +2516,8 @@ function gambarSatuKendaraan(k, lebar, tinggi) {
       }
       ctx.fillStyle = "#ffffff";
       ctx.font = "bold " + Math.max(8, 10 * z) + "px sans-serif"; ctx.textAlign = "center";
-      ctx.fillText("TRUK", s.x - w * 0.16, s.y + 8 * z - 4 * z);
+      ctx.fillText(String(k.tipe || "").toUpperCase(), s.x - w * 0.16, s.y + 8 * z - 4 * z);
     }
-  } else if (k.tipe === "bus") {
-    // v19 Worker 5: bus memakai sprite bus sendiri (assets/vehicles/
-    // bus.png); bila belum termuat, fallback ke sprite truk + atap biru
-    // (placeholder lama Worker 4) agar bus tetap terlihat.
-    const t = tileTengahDunia(k.x, k.y);
-    const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
-    const imgBus = gambarAset["assets/vehicles/bus.png"];
-    const img = (imgBus && imgBus.complete && imgBus.naturalWidth) ? imgBus : gambarAset["assets/vehicles/truk-pengangkut.png"];
-    bayangan(s.x, s.y + 8 * z, 64 * z * 0.55, 64 * z * 0.16);
-    sorotan(s.x, s.y + 8 * z, 64 * z * 0.62, 64 * z * 0.22);
-    if (img && img.complete && img.naturalWidth) {
-      const w = 64 * z, h = w * (img.naturalHeight / img.naturalWidth);
-      const hadapKiri = (Math.cos(k.arah || 0) - Math.sin(k.arah || 0)) < 0;
-      if (hadapKiri) {
-        ctx.save(); ctx.translate(s.x, 0); ctx.scale(-1, 1);
-        ctx.drawImage(img, -w / 2, s.y + 8 * z - h, w, h);
-        ctx.restore();
-      } else {
-        ctx.drawImage(img, s.x - w / 2, s.y + 8 * z - h, w, h);
-      }
-      if (img === gambarAset["assets/vehicles/truk-pengangkut.png"]) {
-        ctx.fillStyle = "rgba(9,132,227,0.85)";
-        ctx.fillRect(s.x - w * 0.32, s.y + 8 * z - h - 4 * z, w * 0.64, Math.max(2, 3 * z));
-      }
-    } else {
-      ctx.fillStyle = "#0984e3";
-      ctx.fillRect(s.x - 32 * z, s.y - 12 * z, 64 * z, 18 * z);
-      ctx.fillStyle = "#ffffff";
-      ctx.font = Math.max(8, 10 * z) + "px sans-serif"; ctx.textAlign = "center";
-      ctx.fillText("BUS", s.x, s.y + 3 * z);
-    }
-  } else if (k.tipe === "mobil" || k.tipe === "ambulans") {
-    // v22-W2: mobil & ambulans belum punya sprite — gambar vektor
-    // sederhana (badan + kabin + roda, dirotasi mengikuti arah layar).
-    // Sudut layar dari arah tile (isometri): sx = cos-sin, sy = (cos+sin)/2.
-    const t = tileTengahDunia(k.x, k.y);
-    const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
-    const warna = (k.tipe === "ambulans") ? "#ffffff" : (k.warna === "#0984e3" || !k.warna ? "#00a8ff" : k.warna);
-    const ca = Math.cos(k.arah || 0), sa = Math.sin(k.arah || 0);
-    const sudutLayar = Math.atan2((ca + sa) * 0.5, ca - sa);
-    const pw = 40 * z, ph = 18 * z, r = 5 * z;
-    sorotan(s.x, s.y + 6 * z, pw * 0.62, ph * 0.62);
-    ctx.save();
-    ctx.translate(s.x, s.y + 6 * z);
-    ctx.rotate(sudutLayar);
-    ctx.fillStyle = "rgba(0,0,0,0.25)";
-    ctx.beginPath(); ctx.ellipse(0, 2 * z, pw * 0.55, ph * 0.55, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = warna;
-    ctx.beginPath();
-    ctx.moveTo(-pw / 2 + r, -ph / 2); ctx.lineTo(pw / 2 - r, -ph / 2);
-    ctx.quadraticCurveTo(pw / 2, -ph / 2, pw / 2, -ph / 2 + r);
-    ctx.lineTo(pw / 2, ph / 2 - r); ctx.quadraticCurveTo(pw / 2, ph / 2, pw / 2 - r, ph / 2);
-    ctx.lineTo(-pw / 2 + r, ph / 2); ctx.quadraticCurveTo(-pw / 2, ph / 2, -pw / 2, ph / 2 - r);
-    ctx.lineTo(-pw / 2, -ph / 2 + r); ctx.quadraticCurveTo(-pw / 2, -ph / 2, -pw / 2 + r, -ph / 2);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(0,0,0,0.55)"; ctx.lineWidth = Math.max(1.5, 2 * z); ctx.stroke();
-    ctx.fillStyle = (k.tipe === "ambulans") ? "#dfe6e9" : "rgba(255,255,255,0.75)";
-    ctx.fillRect(-pw * 0.18, -ph * 0.32, pw * 0.36, ph * 0.64);
-    ctx.fillStyle = "#2d3436";
-    for (const [rx, ry] of [[-pw * 0.32, -ph / 2], [pw * 0.32, -ph / 2], [-pw * 0.32, ph / 2], [pw * 0.32, ph / 2]]) {
-      ctx.beginPath(); ctx.arc(rx, ry, 3.2 * z, 0, Math.PI * 2); ctx.fill();
-    }
-    if (k.tipe === "ambulans") {
-      ctx.fillStyle = "#d63031";
-      ctx.fillRect(-pw * 0.08, -ph * 0.32, pw * 0.16, ph * 0.64);
-      ctx.fillRect(-pw * 0.18, -ph * 0.12, pw * 0.36, ph * 0.24);
-      ctx.fillRect(-pw / 2, ph / 2 - 2 * z, pw, 2 * z);
-      if ((k.state === "cruising" || k.state === "accelerating") && Math.floor(frame / 12) % 2 === 0) {
-        ctx.fillStyle = "#ff0000";
-        ctx.beginPath(); ctx.arc(0, -ph / 2 - 2 * z, 3 * z, 0, Math.PI * 2); ctx.fill();
-      }
-    }
-    ctx.restore();
   } else if (k.tipe === "kapal") {
     const t = tileTengahDunia(k.x, k.y + Math.sin(frame / 30) * 0.15);
     const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
@@ -2559,6 +2552,49 @@ function gambarSatuKendaraan(k, lebar, tinggi) {
       ctx.font = "bold " + Math.max(8, 9 * z) + "px sans-serif"; ctx.textAlign = "center";
       ctx.fillText("PERAHU", s.x, s.y - 2 * z);
     }
+  } else {
+    // v25: tipe TANPA sprite (mobil generik lama + tipe baru yang
+    // spritenya belum didaftarkan) — fallback vektor generik, dirotasi
+    // mengikuti sudut layar (pola lama cabang mobil/ambulans v22-W2,
+    // badan dipertebal 48×22 agar tidak terbaca "hanya roda saja").
+    const t = tileTengahDunia(k.x, k.y);
+    const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
+    const warna = (k.tipe === "ambulans") ? "#ffffff" : (k.warna === "#0984e3" || !k.warna ? "#00a8ff" : k.warna);
+    const ca = Math.cos(k.arah || 0), sa = Math.sin(k.arah || 0);
+    const sudutLayar = Math.atan2((ca + sa) * 0.5, ca - sa);
+    const pw = 48 * z, ph = 22 * z, r = 5 * z;
+    sorotan(s.x, s.y + 6 * z, pw * 0.62, ph * 0.62);
+    ctx.save();
+    ctx.translate(s.x, s.y + 6 * z);
+    ctx.rotate(sudutLayar);
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.beginPath(); ctx.ellipse(0, 2 * z, pw * 0.55, ph * 0.55, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = warna;
+    ctx.beginPath();
+    ctx.moveTo(-pw / 2 + r, -ph / 2); ctx.lineTo(pw / 2 - r, -ph / 2);
+    ctx.quadraticCurveTo(pw / 2, -ph / 2, pw / 2, -ph / 2 + r);
+    ctx.lineTo(pw / 2, ph / 2 - r); ctx.quadraticCurveTo(pw / 2, ph / 2, pw / 2 - r, ph / 2);
+    ctx.lineTo(-pw / 2 + r, ph / 2); ctx.quadraticCurveTo(-pw / 2, ph / 2, -pw / 2, ph / 2 - r);
+    ctx.lineTo(-pw / 2, -ph / 2 + r); ctx.quadraticCurveTo(-pw / 2, -ph / 2, -pw / 2 + r, -ph / 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,0.55)"; ctx.lineWidth = Math.max(1.5, 2 * z); ctx.stroke();
+    ctx.fillStyle = (k.tipe === "ambulans") ? "#dfe6e9" : "rgba(255,255,255,0.75)";
+    ctx.fillRect(-pw * 0.18, -ph * 0.32, pw * 0.36, ph * 0.64);
+    ctx.fillStyle = "#2d3436";
+    for (const [rx, ry] of [[-pw * 0.32, -ph / 2], [pw * 0.32, -ph / 2], [-pw * 0.32, ph / 2], [pw * 0.32, ph / 2]]) {
+      ctx.beginPath(); ctx.arc(rx, ry, 3.2 * z, 0, Math.PI * 2); ctx.fill();
+    }
+    if (k.tipe === "ambulans") {
+      ctx.fillStyle = "#d63031";
+      ctx.fillRect(-pw * 0.08, -ph * 0.32, pw * 0.16, ph * 0.64);
+      ctx.fillRect(-pw * 0.18, -ph * 0.12, pw * 0.36, ph * 0.24);
+      ctx.fillRect(-pw / 2, ph / 2 - 2 * z, pw, 2 * z);
+      if ((k.state === "cruising" || k.state === "accelerating") && Math.floor(frame / 12) % 2 === 0) {
+        ctx.fillStyle = "#ff0000";
+        ctx.beginPath(); ctx.arc(0, -ph / 2 - 2 * z, 3 * z, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    ctx.restore();
   }
 }
 function gambarPeta() {
@@ -3024,6 +3060,12 @@ function initKendaraan() {
     // Runtime (tidak disimpan); disinkronkan berkala juga dari
     // perbaruiSemuaKendaraan saat rumah baru selesai dibangun.
     if (typeof sinkronMobilWarga === "function") { try { sinkronMobilWarga(); } catch (e) {} }
+    // v25 Armada Kendaraan: dinas (1/kantor, maks 4), instansi
+    // (polisi/pemadam/ambulans, maks 3 tiap jenis), truk sampah
+    // (1 + 1/100 jiwa, maks 3) — runtime, disinkronkan berkala juga.
+    if (typeof sinkronKendaraanDinas === "function") { try { sinkronKendaraanDinas(); } catch (e) {} }
+    if (typeof sinkronKendaraanInstansi === "function") { try { sinkronKendaraanInstansi(); } catch (e) {} }
+    if (typeof sinkronTrukSampah === "function") { try { sinkronTrukSampah(); } catch (e) {} }
   }
   const L = peta.landing;
   kendaraanVisual.push({ tipe: "kapal", x: L.x + 1, y: L.y + 2 });
@@ -3259,7 +3301,13 @@ function bangunCacheOverlay() {
 // merah = darurat.
 let tampilJaringanJalan = false, tampilRuteBus = false, tampilJaringanPejalan = false, tampilRuteLaut = false;
 let kendaraanTerpilihId = null;
-const WARNA_RUTE_KENDARAAN = { mobil: "#0984e3", bus: "#00b894", truk: "#e17055", ambulans: "#e74c3c" };
+const WARNA_RUTE_KENDARAAN = { mobil: "#0984e3", bus: "#00b894", truk: "#e17055", ambulans: "#e74c3c",
+  // v25: sedan/hatchback biru (pribadi), pickup kuning, motor ungu,
+  // angkot hijau, dinas abu-abu, polisi/pemadam merah (darurat),
+  // truk sampah hijau.
+  sedan: "#0984e3", hatchback: "#0984e3", pickup: "#fdcb6e", motor: "#6c5ce7",
+  angkot: "#00b894", "mobil-dinas": "#636e72", "mobil-polisi": "#e74c3c",
+  "mobil-pemadam": "#e74c3c", "truk-sampah": "#00b894" };
 function aturTampilLalin(jenis) {
   if (jenis === "jalan") tampilJaringanJalan = !tampilJaringanJalan;
   else if (jenis === "bus") tampilRuteBus = !tampilRuteBus;

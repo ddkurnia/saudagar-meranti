@@ -88,7 +88,58 @@ const TIPE_KENDARAAN = {
   ambulans: {
     nama: "Ambulans", kecepatanMaksKmh: 80, percepatan: 1.2, perlambatan: 2.4,
     kapasitas: 2, satuanKapasitas: "pasien",
-    panjangPetak: 1.2, lebarPetak: 0.5, sprite: null, warna: "#ffffff", darurat: true,
+    panjangPetak: 1.2, lebarPetak: 0.5, sprite: "assets/vehicles/ambulans.png", warna: "#ffffff", darurat: true,
+  },
+  // ---- v25 Armada Kendaraan: 9 tipe baru (+ ambulans kini bersprite;
+  // sprite 2.5D di assets/vehicles/, depan menghadap kanan-bawah seperti bus/truk).
+  // `palet: true` = warna unit diundi dari WARNA_MOBIL saat pendaftaran
+  // (daftarkanKendaraan) — tiap unit beda warna, seperti mobil warga.
+  // `mobil` lama DIPERTAHANKAN sebagai tipe generik (targetMobilWarga /
+  // tes lama) — warga kini memakai sedan/hatchback/motor/pickup.
+  sedan: {
+    nama: "Sedan", kecepatanMaksKmh: 55, percepatan: 1.0, perlambatan: 2.0,
+    kapasitas: 5, satuanKapasitas: "penumpang",
+    panjangPetak: 1.1, lebarPetak: 0.5, sprite: "assets/vehicles/mobil-sedan.png", warna: "#0984e3", palet: true, darurat: false,
+  },
+  hatchback: {
+    nama: "Hatchback", kecepatanMaksKmh: 50, percepatan: 1.0, perlambatan: 2.0,
+    kapasitas: 5, satuanKapasitas: "penumpang",
+    panjangPetak: 1.0, lebarPetak: 0.5, sprite: "assets/vehicles/mobil-hatchback.png", warna: "#0984e3", palet: true, darurat: false,
+  },
+  pickup: {
+    nama: "Pickup", kecepatanMaksKmh: 45, percepatan: 0.8, perlambatan: 1.6,
+    kapasitas: 3, satuanKapasitas: "penumpang",
+    panjangPetak: 1.2, lebarPetak: 0.5, sprite: "assets/vehicles/mobil-pickup.png", warna: "#fdcb6e", darurat: false,
+  },
+  motor: {
+    nama: "Motor", kecepatanMaksKmh: 60, percepatan: 1.2, perlambatan: 2.2,
+    kapasitas: 2, satuanKapasitas: "penumpang",
+    panjangPetak: 0.7, lebarPetak: 0.3, sprite: "assets/vehicles/motor.png", warna: "#0984e3", palet: true, darurat: false,
+  },
+  angkot: {
+    nama: "Angkot", kecepatanMaksKmh: 40, percepatan: 0.7, perlambatan: 1.4,
+    kapasitas: 12, satuanKapasitas: "penumpang",
+    panjangPetak: 1.3, lebarPetak: 0.6, sprite: "assets/vehicles/angkot.png", warna: "#00b894", darurat: false,
+  },
+  "mobil-dinas": {
+    nama: "Mobil Dinas", kecepatanMaksKmh: 50, percepatan: 0.9, perlambatan: 1.8,
+    kapasitas: 5, satuanKapasitas: "penumpang",
+    panjangPetak: 1.1, lebarPetak: 0.5, sprite: "assets/vehicles/mobil-dinas.png", warna: "#2d3436", darurat: false,
+  },
+  "mobil-polisi": {
+    nama: "Mobil Polisi", kecepatanMaksKmh: 70, percepatan: 1.1, perlambatan: 2.2,
+    kapasitas: 4, satuanKapasitas: "penumpang",
+    panjangPetak: 1.1, lebarPetak: 0.5, sprite: "assets/vehicles/mobil-polisi.png", warna: "#0984e3", darurat: true,
+  },
+  "mobil-pemadam": {
+    nama: "Mobil Pemadam", kecepatanMaksKmh: 60, percepatan: 0.7, perlambatan: 1.5,
+    kapasitas: 6, satuanKapasitas: "penumpang",
+    panjangPetak: 1.5, lebarPetak: 0.6, sprite: "assets/vehicles/mobil-pemadam.png", warna: "#d63031", darurat: true,
+  },
+  "truk-sampah": {
+    nama: "Truk Sampah", kecepatanMaksKmh: 35, percepatan: 0.5, perlambatan: 1.0,
+    kapasitas: 500, satuanKapasitas: "unit muatan",
+    panjangPetak: 1.4, lebarPetak: 0.6, sprite: "assets/vehicles/truk-sampah.png", warna: "#00b894", darurat: false,
   },
 };
 // Pejalan kaki (warga) TIDAK masuk tabel ini: kecepatannya 0,5–0,9
@@ -138,11 +189,16 @@ function daftarkanKendaraan(k, opts) {
   if (!Array.isArray(k._antreBelok)) k._antreBelok = [];
   if (k._dikelolaManager === undefined) k._dikelolaManager = kelola;
   if (!k.warna) {
-    if (k.tipe === "mobil") {
+    const T = TIPE_KENDARAAN[k.tipe];
+    if (T && T.palet) {
+      // v25: sedan/hatchback/motor — warna unit diundi dari palet
+      // (ditentukan nomor id, deterministik per unit).
+      const n = parseInt(String(k.id).replace(/\D/g, ""), 10);
+      k.warna = WARNA_MOBIL[(isFinite(n) ? n : 0) % WARNA_MOBIL.length];
+    } else if (k.tipe === "mobil") {
       const n = parseInt(String(k.id).replace(/\D/g, ""), 10);
       k.warna = WARNA_MOBIL[(isFinite(n) ? n : 0) % WARNA_MOBIL.length];
     } else {
-      const T = TIPE_KENDARAAN[k.tipe];
       k.warna = (T && T.warna) || "#0984e3";
     }
   }
@@ -441,6 +497,10 @@ function pilihTujuanTerjauhJalan(k, jarakMin, kecuali, hanyaDi) {
 // tertutup: ia jatuh ke sini saat semua bangunan <= 1 petak.
 function _beriTujuanBaru(k) {
   if (k.mobilWarga && typeof _beriTujuanMobil === "function" && _beriTujuanMobil(k)) return;
+  // v25: mobil dinas menuju bangunan perkantoran lain dulu (bukan
+  // koordinat acak); bila tidak ada kantor lain yang valid, jatuh ke
+  // ambient acak di bawah (fallback, seperti mobil warga).
+  if (k.dinas && typeof _beriTujuanDinas === "function" && _beriTujuanDinas(k)) return;
   // v22.5: tentukan komponen graph kendaraan SEKALI sebelum loop —
   // kandidat tujuan dibatasi ke komponen itu saja (lihat
   // pilihTujuanTerjauhJalan `hanyaDi`). Tanpa batas ini, tiap retry
@@ -484,7 +544,13 @@ function buatKendaraanJalan(tipe, x, y, tx, ty, opts) {
   if (tx !== undefined && ty !== undefined) {
     buatRuteKendaraan(k, tx, ty);
     if (k.status === "menuju") k.state = "accelerating";
-  } else if (tipe === "truk" || tipe === "mobil") {
+  } else {
+    // v25: ambient berlaku untuk SEMUA tipe jalan (dulu hanya
+    // truk/mobil) — kendaraan tanpa tujuan eksplisit (truk sampah,
+    // mobil dinas, patroli instansi, mobil warga) mendapat tujuan
+    // acak, parkir sejenak, lalu berangkat lagi. Truk logistik/bus
+    // rute tidak lewat sini (buatKendaraan langsung), jadi tidak
+    // terpengaruh.
     k.ambient = true;
     _beriTujuanBaru(k);
   }
@@ -546,10 +612,44 @@ function _beriTujuanMobil(k) {
   }
   return false;
 }
+// v25: tujuan mobil dinas = bangunan perkantoran lain (kantor
+// pemerintah / kantor dinas / kantor bupati), terjauh dulu seperti
+// _beriTujuanMobil. false = tidak ada kantor lain yang valid —
+// pemanggil (_beriTujuanBaru) jatuh ke ambient acak.
+const ID_KANTOR_V25 = ["kantor-pemerintah", "kantor-dinas", "kantor-bupati"];
+function _beriTujuanDinas(k) {
+  if (typeof S === "undefined" || !S || !Array.isArray(S.bangunan)) return false;
+  const kantor = S.bangunan.filter(b => b.selesai && ID_KANTOR_V25.indexOf(b.id) !== -1);
+  if (!kantor.length) return false;
+  const kini = { x: Math.round(k.x), y: Math.round(k.y) };
+  const acak = kantor.slice();
+  for (let i = acak.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const tmp = acak[i]; acak[i] = acak[j]; acak[j] = tmp; }
+  acak.sort((a, b) => (Math.abs(b.x - kini.x) + Math.abs(b.y - kini.y)) - (Math.abs(a.x - kini.x) + Math.abs(a.y - kini.y)));
+  let percobaan = 0;
+  for (const b of acak) {
+    if (percobaan++ >= 5) break;
+    if (Math.abs(b.x - kini.x) + Math.abs(b.y - kini.y) <= 1) continue;
+    if (typeof buatRuteKendaraan === "function" && buatRuteKendaraan(k, b.x, b.y) && k.status === "menuju") {
+      k.state = "accelerating"; k._target = null; k._antreBelok = [];
+      return true;
+    }
+  }
+  return false;
+}
 // Jumlah mobil warga yang seharusnya ada untuk populasi saat ini.
 function targetMobilWarga() {
   const pop = (typeof S !== "undefined" && S && S.penduduk && typeof S.penduduk.total === "number") ? S.penduduk.total : 0;
   return Math.max(1, Math.min(12, 1 + Math.floor(pop / 8)));
+}
+// v25: tipe mobil warga diundi per unit — sedan 35%, hatchback 25%,
+// motor 25%, pickup 15%. `mobil` generik TIDAK masuk undian (tetap
+// tersedia sebagai tipe generik untuk targetMobilWarga/tes lama).
+const BOBOT_MOBIL_WARGA_V25 = [["sedan", 35], ["hatchback", 25], ["motor", 25], ["pickup", 15]];
+function _pilihTipeMobilWarga() {
+  const total = BOBOT_MOBIL_WARGA_V25.reduce((a, b) => a + b[1], 0);
+  let r = Math.random() * total;
+  for (const [tipe, bobot] of BOBOT_MOBIL_WARGA_V25) { r -= bobot; if (r <= 0) return tipe; }
+  return "sedan";
 }
 // Spawn SATU mobil warga di petak jalan dekat rumah selesai (bukan di
 // atas rumah). Petak spawn dipilih dari jalan dalam radius 3 petak
@@ -579,7 +679,10 @@ function spawnMobilWarga(daftarRumah) {
   if (!bebas.length) return null;
   const pilihan = bebas[Math.floor(Math.random() * bebas.length)];
   const r = rumah[Math.floor(Math.random() * rumah.length)];
-  return buatKendaraanJalan("mobil", pilihan.x, pilihan.y, undefined, undefined, { mobilWarga: true, rumah: { x: r.x, y: r.y } });
+  // v25: tipe diundi (sedan/hatchback/motor/pickup); penanda
+  // k.mobilWarga tetap dipakai agar sinkron menghitung gabungan
+  // keempat tipe (target tetap 1+floor(pop/8), maks 12).
+  return buatKendaraanJalan(_pilihTipeMobilWarga(), pilihan.x, pilihan.y, undefined, undefined, { mobilWarga: true, rumah: { x: r.x, y: r.y } });
 }
 // Sinkronkan jumlah mobil warga dengan keadaan kota: tambah bila rumah
 // selesai / populasi bertambah, kurangi (yang parkir dulu) bila
@@ -604,6 +707,110 @@ function sinkronMobilWarga() {
     if (!spawnMobilWarga(rumah)) break;
     mobil = daftarKendaraan.filter(k => k && k.mobilWarga);
   }
+}
+
+// ---------------- Armada v25: dinas, instansi & truk sampah ----------------
+// Pola yang sama seperti sinkronMobilWarga: jumlah kendaraan mengikuti
+// jumlah bangunan induk yang selesai; spawn di jalan dekat bangunan
+// induk; pengurangan mengutamakan yang sedang parkir. Semua sinkron
+// menghormati batas global 40 (spawn mengembalikan null bila penuh —
+// TIDAK pernah memaksa). Dipanggil initKendaraan (mulaiGame) dan
+// berkala dari perbaruiSemuaKendaraan (~10 detik sekali).
+// TIDAK ada dispatch kejadian: patroli bersifat ambient (tujuan acak /
+// kantor lain) karena belum ada sistem kejadian kebakaran/kriminal/
+// medis yang bisa memanggil mereka.
+function _spawnKendaraanDekat(tipe, daftarIdBangunan, penanda) {
+  if (typeof S === "undefined" || !S || !(S.jalan || []).length) return null;
+  if (daftarKendaraan.length >= KENDARAAN_KONFIG.maksKendaraanAktif) return null;
+  const induk = (S.bangunan || []).filter(b => b.selesai && daftarIdBangunan.indexOf(b.id) !== -1);
+  if (!induk.length) return null;
+  const dipakai = (j) => daftarKendaraan.some(k => k && Math.hypot((k.x || 0) - j.x, (k.y || 0) - j.y) < 0.8);
+  const kandidat = [];
+  for (const j of S.jalan) {
+    for (const r of induk) {
+      if (Math.abs(j.x - r.x) + Math.abs(j.y - r.y) <= 3) { kandidat.push(j); break; }
+    }
+  }
+  const bebas = kandidat.filter(j => !dipakai(j));
+  if (!bebas.length) return null;
+  const pilihan = bebas[Math.floor(Math.random() * bebas.length)];
+  const k = buatKendaraanJalan(tipe, pilihan.x, pilihan.y);
+  if (k && penanda) k[penanda] = true;
+  return k;
+}
+// Samakan jumlah kendaraan berpenanda dengan target: tambah via
+// spawnFn, kurangi (yang parkir dulu) via hapusKendaraan.
+function _sinkronArmadaPenanda(penanda, target, spawnFn) {
+  if (typeof S === "undefined" || !S) return;
+  let daftar = daftarKendaraan.filter(k => k && k[penanda]);
+  let pengaman = 0;
+  while (daftar.length > target && pengaman++ < 50) {
+    const korban = daftar.find(k => k.state === "parking") || daftar[daftar.length - 1];
+    if (typeof hapusKendaraan === "function") hapusKendaraan(korban.id);
+    else break;
+    daftar = daftarKendaraan.filter(k => k && k[penanda]);
+  }
+  pengaman = 0;
+  while (daftar.length < target && pengaman++ < target + 2) {
+    if (!spawnFn()) break;
+    daftar = daftarKendaraan.filter(k => k && k[penanda]);
+  }
+}
+// Pemerintah: 1 mobil-dinas per kantor pemerintah/dinas/bupati
+// selesai, maks 4. Tujuan: kantor lain (lihat _beriTujuanDinas),
+// fallback ambient.
+function sinkronKendaraanDinas() {
+  if (typeof S === "undefined" || !S || !Array.isArray(S.bangunan) || !Array.isArray(S.jalan)) return;
+  if (!S.jalan.length) return;
+  const nKantor = S.bangunan.filter(b => b.selesai && ID_KANTOR_V25.indexOf(b.id) !== -1).length;
+  if (!nKantor) return;
+  _sinkronArmadaPenanda("dinas", Math.min(4, nKantor),
+    () => _spawnKendaraanDekat("mobil-dinas", ID_KANTOR_V25, "dinas"));
+}
+// Instansi: 1 mobil-polisi per kantor polisi (maks 3), 1 mobil-pemadam
+// per pos pemadam / pemadam kebakaran (maks 3), 1 ambulans per
+// puskesmas / rumah sakit (maks 3). Patroli ambient (_beriTujuanBaru);
+// TIDAK ada dispatch kejadian (belum ada sistemnya).
+function sinkronKendaraanInstansi() {
+  if (typeof S === "undefined" || !S || !Array.isArray(S.bangunan) || !Array.isArray(S.jalan)) return;
+  if (!S.jalan.length) return;
+  const hitung = (ids) => S.bangunan.filter(b => b.selesai && ids.indexOf(b.id) !== -1).length;
+  const nPolisi = hitung(["kantor-polisi"]);
+  if (nPolisi) _sinkronArmadaPenanda("polisi", Math.min(3, nPolisi),
+    () => _spawnKendaraanDekat("mobil-polisi", ["kantor-polisi"], "polisi"));
+  const nDamkar = hitung(["pos-pemadam", "pemadam-kebakaran"]);
+  if (nDamkar) _sinkronArmadaPenanda("pemadam", Math.min(3, nDamkar),
+    () => _spawnKendaraanDekat("mobil-pemadam", ["pos-pemadam", "pemadam-kebakaran"], "pemadam"));
+  const nMedis = hitung(["puskesmas", "rumah-sakit"]);
+  if (nMedis) _sinkronArmadaPenanda("medis", Math.min(3, nMedis),
+    () => _spawnKendaraanDekat("ambulans", ["puskesmas", "rumah-sakit"], "medis"));
+}
+// Truk sampah: 1 unit + 1 tiap 100 penduduk, maks 3 — spawn ambient
+// seperti truk kota (jalan pertama yang bebas, bukan dekat bangunan).
+// v25: TIDAK mengambil petak jalan bebas TERAKHIR — di kota awal (3
+// petak jalan: truk ambient + mobil warga = 2 kendaraan, 1 petak
+// bebas) truk sampah tidak di-spawn sampai pemain menambah jalan,
+// supaya jalan awal tidak penuh sesak dan metrik lalin kota awal
+// (skor/kemacetan/overlay v19-v20: semua petak rasio 1,0 bila 3
+// kendaraan menempati 3 petak) tetap bermakna. Begitu ada >= 2 petak
+// bebas, sinkron berkala (~10 detik) memunculkannya.
+function spawnTrukSampah() {
+  if (typeof S === "undefined" || !S || !(S.jalan || []).length) return null;
+  if (daftarKendaraan.length >= KENDARAAN_KONFIG.maksKendaraanAktif) return null;
+  const dipakai = (j) => daftarKendaraan.some(k => k && Math.hypot((k.x || 0) - j.x, (k.y || 0) - j.y) < 0.8);
+  const bebas = S.jalan.filter(j => !dipakai(j));
+  if (bebas.length < 2) return null;
+  const k = buatKendaraanJalan("truk-sampah", bebas[0].x, bebas[0].y);
+  if (k) k.trukSampah = true;
+  return k;
+}
+function targetTrukSampah() {
+  const pop = (typeof S !== "undefined" && S && S.penduduk && typeof S.penduduk.total === "number") ? S.penduduk.total : 0;
+  return Math.max(1, Math.min(3, 1 + Math.floor(pop / 100)));
+}
+function sinkronTrukSampah() {
+  if (typeof S === "undefined" || !S || !Array.isArray(S.jalan) || !S.jalan.length) return;
+  _sinkronArmadaPenanda("trukSampah", targetTrukSampah(), () => spawnTrukSampah());
 }
 // Minta kendaraan kembali ke (x,y) SETELAH tiba di tujuan saat ini
 // (dipakai W3 untuk perjalanan pulang truk logistik). Bila kendaraan
@@ -919,6 +1126,12 @@ function perbaruiSemuaKendaraan(dt) {
   if (++_hitungSinkronMobil >= 600) {
     _hitungSinkronMobil = 0;
     try { sinkronMobilWarga(); } catch (e) {}
+    // v25: armada dinas/instansi/sampah ikut disinkronkan berkala —
+    // bangunan induk yang selesai dibangun belakangan ikut mendapat
+    // kendaraan tanpa perlu reload.
+    try { sinkronKendaraanDinas(); } catch (e) {}
+    try { sinkronKendaraanInstansi(); } catch (e) {}
+    try { sinkronTrukSampah(); } catch (e) {}
   }
   if (typeof kendaraanVisual !== "undefined" && Array.isArray(kendaraanVisual)) {
     for (const v of kendaraanVisual) {

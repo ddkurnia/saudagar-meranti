@@ -77,7 +77,7 @@ const URUT_MODUL = ["city-data.js", "city-map.js", "city-utilitas.js", "city-bah
   "city.js", "city-tutorial.js", "city-ui-v24.js"];
 const src = URUT_MODUL.map(f => fs.readFileSync(ROOT + "/js/" + f, "utf8")).join("\n");
 vm.runInContext(src, sandbox);
-for (const nama of ["S", "peta", "BANGUNAN", "BANGUNAN_MAP", "TERRAIN", "KECAMATAN_DEFS", "CITY", "kamera", "waktuGame", "wargaVisual", "TUTORIAL", "VERSI_GAME", "KOMODITAS"]) {
+for (const nama of ["S", "peta", "BANGUNAN", "BANGUNAN_MAP", "TERRAIN", "KECAMATAN_DEFS", "CITY", "kamera", "waktuGame", "wargaVisual", "TUTORIAL", "VERSI_GAME", "KOMODITAS", "TIPE_KENDARAAN", "KENDARAAN_KONFIG", "WARNA_RUTE_KENDARAAN", "WARNA_MOBIL", "daftarKendaraan", "kendaraanVisual"]) {
   Object.defineProperty(sandbox, nama, { get: () => vm.runInContext(nama, sandbox), configurable: true });
 }
 listeners["DOMContentLoaded"]();
@@ -103,30 +103,36 @@ function majuSatuHari() { for (let i = 0; i < 6; i++) C.majukanWaktu(240); }
 const idxHtml = fs.readFileSync(ROOT + "/index.html", "utf8");
 const swTxt = fs.readFileSync(ROOT + "/sw.js", "utf8");
 const srcCity = fs.readFileSync(ROOT + "/js/city.js", "utf8");
-cek("A1 VERSI_GAME v24.2", C.VERSI_GAME === "v24.2", C.VERSI_GAME);
+cek("A1 VERSI_GAME v25", C.VERSI_GAME === "v25", C.VERSI_GAME);
 cek("A2 index.html memuat 6 modul v24 dalam urutan benar (advisor + ui-v24 ?v=3, diagnostik + bubble ?v=2, lainnya ?v=1)",
   idxHtml.indexOf("js/city-warga.js?v=1") !== -1 && idxHtml.indexOf("js/city-bubble.js?v=2") !== -1 &&
   idxHtml.indexOf("js/city-diagnostik.js?v=2") !== -1 && idxHtml.indexOf("js/city-advisor.js?v=3") !== -1 &&
   idxHtml.indexOf("js/city-tutorial.js?v=1") !== -1 && idxHtml.indexOf("js/city-ui-v24.js?v=3") !== -1 &&
-  idxHtml.indexOf("js/city-advisor.js?v=3") < idxHtml.indexOf("js/city.js?v=36") &&
-  idxHtml.indexOf("js/city.js?v=36") < idxHtml.indexOf("js/city-tutorial.js?v=1"));
-cek("A3 index.html: #btnAdvisor + #drawerAdvisorV24 + #toastAksiV24 + css?v=18 + city.js?v=36",
+  idxHtml.indexOf("js/city-advisor.js?v=3") < idxHtml.indexOf("js/city.js?v=37") &&
+  idxHtml.indexOf("js/city.js?v=37") < idxHtml.indexOf("js/city-tutorial.js?v=1"));
+cek("A3 index.html: #btnAdvisor + #drawerAdvisorV24 + #toastAksiV24 + css?v=18 + city.js?v=37",
   idxHtml.indexOf('id="btnAdvisor"') !== -1 && idxHtml.indexOf('id="drawerAdvisorV24"') !== -1 &&
   idxHtml.indexOf('id="toastAksiV24"') !== -1 && idxHtml.includes("css/city.css?v=18") &&
-  idxHtml.includes("js/city.js?v=36"));
-cek("A4 sw.js cache meranti-rising-v24.2 + precache 6 modul baru",
-  swTxt.indexOf("meranti-rising-v24.2") !== -1 && swTxt.indexOf("js/city-warga.js?v=1") !== -1 &&
+  idxHtml.includes("js/city.js?v=37"));
+cek("A4 sw.js cache meranti-rising-v25 + precache 6 modul baru",
+  swTxt.indexOf("meranti-rising-v25") !== -1 && swTxt.indexOf("js/city-warga.js?v=1") !== -1 &&
   swTxt.indexOf("js/city-bubble.js?v=2") !== -1 && swTxt.indexOf("js/city-diagnostik.js?v=2") !== -1 &&
   swTxt.indexOf("js/city-advisor.js?v=3") !== -1 && swTxt.indexOf("js/city-tutorial.js?v=1") !== -1 &&
   swTxt.indexOf("js/city-ui-v24.js?v=3") !== -1);
-cek("A5 tidak ada sisa pin v24.1 aktif (city.js?v=35 / meranti-rising-v24.1 / advisor|ui-v24 ?v=2 / diagnostik|bubble ?v=1 / css?v=17)",
+cek("A5 tidak ada sisa pin v24.1/v24.2 aktif (city.js?v=35/36 / meranti-rising-v24.1/v24.2 / advisor|ui-v24 ?v=2 / diagnostik|bubble ?v=1 / kendaraan ?v=4 / lalin ?v=2 / css?v=17)",
   !idxHtml.includes("city.js?v=35") && !idxHtml.includes("city-advisor.js?v=2") &&
   !idxHtml.includes("city-ui-v24.js?v=2") && !idxHtml.includes("city-diagnostik.js?v=1") &&
   !idxHtml.includes("city-bubble.js?v=1") && !idxHtml.includes("css/city.css?v=17") &&
   !swTxt.includes("city.js?v=35") && !swTxt.includes('"meranti-rising-v24.1"') &&
   !swTxt.includes("city-advisor.js?v=2") && !swTxt.includes("city-ui-v24.js?v=2") &&
   !swTxt.includes("city-diagnostik.js?v=1") && !swTxt.includes("city-bubble.js?v=1") &&
-  !swTxt.includes("css/city.css?v=17"));
+  !swTxt.includes("css/city.css?v=17") &&
+  // v25: tidak ada sisa pin v24.2 aktif (city.js?v=36 / cache v24.2 /
+  // kendaraan ?v=4 / lalin ?v=2).
+  !idxHtml.includes("city.js?v=36") && !idxHtml.includes("js/city-kendaraan.js?v=4") &&
+  !idxHtml.includes("js/city-lalin.js?v=2") && !swTxt.includes("city.js?v=36") &&
+  !swTxt.includes('"meranti-rising-v24.2"') && !swTxt.includes("js/city-kendaraan.js?v=4") &&
+  !swTxt.includes("js/city-lalin.js?v=2"));
 cek("A6 modul global termuat (Warga/Bubble/Diagnostik/Advisor/Tutorial/UIV24/Notifikasi)",
   !!W && !!Bbl && !!Dg && !!Adv && !!Tut && !!UI && !!Notif);
 cek("A7 adapter kontrak: Diagnostik.diagnosis = diagnosa + statusBangunan; Advisor.pesan + ringkasan",
@@ -790,13 +796,13 @@ Bbl.bersihkan();
 Dg.invalidateSemua();
 
 // ---- X4d: banner "Versi baru tersedia" hanya bila SW lebih baru ----
-cek("X4d bandingVersi: v24.2>v24.1, v24.1<v24.2, sama=0, v24.10>v24.2", ctxEval("bandingVersi('v24.2','v24.1')") === 1 && ctxEval("bandingVersi('v24.1','v24.2')") === -1 && ctxEval("bandingVersi('v24.2','v24.2')") === 0 && ctxEval("bandingVersi('v24.10','v24.2')") === 1);
+cek("X4d bandingVersi: v24.2>v24.1, v24.1<v24.2, sama=0, v24.10>v24.2, v25.1>v25", ctxEval("bandingVersi('v24.2','v24.1')") === 1 && ctxEval("bandingVersi('v24.1','v24.2')") === -1 && ctxEval("bandingVersi('v24.2','v24.2')") === 0 && ctxEval("bandingVersi('v24.10','v24.2')") === 1 && ctxEval("bandingVersi('v25.1','v25')") === 1);
 ctxEval("pwaTerimaVersiSW('v24.1')");
-cek("X4d SW v24.1 (lebih lama dari halaman v24.2) -> banner TIDAK tampil", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
-ctxEval("pwaTerimaVersiSW('v24.3')");
-cek("X4d SW v24.3 (lebih baru) -> banner tampil", ctxEval("pwaUpdateTersedia") === true && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "");
-ctxEval("pwaTerimaVersiSW('v24.2')");
-cek("X4d SW v24.2 (sama dengan halaman) -> banner basi disembunyikan lagi", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
+cek("X4d SW v24.1 (lebih lama dari halaman v25) -> banner TIDAK tampil", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
+ctxEval("pwaTerimaVersiSW('v25.1')");
+cek("X4d SW v25.1 (lebih baru) -> banner tampil", ctxEval("pwaUpdateTersedia") === true && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "");
+ctxEval("pwaTerimaVersiSW('v25')");
+cek("X4d SW v25 (sama dengan halaman) -> banner basi disembunyikan lagi", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
 cek("X4d sw.js: postMessage versi + handler minta-versi", swTxt.indexOf("meranti-rising-minta-versi") !== -1 && swTxt.indexOf("meranti-rising-versi") !== -1 && swTxt.indexOf("VERSI_SW") !== -1);
 cek("X4d updatefound menanyakan versi SW dulu (bukan langsung menandai update)", srcCity.indexOf('baru.postMessage({ tipe: "meranti-rising-minta-versi" })') !== -1);
 
@@ -873,6 +879,275 @@ UI.tutupAdvisor();
 C.S.bangunan.splice(C.S.bangunan.indexOf(sdX3), 1);
 C.S.jalan.pop();
 Dg.invalidateSemua();
+
+// ---------------- Y: v25 Armada Kendaraan ----------------
+// Jalan uji: lurus 5 petak aspal (10,10)-(14,10); keadaan (jalan /
+// bangunan / jembatan / populasi / waktu) dipulihkan di akhir seksi
+// dan semua kendaraan tes dihapus. Sinkron berkala (~600 frame)
+// DIMATIKAN selama seksi ini (_hitungSinkronMobil = -100000) agar
+// tidak menyela hitungan (sinkron diuji langsung lewat fungsinya).
+C.aturKecepatan(1);
+vm.runInContext("waktuGame = 12 * 60;", sandbox);
+vm.runInContext("_hitungSinkronMobil = -100000;", sandbox);
+const jalanV25Lama = C.S.jalan.slice();
+const jembV25Lama = C.S.jembatan.slice();
+const bangV25Lama = C.S.bangunan.slice();
+const popV25Lama = C.S.penduduk.total;
+// Bersihkan kendaraan sisa dari seksi sebelumnya (mulaiGame di seksi
+// X meninggalkan truk ambient + mobil warga) agar hitungan seksi Y
+// tidak tercemar.
+function bersihSemuaKendaraanV25() {
+  for (const k of C.daftarKendaraan.slice()) { try { C.hapusKendaraan(k.id); } catch (e) {} }
+}
+bersihSemuaKendaraanV25();
+function aturJalanV25(daftar, tipe) {
+  C.S.jalan = daftar.map(p => ({ x: p[0], y: p[1], tipe: tipe || "jalan-aspal" }));
+  C.S.jembatan = [];
+  C.bangunGraphJalan();
+}
+function bersihKendaraanV25(id) { try { C.hapusKendaraan(id); } catch (e) {} }
+function normV25(a) { let s = a; while (s <= -Math.PI) s += Math.PI * 2; while (s > Math.PI) s -= Math.PI * 2; return s; }
+
+// ---- (a) sprite & tabel tipe ----
+cek("Y-a1 semua tipe kendaraan punya sprite path yang file-nya ADA di disk (10 baru + bus + truk = 12; ambulans termasuk dalam 10 baru)", (() => {
+  const paths = Object.keys(C.TIPE_KENDARAAN).map(t => C.TIPE_KENDARAAN[t].sprite).filter(Boolean);
+  return paths.length === 12 && paths.every(p => fs.existsSync(ROOT + "/" + p));
+})(), Object.keys(C.TIPE_KENDARAAN).map(t => C.TIPE_KENDARAAN[t].sprite || "(vektor)").join(", "));
+const SPEK_V25 = {
+  sedan: [55, 5, false, 1.1], hatchback: [50, 5, false, 1.0], pickup: [45, 3, false, 1.2],
+  motor: [60, 2, false, 0.7], angkot: [40, 12, false, 1.3], "mobil-dinas": [50, 5, false, 1.1],
+  "mobil-polisi": [70, 4, true, 1.1], "mobil-pemadam": [60, 6, true, 1.5],
+  ambulans: [80, 2, true, 1.2], "truk-sampah": [35, 500, false, 1.4],
+};
+cek("Y-a2 tabel TIPE_KENDARAAN 9 tipe baru + ambulans sesuai spek (kecepatan/kapasitas/darurat/panjangPetak)", Object.keys(SPEK_V25).every(t => {
+  const T = C.TIPE_KENDARAAN[t], s = SPEK_V25[t];
+  return T && T.kecepatanMaksKmh === s[0] && T.kapasitas === s[1] && T.darurat === s[2] &&
+    T.panjangPetak === s[3] && typeof T.sprite === "string" && T.sprite.indexOf("assets/vehicles/") === 0;
+}) && C.TIPE_KENDARAAN.ambulans.sprite === "assets/vehicles/ambulans.png" &&
+  C.TIPE_KENDARAAN.mobil.kecepatanMaksKmh === 50 && C.TIPE_KENDARAAN.mobil.kapasitas === 5 &&
+  C.TIPE_KENDARAAN.mobil.sprite === null);
+cek("Y-a3 muatSemuaGambar() mendaftarkan semua 10 sprite baru (bukan hanya TIPE_KENDARAAN)",
+  Object.keys(SPEK_V25).every(t => srcCity.indexOf('"' + C.TIPE_KENDARAAN[t].sprite + '"') !== -1));
+cek("Y-a4 WARNA_RUTE_KENDARAAN: semua tipe baru ada; darurat merah, dinas abu-abu, angkot hijau",
+  ["sedan", "hatchback", "pickup", "motor", "angkot", "mobil-dinas", "mobil-polisi", "mobil-pemadam", "truk-sampah"].every(t => typeof C.WARNA_RUTE_KENDARAAN[t] === "string") &&
+  C.WARNA_RUTE_KENDARAAN["mobil-polisi"] === "#e74c3c" && C.WARNA_RUTE_KENDARAAN["mobil-pemadam"] === "#e74c3c" &&
+  C.WARNA_RUTE_KENDARAAN.ambulans === "#e74c3c" && C.WARNA_RUTE_KENDARAAN["mobil-dinas"] === "#636e72" &&
+  C.WARNA_RUTE_KENDARAAN.angkot === "#00b894");
+
+// ---- (b) orientasi: hadap = sudut layar untuk 8 arah ----
+const ARAH_V25 = [0, Math.PI / 4, Math.PI / 2, 3 * Math.PI / 4, Math.PI, 5 * Math.PI / 4, 3 * Math.PI / 2, 7 * Math.PI / 4];
+const LAYAR_V25 = [Math.atan(0.5), Math.PI / 2, Math.PI - Math.atan(0.5), Math.PI, -(Math.PI - Math.atan(0.5)), -Math.PI / 2, -Math.atan(0.5), 0];
+cek("Y-b1 sudutPutarKendaraan: sudutLayar cocok tabel audit 8 arah (toleransi 1e-9) + hadap hasil = sudutLayar",
+  ARAH_V25.every((a, i) => {
+    const p = C.sudutPutarKendaraan(a);
+    if (Math.abs(normV25(p.sudutLayar - LAYAR_V25[i])) > 1e-9) return false;
+    const hadap = p.flip ? normV25(Math.PI - Math.atan(0.5) + p.theta) : normV25(Math.atan(0.5) + p.theta);
+    return Math.abs(normV25(hadap - p.sudutLayar)) < 1e-9;
+  }));
+cek("Y-b2 |θ| ≤ 90° untuk 7 dari 8 arah (sprite tidak terbalik)", ARAH_V25.every((a, i) => i === 5 || Math.abs(C.sudutPutarKendaraan(a).theta) <= Math.PI / 2 + 1e-12));
+cek("Y-b3 arah 225° (layar lurus ke atas): flip + |θ| = 116,565° — batas geometri sprite 2.5D, hadap tetap tepat", (() => {
+  const p = C.sudutPutarKendaraan(5 * Math.PI / 4);
+  return p.flip === true && Math.abs(Math.abs(p.theta) - (Math.PI / 2 + Math.atan(0.5))) < 1e-9;
+})(), "theta=" + (C.sudutPutarKendaraan(5 * Math.PI / 4).theta * 180 / Math.PI).toFixed(3) + "°");
+cek("Y-b4 cermin horizontal hanya di arah 90°/135°/180°/225° (bukan di 0°/45°/270°/315°)",
+  ARAH_V25.every((a, i) => C.sudutPutarKendaraan(a).flip === (i >= 2 && i <= 5)));
+
+// ---- (c) tiap tipe baru spawn + bergerak di loop game ----
+aturJalanV25([[10, 10], [11, 10], [12, 10], [13, 10], [14, 10]]);
+C.S.bangunan = [];
+const TIPE_BARU_V25 = ["sedan", "hatchback", "pickup", "motor", "angkot", "mobil-dinas", "mobil-polisi", "mobil-pemadam", "ambulans", "truk-sampah"];
+for (const tipe of TIPE_BARU_V25) {
+  const k = C.buatKendaraanJalan(tipe, 10, 10, 14, 10);
+  let maksJarak = 0;
+  for (let i = 0; i < 600; i++) {
+    C.perbaruiSemuaKendaraan(0.016);
+    maksJarak = Math.max(maksJarak, Math.hypot(k.x - 10, k.y - 10));
+    if (maksJarak > 3.5) break;
+  }
+  cek("Y-c kendaraan " + tipe + " spawn + bergerak (terdaftar & di kendaraanVisual, jarak > 0,5)",
+    k && maksJarak > 0.5 && C.daftarKendaraan.indexOf(k) !== -1 && C.kendaraanVisual.indexOf(k) !== -1,
+    tipe + " jarak=" + maksJarak.toFixed(2) + " state=" + (k && k.state));
+  if (k) bersihKendaraanV25(k.id);
+}
+cek("Y-c2 render gambarSatuKendaraan semua tipe baru + lama tanpa throw (headless: fallback vektor)",
+  TIPE_BARU_V25.concat(["mobil", "bus", "truk", "kapal", "perahu"]).every(t => {
+    try { C.gambarSatuKendaraan({ tipe: t, x: 12, y: 10, state: "cruising", arah: Math.PI / 4, warna: "#0984e3" }, 800, 600); return true; }
+    catch (e) { return false; }
+  }));
+
+// ---- (f) sinkron spawn: warga / dinas / instansi / sampah / angkot ----
+// Jalan 2 lajur + bangunan induk di tepi (jarak <= 3 petak dari jalan).
+// Jalan sengaja LEBAR (x 6..20, 30 petak): sinkron warga/dinas/
+// instansi/sampah butuh petak jalan BEBAS di dekat tiap bangunan induk
+// — gedung di y=13 hanya mencapai 4 petak kandidat (Manhattan ≤3),
+// sehingga spawn gagal acak saat kendaraan lain menutupinya (flaky,
+// terbukti 2 run: polisi= kosong). Gedung instansi kini di y=12
+// (8 petak kandidat tiap gedung) + jalan 30 petak.
+aturJalanV25([[6, 10], [7, 10], [8, 10], [9, 10], [10, 10], [11, 10], [12, 10], [13, 10], [14, 10], [15, 10], [16, 10], [17, 10], [18, 10], [19, 10], [20, 10], [6, 11], [7, 11], [8, 11], [9, 11], [10, 11], [11, 11], [12, 11], [13, 11], [14, 11], [15, 11], [16, 11], [17, 11], [18, 11], [19, 11], [20, 11]]);
+C.S.bangunan = [];
+tambahBangunan("rumah-sederhana", 11, 12, {});
+tambahBangunan("rumah-sederhana", 13, 12, {});
+tambahBangunan("rumah-sederhana", 15, 12, {});
+C.S.penduduk.total = 4;
+C.sinkronMobilWarga();
+let wargaV25 = C.daftarKendaraan.filter(k => k && k.mobilWarga);
+cek("Y-f1 warga: pop 4 -> 1 mobil warga, tipe diundi (sedan/hatchback/motor/pickup)",
+  wargaV25.length === 1 && ["sedan", "hatchback", "motor", "pickup"].indexOf(wargaV25[0].tipe) !== -1,
+  wargaV25.map(k => k.tipe).join(","));
+const distV25 = {};
+for (let i = 0; i < 200; i++) { const t = C._pilihTipeMobilWarga(); distV25[t] = (distV25[t] || 0) + 1; }
+cek("Y-f2 undian tipe mobil warga mencakup keempat tipe (bobot 35/25/25/15)", ["sedan", "hatchback", "motor", "pickup"].every(t => (distV25[t] || 0) > 5), JSON.stringify(distV25));
+C.S.penduduk.total = 20;
+C.sinkronMobilWarga();
+wargaV25 = C.daftarKendaraan.filter(k => k && k.mobilWarga);
+cek("Y-f3 warga: pop 20 -> target 3 mobil warga (1+floor(20/8))", wargaV25.length === 3, "jumlah=" + wargaV25.length);
+tambahBangunan("kantor-pemerintah", 12, 12, {});
+C.sinkronKendaraanDinas();
+cek("Y-f4 dinas: 1 kantor -> 1 mobil-dinas (penanda dinas)", C.daftarKendaraan.filter(k => k && k.dinas).length === 1 && C.daftarKendaraan.some(k => k && k.dinas && k.tipe === "mobil-dinas"));
+tambahBangunan("kantor-dinas", 14, 12, {});
+tambahBangunan("kantor-bupati", 16, 12, {});
+tambahBangunan("kantor-pemerintah", 11, 13, {});
+tambahBangunan("kantor-dinas", 13, 13, {});
+C.sinkronKendaraanDinas();
+cek("Y-f5 dinas: 5 kantor -> maks 4 mobil-dinas", C.daftarKendaraan.filter(k => k && k.dinas).length === 4, "jumlah=" + C.daftarKendaraan.filter(k => k && k.dinas).length);
+tambahBangunan("kantor-polisi", 17, 12, {});
+tambahBangunan("pos-pemadam", 10, 12, {});
+tambahBangunan("puskesmas", 18, 12, {});
+C.sinkronKendaraanInstansi();
+// Retry: spawn menolak petak yang sedang ditempati kendaraan lain —
+// bila petak kandidat sedang penuh sesaat, biarkan kendaraan bergerak
+// lalu coba lagi (maks 3x). Ini menutup flaky hunian-sesaat, bukan
+// menutupi kegagalan spawn yang sesungguhnya (tanpa bangunan induk /
+// manager penuh tetap null — lihat Y-e2).
+for (let r = 0; r < 3 && !(C.daftarKendaraan.some(k => k && k.polisi) && C.daftarKendaraan.some(k => k && k.pemadam) && C.daftarKendaraan.some(k => k && k.medis)); r++) {
+  for (let i = 0; i < 120; i++) C.perbaruiSemuaKendaraan(0.016);
+  C.sinkronKendaraanInstansi();
+}
+cek("Y-f6 instansi: 1 polisi + 1 pemadam + 1 ambulans (penanda polisi/pemadam/medis, ambulans darurat)",
+  C.daftarKendaraan.some(k => k && k.polisi && k.tipe === "mobil-polisi") &&
+  C.daftarKendaraan.some(k => k && k.pemadam && k.tipe === "mobil-pemadam") &&
+  C.daftarKendaraan.some(k => k && k.medis && k.tipe === "ambulans") &&
+  C.TIPE_KENDARAAN["mobil-polisi"].darurat === true && C.TIPE_KENDARAAN.ambulans.darurat === true,
+  "polisi=" + C.daftarKendaraan.filter(k => k && k.polisi).map(k => k.tipe).join(",") +
+  " pemadam=" + C.daftarKendaraan.filter(k => k && k.pemadam).map(k => k.tipe).join(",") +
+  " medis=" + C.daftarKendaraan.filter(k => k && k.medis).map(k => k.tipe).join(",") +
+  " total=" + C.daftarKendaraan.length);
+C.S.penduduk.total = 4;
+C.sinkronTrukSampah();
+cek("Y-f7 sampah: pop 4 -> 1 truk-sampah", C.daftarKendaraan.filter(k => k && k.trukSampah).length === 1);
+C.S.penduduk.total = 250;
+C.sinkronTrukSampah();
+cek("Y-f8 sampah: pop 250 -> maks 3 truk-sampah (1+floor(250/100))", C.daftarKendaraan.filter(k => k && k.trukSampah).length === 3, "jumlah=" + C.daftarKendaraan.filter(k => k && k.trukSampah).length);
+const angkotV25 = C._buatBusRute({ routeId: "RB-V25", jenisKendaraan: "angkot", terminalAwal: { x: 10, y: 10 }, armada: 2, jadwalKeberangkatan: 60 }, 0);
+cek("Y-f9 _buatBusRute angkot -> tipe angkot, kapasitas 12, TIDAK terdaftar di manager (tidak dobel-digerakkan)",
+  angkotV25.tipe === "angkot" && angkotV25.kapasitas === 12 && C.daftarKendaraan.indexOf(angkotV25) === -1,
+  "tipe=" + angkotV25.tipe + " kap=" + angkotV25.kapasitas);
+const busV25 = C._buatBusRute({ routeId: "RB-V25B", jenisKendaraan: "bus", terminalAwal: { x: 10, y: 10 }, armada: 1, jadwalKeberangkatan: 60 }, 0);
+cek("Y-f10 _buatBusRute bus -> tipe bus, kapasitas 40", busV25.tipe === "bus" && busV25.kapasitas === 40);
+const miniV25 = C._buatBusRute({ routeId: "RB-V25M", jenisKendaraan: "minibus", terminalAwal: { x: 10, y: 10 }, armada: 1, jadwalKeberangkatan: 60 }, 0);
+cek("Y-f11 minibus tetap bus (tidak ada sprite minibus), kapasitas 20", miniV25.tipe === "bus" && miniV25.kapasitas === 20);
+
+// ---- (d) darurat vs lampu merah (pola test13 TEST 3) ----
+// Bersihkan dulu kendaraan seksi (f) — kendaraan parkir sisa di jalan
+// yang sama akan memblokir sedan (jarak aman) dan mengacaukan ukur.
+bersihSemuaKendaraanV25();
+aturJalanV25([[10, 10], [11, 10], [12, 10], [13, 10], [14, 10]]);
+C.S.bangunan = [{ id: "traffic-light", x: 12, y: 9, selesai: true, rot: 0 }];
+C.bangunGraphJalan();
+let menitMerahV25 = null, menitHijauV25 = null;
+for (let m = 360; m < 380; m++) {
+  vm.runInContext("waktuGame = " + m + ";", sandbox);
+  if (menitMerahV25 === null && C.lampuMerahDi(11, 10) === true) menitMerahV25 = m;
+  if (menitHijauV25 === null && C.lampuMerahDi(11, 10) === false) menitHijauV25 = m;
+  if (menitMerahV25 !== null && menitHijauV25 !== null) break;
+}
+cek("Y-d0 ada fase merah & hijau dalam satu siklus lampu", menitMerahV25 !== null && menitHijauV25 !== null, "merah=" + menitMerahV25 + " hijau=" + menitHijauV25);
+if (menitMerahV25 !== null && menitHijauV25 !== null) {
+  vm.runInContext("waktuGame = " + menitMerahV25 + ";", sandbox);
+  for (const tipe of ["ambulans", "mobil-polisi", "mobil-pemadam"]) {
+    const k = C.buatKendaraanJalan(tipe, 10, 10, 14, 10);
+    let lewat = false;
+    for (let i = 0; i < 800; i++) {
+      C.perbaruiSemuaKendaraan(0.016);
+      if (k.x > 13) { lewat = true; break; }
+    }
+    cek("Y-d1 " + tipe + " (darurat) tidak berhenti di lampu merah", lewat, "x=" + k.x.toFixed(2) + " state=" + k.state);
+    bersihKendaraanV25(k.id);
+  }
+  const sedanV25 = C.buatKendaraanJalan("sedan", 10, 10, 14, 10);
+  let xMaksV25 = 10;
+  for (let i = 0; i < 1200; i++) {
+    C.perbaruiSemuaKendaraan(0.016);
+    xMaksV25 = Math.max(xMaksV25, sedanV25.x);
+    if (sedanV25.state === "waiting" && sedanV25.cepat < 0.05) break;
+  }
+  cek("Y-d2 sedan (non-darurat) berhenti di lampu merah (x < 12,5, waiting)", sedanV25.state === "waiting" && sedanV25.cepat < 0.05 && xMaksV25 < 12.5, sedanV25.state + " x=" + sedanV25.x.toFixed(2) + " xMaks=" + xMaksV25.toFixed(2));
+  vm.runInContext("waktuGame = " + menitHijauV25 + ";", sandbox);
+  let tibaV25 = false;
+  for (let i = 0; i < 1500 && !tibaV25; i++) {
+    C.perbaruiSemuaKendaraan(0.016);
+    if ((sedanV25.status === "tiba" || sedanV25.state === "parking") && Math.hypot(sedanV25.x - 14, sedanV25.y - 10) < 0.8) tibaV25 = true;
+  }
+  cek("Y-d3 lampu hijau -> sedan melanjutkan perjalanan sampai tujuan", tibaV25, "status=" + sedanV25.status + " pos=" + sedanV25.x.toFixed(2) + "," + sedanV25.y.toFixed(2));
+  bersihKendaraanV25(sedanV25.id);
+  // Prioritas darurat: sedan di depan menunggu saat mobil-polisi aktif
+  // di edge yang sama; setelah polisi pergi, sedan jalan lagi.
+  aturJalanV25([[10, 10], [11, 10], [12, 10], [13, 10], [14, 10]]);
+  const depanV25 = C.buatKendaraanJalan("sedan", 11, 10, 14, 10);
+  const polV25 = C.buatKendaraanJalan("mobil-polisi", 10, 10, 14, 10);
+  let pernahMenungguV25 = false, polTibaV25 = false;
+  for (let i = 0; i < 1200 && !polTibaV25; i++) {
+    C.perbaruiSemuaKendaraan(0.016);
+    if (depanV25.state === "waiting") pernahMenungguV25 = true;
+    if ((polV25.status === "tiba" || polV25.state === "parking") && Math.hypot(polV25.x - 14, polV25.y - 10) < 0.8) polTibaV25 = true;
+  }
+  cek("Y-d4 sedan di depan menunggu saat mobil-polisi aktif di edge yang sama", pernahMenungguV25, "depanState=" + depanV25.state + " polState=" + polV25.state);
+  cek("Y-d5 mobil-polisi tiba di tujuan", polTibaV25, "pos=" + polV25.x.toFixed(2) + "," + polV25.y.toFixed(2));
+  bersihKendaraanV25(polV25.id);
+  let sedanLanjutV25 = false;
+  for (let i = 0; i < 1500 && !sedanLanjutV25; i++) {
+    C.perbaruiSemuaKendaraan(0.016);
+    if ((depanV25.status === "tiba" || depanV25.state === "parking") && Math.hypot(depanV25.x - 14, depanV25.y - 10) < 0.8) sedanLanjutV25 = true;
+  }
+  cek("Y-d6 setelah polisi pergi, sedan melanjutkan perjalanan sampai tujuan", sedanLanjutV25, "status=" + depanV25.status);
+  bersihKendaraanV25(depanV25.id);
+}
+
+// ---- (e) batas 40 dihormati ----
+bersihSemuaKendaraanV25();
+C.S.bangunan = [];
+aturJalanV25([[10, 10], [11, 10], [12, 10], [13, 10], [14, 10]]);
+let isiV25 = 0;
+while (isiV25 < 60) {
+  const k = C.buatKendaraanJalan("sedan", 10, 10, 14, 10);
+  if (!k) break;
+  isiV25++;
+}
+cek("Y-e1 batas 40 dihormati (isi sampai penuh = 40 kendaraan)", isiV25 === 40 && C.daftarKendaraan.length === 40, "isi=" + isiV25 + " total=" + C.daftarKendaraan.length);
+cek("Y-e2 spawn ke-41 mengembalikan null + sinkron tidak memaksa (sampah & warga)",
+  C.buatKendaraanJalan("sedan", 10, 10, 14, 10) === null &&
+  C.buatKendaraanJalan("truk-sampah", 10, 10, 14, 10) === null &&
+  C.spawnMobilWarga() === null &&
+  (() => { C.sinkronTrukSampah(); C.sinkronKendaraanDinas(); C.sinkronKendaraanInstansi(); return C.daftarKendaraan.length === 40; })(),
+  "total=" + C.daftarKendaraan.length);
+bersihSemuaKendaraanV25();
+
+// ---- (g) refs v25 ----
+cek("Y-g1 VERSI_GAME v25 + index.html refs v25 (city.js v=37, kendaraan v=5, lalin v=3, css v=18 tetap)",
+  C.VERSI_GAME === "v25" && idxHtml.includes("js/city.js?v=37") && idxHtml.includes("js/city-kendaraan.js?v=5") &&
+  idxHtml.includes("js/city-lalin.js?v=3") && idxHtml.includes("css/city.css?v=18"));
+cek("Y-g2 sw.js cache meranti-rising-v25 + precache ?v= baru (city.js v=37, kendaraan v=5, lalin v=3)",
+  swTxt.indexOf("meranti-rising-v25") !== -1 && swTxt.indexOf("js/city.js?v=37") !== -1 &&
+  swTxt.indexOf("js/city-kendaraan.js?v=5") !== -1 && swTxt.indexOf("js/city-lalin.js?v=3") !== -1);
+
+// ---- pulihkan keadaan seksi Y ----
+C.S.jalan = jalanV25Lama;
+C.S.jembatan = jembV25Lama;
+C.S.bangunan = bangV25Lama;
+C.S.penduduk.total = popV25Lama;
+C.bangunGraphJalan();
+vm.runInContext("_hitungSinkronMobil = 0;", sandbox);
+vm.runInContext("waktuGame = 12 * 60;", sandbox);
 
 // ---------------- Ringkasan ----------------
 console.log("\nHASIL v24: lulus " + lulus + ", gagal " + gagal);

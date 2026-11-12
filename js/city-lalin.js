@@ -1002,7 +1002,15 @@ function _ruteTerhubung(route) {
 }
 function _buatBusRute(route, idxBus) {
   const p = route.terminalAwal;
-  const k = buatKendaraan("bus", p.x, p.y);
+  // v25: tipe kendaraan mengikuti route.jenisKendaraan — "angkot"
+  // memakai sprite angkot sendiri (kapasitas 12 dari konfigurasi);
+  // "bus"/"minibus" tetap bus (tidak ada sprite minibus). Bus rute
+  // bergerak per jam game (prosesBusRutePerJam, bukan per-frame) dan
+  // TIDAK masuk kendaraanVisual — jadi tidak dobel-digerakkan oleh
+  // VehicleManager maupun perbaruiBusVisual (yang hanya menyentuh
+  // kendaraanVisual tipe "bus" dari sistem lama S.lalin.bus).
+  const tipeKendaraan = (route.jenisKendaraan === "angkot") ? "angkot" : "bus";
+  const k = buatKendaraan(tipeKendaraan, p.x, p.y);
   k.routeId = route.routeId;
   k.busId = route.routeId + "-bus-" + (idxBus + 1);
   k.halteSaatIni = 0;

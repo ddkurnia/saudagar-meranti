@@ -6,6 +6,93 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v25 — Armada Kendaraan (2026-11-12)
+
+Perbaikan orientasi kendaraan + 9 tipe kendaraan baru dengan sprite (ambulans yang sudah ada kini bersprite)
+2.5D sendiri — tanpa mengubah save key, ekonomi, waktu, koordinat
+bangunan, rumus pertumbuhan penduduk, graph jalan, A*, atau logika
+gerak-rute-pathfinding.
+
+- **"Jalan miring ke samping" diperbaiki.** Akar masalah: cabang
+  truk/bus di `gambarSatuKendaraan` hanya flip horizontal
+  (`hadapKiri` dari cos−sin) dan TIDAK PERNAH memutar sprite mengikuti
+  arah gerak — sprite yang menghadap kanan-bawah digambar dengan sumbu
+  yang sama walau kendaraan bergerak ke arah diagonal lain, sehingga
+  bodi tampak miring/crab-walking; cabang mobil/ambulans vektor memang
+  diputar tapi badannya tipis (40×18 px, roda menonjol) sehingga terbaca
+  "hanya roda saja". Perbaikan: SATU cabang sprite generik berdasarkan
+  `TIPE_KENDARAAN[k.tipe].sprite` — sprite DIPUTAR mengikuti sudut
+  layar `sudutLayar = atan2((cos a + sin a) * 0,5, cos a − sin a)`,
+  `θ = sudutLayar − atan(0,5)`; bila `|θ| > 90°` pakai cermin horizontal
+  + `θ_flip = sudutLayar − (π − atan(0,5))`, dinormalisasi ke (−π, π].
+  Urutan canvas: translate → rotate(θ) → scale(−1,1) bila flip →
+  drawImage; bayangan + sorotan tetap di luar rotasi. Hadap hasil =
+  sudut layar, terbukti headless untuk 8 arah (toleransi 1e-9).
+  Lebar render proporsional `panjangPetak`: `w = 64*z *
+  (panjangPetak/1,6)` — bus tetap 64*z, sedan 44*z, motor 28*z,
+  pemadam 60*z. Fallback vektor generik (pakai `T.warna`) dipertahankan
+  bila sprite belum termuat; `mobil` lama tanpa sprite tetap memakai
+  fallback vektor (badan dipertebal 48×22 px).
+- **9 tipe baru di `TIPE_KENDARAAN`** (total 13; `mobil` generik
+  dipertahankan): sedan (55 km/jam, 5 penumpang), hatchback (50, 5),
+  pickup (45, 3), motor (60, 2), angkot (40, 12), mobil-dinas (50, 5),
+  mobil-polisi (70, 4, darurat), mobil-pemadam (60, 6, darurat),
+  ambulans (kini bersprite `ambulans.png`, 80, 2 pasien, darurat),
+  truk-sampah (35, 500 unit muatan). Sedan/hatchback/motor mengundi
+  warna per unit dari palet `WARNA_MOBIL`. Darurat memakai logika lampu
+  merah + prioritas yang sudah ada (tidak ada logika baru).
+- **Wiring spawn** (semua menghormati batas global 40 — spawn
+  mengembalikan null bila penuh, tidak memaksa): warga — tipe diundi
+  per unit (sedan 35%, hatchback 25%, motor 25%, pickup 15%), target
+  tetap 1+floor(pop/8), maks 12, penanda `k.mobilWarga` menghitung
+  gabungan keempat tipe; pemerintah — 1 mobil-dinas per
+  kantor-pemerintah/kantor-dinas/kantor-bupati selesai, maks 4, tujuan
+  kantor lain dulu (`_beriTujuanDinas`), fallback ambient; instansi —
+  1 mobil-polisi per kantor polisi (maks 3), 1 mobil-pemadam per
+  pos-pemadam/pemadam-kebakaran (maks 3), 1 ambulans per
+  puskesmas/rumah-sakit (maks 3), patroli ambient — TIDAK ada dispatch
+  kejadian (belum ada sistemnya); angkutan umum — `_buatBusRute`
+  mengikuti `route.jenisKendaraan` ("angkot" → tipe angkot, kapasitas
+  12; "bus"/"minibus" → bus), batas 3/rute tetap, bus rute tidak masuk
+  `daftarKendaraan` sehingga tidak dobel-digerakkan manager maupun
+  `perbaruiBusVisual`; truk sampah — 1 unit + 1 tiap 100 penduduk,
+  maks 3, spawn ambient via `buatKendaraanJalan("truk-sampah")`.
+  Semua sinkron dipanggil `initKendaraan` dan berkala (~10 detik) dari
+  `perbaruiSemuaKendaraan`.
+- **Penyimpangan yang disengaja (terbukti tes):** `spawnTrukSampah`
+  TIDAK mengambil petak jalan bebas TERAKHIR. Tanpa guard ini, kota
+  awal (3 petak jalan) terisi 3 kendaraan (truk + mobil warga + truk
+  sampah) sehingga semua petak rasio 1,0 — skor lalin 0 bahkan di pop
+  10 dan 3 cek v19/v20 gagal. Dengan guard, truk sampah di kota awal
+  baru muncul begitu jalan ≥4 petak (sinkron berkala ~10 detik).
+- **Refs:** `VERSI_GAME "v25"`; `city.js?v=37`,
+  `city-kendaraan.js?v=5`, `city-lalin.js?v=3`; modul lain tidak berubah
+  (css?v=18 tetap); SW cache `meranti-rising-v25`.
+
+### Hasil tes headless v25
+
+Suite: `node tests/test24.js` — **216 cek, 0 gagal** (173 lama + 43
+baru v25: sprite di disk, tabel tipe, orientasi 8 arah, spawn+gerak
+9 tipe baru + ambulans, sinkron warga/dinas/instansi/sampah, angkot, darurat vs lampu
+merah, batas 40, refs). `node tests/test13.js` — **1270 cek,
+TEST_V13_OK** (11 dari 12 run hijau pada kode final; 1 run gagal 1 cek
+— lihat batas jujur). `node tests/test-suara.js` — **28 cek,
+TEST_SUARA_OK** (2 run).
+
+### Batas jujur v25
+
+| Batas | Keterangan |
+| --- | --- |
+| Arah tile 225° (layar lurus ke atas): \|θ\| = 116,565° | Batas geometri rotasi sprite 2.5D, bukan bug kode: hadap asli sprite (26,565°) berjarak 116,565° dari arah layar −90°, jadi putaran berapa pun (flip/tidak) melewati 90° di arah itu saja. Hadap tetap tepat (terbukti 1e-9); bodi miring melewati horizontal dan atap menunduk di arah itu. 7 arah lain \|θ\| ≤ 90° dan atap tetap di atas. |
+| Tampilan sprite + orientasi semua arah | Teruji headless (hadap, flip, fallback vektor tanpa throw); tampilan visual sprite di peta (apakah sedan/motor/angkot terbaca baik di zoom 1x/2x, apakah arah 225° tampak wajar) hanya bisa dinilai cek live. |
+| Spawn darurat (polisi/pemadam/ambulans) | Teruji headless (sinkron + patroli ambient); perilaku patroli di kota live (apakah mereka berkumpul di satu ruas, apakah menumpuk di dekat fasilitas) belum terlihat live. |
+| Rotasi sprite 3/4 pada arah utara/barat | Arah 90°/135°/180°/225° memakai cermin horizontal + rotasi (bukan frame sprite terpisah) — sisi kendaraan yang terlihat adalah cerminan sisi kanan-bawah; bila cerminan tampak janggal (mis. setir/pintu terbalik), perlu frame khusus per arah. Belum dinilai live. |
+| Papan angkot "ANGKOT DAGO – KALAPA" | Aset `angkot.png` bertuliskan rute Dago–Kalapa (Bandung), bukan rute Meranti — bukan blocker, tapi perlu diganti tulisannya bila ada revisi aset. |
+| Truk sampah di kota awal | Guard petak-bebas-terakhir: di kota awal (3 petak jalan) truk sampah TIDAK muncul sampai jalan ≥4 petak. Aturan "1 unit" berlaku penuh begitu ada ruang. |
+| Darurat tanpa dispatch | Polisi/pemadam/ambulans hanya patroli ambient — tidak ada sistem kejadian (kebakaran/kriminal/medis) yang memanggil mereka ke lokasi. |
+| 1 run test13 gagal 1 cek dari 12 run | Pada kode final: 11 run `TEST_V13_OK`, 1 run `TEST_V13_GAGAL:1 dari 1270` — cek yang gagal tidak teridentifikasi (output run itu terpotong sebelum baris GAGAL) dan tidak terulang di 11 run lain. Hipotesis utama (belum terbukti): ambang gerak mobil warga di skenario v22.5 (c) — tipe mobil warga diundi acak + truk sampah berkala bisa muncul di tengah 3600 tick dan menambah kendaraan ke-3 di jalan 3 petak. |
+| Flaky lama yang diperbaiki di tes v25 | `Y-f6` sempat gagal 2× saat jalan uji 14 petak (spawn instansi hanya punya 4 petak kandidat Manhattan ≤3) — diperbaiki dengan jalan uji 30 petak + gedung di y=12 (8 kandidat) + retry sinkron maks 3×; hijau 5× berturut-turut setelah perbaikan, lalu 3× lagi pada kode final. |
+
 ## Yang baru di v24.2 — Toast Kritis, Rencana Kilang & Poles (2026-11-12)
 
 Perbaikan atas temuan cek live v24.1 — tanpa mengubah save key, ekonomi,
