@@ -6,6 +6,124 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v27 — Varian Arah Kendaraan: belok tanpa "jumping" (2026-11-12)
+
+Pengganti rotasi sprite v25: tiap tipe kendaraan kini punya 4 sprite
+2D dari sisi berbeda (SE/SW/NW/NE), dipilih dari arah gerak TANPA
+diputar — belok = ganti varian tepat di tengah belokan. Akar masalah
+v25 adalah batas geometri sprite 2.5D: di arah tile 225° (layar lurus
+ke atas) sprite harus miring 116,565°, melewati horizontal, sehingga
+belokan terbaca "melompat". Empat arah sudah cukup karena jalan di
+grid isometri selalu searah sumbu tile (standar SimCity 2000 /
+Transport Tycoon); arah kardinal layar hanya dilewati sekejap di
+tengah belokan. Tidak ada perubahan save key, ekonomi, waktu,
+koordinat, rumus penduduk, road graph/A*, atau sistem transport.
+
+- **Pemetaan (4 diagonal layar, bukan 8).** `k.arah` (radian, ruang
+  tile) → sudut layar `atan2((cos a + sin a) * 0,5, cos a − sin a)`
+  → sektor `[0°,90°) SE, [90°,180°) SW, [180°,270°) NW, [270°,360°)
+  NE` (`pilihVarianArah()` + `sektorVarian()` di `js/city.js`).
+  Batas sektor tepat di arah kardinal layar (E/S/W/N) = tepat di
+  tengah setiap belokan 90°. Pasangan yang bertukar di tiap belokan
+  selalu sekeluarga: SE↔SW depan→depan, NW↔NE belakang→belakang,
+  SW↔NW dan NE↔SE depan→belakang saat kendaraan tampak dari samping.
+- **Renderer tanpa rotasi.** Cabang sprite generik di
+  `gambarSatuKendaraan()` kini `drawImage` tanpa `rotate` — hanya
+  `translate` (+ `scale(-1,1)` bila fallback cermin). Tinggi render
+  ikut aspek varian yang dipakai (tampak belakang lebih pendek) dan
+  itu benar. Bayangan + sorotan kuning tetap digambar di luar (elips
+  tak berotasi). `sudutPutarKendaraan()` v25 TETAP ADA — masih dipakai
+  fallback vektor tipe tanpa sprite ("mobil" generik) + tes v25 (Y-b).
+- **Histeresis 5° (anti-flicker).** `k._varianArah` (field runtime,
+  tidak disimpan di save): bila sudut layar masih <5° dari batas
+  sektor, varian lama dipertahankan — kendaraan yang berhenti tepat
+  di persimpangan tidak berkedip.
+- **Rantai fallback (tidak pernah throw).** Varian arah → pasangan
+  cermin sekeluarga (SE↔SW, NW↔NE, cermin tanpa rotasi) → SE tanpa
+  cermin → (bus saja) truk + atap biru (placeholder v19) → fallback
+  vektor generik. Varian hilang hanya dicatat sekali via
+  `console.warn`, tidak menghentikan render.
+- **Preload + cache.** `muatSemuaGambar()` memuat ke-48 file (12 SE
+  + 36 varian, total aset kendaraan ~18 MB: SE ~4 MB + varian
+  14.728.889 byte) agar belokan tidak pop-in. SW TIDAK mem-precache
+  36 varian — keputusan sadar mengikuti preseden audio v23 (mp3
+  ~14 MB tidak di-precache) dan perlakuan sprite kendaraan yang
+  sudah ada (tidak satu pun di-precache): `muatSemuaGambar` memuat
+  varian saat game dibuka dan fetch handler SW menyimpannya ke
+  runtime-cache (cache-first + put saat miss), jadi sesi kedua tetap
+  bisa offline. Lihat tradeoff di tabel batas di bawah.
+- **Aset (36 file, sudah terverifikasi di disk).** Konvensi nama
+  `<stem>-<arah>.png` di `assets/vehicles/` (mis. `mobil-sedan.png`
+  = SE, `mobil-sedan-sw.png` dst.); semua RGBA transparan, lebar
+  sama dengan SE tipenya, total 14.728.889 byte (manifest:
+  `~/workspace/saudagar-meranti-aset-varian-arah.txt`). File-file
+  ini TIDAK ikut push teks — diunggah via GitHub web UI setelah
+  code push (biner rusak bila ikut push teks).
+- **Versi.** `VERSI_GAME "v27"`, `js/city.js?v=39`, SW cache
+  `meranti-rising-v27`. `js/city-kendaraan.js` TIDAK berubah (pakai
+  konvensi nama, bukan tabel varian eksplisit). Tes: seksi AA baru
+  di `tests/test24.js` (52 cek: 12 file + 12 konvensi + 8 pemetaan
+  + 4 batas + 4 fallback + 5 render smoke + 2 histeresis + 1
+  preload + 4 refs/save/kompatibilitas) — test24 236 → 288 cek.
+
+### Menu fix v27 — layout menu utama utuh dalam 1 viewport (2026-11-12)
+
+Perbaikan CRITICAL atas temuan cek live v26 (screenshot tablet user):
+menu overflow vertikal ~300 px di viewport ~1280×570, overflow
+horizontal (latar 108% + awan), sambungan horizontal di tengah
+panorama, panel promo tak terlihat, logo partner hanya ~12 px visual.
+`VERSI_GAME` TETAP `"v27"` — fix ini ikut push gabungan v27.
+
+- **Viewport lock (menu saja).** `#tahapSinematik` `overflow:hidden` +
+  `height:100dvh`; `.menu-layar` `height:100%`; `#layarMulai` dikunci
+  class `.menu-terkunci` yang di-toggle `tampilkanTahap()` HANYA saat
+  `nama==='sinematik'` — tahap identitas/narasi/profil/pengaturan
+  tetap boleh scroll vertikal. Satu-satunya perubahan `js/city.js`.
+- **Satu background + satu overlay.** `.latarSinematik` `inset:-4%` →
+  `inset:0` (+ `overflow:hidden`); awan ×2 + ombak pindah menjadi
+  anak `.latarSinematik`; `.menu-overlay` `absolute` → `fixed`.
+- **Tiga zona.** `.menu-layar` setinggi viewport → `.menu-promo`
+  (`bottom:150px`) otomatis berjangkar ke viewport; pemadatan promo
+  di `max-height:700px/620px`. Aturan lama `.menu-promo{display:none}`
+  di `max-height:560px` DIHAPUS (bertentangan dengan acceptance).
+- **Logo partner Opsi A (crop, bukan margin negatif).**
+  `assets/menu/partner-logos.png` 2172×724 → **2172×196** (crop
+  vertikal pita alpha>200 y 255–439 + padding 6 px, lebar penuh
+  dipertahankan; path file TETAP). `.menu-partner img` kini
+  `height:clamp(36px, 5vh, 44px)` → visual ~34–41 px (dulu ~12 px).
+  File PNG ini HARUS diunggah ulang via GitHub web UI saat push
+  (menimpa file lama di repo) — push teks tidak membawa biner.
+- **Kolom kiri dipadatkan (clamp).** Lebar `clamp(250px,28vw,400px)`
+  + backstop `max-height:700px/620px`; logo
+  `clamp(200px,24vw,400px)` + `max-height:clamp(64px,16vh,133px)`;
+  nav `gap/margin-top` clamp; sub/sapaan/header/infoSave clamp.
+- **Kategori + Cara bermain keluar dari kolom.** `#caraMain` dan
+  `#menuPanelMuat` pindah jadi anak langsung `#tahapSinematik` dan
+  overlay fixed terpusat — TANPA perubahan JS (toggle `.open` /
+  `style.display` yang ada tetap berlaku; tes Z12 tetap lolos).
+- **Administratif.** `css/menu.css?v=1` → `?v=2` (index.html, sw.js
+  precache, tes Z1/Z5); nama cache SW `meranti-rising-v27` TETAP.
+  Tes baru Z17–Z19b di `tests/test24.js` (test24 288 → 292 cek).
+  Bukti render 6 ukuran di `~/workspace/menu-fix-v27-verifikasi/`.
+- **Pengecualian portrait (deviasi dari rencana audit, dari bukti
+  render).** Konten portrait 390×844 terukur ~961 px > viewport 844
+  px (bar kategori terpotong ~117 px), jadi scroll vertikal
+  diizinkan kembali HANYA di `@media (max-width:820px)` — seam
+  tidak kembali karena overlay sudah `fixed`. Semua ukuran
+  landscape (≥1024 px) tetap terkunci `overflow:hidden`.
+
+| Batas | Keterangan |
+| --- | --- |
+| Verifikasi live BELUM dilakukan | Yang terverifikasi: headless 0 failures (TEST_V13_OK 1270, TEST_V24_OK 288, TEST_SUARA_OK 28, masing-masing ≥2 run) + 36 file varian ada di disk (ukuran + dimensi + RGBA cocok manifest). Apakah belokan benar-benar terlihat mulus di peta (bukan "patah"), apakah varian belakang terbaca benar saat kendaraan menjauh, dan apakah tidak ada pop-in di belokan pertama — HANYA bisa dinilai cek live. Daftar cek live untuk agen induk: (1) kota baru, percepat 2x: amati truk/motor belok di persimpangan — bodi harus tetap sejajar jalan, ganti sisi tepat di tengah belokan, tanpa miring/jumping; (2) putar kamera/zoom 1x–2x di jalan lurus 4 arah: tiap arah menampilkan varian yang benar (depan 3/4 saat mendekat, belakang 3/4 saat menjauh); (3) Network: ke-48 file kendaraan termuat tanpa 404; (4) matikan jaringan lalu muat ulang (sesi kedua): kendaraan tetap bersprite (runtime-cache); (5) console tanpa error; SW cache baru `meranti-rising-v27` terinstal. |
+| Papan angkot SE masih "ANGKOT DAGO – KALAPA" | Batas lama dari v25, tidak disentuh v27. Ketiga varian angkot baru papannya KOSONG (tanpa tulisan) — sengaja, agar tidak mengulang kesalahan. Bila SE diregenerasi jadi "SELATPANJANG", ketiga varian angkot (SW/NW/NE) HARUS diregenerasi juga agar konsisten. |
+| Kapal / perahu: orientasi masih terbuka | Cabang render terpisah, bukan kendaraan jalan — di luar cakupan v27, sama seperti v25. |
+| Total aset kendaraan ~18 MB (tradeoff preload vs runtime-cache) | Preload 48 file di `muatSemuaGambar` berarti sesi pertama mengunduh ~18 MB sprite kendaraan (di atas aset game lain) — muat pertama lebih berat, terutama di koneksi lambat. Imbalannya: tidak ada pop-in saat belok dan sesi kedua offline via runtime-cache. Alternatif yang DITOLAK: precache SW (instal PWA membengkak ~14 MB + risiko gagal instal) dan lazy-load per varian (belokan pertama akan pop-in / fallback cermin). Bila muat pertama terbukti terlalu berat, opsi v27.1: lazy-load varian NW/NE (hanya dipakai saat kendaraan menjauh) atau kompres ulang PNG. |
+| Fallback cermin membalik tulisan | Bila file varian hilang, pasangan cerminnya dipakai — tulisan di badan kendaraan (mis. papan angkot) akan terbalik. Ini hanya jalur darurat; dengan ke-48 file lengkap, cermin tidak pernah dipakai. |
+| Histeresis 5° = saklar sedikit tertunda | Kendaraan yang berbelok sangat pelan di sekitar batas sektor mengganti varian hingga 5° sesudah batas (bukan tepat di batas). Tidak terlihat di kecepatan normal; bila pengguna masih merasa "patah", opsi v27.1: tambah 4 varian kardinal (N/S/E/W) → 8 arah total. |
+| 9 varian beratap putih: jejak fringe magenta 1px | Truk-sampah, truk-pengangkut, ambulans (×3 arah) diregenerasi dengan latar magenta karena latar putih bocor ke atap putih (flood-fill) — jejak fringe magenta 1px nyaris tak terlihat di tepi atas bak/boks (catatan manifest aset). |
+| Musik `musik-melayu-2/3.mp3` masih hilang | Batas lama dari v23/v24.2, tidak disentuh v27 (fallback playlist tetap jalan). |
+| Perilaku `menuKategoriTertunda` tidak disentuh | Drawer kategori yang terbuka lagi saat LANJUTKAN (temuan cek live v26) menunggu keputusan pengguna — sengaja tidak diubah di v27. Begitu pula layout modal Pengaturan. |
+
 ## Yang baru di v26 — Main Menu RISE OF MERANTI (2026-11-12)
 
 Restruktur layar mulai ke layout referensi (panorama full-screen,

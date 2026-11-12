@@ -20,12 +20,17 @@
   max-width: none; width: auto; margin: 0; padding: 0;
   background: transparent; border: 0; border-radius: 0;
   box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;
-  text-align: left; overflow-y: auto; overflow-x: hidden;
+  text-align: left; overflow: hidden; height: 100%; height: 100dvh;
 }
 /* Overlay gelap tipis: kiri kuat (menu terbaca), kanan nyaris nol
-   (panorama tetap dominan); bawah gelap untuk bar kategori. */
+   (panorama tetap dominan); bawah gelap untuk bar kategori.
+   v27 menu-fix: position:fixed agar overlay setinggi viewport dan
+   TIDAK ikut ter-scroll (sebelumnya absolute di dalam tahap yang
+   bisa scroll → sambungan horizontal di tengah panorama). Tetap di
+   dalam #tahapSinematik (z-index:2, stacking context) sehingga
+   hilang bersama menu saat tahap lain tampil. */
 .menu-overlay {
-  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background:
     linear-gradient(90deg, rgba(3, 18, 32, .78) 0%, rgba(3, 18, 32, .55) 30%, rgba(3, 18, 32, .12) 55%, rgba(3, 18, 32, 0) 70%),
     linear-gradient(0deg, rgba(3, 18, 32, .72) 0%, rgba(3, 18, 32, 0) 26%),
@@ -33,16 +38,17 @@
 }
 .menu-layar {
   position: relative; z-index: 1;
-  display: flex; flex-direction: column; min-height: 100%;
+  display: flex; flex-direction: column; height: 100%; min-height: 0;
 }
 
 /* ---------- Header: partner kiri, versi + ikon kanan ---------- */
 .menu-header {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 16px; padding: 14px 24px 0;
+  gap: 16px; padding: clamp(6px, 1.2vh, 14px) clamp(14px, 2vw, 24px) 0;
+  flex: none;
 }
 .menu-partner img {
-  display: block; height: 46px; width: auto;
+  display: block; height: clamp(36px, 5vh, 44px); width: auto;
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, .5));
 }
 .menu-header-kanan { display: flex; align-items: center; gap: 10px; }
@@ -55,7 +61,7 @@
   text-shadow: 0 1px 6px rgba(0, 0, 0, .6);
 }
 .menu-ikon-btn {
-  width: 46px; height: 46px; padding: 0; cursor: pointer;
+  width: clamp(38px, 5.5vh, 46px); height: clamp(38px, 5.5vh, 46px); padding: 0; cursor: pointer;
   background: transparent; border: 0; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   transition: transform var(--anim-cepat), filter var(--anim-cepat);
@@ -67,19 +73,19 @@
 
 /* ---------- Kolom kiri: logo + nav ---------- */
 .menu-utama {
-  flex: 1 1 auto; display: flex; align-items: center;
-  padding: 8px 24px;
+  flex: 1 1 auto; display: flex; align-items: flex-start;
+  padding: 8px 24px; min-height: 0;
 }
-.menu-kiri { width: min(400px, 94vw); animation: menuNaik .45s ease both; }
+.menu-kiri { width: clamp(250px, 28vw, 400px); min-height: 0; animation: menuNaik .45s ease both; }
 .menu-logo {
-  display: block; width: min(430px, 100%); height: auto; margin-bottom: 2px;
+  display: block; width: clamp(200px, 24vw, 400px); max-height: clamp(64px, 16vh, 133px); object-fit: contain; height: auto; margin-bottom: 2px;
   filter: drop-shadow(0 10px 28px rgba(0, 0, 0, .55));
 }
 #tahapSinematik .subMulai {
-  margin-bottom: 4px; text-shadow: 0 2px 10px rgba(0, 0, 0, .7);
+  margin-bottom: 4px; font-size: clamp(11px, 1.6vh, 13px); text-shadow: 0 2px 10px rgba(0, 0, 0, .7);
 }
-#tahapSinematik .sambutanKembali { text-shadow: 0 2px 10px rgba(0, 0, 0, .7); }
-.menu-nav { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+#tahapSinematik .sambutanKembali { font-size: clamp(12px, 1.8vh, 14px); text-shadow: 0 2px 10px rgba(0, 0, 0, .7); }
+.menu-nav { display: flex; flex-direction: column; gap: clamp(6px, 1.2vh, 10px); margin-top: clamp(6px, 1vh, 10px); }
 
 /* Tombol nav: crop gambar sebagai visual, <button> nyata. */
 .menu-btn {
@@ -124,8 +130,10 @@
   font-size: 14px; font-weight: 800; line-height: 1.3;
 }
 .menu-btn.menu-konfirmasi .menu-btn-konfirmasi { display: flex; }
-/* Tombol instal PWA (btnInstalMulai) tetap memakai .btnUtama city.css. */
-#tahapSinematik #btnInstalMulai { margin-top: 2px; }
+/* Tombol instal PWA (btnInstalMulai) tetap memakai .btnUtama city.css —
+   dipadatkan di menu (v27 menu-fix) supaya saat beforeinstallprompt
+   muncul (+1 tombol di nav) kolom kiri tetap muat di viewport 570px. */
+#tahapSinematik #btnInstalMulai { margin-top: 2px; padding: 9px 16px; font-size: 13px; }
 
 /* ---------- Panel MUAT ---------- */
 .menu-panel-muat {
@@ -160,8 +168,26 @@
 .menu-muat-muatkan:active, .menu-detail-buka:active,
 .menu-muat-tutup:active, .menu-detail-tutup:active { transform: scale(.98); }
 
-#tahapSinematik .infoSave { text-shadow: 0 2px 8px rgba(0, 0, 0, .8); }
+#tahapSinematik .infoSave { font-size: clamp(11px, 1.5vh, 12px); margin-top: 6px; text-shadow: 0 2px 8px rgba(0, 0, 0, .8); }
 #tahapSinematik .caraMain { margin-top: 12px; max-width: 400px; }
+/* v27 menu-fix: #caraMain keluar dari kolom kiri → overlay terpusat
+   (anak langsung #tahapSinematik, index.html). Tanpa perubahan JS:
+   menuToggleBantuan hanya toggle .open. Tertutup = display:none. */
+#tahapSinematik #caraMain {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(560px, 94vw); max-width: none; max-height: 80vh; overflow-y: auto;
+  z-index: 5; margin-top: 0;
+}
+#tahapSinematik #caraMain:not([open]) { display: none; }
+/* v27 menu-fix: panel MUAT juga overlay terpusat (keluar dari kolom
+   kiri → anak langsung #tahapSinematik). Tampil/sembunyi tetap via
+   style.display dari kode yang ada, tanpa perubahan JS. */
+#tahapSinematik #menuPanelMuat {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(480px, 94vw); z-index: 5; margin-top: 0; animation: none;
+  /* animation:none: .menu-panel-muat memakai menuNaik (transform),
+     yang akan menimpa translate(-50%,-50%) penengah ini bila dibiarkan. */
+}
 
 /* ---------- Panel promo kanan bawah ---------- */
 .menu-promo {
@@ -179,7 +205,7 @@
 
 /* ---------- Bar 7 kategori bawah ---------- */
 .menu-kategori {
-  position: relative; z-index: 1;
+  position: relative; z-index: 1; flex: none;
   display: flex; gap: 12px; justify-content: center;
   padding: 8px 16px 16px;
   animation: menuNaik .5s ease both .1s;
@@ -190,7 +216,7 @@
   transition: transform .18s ease, filter .18s ease;
 }
 .menu-kat img {
-  display: block; width: 104px; height: auto; border-radius: 16px;
+  display: block; width: clamp(64px, 9vw, 104px); height: auto; border-radius: 16px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
 }
 .menu-kat:hover { transform: translateY(-4px); filter: brightness(1.12); }
@@ -233,7 +259,7 @@
 }
 @media (max-width: 1100px) {
   .menu-header { padding: 10px 16px 0; }
-  .menu-partner img { height: 36px; }
+  .menu-partner img { height: clamp(34px, 5vh, 42px); }
   .menu-utama { padding: 4px 16px; }
   .menu-kiri { width: min(320px, 94vw); }
   .menu-logo { width: min(320px, 100%); }
@@ -248,15 +274,39 @@
   .menu-detail-kategori img { width: 120px; }
 }
 
-/* ---------- Layar pendek (HP landscape): promo disembunyikan ----------
-   Promo hanya materi pemasaran, bukan fungsi — di layar setinggi
-   <560px ia akan menumpuk nav/kategori, jadi disembunyikan. */
+/* ---------- Layar pendek: promo tetap tampil (v27 menu-fix) ----------
+   Aturan lama menyembunyikan .menu-promo di bawah 560px — bertentangan
+   dengan acceptance poin 10 (promo terlihat di semua resolusi), jadi
+   baris display:none itu DIHAPUS; pemadatan tinggi ditangani query
+   max-height:700px/620px di bawah. */
 @media (max-height: 560px) {
-  .menu-promo { display: none; }
   .menu-logo { width: min(300px, 70%); }
   .menu-kategori img { width: 64px; }
   .menu-detail-kategori { bottom: 96px; }
   .menu-detail-kategori img { width: 100px; }
+}
+
+/* ---------- Pemadatan tinggi (v27 menu-fix): viewport pendek ---------- */
+@media (max-height: 700px) {
+  .menu-kiri { width: min(320px, 94vw); }
+  .menu-promo { width: min(360px, 44vw); padding: 12px; bottom: 140px; }
+  .menu-promo-gambar { width: 110px; }
+  .menu-promo-teks h2 { font-size: 16px; }
+  .menu-promo-teks p { font-size: 12px; }
+}
+@media (max-height: 640px) {
+  .menu-kategori img { width: 72px; }
+}
+@media (max-height: 620px) {
+  .menu-kiri { width: min(260px, 94vw); }
+  .menu-promo-gambar { width: 96px; }
+  /* v27 menu-fix: infoSave 1 baris (ellipsis) di layar pendek — teks
+     2 baris + tombol instal (+~36px) meluber ~19px di viewport 570px.
+     Ekor "· Versi v27" boleh terpotong: pill versi sudah di header. */
+  #tahapSinematik .infoSave { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+@media (max-height: 600px) {
+  .menu-kategori img { width: 64px; }
 }
 
 /* ---------- Portrait phone ---------- */
@@ -266,7 +316,7 @@
       linear-gradient(180deg, rgba(3, 18, 32, .55) 0%, rgba(3, 18, 32, .18) 38%, rgba(3, 18, 32, .55) 100%);
   }
   .menu-header { padding: 10px 14px 0; }
-  .menu-partner img { height: 30px; }
+  .menu-partner img { height: clamp(32px, 4.5vh, 40px); }
   .menu-ikon-btn { width: 40px; height: 40px; }
   .menu-ikon-btn img { width: 38px; height: 38px; }
   .menu-pill-versi { padding: 6px 12px; font-size: 13px; }
@@ -281,6 +331,14 @@
     position: static; width: min(480px, 94vw);
     margin: 16px auto 8px; animation: none;
   }
+  /* v27 menu-fix — PENGECUALIAN PORTRAIT (di luar rencana audit,
+     diputuskan implementer dari bukti render): konten portrait
+     ~960px tidak muat dalam viewport ~844px, jadi scroll vertikal
+     diizinkan KEMBALI hanya di ≤820px. Seam tidak kembali karena
+     overlay sudah fixed; latar/awan sudah terkunci di .latarSinematik.
+     Semua ukuran landscape (≥1024px) tetap terkunci overflow:hidden. */
+  #layarMulai.menu-terkunci { overflow-y: auto; }
+  #layarMulai #tahapSinematik { overflow-y: auto; }
   .menu-kategori {
     justify-content: flex-start; overflow-x: auto;
     padding: 8px 10px 16px; scrollbar-width: thin;

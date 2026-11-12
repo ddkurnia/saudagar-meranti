@@ -16,15 +16,16 @@
 <link rel="icon" type="image/png" sizes="48x48" href="assets/icons/favicon-48.png">
 <link rel="shortcut icon" href="assets/icons/favicon-32.png">
 <link rel="stylesheet" href="css/city.css?v=18">
-<link rel="stylesheet" href="css/menu.css?v=1">
+<link rel="stylesheet" href="css/menu.css?v=2">
 </head>
 <body>
 <!-- Layar mulai: pembuka sinematik MERANTI RISING (v20: main menu ala game PC/console; v26: layout RISE OF MERANTI — panorama + header + logo + 5 tombol nav + promo + 7 kategori, lihat css/menu.css) -->
 <div id="layarMulai">
-  <div class="latarSinematik"><img src="assets/menu/menu-background.jpg" alt="Panorama Kepulauan Meranti — jembatan, laut, dan kota Selatpanjang"></div>
-  <div class="awanSinematik awan1"></div>
-  <div class="awanSinematik awan2"></div>
-  <div class="ombakSinematik"></div>
+  <div class="latarSinematik"><img src="assets/menu/menu-background.jpg" alt="Panorama Kepulauan Meranti — jembatan, laut, dan kota Selatpanjang">
+    <div class="awanSinematik awan1"></div>
+    <div class="awanSinematik awan2"></div>
+    <div class="ombakSinematik"></div>
+  </div>
   <!-- Tahap 1: sinematik — menu utama v26 -->
   <div id="tahapSinematik" class="kartuMulai">
     <div class="menu-overlay" aria-hidden="true"></div>
@@ -33,7 +34,7 @@
       <header class="menu-header">
         <div class="menu-partner"><img src="assets/menu/partner-logos.png" alt="KEDAI MEDIA — kedaimedia.com, dan MALAKA DIGITAL HUB"></div>
         <div class="menu-header-kanan">
-          <span id="menuPillVersi" class="menu-pill-versi">v26</span>
+          <span id="menuPillVersi" class="menu-pill-versi">v27</span>
           <button id="btnMenuBantuan" type="button" class="menu-ikon-btn" title="Cara bermain" aria-label="Cara bermain"><img src="assets/menu/crop/header-ikon-lingkaran-bantuan-kecil.png" alt=""></button>
           <button id="btnMenuProfil" type="button" class="menu-ikon-btn" title="Profil Pemain" aria-label="Profil Pemain"><img src="assets/menu/crop/header-ikon-lingkaran-profil-besar.png" alt=""></button>
           <button id="btnMenuPengaturan" type="button" class="menu-ikon-btn" title="Pengaturan" aria-label="Pengaturan"><img src="assets/menu/crop/header-ikon-lingkaran-pengaturan-kecil.png" alt=""></button>
@@ -57,33 +58,7 @@
                  muncul saat event beforeinstallprompt datang (lihat city.js). -->
             <button id="btnInstalMulai" class="btnUtama sekunder" style="display:none">⬇ INSTAL APLIKASI</button>
           </nav>
-          <!-- Panel MUAT v26: detail simpanan nyata dari muat(); bila belum ada simpanan, tampil jujur + tombol Muat nonaktif. -->
-          <div id="menuPanelMuat" class="menu-panel-muat" style="display:none">
-            <h3>Muat Permainan</h3>
-            <p id="muatStatus" class="menu-muat-status"></p>
-            <dl class="menu-muat-detail">
-              <div><dt>Pemimpin</dt><dd id="muatNama">—</dd></div>
-              <div><dt>Level</dt><dd id="muatLevel">—</dd></div>
-              <div><dt>Hari</dt><dd id="muatHari">—</dd></div>
-              <div><dt>Penduduk</dt><dd id="muatPenduduk">—</dd></div>
-              <div><dt>Kas</dt><dd id="muatUang">—</dd></div>
-            </dl>
-            <div class="menu-muat-tombol">
-              <button id="btnMuatMuatkan" type="button" class="menu-muat-muatkan">▶ Muat Simpanan</button>
-              <button id="btnMuatTutup" type="button" class="menu-muat-tutup">Tutup</button>
-            </div>
-          </div>
           <p id="infoSave" class="infoSave"></p>
-          <details id="caraMain" class="caraMain">
-            <summary>Cara bermain</summary>
-            <span>🖱️ Seret peta untuk menggeser · roda mouse untuk zoom</span>
-            <span>👆 Di HP/tablet: seret 1 jari untuk menggeser · cubit 2 jari untuk zoom · geser 2 jari untuk menggeser saat zoom</span>
-            <span>🏠 Pilih bangunan di menu bawah, lalu ketuk lokasi di peta (ketuk 2× untuk membangun — ketukan pertama hanya pratinjau)</span>
-            <span>🛣️ Bangunan butuh jalan di sampingnya · jembatan hanya di atas air</span>
-            <span>👷 Bangunan butuh pekerja — penduduk tumbuh bila ada rumah &amp; layanan</span>
-            <span>⏱️ 1 hari game = 48 menit nyata · tombol ⏸ / 0.5× / 1× / 2× di kanan bawah untuk jeda &amp; percepat waktu</span>
-            <span>⏸️ Spasi / P = jeda · Esc = batal</span>
-          </details>
         </div>
       </div>
       <!-- Panel promo v26 kanan bawah: gambar kota mini + teks (judul + deskripsi sesuai brief). -->
@@ -105,6 +80,40 @@
         <button id="menuKatTransportasi" type="button" class="menu-kat" aria-label="Transportasi"><img src="assets/menu/crop/kategori-transportasi.png" alt=""></button>
       </nav>
     </div>
+    <!-- Panel MUAT v26 (v27 menu-fix: keluar dari kolom kiri → overlay
+         terpusat, anak langsung #tahapSinematik; tampil/sembunyi tetap
+         via style.display, tanpa perubahan JS): detail simpanan nyata
+         dari muat(); bila belum ada simpanan, tampil jujur + tombol
+         Muat nonaktif. -->
+    <div id="menuPanelMuat" class="menu-panel-muat" style="display:none">
+      <h3>Muat Permainan</h3>
+      <p id="muatStatus" class="menu-muat-status"></p>
+      <dl class="menu-muat-detail">
+        <div><dt>Pemimpin</dt><dd id="muatNama">—</dd></div>
+        <div><dt>Level</dt><dd id="muatLevel">—</dd></div>
+        <div><dt>Hari</dt><dd id="muatHari">—</dd></div>
+        <div><dt>Penduduk</dt><dd id="muatPenduduk">—</dd></div>
+        <div><dt>Kas</dt><dd id="muatUang">—</dd></div>
+      </dl>
+      <div class="menu-muat-tombol">
+        <button id="btnMuatMuatkan" type="button" class="menu-muat-muatkan">▶ Muat Simpanan</button>
+        <button id="btnMuatTutup" type="button" class="menu-muat-tutup">Tutup</button>
+      </div>
+    </div>
+    <!-- Cara bermain v27 menu-fix: keluar dari kolom kiri → overlay
+         terpusat, anak langsung #tahapSinematik (di samping
+         #menuDetailKategori); buka/tutup tetap via menuToggleBantuan,
+         tanpa perubahan JS. -->
+    <details id="caraMain" class="caraMain">
+      <summary>Cara bermain</summary>
+      <span>🖱️ Seret peta untuk menggeser · roda mouse untuk zoom</span>
+      <span>👆 Di HP/tablet: seret 1 jari untuk menggeser · cubit 2 jari untuk zoom · geser 2 jari untuk menggeser saat zoom</span>
+      <span>🏠 Pilih bangunan di menu bawah, lalu ketuk lokasi di peta (ketuk 2× untuk membangun — ketukan pertama hanya pratinjau)</span>
+      <span>🛣️ Bangunan butuh jalan di sampingnya · jembatan hanya di atas air</span>
+      <span>👷 Bangunan butuh pekerja — penduduk tumbuh bila ada rumah &amp; layanan</span>
+      <span>⏱️ 1 hari game = 48 menit nyata · tombol ⏸ / 0.5× / 1× / 2× di kanan bawah untuk jeda &amp; percepat waktu</span>
+      <span>⏸️ Spasi / P = jeda · Esc = batal</span>
+    </details>
     <!-- Kartu detail kategori v26 (gambar kartu-*.png): muncul saat chip kategori diketuk. -->
     <div id="menuDetailKategori" class="menu-detail-kategori" style="display:none" role="dialog" aria-label="Detail kategori">
       <img id="menuDetailGambar" src="assets/menu/crop/kartu-infrastruktur.png" alt="">
@@ -462,7 +471,7 @@
 <script src="js/city-bubble.js?v=2"></script>
 <script src="js/city-diagnostik.js?v=2"></script>
 <script src="js/city-advisor.js?v=3"></script>
-<script src="js/city.js?v=38"></script>
+<script src="js/city.js?v=39"></script>
 <script src="js/city-tutorial.js?v=1"></script>
 <script src="js/city-ui-v24.js?v=3"></script>
 </body>

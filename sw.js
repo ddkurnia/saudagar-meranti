@@ -1,6 +1,6 @@
 // =====================================================================
 // Service worker MERANTI RISING — v22-W7 (PWA + Logo Resmi).
-// Nama cache TERIKAT VERSI_GAME ("v26"): naikkan bersama VERSI_GAME di
+// Nama cache TERIKAT VERSI_GAME ("v27"): naikkan bersama VERSI_GAME di
 // js/city.js setiap rilis, supaya deploy baru tidak pernah menyajikan
 // build basi dari cache lama.
 // v24.2 (4d): SW memberi tahu versinya ke halaman (postMessage saat
@@ -21,7 +21,7 @@
 //    lama — cache aplikasi lain di origin yang sama (mis. repo lain di
 //    GitHub Pages) TIDAK dihapus.
 // =====================================================================
-const NAMA_CACHE = "meranti-rising-v26";
+const NAMA_CACHE = "meranti-rising-v27";
 // Versi game yang dibawa SW ini (dipakai postMessage ke halaman).
 const VERSI_SW = NAMA_CACHE.replace(/^meranti-rising-/, "");
 // Shell game yang di-precache. Nilai ?v= mengikuti index.html saat
@@ -29,13 +29,21 @@ const VERSI_SW = NAMA_CACHE.replace(/^meranti-rising-/, "");
 // v23: file audio .mp3 TIDAK di-precache (total ~14 MB; musik-melayu-1.mp3
 // saja 8,26 MB) — streaming + runtime-cache SW sudah menangani sesi kedua
 // (termasuk offline) tanpa memperberat instal PWA / muat pertama.
+// v27: 36 varian arah kendaraan (~14 MB, total aset kendaraan ~18 MB)
+// TIDAK di-precache dengan alasan yang sama + preseden audio: tidak ada
+// satu pun sprite kendaraan di-precache (SE pun tidak); muatSemuaGambar
+// memuat ke-48 file saat game dibuka dan fetch handler di bawah
+// menyimpannya ke runtime-cache (cache-first + put saat miss), jadi
+// sesi kedua tetap bisa offline. Tradeoff jujur: sesi pertama butuh
+// jaringan untuk varian (bukan instal PWA yang membengkak); bila
+// varian belum termuat, renderer memakai fallback cermin/vektor.
 // tetap mengambil URL baru dari network (cache-first + runtime put),
 // jadi daftar ini tidak perlu dikejar setiap bump kecil.
 const DAFTAR_CACHE = [
   "./",
   "./index.html",
   "./css/city.css?v=18",
-  "./css/menu.css?v=1", // v26: stylesheet menu utama RISE OF MERANTI
+  "./css/menu.css?v=2", // v26: stylesheet menu utama RISE OF MERANTI; v27 menu-fix: bump ?v=2
   "./js/city-data.js?v=9",
   "./js/city-map.js?v=4",
   "./js/city-utilitas.js?v=1",
@@ -45,7 +53,7 @@ const DAFTAR_CACHE = [
   "./js/city-kendaraan.js?v=5",
   "./js/city-persimpangan.js?v=1",
   "./js/city-maritim.js?v=1",
-  "./js/city.js?v=38",
+  "./js/city.js?v=39",
   "./js/city-suara.js?v=1",
   "./js/city-warga.js?v=1",
   "./js/city-bubble.js?v=2",

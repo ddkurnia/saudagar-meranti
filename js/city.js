@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v26"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v27"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -1039,6 +1039,13 @@ function muatSemuaGambar() {
   paths.add("assets/vehicles/mobil-pemadam.png");
   paths.add("assets/vehicles/ambulans.png");
   paths.add("assets/vehicles/truk-sampah.png");
+  // v27: varian arah kendaraan (36 file: 12 tipe x SW/NW/NE; SE = sprite
+  // lama di atas). Preload SEMUA varian agar belokan tidak pop-in —
+  // total aset kendaraan ~18 MB (12 SE ~4 MB + 36 varian ~14 MB);
+  // SW TIDAK mem-precache varian (keputusan v27, lihat README):
+  // runtime-cache SW sudah menyimpan tiap varian saat pertama dimuat.
+  const STEM_KENDARAAN_V27 = ["bus", "truk-pengangkut", "ambulans", "mobil-sedan", "mobil-hatchback", "mobil-pickup", "motor", "angkot", "mobil-dinas", "mobil-polisi", "mobil-pemadam", "truk-sampah"];
+  for (const stem of STEM_KENDARAAN_V27) for (const a of ["sw", "nw", "ne"]) paths.add("assets/vehicles/" + stem + "-" + a + ".png");
   paths.add("assets/vehicles/kapal-kargo.png");
   paths.add("assets/vehicles/perahu-kecil.png");
   // v15: kapal feri + jembatan gantung
@@ -2416,16 +2423,22 @@ function gambarSatuWarga(w, lebar, tinggi) {
 // kanan-bawah, yaitu sudut sumbu atan(0,5) ≈ 26,565° pada layar
 // isometri. Arah gerak tile a = k.arah dipetakan ke sudut layar:
 //   sudutLayar = atan2((cos a + sin a) * 0,5, cos a − sin a)
-// Sudut putar gambar θ = sudutLayar − atan(0,5); bila |θ| > 90°,
-// sprite dicerminkan horizontal dan θ_flip = sudutLayar −
-// (π − atan(0,5)), dinormalisasi ke (−π, π]. Urutan canvas di
-// gambarSatuKendaraan: translate → rotate(θ) → scale(−1,1) bila flip
-// → drawImage — dengan urutan ini arah hadap hasil = sudutLayar
-// (terbukti headless untuk 8 arah). BATAS GEOMETRI: arah tile 225°
-// (layar lurus ke atas) berjarak 116,565° dari hadap asli sprite,
-// jadi |θ| = 116,565° di arah itu saja — hadap tetap tepat, tapi bodi
-// miring melewati horizontal; 7 arah lain |θ| ≤ 90° dan atap tetap
-// di atas. Lihat tes v25 (test24.js) + batas jujur README.
+// v25 memutar SATU sprite mengikuti sudut layar (sudutPutarKendaraan
+// di bawah) — terbukti headless untuk 8 arah, tapi BATAS GEOMETRI:
+// arah tile 225° (layar lurus ke atas) berjarak 116,565° dari hadap
+// asli sprite, jadi |θ| = 116,565° di arah itu saja dan bodi miring
+// melewati horizontal ("jumping" saat belok).
+// v27 — Varian arah (pengganti rotasi): 4 sprite per tipe (SE/SW/NW/
+// NE, konvensi nama <stem>-<arah>.png), dipilih dari sudut layar
+// TANPA rotate — belok = ganti varian tepat di tengah belokan
+// (batas sektor di sudut kardinal layar 0°/90°/180°/270°).
+//   [0°,90°) -> SE, [90°,180°) -> SW, [180°,270°) -> NW, [270°,360°) -> NE
+// Cermin horizontal HANYA sebagai fallback terdegradasi bila file
+// varian hilang (pasangan sekeluarga: SE<->SW, NW<->NE) dan TIDAK
+// PERNAH dikombinasi dengan rotasi. sudutPutarKendaraan TETAP ADA —
+// masih dipakai fallback vektor tipe tanpa sprite ("mobil" generik)
+// + tes v25 (Y-b1..b4). Lihat tes v27 (test24.js seksi AA) + batas
+// jujur README.
 const SUDUT_SPRITE_KENDARAAN = Math.atan(0.5);
 function normalisasiSudutKendaraan(a) {
   let s = a;
@@ -2433,9 +2446,14 @@ function normalisasiSudutKendaraan(a) {
   while (s > Math.PI) s -= Math.PI * 2;
   return s;
 }
-function sudutPutarKendaraan(arah) {
+// Sudut layar (radian, (-π, π]) dari arah gerak tile — rumus yang sama
+// dipakai sudutPutarKendaraan (v25) dan pilihVarianArah (v27).
+function sudutLayarKendaraan(arah) {
   const ca = Math.cos(arah || 0), sa = Math.sin(arah || 0);
-  const sudutLayar = Math.atan2((ca + sa) * 0.5, ca - sa);
+  return Math.atan2((ca + sa) * 0.5, ca - sa);
+}
+function sudutPutarKendaraan(arah) {
+  const sudutLayar = sudutLayarKendaraan(arah);
   let theta = normalisasiSudutKendaraan(sudutLayar - SUDUT_SPRITE_KENDARAAN);
   let flip = false;
   if (Math.abs(theta) > Math.PI / 2) {
@@ -2443,6 +2461,77 @@ function sudutPutarKendaraan(arah) {
     theta = normalisasiSudutKendaraan(sudutLayar - (Math.PI - SUDUT_SPRITE_KENDARAAN));
   }
   return { sudutLayar: sudutLayar, theta: theta, flip: flip };
+}
+// v27: sektor varian dari sudut layar yang sudah dinormalisasi ke
+// [0, 2π). Batas tepat di arah kardinal layar (E=0°, S=90°, W=180°,
+// N=270°) — yaitu tepat di TENGAH setiap belokan 90°. Jepit float:
+// sudutLayar hasil atan2 di k.arah 315° bisa berupa 2π−ε (bukan 0)
+// karena pembulatan — tanpa jepit, 315° salah masuk NE, bukan SE.
+function sektorVarian(sudutLayarNorm) {
+  let d = sudutLayarNorm;
+  if (d >= Math.PI * 2 - 1e-9) d = 0;
+  return d < Math.PI / 2 ? "se" : d < Math.PI ? "sw" : d < 3 * Math.PI / 2 ? "nw" : "ne";
+}
+// v27: pilih varian arah dari k.arah TANPA rotasi. Argumen k opsional:
+// bila ada, histeresis 5° diberlakukan via k._varianArah (field runtime,
+// tidak disimpan di save) — bila sudut masih <5° dari batas sektor,
+// varian lama dipertahankan agar kendaraan yang berhenti tepat di
+// persimpangan tidak berkedip. Tanpa k, pemetaan murni (dipakai tes).
+const HISTERESIS_VARIAN_RAD = 5 * Math.PI / 180;
+function pilihVarianArah(arah, k) {
+  let d = sudutLayarKendaraan(arah);
+  if (d < 0) d += Math.PI * 2; // [0, 2π)
+  let varian = sektorVarian(d);
+  if (k && k._varianArah && k._varianArah !== varian) {
+    // Jarak ke batas sektor terdekat (batas di 0, π/2, π, 3π/2):
+    const sisa = d % (Math.PI / 2);
+    const jarakBatas = Math.min(sisa, Math.PI / 2 - sisa);
+    if (jarakBatas < HISTERESIS_VARIAN_RAD) varian = k._varianArah;
+  }
+  if (k) k._varianArah = varian;
+  return varian;
+}
+// v27: path varian dari konvensi nama — SE = T.sprite apa adanya,
+// varian lain = stem + "-<arah>.png" (mis. mobil-sedan.png ->
+// mobil-sedan-sw.png). TIDAK ada tabel varian terpisah.
+function pathVarianKendaraan(spriteSE, varian) {
+  if (!spriteSE) return null;
+  if (varian === "se") return spriteSE;
+  return spriteSE.replace(/\.png$/, "-" + varian + ".png");
+}
+function gambarKendaraanTermuat(path) {
+  const g = path ? gambarAset[path] : null;
+  return (g && g.complete && g.naturalWidth) ? g : null;
+}
+// v27: pasangan cermin sekeluarga (SE<->SW depan, NW<->NE belakang).
+const PASANGAN_CERMIN_VARIAN = { se: "sw", sw: "se", nw: "ne", ne: "nw" };
+const _varianKendaraanSudahDiperingatkan = {}; // "sprite|varian" -> true (warn sekali)
+// v27: rantai fallback per kendaraan, per frame (tidak pernah throw):
+//   1. file varian arah -> 2. pasangan cermin (mirror tanpa rotasi) ->
+//   3. SE tanpa cermin -> 4. (bus saja) truk sebagai placeholder v19 ->
+//   5. null (pemanggil memakai fallback vektor generik).
+// Kegagalan memuat varian hanya dicatat sekali via console.warn.
+function pilihGambarKendaraan(spriteSE, varian, bolehTruk) {
+  const imgVarian = gambarKendaraanTermuat(pathVarianKendaraan(spriteSE, varian));
+  if (imgVarian) return { img: imgVarian, cermin: false, pakaiTruk: false };
+  if (varian !== "se" && typeof console !== "undefined" && console.warn) {
+    const kunci = spriteSE + "|" + varian;
+    if (!_varianKendaraanSudahDiperingatkan[kunci]) {
+      _varianKendaraanSudahDiperingatkan[kunci] = true;
+      console.warn("[v27] varian kendaraan hilang, pakai fallback: " + spriteSE + " arah " + varian);
+    }
+  }
+  const pasangan = PASANGAN_CERMIN_VARIAN[varian] || "se";
+  const imgPasangan = gambarKendaraanTermuat(pathVarianKendaraan(spriteSE, pasangan));
+  if (imgPasangan) return { img: imgPasangan, cermin: true, pakaiTruk: false };
+  const imgSE = gambarKendaraanTermuat(spriteSE);
+  if (imgSE) return { img: imgSE, cermin: false, pakaiTruk: false };
+  if (bolehTruk) {
+    const imgTruk = gambarKendaraanTermuat(pathVarianKendaraan("assets/vehicles/truk-pengangkut.png", varian))
+      || gambarKendaraanTermuat("assets/vehicles/truk-pengangkut.png");
+    if (imgTruk) return { img: imgTruk, cermin: false, pakaiTruk: true };
+  }
+  return { img: null, cermin: false, pakaiTruk: false };
 }
 // Gambar satu kendaraan (truk/kapal/perahu) — dipakai lapisan gabungan
 function gambarSatuKendaraan(k, lebar, tinggi) {
@@ -2466,36 +2555,32 @@ function gambarSatuKendaraan(k, lebar, tinggi) {
   // v25: SEMUA kendaraan jalan memakai SATU cabang sprite generik
   // (TIPE_KENDARAAN[k.tipe].sprite) — cabang truk/bus/mobil/ambulans
   // lama yang masing-masing berdiri sendiri kini satu jalur.
-  // AKAR MASALAH "jalan miring ke samping": cabang truk/bus lama hanya
-  // flip horizontal (hadapKiri dari cos−sin) dan TIDAK PERNAH memutar
-  // sprite mengikuti arah gerak — sprite yang menghadap kanan-bawah
-  // digambar dengan sumbu yang sama walau kendaraan bergerak ke arah
-  // diagonal lain, sehingga bodi tampak miring/crab-walking.
-  // Perbaikan: sprite DIPUTAR mengikuti sudut layar (sudutPutarKendaraan
-  // di atas) — θ = sudutLayar − atan(0,5); bila |θ| > 90° pakai cermin
-  // horizontal + θ_flip = sudutLayar − (π − atan(0,5)). Bayangan +
-  // sorotan tetap digambar DI LUAR rotasi. Lebar render proporsional
-  // panjangPetak: w = 64*z * (panjangPetak/1,6) — bus tetap 64*z,
-  // sedan 44*z, motor 28*z, pemadam 60*z.
+  // v27: sprite DIPILIH dari sudut layar (pilihVarianArah di atas)
+  // TANPA rotate — belok = ganti varian SE/SW/NW/NE di tengah
+  // belokan; cermin hanya bila file varian hilang (pilihGambar-
+  // Kendaraan). Bayangan + sorotan tetap digambar DI LUAR (elips tak
+  // berotasi). Lebar render proporsional panjangPetak:
+  // w = 64*z * (panjangPetak/1,6) — bus tetap 64*z, sedan 44*z,
+  // motor 28*z, pemadam 60*z. Tinggi ikut aspek varian yang dipakai
+  // (tampak belakang lebih pendek) dan itu BENAR.
   const T = (typeof TIPE_KENDARAAN !== "undefined" && TIPE_KENDARAAN[k.tipe]) || null;
   if (T && T.sprite) {
     const t = tileTengahDunia(k.x, k.y);
     const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
-    let img = gambarAset[T.sprite];
-    // v19: bus yang spritenya belum termuat memakai sprite truk +
-    // atap biru (placeholder lama) agar tetap terlihat.
-    const pakaiTruk = (k.tipe === "bus") && (!img || !img.complete || !img.naturalWidth);
-    if (pakaiTruk) img = gambarAset["assets/vehicles/truk-pengangkut.png"];
     const w = 64 * z * ((T.panjangPetak || 1.6) / 1.6);
     bayangan(s.x, s.y + 8 * z, w * 0.55, w * 0.16);
     sorotan(s.x, s.y + 8 * z, w * 0.62, w * 0.22);
-    if (img && img.complete && img.naturalWidth) {
+    // v27: varian arah + rantai fallback (varian -> cermin -> SE ->
+    // bus: truk -> vektor). v19: bus yang spritenya belum termuat
+    // memakai sprite truk + atap biru (placeholder lama).
+    const varian = pilihVarianArah(k.arah || 0, k);
+    const hasil = pilihGambarKendaraan(T.sprite, varian, k.tipe === "bus");
+    const img = hasil.img, pakaiTruk = hasil.pakaiTruk;
+    if (img) {
       const h = w * (img.naturalHeight / img.naturalWidth);
-      const putar = sudutPutarKendaraan(k.arah || 0);
       ctx.save();
       ctx.translate(s.x, s.y + 8 * z);
-      ctx.rotate(putar.theta);
-      if (putar.flip) ctx.scale(-1, 1);
+      if (hasil.cermin) ctx.scale(-1, 1); // fallback terdegradasi saja; TANPA rotate
       ctx.drawImage(img, -w / 2, -h, w, h);
       if (pakaiTruk) {
         ctx.fillStyle = "rgba(9,132,227,0.85)";
@@ -2557,11 +2642,12 @@ function gambarSatuKendaraan(k, lebar, tinggi) {
     // spritenya belum didaftarkan) — fallback vektor generik, dirotasi
     // mengikuti sudut layar (pola lama cabang mobil/ambulans v22-W2,
     // badan dipertebal 48×22 agar tidak terbaca "hanya roda saja").
+    // v27: rotasi HANYA di sini (vektor, bukan sprite) — helper
+    // sudutPutarKendaraan tetap dipakai jalur ini.
     const t = tileTengahDunia(k.x, k.y);
     const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
     const warna = (k.tipe === "ambulans") ? "#ffffff" : (k.warna === "#0984e3" || !k.warna ? "#00a8ff" : k.warna);
-    const ca = Math.cos(k.arah || 0), sa = Math.sin(k.arah || 0);
-    const sudutLayar = Math.atan2((ca + sa) * 0.5, ca - sa);
+    const sudutLayar = sudutPutarKendaraan(k.arah || 0).sudutLayar;
     const pw = 48 * z, ph = 22 * z, r = 5 * z;
     sorotan(s.x, s.y + 6 * z, pw * 0.62, ph * 0.62);
     ctx.save();
@@ -5791,6 +5877,11 @@ function tampilkanTahap(nama) {
   if (nama === "pengaturan") tandaiDensity();
   if (nama === "pengaturan") perbaruiTombolPWA(); // v22-W7: segarkan tombol fullscreen/instal/update
   if (nama === "pengaturan") sinkronSuaraMulai();
+  // v27 menu-fix: kunci scroll HANYA saat tahap sinematik (menu utama)
+  // — overflow vertikal di menu adalah akar overflow + seam; tahap
+  // identitas/narasi/profil/pengaturan tetap boleh scroll vertikal.
+  const lm = document.getElementById("layarMulai");
+  if (lm && lm.classList) lm.classList.toggle("menu-terkunci", nama === "sinematik");
   // v26: kembali ke sinematik membatalkan kategori tertunda (pengguna
   // memilih keluar dari alur identitas/bar baru lewat "Kembali").
   if (nama === "sinematik") menuKategoriTertunda = null;
