@@ -345,6 +345,27 @@ function pilihTujuanAcakJalan(k, jarakMin, kecuali) {
   const t = calon[Math.floor(Math.random() * calon.length)];
   return { x: t.x, y: t.y };
 }
+// v22.5: petak-petak jalan ("x,y") yang termasuk dalam satu komponen
+// graph (idK). Dibangun dari graphJalan.node + graphJalan.edge —
+// komponen di graphJalan.komponen hanya menyimpan HITUNGAN, bukan
+// daftar petak, jadi petaknya dirangkai di sini: semua node komponen
+// itu + semua petak di edge yang berangkat dari node komponen itu
+// (edge selalu menghubungkan dua node sekomponen). Mengembalikan null
+// bila graph belum ada / idK tak valid (pemanggil memakai perilaku
+// lama tanpa filter — fail-open).
+function _petakDiKomponen(idK) {
+  if (typeof graphJalan === "undefined" || !graphJalan || !Array.isArray(graphJalan.node) || !Array.isArray(graphJalan.edge)) return null;
+  if (typeof idK !== "number" || idK < 0) return null;
+  const kompNode = new Map();
+  for (const n of graphJalan.node) kompNode.set(n.id, n.komponen);
+  const hasil = new Set();
+  for (const n of graphJalan.node) if (n.komponen === idK) hasil.add(n.x + "," + n.y);
+  for (const e of graphJalan.edge) {
+    if (kompNode.get(e.dari) !== idK) continue;
+    if (Array.isArray(e.petak)) for (const p of e.petak) hasil.add(p.x + "," + p.y);
+  }
+  return hasil.size ? hasil : null;
+}
 // v22.4: pilih petak jalan TERJAUH (Manhattan) dari `k` yang masih
 // >= `jarakMin` — bukan acak. Di jalan pendek, tujuan acak membuat
 // kendaraan berosilasi di rute 2 petak (accelerating<->parking) dan
@@ -355,7 +376,17 @@ function pilihTujuanAcakJalan(k, jarakMin, kecuali) {
 // (variasi, bukan deterministik penuh). `kecuali` (Set "x,y") =
 // petak yang sudah dicoba & gagal dirutekan, seperti
 // pilihTujuanAcakJalan. Mengembalikan null bila tidak ada kandidat.
-function pilihTujuanTerjauhJalan(k, jarakMin, kecuali) {
+// v22.5: `hanyaDi` (Set "x,y", opsional) = batasi kandidat ke petak
+// dalam set itu — dipakai _beriTujuanBaru untuk membatasi tujuan ke
+// KOMPONEN graph kendaraan sendiri (lihat _petakDiKomponen). Tanpa
+// batas ini, "terjauh dulu" memilih petak di komponen jalan TERPUTUS
+// yang lebih jauh dan menghabiskan 6 percobaan tiap retry pada
+// tujuan tak-terjangkau, sehingga kendaraan beku parkir selamanya
+// (reproduksi v22.5 Worker 1: N>=6 petak terputus -> gerak 165 /
+// parkir 3411 dalam 3600 tick). "Terjauh dulu" tetap berlaku DI DALAM
+// komponen yang terjangkau — niat v22.4 terjaga, perangkap hilang.
+// `hanyaDi` null = tanpa filter (perilaku lama).
+function pilihTujuanTerjauhJalan(k, jarakMin, kecuali, hanyaDi) {
   if (typeof S === "undefined" || !S || !S.jalan || !S.jalan.length) return null;
   const min = (jarakMin === undefined ? 3 : jarakMin);
   const kx = Math.round(k.x), ky = Math.round(k.y);
@@ -365,6 +396,7 @@ function pilihTujuanTerjauhJalan(k, jarakMin, kecuali) {
   for (const j of S.jalan) {
     if ((j.x + "," + j.y) === kini) continue;
     if (kecuali && kecuali.has(j.x + "," + j.y)) continue;
+    if (hanyaDi && !hanyaDi.has(j.x + "," + j.y)) continue;
     const d = Math.abs(j.x - kx) + Math.abs(j.y - ky);
     if (d < min) continue;
     if (d > jauh) { jauh = d; calon.length = 0; calon.push(j); }
@@ -400,12 +432,32 @@ function pilihTujuanTerjauhJalan(k, jarakMin, kecuali) {
 // hanya URUTAN kandidat di tiap percobaan (terjauh dulu, bukan acak).
 // Parkir hanya bila benar-benar tidak ada satu pun tujuan yang bisa
 // dirutekan — dengan jeda coba-ulang 1,5 dtk (bukan 3 dtk).
+// v22.5: kandidat tujuan DIBATASI ke komponen graph kendaraan sendiri
+// (nodeTerdekat + _petakDiKomponen, lihat pilihTujuanTerjauhJalan
+// `hanyaDi`) — "terjauh dulu" tanpa batas ini memilih petak di
+// komponen jalan TERPUTUS yang lebih jauh, menghabiskan 6 percobaan
+// tiap retry, dan kendaraan beku parkir selamanya begitu ada >= 6
+// petak terputus (reproduksi Worker 1). _beriTujuanMobil ikut
+// tertutup: ia jatuh ke sini saat semua bangunan <= 1 petak.
 function _beriTujuanBaru(k) {
   if (k.mobilWarga && typeof _beriTujuanMobil === "function" && _beriTujuanMobil(k)) return;
+  // v22.5: tentukan komponen graph kendaraan SEKALI sebelum loop —
+  // kandidat tujuan dibatasi ke komponen itu saja (lihat
+  // pilihTujuanTerjauhJalan `hanyaDi`). Tanpa batas ini, tiap retry
+  // menghabiskan 6 percobaan pada petak terjauh di komponen TERPUTUS
+  // dan kendaraan beku parkir selamanya. Bila komponen tak diketahui
+  // (tanpa graph / tanpa jalan), hanyaDi = null = perilaku lama.
+  let hanyaDi = null;
+  if (typeof nodeTerdekat === "function") {
+    try {
+      const nk = nodeTerdekat(k.x, k.y);
+      if (nk && typeof nk.komponen === "number" && nk.komponen >= 0) hanyaDi = _petakDiKomponen(nk.komponen);
+    } catch (e) { hanyaDi = null; }
+  }
   const dicoba = new Set();
   for (let percobaan = 0; percobaan < 6; percobaan++) {
     const jarakMin = percobaan < 2 ? 3 : (percobaan < 4 ? 1 : 0);
-    const t = pilihTujuanTerjauhJalan(k, jarakMin, dicoba);
+    const t = pilihTujuanTerjauhJalan(k, jarakMin, dicoba, hanyaDi);
     if (!t) continue;
     dicoba.add(t.x + "," + t.y);
     if (typeof buatRuteKendaraan === "function" && buatRuteKendaraan(k, t.x, t.y) && k.status === "menuju") {

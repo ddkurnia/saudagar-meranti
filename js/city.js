@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v22.4"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v22.5"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -4138,8 +4138,21 @@ function renderPanelKiri() {
     const volumeEst = (S.lalin && typeof S.lalin.volumeEstimasi === "number") ? S.lalin.volumeEstimasi : ((S.lalin && typeof S.lalin.volumeTotal === "number") ? S.lalin.volumeTotal : null);
     html += "<div class='barisStat'><span>Estimasi permintaan (zona)</span><span>" + (volumeEst !== null ? volumeEst + " kend/jam" : "—") + "</span></div>";
     html += "<div class='barisStat'><span>Kendaraan aktual di jalan</span><b>" + ik.aktif + " bergerak · " + ik.total + " total</b></div>";
+    // v22.5-W3 — SKOR ZONA DI KEDUA CABANG (temuan cek live v22.4):
+    // baris "Skor zona (estimasi)" dulu hanya dirender di cabang else
+    // (kendaraan bergerak), sehingga saat jalan kosong (0 bergerak —
+    // keadaan yang justru paling sering live) label yang dijanjikan
+    // v22.4 itu TIDAK PERNAH muncul. Skor zona (S.lalin.skor, /100)
+    // dihitung di sini sekali agar dipakai kedua cabang. ANGKA BERBEDA
+    // dari "Estimasi permintaan (zona)" di atas (volumeEstimasi,
+    // kend/jam): skor = rata-rata skor petak jalan, volume = total
+    // permintaan — keduanya estimasi zona, jadi keduanya dipertahankan
+    // dengan label masing-masing. hitungLalin / S.lalin tidak diubah.
+    const skorZona = (S.lalin && typeof S.lalin.skor === "number") ? S.lalin.skor : null;
+    const labelZona = skorZona === null ? "—" : skorZona + "/100 · " + (skorZona >= 70 ? "Lancar" : skorZona >= 40 ? "Padat" : "Macet");
     if (jalanKosong) {
       html += "<div class='barisStat'><span>Kemacetan (nyata)</span><b>Lancar — jalan kosong</b></div>";
+      html += "<div class='barisStat'><span>Skor zona (estimasi)</span><span>" + labelZona + "</span></div>";
       html += "<div class='misiDes'>Tidak ada kendaraan bergerak — angka volume di atas estimasi permintaan zona (rumus penduduk &amp; bangunan), bukan lalu lintas nyata.</div>";
     } else {
       // v22.4-W3 — LABEL JUJUR LANJUTAN: skor zona (S.lalin.skor) adalah
@@ -4151,8 +4164,8 @@ function renderPanelKiri() {
       // estimasi pendamping. S.lalin.skor/kemacetan/perPetak TIDAK
       // diubah — tetap dipakai kebahagiaan, overlay & A*.
       const nyata = (typeof kepadatanNyataLalin === "function") ? kepadatanNyataLalin(kendaraanBergerak) : null;
-      const skorZona = (S.lalin && typeof S.lalin.skor === "number") ? S.lalin.skor : null;
-      const labelZona = skorZona === null ? "—" : skorZona + "/100 · " + (skorZona >= 70 ? "Lancar" : skorZona >= 40 ? "Padat" : "Macet");
+      // (v22.5-W3: skorZona/labelZona dihitung di atas, dipakai kedua
+      // cabang — jangan dihitung ulang di sini.)
       if (nyata) {
         html += "<div class='barisStat'><span>Kemacetan (nyata)</span><b>" + nyata.label + " · " + nyata.kendaraanBergerak + " kendaraan / kapasitas " + nyata.kapasitasSimultan + " (rasio " + nyata.rasio + ")</b></div>";
         html += "<div class='barisStat'><span>Skor zona (estimasi)</span><span>" + labelZona + "</span></div>";

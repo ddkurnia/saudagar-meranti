@@ -536,6 +536,12 @@ function _persimpanganBerikutDariRute(k) {
 }
 // Isi rute kendaraan ke (tx,ty). Bila tidak ada rute -> status
 // "tidak-ada-jalur", kendaraan TETAP di lokasi aman (tidak dipindah).
+// v22.5: saat rute gagal, k.tujuan dikembalikan ke null — sebelumnya
+// tertinggal menunjuk petak tak-terjangkau (mis. komponen terputus),
+// membingungkan di debug/panel. Aman: semua pemanggil yang membaca
+// k.tujuan sesudah gagal (ruteUlangBilaPerlu) memperlakukan null sama
+// dengan rute-gagal (false), dan pemanggil lain (logistik/bus/ambient)
+// hanya membaca k.rute/k.status sesudah gagal.
 function buatRuteKendaraan(k, tx, ty) {
   if (!k) return false;
   k.asal = { x: Math.round(k.x), y: Math.round(k.y) };
@@ -545,6 +551,7 @@ function buatRuteKendaraan(k, tx, ty) {
     k.rute = []; k.idxWaypoint = 0; k.progres = 0;
     k.segmenSaatIni = null; k.persimpanganBerikut = null;
     k.status = "tidak-ada-jalur"; k.versiRute = versiGraph;
+    k.tujuan = null;
     return false;
   }
   k.rute = rute;

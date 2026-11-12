@@ -859,8 +859,8 @@ const kecHarap = ["tebing-tinggi-barat", "tebing-tinggi", "tebing-tinggi-timur",
 // (a) konstanta, ukuran peta & cakupan kecamatan
 cek("CITY 480x320, seed 20261111", C.CITY.GRID_W === 480 && C.CITY.GRID_H === 320 && C.CITY.SEED === 20261111, C.CITY.GRID_W + "x" + C.CITY.GRID_H + " seed " + C.CITY.SEED);
 cek("CITY SAVE_KEY/SAVE_LAMA/PROFIL_KEY v17", C.CITY.SAVE_KEY === "merantiRisingWorldV1" && C.CITY.SAVE_LAMA === "saudagarSaguMerantiCityV1" && C.CITY.PROFIL_KEY === "merantiRisingProfilV1", C.CITY.SAVE_KEY + " / " + C.CITY.SAVE_LAMA + " / " + C.CITY.PROFIL_KEY);
-cek("VERSI_GAME v22.4", versiGame17 === "v22.4", versiGame17);
-cek("index.html memakai refs v22.4 (css v=16, city-data v=9, city-map v=4, city-utilitas v=1, city-bahagia v=1, city-lalin v=2, city-jalan v=1, city-kendaraan v=3, city-persimpangan v=1, city-maritim v=1, city.js v=31)", idxHtml.includes("css/city.css?v=16") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=2") && idxHtml.includes("js/city-jalan.js?v=1") && idxHtml.includes("js/city-kendaraan.js?v=3") && idxHtml.includes("js/city-persimpangan.js?v=1") && idxHtml.includes("js/city-maritim.js?v=1") && idxHtml.includes("js/city.js?v=31"));
+cek("VERSI_GAME v22.5", versiGame17 === "v22.5", versiGame17);
+cek("index.html memakai refs v22.5 (css v=16, city-data v=9, city-map v=4, city-utilitas v=1, city-bahagia v=1, city-lalin v=2, city-jalan v=2, city-kendaraan v=4, city-persimpangan v=1, city-maritim v=1, city.js v=32)", idxHtml.includes("css/city.css?v=16") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=2") && idxHtml.includes("js/city-jalan.js?v=2") && idxHtml.includes("js/city-kendaraan.js?v=4") && idxHtml.includes("js/city-persimpangan.js?v=1") && idxHtml.includes("js/city-maritim.js?v=1") && idxHtml.includes("js/city.js?v=32"));
 cek("PULAU_DEFS 27 pulau", !!pulauDefs17 && pulauDefs17.length === 27, pulauDefs17 ? pulauDefs17.length : "tidak ada");
 cek("KECAMATAN_DEFS 9 kecamatan", kecIds.length === 9, kecIds.length);
 cek("9 id kecamatan sesuai kontrak", kecHarap.every(id => kecIds.includes(id)), kecIds.join(","));
@@ -1167,7 +1167,7 @@ cek("v17.1: helper cariTileKebunSagu ada", srcCityA.includes("function cariTileK
 cek("v17.1: panel legenda terrain ada", srcCityA.includes("Peta — Legenda Terrain"));
 cek("v17.1: auto-pan tutorial langkah 6 memakai cariTileKebunSagu", srcCityA.includes("cariTileKebunSagu()"));
 cek("v18-A: kontrol waktu baru di index.html (btnKec05, tanpa btnHari/btnKec3)", idxHtml.includes('id="btnKec05"') && !idxHtml.includes('id="btnHari"') && !idxHtml.includes('id="btnKec3"'));
-cek("v18-D: VERSI_GAME naik ke v22.4 (modul akhir)", C.VERSI_GAME === "v22.4", C.VERSI_GAME);
+cek("v18-D: VERSI_GAME naik ke v22.5 (modul akhir)", C.VERSI_GAME === "v22.5", C.VERSI_GAME);
 // Kembalikan ke permainan baru yang bersih setelah semua uji waktu
 C.mulaiGame(true);
 cek("v18-A: permainan baru mulai 06:00 hari ke-0", C.waktuGame === 360 && C.hariGame() === 0 && C.jamGame() === 6, C.waktuGame);
@@ -1431,7 +1431,7 @@ cek("v18-C: riset tetap harian (olah-sagu 2 hari, konstruksi-beton 3 hari)", C.T
 cek("v18-C: prosesPergantianHari tetap memajukan riset per hari", srcCityB.includes("S.riset.sisa--"));
 cek("v18-C: tidak ada lagi progres konstruksi harian (b.progres += 1 / d.waktu)", !srcCityB.includes("b.progres += 1 / d.waktu"));
 cek("v18-C: loop utama tidak lagi memanggil perbaruiFeri(dt)", !srcCityB.includes("perbaruiFeri(dt);"));
-cek("v18-D: VERSI_GAME v22.4 (modul akhir)", C.VERSI_GAME === "v22.4", C.VERSI_GAME);
+cek("v18-D: VERSI_GAME v22.5 (modul akhir)", C.VERSI_GAME === "v22.5", C.VERSI_GAME);
 let mangroveC = 0;
 for (const baris of C.peta.terrain) for (const t of baris) if (t === "mangrove") mangroveC++;
 cek("v18-C: v17.1 mangrove > 1000 petak", mangroveC > 1000, mangroveC);
@@ -1440,8 +1440,8 @@ cek("v18-C: v17.1 cariTileKebunSagu menemukan petak valid", !!tkSaguC && C.cekBa
 cek("v18-C: v17.1 legenda terrain masih ada", srcCityB.includes("Peta — Legenda Terrain"));
 // ---- v18-D: UI jam/kalender bar atas + tutorial langkah 4 baru + hapus hariBerikutnya ----
 // (a) versi & refs di index.html (dibaca dari disk; harness sudah memakai fs)
-cek("v18-D: VERSI_GAME v22.4", C.VERSI_GAME === "v22.4", C.VERSI_GAME);
-cek("v18-D: index.html refs v22.4 (css v=16, city-data v=9, city-map v=4, city-utilitas v=1, city v=31) + city-bahagia v=1 + city-lalin v=2 + city-jalan v=1 + city-kendaraan v=3 + city-persimpangan v=1 + city-maritim v=1 (v22-W5)", idxHtml.includes("css/city.css?v=16") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city.js?v=31") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=2") && idxHtml.includes("js/city-jalan.js?v=1") && idxHtml.includes("js/city-kendaraan.js?v=3") && idxHtml.includes("js/city-persimpangan.js?v=1") && idxHtml.includes("js/city-maritim.js?v=1"));
+cek("v18-D: VERSI_GAME v22.5", C.VERSI_GAME === "v22.5", C.VERSI_GAME);
+cek("v18-D: index.html refs v22.5 (css v=16, city-data v=9, city-map v=4, city-utilitas v=1, city v=32) + city-bahagia v=1 + city-lalin v=2 + city-jalan v=2 + city-kendaraan v=4 + city-persimpangan v=1 + city-maritim v=1 (v22-W5)", idxHtml.includes("css/city.css?v=16") && idxHtml.includes("js/city-data.js?v=9") && idxHtml.includes("js/city-map.js?v=4") && idxHtml.includes("js/city-utilitas.js?v=1") && idxHtml.includes("js/city.js?v=32") && idxHtml.includes("js/city-bahagia.js?v=1") && idxHtml.includes("js/city-lalin.js?v=2") && idxHtml.includes("js/city-jalan.js?v=2") && idxHtml.includes("js/city-kendaraan.js?v=4") && idxHtml.includes("js/city-persimpangan.js?v=1") && idxHtml.includes("js/city-maritim.js?v=1"));
 cek("v18-D: #jamAtas ada di bar atas (jam, hari, fase, cuaca)", idxHtml.includes('id="jamAtas"') && idxHtml.includes('id="jamAtasJam"') && idxHtml.includes('id="jamAtasHari"') && idxHtml.includes('id="jamAtasFase"') && idxHtml.includes('id="jamAtasCuaca"'));
 cek("v18-D: #ikonFase hanya satu (dipindah ke #jamAtas, tidak duplikat)", (idxHtml.match(/id="ikonFase"/g) || []).length === 1);
 cek("v18-D: tidak ada tombol Hari Berikutnya di index.html", !idxHtml.includes('id="btnHari"') && !idxHtml.includes('id="btnKec3"') && !/<button[^>]*>[^<]*Hari Berikutnya/.test(idxHtml) && !idxHtml.includes("⏭ Hari Berikutnya"));
@@ -3291,7 +3291,7 @@ cek("v21-w5: CSS portrait HP: minimap disembunyikan saat panel kiri terbuka (:ha
 // --- (l) v21 tetap jalan: regresi sistem inti ---
 if (typeof C.perbaruiDiagnostikRender === "function") C.perbaruiDiagnostikRender();
 cek("v21-w5: regresi — 19 kategori, overlay, profil, density, minimap besar, tutup panel, petaVersi 5, generasiSimpan, diagnostik render", C.TAB_BANGUN.length === 19 && typeof C.aturOverlay === "function" && typeof C.resetProfil === "function" && typeof C.aturDensity === "function" && typeof C.toggleMinimapBesar === "function" && typeof C.tutupSemuaPanel === "function" && C.S.petaVersi === 5 && typeof C.S.generasiSimpan === "number" && typeof vm.runInContext("window.__merantiRender", sandbox) === "object", "petaVersi=" + C.S.petaVersi + " gen=" + C.S.generasiSimpan);
-cek("v21-w5: VERSI_GAME v22.4 + refs v22.4 (css v=16, city.js v=31, city-jalan v=1, city-kendaraan v=3, city-maritim v=1)", C.VERSI_GAME === "v22.4" && idxHtml.includes("css/city.css?v=16") && idxHtml.includes("js/city.js?v=31") && idxHtml.includes("js/city-jalan.js?v=1") && idxHtml.includes("js/city-kendaraan.js?v=3") && idxHtml.includes("js/city-maritim.js?v=1"));
+cek("v21-w5: VERSI_GAME v22.5 + refs v22.5 (css v=16, city.js v=32, city-jalan v=2, city-kendaraan v=4, city-maritim v=1)", C.VERSI_GAME === "v22.5" && idxHtml.includes("css/city.css?v=16") && idxHtml.includes("js/city.js?v=32") && idxHtml.includes("js/city-jalan.js?v=2") && idxHtml.includes("js/city-kendaraan.js?v=4") && idxHtml.includes("js/city-maritim.js?v=1"));
 
 // --- (n) v22-W1: RoadGraph + A* + Lane System (js/city-jalan.js) ---
 // Jaringan uji (aspal): L utama (10,10)-(14,10)-(14,14) + cabang buntu
@@ -4431,7 +4431,7 @@ const truk1W5 = C.kendaraanVisual.find(k => k.tipe === "truk");
 C.initKendaraan();
 const truk2W5 = C.kendaraanVisual.find(k => k.tipe === "truk");
 cek("v22-w5: initKendaraan deterministik — truk selalu di petak jalan pertama (bukan acak)", !!truk1W5 && !!truk2W5 && truk1W5.x === C.S.jalan[0].x && truk1W5.y === C.S.jalan[0].y && truk2W5.x === C.S.jalan[0].x && truk2W5.y === C.S.jalan[0].y, "truk=" + (truk1W5 && truk1W5.x + "," + truk1W5.y));
-cek("v22-w5: VERSI_GAME v22.4 + nav Lalu Lintas ada di index.html + overlay traffic terdaftar", C.VERSI_GAME === "v22.4" && idxHtml.indexOf('data-tab="lalin"') >= 0 && idxHtml.indexOf("js/city-maritim.js?v=1") >= 0);
+cek("v22-w5: VERSI_GAME v22.5 + nav Lalu Lintas ada di index.html + overlay traffic terdaftar", C.VERSI_GAME === "v22.5" && idxHtml.indexOf('data-tab="lalin"') >= 0 && idxHtml.indexOf("js/city-maritim.js?v=1") >= 0);
 
 // =====================================================================
 // v22-W7: PWA + Logo Resmi (Worker 7 — wilayah TERPISAH dari traffic
@@ -4453,7 +4453,7 @@ const swW7 = fs.readFileSync(ROOT_W7 + "/sw.js", "utf8");
 let swSyntaxOkW7 = false;
 try { require("child_process").execSync("node --check " + ROOT_W7 + "/sw.js", { stdio: "ignore" }); swSyntaxOkW7 = true; } catch (e) { swSyntaxOkW7 = false; }
 cek("v22-w7: sw.js lolos node --check", swSyntaxOkW7);
-cek("v22-w7: nama cache SW terikat v22.4 (meranti-rising-v22.4)", swW7.indexOf("meranti-rising-v22.4") !== -1);
+cek("v22-w7: nama cache SW terikat v22.5 (meranti-rising-v22.5)", swW7.indexOf("meranti-rising-v22.5") !== -1);
 cek("v22-w7: SW hapus cache lama saat activate + skipWaiting + clients.claim", swW7.indexOf("skipWaiting") !== -1 && swW7.indexOf("clients.claim") !== -1 && swW7.indexOf("caches.delete") !== -1);
 cek("v22-w7: SW network-first untuk index.html, cache-first untuk aset", swW7.indexOf("index.html") !== -1 && swW7.indexOf("fetch") !== -1 && swW7.indexOf("caches.match") !== -1);
 const daftarCacheW7 = (swW7.match(/const DAFTAR_CACHE = \[([\s\S]*?)\];/) || ["", ""])[1].split("\n").map(s => (s.match(/"([^"]+)"/) || [])[1]).filter(Boolean);
@@ -4472,7 +4472,7 @@ cek("v22-w7: tombol instal & muat-ulang display:none secara default di index.htm
 const cityW7 = fs.readFileSync(ROOT_W7 + "/js/city.js", "utf8");
 cek("v22-w7: city.js punya wiring PWA (beforeinstallprompt, register sw.js, fullscreen, toast update)", cityW7.indexOf("beforeinstallprompt") !== -1 && cityW7.indexOf('register("sw.js")') !== -1 && cityW7.indexOf("requestFullscreen") !== -1 && cityW7.indexOf("Versi baru tersedia") !== -1);
 cek("v22-w7: city.js mendaftarkan SW hanya via https/localhost", cityW7.indexOf('location.protocol === "https:"') !== -1 && cityW7.indexOf('"localhost"') !== -1);
-cek("v22-w7: VERSI_GAME v22.4 (dinaikkan v22.3 — finalizer v22.4, W7 tidak menyentuhnya)", C.VERSI_GAME === "v22.4");
+cek("v22-w7: VERSI_GAME v22.5 (dinaikkan v22.4 — finalizer v22.5, W7 tidak menyentuhnya)", C.VERSI_GAME === "v22.5");
 
 // ---------------- v22.3-W1: Kendaraan Bergerak + Warga Berjalan ----------------
 // Cek live v22 (?v=40): 1 truk "parking" selamanya + 0 mobil warga +
@@ -4738,9 +4738,15 @@ C.renderPanelKiri();
 const htmlLalinW3 = vm.runInContext('document.getElementById("panelKiriIsi").innerHTML', sandbox);
 cek("v22.3-w3 (f): panel menampilkan kendaraan aktual 0 secara eksplisit", htmlLalinW3.includes("Kendaraan aktual di jalan") && htmlLalinW3.includes("0 bergerak"), htmlLalinW3.slice(0, 600));
 cek("v22.3-w3 (f): panel melabeli volume sebagai estimasi zona", htmlLalinW3.includes("Estimasi permintaan (zona)"), htmlLalinW3.slice(0, 600));
-cek("v22.3-w3 (f): panel TIDAK mengklaim 'Padat' saat jalan kosong", !htmlLalinW3.includes("Padat"), htmlLalinW3.slice(0, 900));
-cek("v22.3-w3 (f): panel TIDAK mengklaim 'Macet' saat jalan kosong", !htmlLalinW3.includes("Macet"), htmlLalinW3.slice(0, 900));
+// v22.5-W3: baris "Skor zona (estimasi)" kini tampil JUGA saat jalan
+// kosong (temuan cek live v22.4) — label skor zona boleh "Padat"/"Macet"
+// karena eksplisit berlabel estimasi. Yang dilarang adalah KLAIM
+// kemacetan NYATA: jadi hapus baris skor zona dari HTML sebelum cek.
+const htmlTanpaSkorZonaW3 = htmlLalinW3.replace(/<div class='barisStat'><span>Skor zona \(estimasi\)<\/span><span>[^<]*<\/span><\/div>/, "");
+cek("v22.3-w3 (f): panel TIDAK mengklaim 'Padat' saat jalan kosong (di luar baris skor zona estimasi)", !htmlTanpaSkorZonaW3.includes("Padat"), htmlLalinW3.slice(0, 900));
+cek("v22.3-w3 (f): panel TIDAK mengklaim 'Macet' saat jalan kosong (di luar baris skor zona estimasi)", !htmlTanpaSkorZonaW3.includes("Macet"), htmlLalinW3.slice(0, 900));
 cek("v22.3-w3 (f): panel menyatakan 'jalan kosong'", htmlLalinW3.includes("jalan kosong"), htmlLalinW3.slice(0, 900));
+cek("v22.5-W3: baris 'Skor zona (estimasi)' tampil juga saat jalan kosong", htmlLalinW3.includes("Skor zona (estimasi)"), htmlLalinW3.slice(0, 900));
 vm.runInContext('panelKiri = "peta";', sandbox);
 
 // ---- v22.3-W3: verifikasi wiring PWA (kode saja — perilaku instal/fullscreen
@@ -4860,7 +4866,11 @@ vm.runInContext('panelKiri = "lalin";', sandbox);
 C.renderPanelKiri();
 const htmlLalinV224 = vm.runInContext('document.getElementById("panelKiriIsi").innerHTML', sandbox);
 cek("v22.4 (e): panel 0 kendaraan -> label 'Lancar — jalan kosong'", htmlLalinV224.includes("Lancar — jalan kosong"));
-cek("v22.4 (e): panel 0 kendaraan -> TANPA 'Padat'/'Macet'", !htmlLalinV224.includes("Padat") && !htmlLalinV224.includes("Macet"), htmlLalinV224.slice(0, 900));
+// v22.5-W3: lihat komentar di v22.3-w3 (f) — "Padat"/"Macet" boleh
+// muncul HANYA di baris "Skor zona (estimasi)" yang berlabel estimasi.
+const htmlTanpaSkorZonaV224 = htmlLalinV224.replace(/<div class='barisStat'><span>Skor zona \(estimasi\)<\/span><span>[^<]*<\/span><\/div>/, "");
+cek("v22.4 (e): panel 0 kendaraan -> TANPA 'Padat'/'Macet' di luar baris skor zona estimasi", !htmlTanpaSkorZonaV224.includes("Padat") && !htmlTanpaSkorZonaV224.includes("Macet"), htmlLalinV224.slice(0, 900));
+cek("v22.5-W3: baris 'Skor zona (estimasi)' tampil juga saat 0 kendaraan", htmlLalinV224.includes("Skor zona (estimasi)"), htmlLalinV224.slice(0, 900));
 cek("v22.4 (e): panel menampilkan baris 'Kemacetan (nyata)' + 'Skor zona (estimasi)' saat ada kendaraan", (() => {
   vm.runInContext("daftarKendaraan.length = 0; kendaraanVisual.length = 0;", sandbox);
   const t1V224 = C.buatKendaraanJalan("truk", C.S.jalan[0].x, C.S.jalan[0].y);
@@ -4872,7 +4882,152 @@ cek("v22.4 (e): panel menampilkan baris 'Kemacetan (nyata)' + 'Skor zona (estima
 vm.runInContext('panelKiri = "peta";', sandbox);
 // (f) konsistensi versi: SW cache + precache mengikuti ?v= baru.
 const swV224 = fs.readFileSync("/home/hatch/workspace/saudagar-meranti/sw.js", "utf8");
-cek("v22.4 (f): sw.js cache v22.4 + precache ?v= baru (city.js v=31, kendaraan v=3, lalin v=2)", swV224.indexOf("meranti-rising-v22.4") !== -1 && swV224.indexOf("js/city.js?v=31") !== -1 && swV224.indexOf("js/city-kendaraan.js?v=3") !== -1 && swV224.indexOf("js/city-lalin.js?v=2") !== -1);
-cek("v22.4 (f): tidak ada sisa refs v22.3 di index.html/sw.js", !idxHtml.includes("v22.3") && !idxHtml.includes("city.js?v=30") && !swV224.includes("meranti-rising-v22.3") && !swV224.includes("city.js?v=30"));
+cek("v22.5 (f): sw.js cache v22.5 + precache ?v= baru (city.js v=32, kendaraan v=4, jalan v=2, lalin v=2)", swV224.indexOf("meranti-rising-v22.5") !== -1 && swV224.indexOf("js/city.js?v=32") !== -1 && swV224.indexOf("js/city-kendaraan.js?v=4") !== -1 && swV224.indexOf("js/city-jalan.js?v=2") !== -1 && swV224.indexOf("js/city-lalin.js?v=2") !== -1);
+cek("v22.5 (f): tidak ada sisa refs v22.4 di index.html/sw.js", !idxHtml.includes("v22.4") && !idxHtml.includes("city.js?v=31") && !idxHtml.includes("city-kendaraan.js?v=3") && !idxHtml.includes("city-jalan.js?v=1") && !swV224.includes("meranti-rising-v22.4") && !swV224.includes("city.js?v=31") && !swV224.includes("city-kendaraan.js?v=3") && !swV224.includes("city-jalan.js?v=1"));
+
+// =====================================================================
+// v22.5 — Kendaraan Benar-Benar Bergerak Live (finalizer).
+// Temuan cek live v22.4: kendaraan TIDAK PERNAH bergerak selama ±15 jam
+// game (truk parkir di tempat, panel "0 bergerak · 2 total", mobil warga
+// hanya di panel), padahal probe headless v22.4 tetap lulus. Akar masalah
+// (Worker 1, reproduksi /tmp/probe225.js + /tmp/probe225b.js):
+// pilihTujuanTerjauhJalan v22.4 memilih kandidat dari SELURUH S.jalan
+// tanpa memperhatikan komponen graph; begitu ada komponen terputus >=6
+// petak, 6 percobaan _beriTujuanBaru habis pada petak tak-terjangkau ->
+// kendaraan parkir selamanya (pre-fix varian D: truk 165 gerak / 3411
+// parkir dari 3600 tick; retry buatRuteKendaraan 438 panggilan / 0
+// sukses). Perbaikan (Worker 2, Opsi A — js/city-kendaraan.js +
+// js/city-jalan.js): _petakDiKomponen + param hanyaDi di
+// pilihTujuanTerjauhJalan + _beriTujuanBaru menghitung hanyaDi sekali
+// + buatRuteKendaraan mengembalikan k.tujuan=null saat rute gagal.
+// Label panel (Worker 3 — js/city.js): skorZona/labelZona diangkat ke
+// atas, baris "Skor zona (estimasi)" tampil juga saat jalan kosong.
+// Pasca-perbaikan (probe ulang /tmp/probe225.js + /tmp/probe225b.js):
+// varian D truk 2364 gerak / 900 parkir; ambang N=6 hilang (truk 2429 /
+// 835, mobil 2315 / 1064); retry 30 panggilan / 30 sukses, 0 gagal.
+// Pejalan kaki DITUNDA dari v22.5 (ia berjalan headless; dunianya 3
+// petak + malam ~30% aktif by design) — kodenya tidak disentuh.
+// (e) Regresi: 10 TEST wajib v22 + semua tes v22.3/v22.4/v21/v20/v19/
+// v18/v17 tetap lulus — dibuktikan suite ini sendiri (TEST_V13_OK
+// di akhir file), tanpa cek tambahan.
+// =====================================================================
+// (a)+(b) REPRODUKSI kota awal persis seperti live: mulaiGame(true) +
+// initKendaraan() yang sesungguhnya, tanpa job/bangunan tambahan,
+// 600 tick live-like (dt=0,016, 1x, jam 06:00). Pasca-perbaikan probe
+// A1: truk pindah 1,78 petak, gerak 498 vs parkir 78; mobil pindah
+// 1,80, gerak 500 vs parkir 87.
+C.mulaiGame(true);
+C.initKendaraan();
+C.aturKecepatan(1);
+const trukV225 = C.kendaraanVisual.find(k => k.tipe === "truk");
+const mobilV225 = C.kendaraanVisual.find(k => k.tipe === "mobil" && k.mobilWarga === true);
+cek("v22.5 (a): kota awal — truk ambient di-spawn di jalan[0]", !!trukV225 && trukV225.x === C.S.jalan[0].x && trukV225.y === C.S.jalan[0].y, trukV225 ? ("(" + trukV225.x + "," + trukV225.y + ") vs jalan[0] (" + C.S.jalan[0].x + "," + C.S.jalan[0].y + ")") : "tidak ada truk");
+cek("v22.5 (b): kota awal — mobil warga di-spawn", !!mobilV225, "kendaraan: " + C.kendaraanVisual.map(k => k.tipe + (k.mobilWarga ? "/warga" : "")).join(", "));
+const trukAwalV225 = trukV225 ? { x: trukV225.x, y: trukV225.y } : null;
+const mobilAwalV225 = mobilV225 ? { x: mobilV225.x, y: mobilV225.y } : null;
+let gerakTrukV225 = 0, parkirTrukV225 = 0, pindahTrukV225 = 0, pindahMobilV225 = 0;
+for (let i = 0; i < 600; i++) {
+  C.perbaruiKendaraan(0.016);
+  if (trukV225) {
+    const d = Math.hypot(trukV225.x - trukAwalV225.x, trukV225.y - trukAwalV225.y);
+    if (d > pindahTrukV225) pindahTrukV225 = d;
+    if (["accelerating", "cruising", "turning", "braking"].indexOf(trukV225.state) >= 0) gerakTrukV225++;
+    else if (trukV225.state === "parking") parkirTrukV225++;
+  }
+  if (mobilV225) {
+    const d = Math.hypot(mobilV225.x - mobilAwalV225.x, mobilV225.y - mobilAwalV225.y);
+    if (d > pindahMobilV225) pindahMobilV225 = d;
+  }
+}
+cek("v22.5 (a): kota awal 600 tick — truk BERPINDAH > 0,5 petak", pindahTrukV225 > 0.5, "pindah maks " + pindahTrukV225.toFixed(2));
+cek("v22.5 (a): kota awal 600 tick — truk lebih banyak bergerak daripada parkir", gerakTrukV225 > parkirTrukV225, "bergerak=" + gerakTrukV225 + " parkir=" + parkirTrukV225);
+cek("v22.5 (b): kota awal 600 tick — mobil warga BERPINDAH > 0,5 petak (bukan hanya tercantum di panel)", pindahMobilV225 > 0.5, "pindah maks " + pindahMobilV225.toFixed(2));
+// (c) VARIAN D + ambang N=6 (bukti Worker 1): kota awal + N petak jalan
+// TERPUTUS (komponen ke-2, jauh dari jalan awal) -> truk + mobil tetap
+// bergerak. 3600 tick dt=0,016 kec 2x dipakai penuh (bukan 600 tick):
+// probe 3600 tick hanya ~0,3 detik per sesi, jadi tidak ada alasan
+// memangkas — ambang gerak >50% (1800/3600) membedakan tegas pre-fix
+// (varian D truk 165/3411, N=6 beku) vs pasca-perbaikan (D 2364/900,
+// N=6 truk 2429/835 mobil 2315/1064).
+function sesiJalanTerputusV225(nTerputus) {
+  C.mulaiGame(true);
+  C.initKendaraan();
+  C.aturKecepatan(2);
+  const L = C.peta.landing;
+  for (let i = 0; i < nTerputus; i++) C.S.jalan.push({ x: L.x + 10 + i, y: L.y + 10, tipe: "jalan-tanah", kecamatan: null });
+  C.bangunGraphJalan();
+  const truk = C.kendaraanVisual.find(k => k.tipe === "truk");
+  const mobil = C.kendaraanVisual.find(k => k.tipe === "mobil" && k.mobilWarga === true);
+  const awalT = truk ? { x: truk.x, y: truk.y } : null;
+  const awalM = mobil ? { x: mobil.x, y: mobil.y } : null;
+  let gerakT = 0, parkirT = 0, pindahT = 0, gerakM = 0, parkirM = 0, pindahM = 0;
+  for (let i = 0; i < 3600; i++) {
+    C.perbaruiKendaraan(0.016);
+    if (truk) {
+      const d = Math.hypot(truk.x - awalT.x, truk.y - awalT.y);
+      if (d > pindahT) pindahT = d;
+      if (["accelerating", "cruising", "turning", "braking"].indexOf(truk.state) >= 0) gerakT++;
+      else if (truk.state === "parking") parkirT++;
+    }
+    if (mobil) {
+      const d = Math.hypot(mobil.x - awalM.x, mobil.y - awalM.y);
+      if (d > pindahM) pindahM = d;
+      if (["accelerating", "cruising", "turning", "braking"].indexOf(mobil.state) >= 0) gerakM++;
+      else if (mobil.state === "parking") parkirM++;
+    }
+  }
+  return { gerakT, parkirT, pindahT, gerakM, parkirM, pindahM };
+}
+const hasilD8V225 = sesiJalanTerputusV225(8);
+cek("v22.5 (c): varian D (8 petak terputus) — truk bergerak >50% dari 3600 tick", hasilD8V225.gerakT > 1800, "bergerak=" + hasilD8V225.gerakT + " parkir=" + hasilD8V225.parkirT);
+cek("v22.5 (c): varian D (8 petak terputus) — truk BERPINDAH > 0,5 petak", hasilD8V225.pindahT > 0.5, "pindah maks " + hasilD8V225.pindahT.toFixed(2));
+cek("v22.5 (c): varian D (8 petak terputus) — mobil bergerak >50% dari 3600 tick", hasilD8V225.gerakM > 1800, "bergerak=" + hasilD8V225.gerakM + " parkir=" + hasilD8V225.parkirM);
+cek("v22.5 (c): varian D (8 petak terputus) — mobil BERPINDAH > 0,5 petak", hasilD8V225.pindahM > 0.5, "pindah maks " + hasilD8V225.pindahM.toFixed(2));
+const hasilN6V225 = sesiJalanTerputusV225(6);
+cek("v22.5 (c): ambang N=6 (6 petak terputus) — truk bergerak >50% dari 3600 tick", hasilN6V225.gerakT > 1800, "bergerak=" + hasilN6V225.gerakT + " parkir=" + hasilN6V225.parkirT);
+cek("v22.5 (c): ambang N=6 (6 petak terputus) — mobil bergerak >50% dari 3600 tick", hasilN6V225.gerakM > 1800, "bergerak=" + hasilN6V225.gerakM + " parkir=" + hasilN6V225.parkirM);
+// (d) Regresi v22.4 — rute 8 petak lurus 1 komponen tetap >=6 petak
+// bentang; mobil 40px; fallback "TRUK"; panel 0 kendaraan ->
+// "Lancar — jalan kosong" + label "Skor zona (estimasi)" tampil
+// (sudah ada dari W3 — dipertahankan di sini sebagai cek tetap).
+C.mulaiGame(true);
+C.aturKecepatan(1);
+const jalanV225Lama = C.S.jalan.slice();
+const bangV225Lama = C.S.bangunan.slice();
+const jembV225Lama = C.S.jembatan.slice();
+C.S.bangunan = []; C.S.jembatan = [];
+C.S.jalan = [];
+for (let x = 10; x <= 17; x++) C.S.jalan.push({ x: x, y: 10, tipe: "jalan-aspal" });
+C.bangunGraphJalan();
+vm.runInContext("daftarKendaraan.length = 0; kendaraanVisual.length = 0; wargaVisual.length = 0;", sandbox);
+const trukV225d = C.buatKendaraanJalan("truk", 10, 10);
+const ruteV225d = (trukV225d && trukV225d.rute) || [];
+const bentangV225d = ruteV225d.length ? Math.max.apply(null, ruteV225d.map(p => Math.abs(p.x - ruteV225d[0].x) + Math.abs(p.y - ruteV225d[0].y))) : 0;
+cek("v22.5 (d): regresi v22.4 — rute 8 petak lurus 1 komponen bentang >= 6 petak", ruteV225d.length >= 7 && bentangV225d >= 6, "waypoint=" + ruteV225d.length + " bentang=" + bentangV225d);
+sandbox.__recV225 = ctxRekamV224();
+vm.runInContext("ctx = __recV225;", sandbox);
+panggilV224.length = 0;
+C.gambarSatuKendaraan({ tipe: "mobil", x: 10, y: 10, state: "cruising", arah: 0, warna: "#00a8ff" }, 800, 600);
+const titikV225d = panggilV224.filter(c => c[0] === "path");
+const lebarMobilV225 = titikV225d.length ? Math.max.apply(null, titikV225d.map(c => c[1])) - Math.min.apply(null, titikV225d.map(c => c[1])) : 0;
+cek("v22.5 (d): regresi v22.4 — mobil vektor lebar gambar >= 36px (40px pada zoom 1)", lebarMobilV225 >= 36, lebarMobilV225);
+const trukImgAsliV225 = vm.runInContext("gambarAset['assets/vehicles/truk-pengangkut.png']", sandbox);
+vm.runInContext("gambarAset['assets/vehicles/truk-pengangkut.png'] = undefined;", sandbox);
+panggilV224.length = 0;
+C.gambarSatuKendaraan({ tipe: "truk", x: 10, y: 10, state: "parking", arah: 0 }, 800, 600);
+cek("v22.5 (d): regresi v22.4 — fallback vektor 'TRUK' saat sprite truk belum termuat", panggilV224.some(c => c[0] === "fillText" && c[1] === "TRUK"));
+sandbox.__trukImgAsliV225 = trukImgAsliV225;
+vm.runInContext("gambarAset['assets/vehicles/truk-pengangkut.png'] = __trukImgAsliV225;", sandbox);
+vm.runInContext("ctx = kanvas.getContext('2d');", sandbox); // kembalikan ctx stub
+C.S.jalan = jalanV225Lama; C.S.jembatan = jembV225Lama; C.S.bangunan = bangV225Lama;
+C.bangunGraphJalan();
+C.mulaiGame(true);
+vm.runInContext("daftarKendaraan.length = 0; kendaraanVisual.length = 0; wargaVisual.length = 0;", sandbox);
+C.hitungLalin();
+vm.runInContext('panelKiri = "lalin";', sandbox);
+C.renderPanelKiri();
+const htmlLalinV225 = vm.runInContext('document.getElementById("panelKiriIsi").innerHTML', sandbox);
+cek("v22.5 (d): regresi v22.4 — panel 0 kendaraan 'Lancar — jalan kosong' + 'Skor zona (estimasi)' tampil", htmlLalinV225.includes("Lancar — jalan kosong") && htmlLalinV225.includes("Skor zona (estimasi)"), htmlLalinV225.slice(0, 900));
+vm.runInContext('panelKiri = "peta";', sandbox);
 
 console.log(gagal === 0 ? "TEST_V13_OK" : "TEST_V13_GAGAL:" + gagal + " dari " + (lulus + gagal));

@@ -6,6 +6,129 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v22.5 — Kendaraan Benar-Benar Bergerak Live (2026-11-12)
+
+Perbaikan atas temuan cek live v22.4 (`?v=42`): kendaraan TIDAK PERNAH
+bergerak selama ±15 jam game — posisi truk sama di 8 tangkapan
+09:23–21:07, panel konsisten `"0 bergerak · 2 total"`, keduanya
+`"parking"`, `"Job 0/0"`, `"Truk logistik 0/6"`; mobil pribadi TIDAK
+PERNAH terlihat di peta (hanya di panel); jalan lurus ~8 petak yang
+dibangun pemeriksa tidak ditempuh siapa pun; Tual Sagu tetap 0.
+REGRESI vs v22.3: di v22.3 panel sempat menunjukkan `"2 bergerak"`
+(berosilasi), di v22.4 parkir 100% — jadi v22.4 MERUSAK pergerakan.
+Headless tes (d) v22.4 tetap lulus (bergerak 513–515 vs parkir 55–57)
+— reproduksi headless v22.4 TIDAK mereproduksi keadaan live. v22.5
+memperbaiki SIMULASI (akar masalahnya), bukan visibilitas. Tidak ada
+perubahan format simpanan (`SAVE_KEY` tetap `merantiRisingWorldV1`,
+`petaVersi` tetap 5), tidak ada perubahan data ekonomi/waktu, tidak
+ada file v23 yang disentuh (`js/city-suara.js`, `tests/test-suara.js`,
+`docs/v23-integrasi.md`, `assets/audio/*`). Pejalan kaki DITUNDA dari
+v22.5 (ia berjalan headless; dunianya 3 petak + malam ~30% aktif by
+design) — kodenya tidak disentuh. `VERSI_GAME "v22.5"`; refs `css?v=16`
+(tetap), `city.js?v=32`, `city-kendaraan.js?v=4`, `city-jalan.js?v=2`
+(naik dari v=1 — W2 mengubah file ini), `city-lalin.js?v=2` (tetap);
+nama cache SW `meranti-rising-v22.5`; precache SW diperbarui.
+
+### 1. Akar masalah — kandidat tujuan dari seluruh jalan, tanpa komponen graph (W1)
+
+Reproduksi Worker 1 (`/tmp/probe225.js`, `/tmp/probe225b.js`, kota
+awal persis seperti live): kota awal hanya punya 3 petak jalan
+`(240,214)–(240,212)`, 1 komponen. `pilihTujuanTerjauhJalan` v22.4
+memilih kandidat dari SELURUH `S.jalan` tanpa memperhatikan komponen
+graph — begitu ada komponen terputus ≥6 petak, 6 percobaan
+`_beriTujuanBaru` habis pada petak tak-terjangkau → kendaraan parkir
+selamanya. Bukti angka pre-fix: varian D (kota awal + 8 petak jalan
+TERPUTUS) truk **165 gerak / 3411 parkir** dari 3600 tick; ambang
+**N=6** petak terputus sudah membekukan kendaraan (165/3411 →
+2455/809 setelah ambang dihapus pada eksperimen W2); retry
+`buatRuteKendaraan` **438 panggilan / 0 sukses**. Penyebab lain
+disingkirkan: A* sehat (`cariRute` semua pasangan petak jalan awal
+mengembalikan rute), state machine sehat, pejalan kaki berjalan
+headless (pindah 2,12–3,01 petak).
+
+### 2. Perbaikan kendaraan — tujuan dibatasi ke komponen sendiri, Opsi A (W2, `js/city-kendaraan.js` + `js/city-jalan.js`)
+
+- Helper baru `_petakDiKomponen(idK)` (`js/city-kendaraan.js`
+  ~baris 356): merangkai daftar petak satu komponen dari
+  `graphJalan.node` + `edge.petak` (komponen di graph hanya menyimpan
+  hitungan, bukan daftar petak); mengembalikan `null` bila graph tak
+  ada / id tak valid → pemanggil memakai perilaku lama (fail-open).
+- `pilihTujuanTerjauhJalan` param ke-4 `hanyaDi` (Set `"x,y"`,
+  opsional, ~baris 389): batasi kandidat ke petak dalam set itu;
+  `null` = tanpa filter (perilaku lama). `"Terjauh dulu"` tetap
+  berlaku DI DALAM komponen yang terjangkau — niat v22.4 terjaga,
+  perangkap hilang.
+- `_beriTujuanBaru` (~baris 442): menghitung `hanyaDi` SEKALI sebelum
+  loop 6 percobaan (via `nodeTerdekat` + `_petakDiKomponen`),
+  bukan per percobaan.
+- `buatRuteKendaraan` (`js/city-jalan.js` ~baris 554): saat rute gagal
+  (`cariRute` null) kini juga mengembalikan `k.tujuan = null`
+  (sebelumnya tujuan gagal tertinggal dan bisa dipakai ulang).
+- Bukti angka pasca-perbaikan (probe ulang Worker 1, kode yang sama
+  dengan yang dites suite): varian D truk **2364 gerak / 900 parkir**
+  (mobil 2334/1058); ambang N=6 hilang — N=6 truk **2429/835**,
+  mobil **2315/1064**; N=3/5/7/8 semua bergerak (truk 2381–2479);
+  retry `buatRuteKendaraan` **30 panggilan / 30 sukses, 0 gagal**;
+  kota awal murni 3 run: truk 2400–2415, mobil 2277–2379 gerak.
+
+### 3. Label panel — "Skor zona (estimasi)" tampil juga saat jalan kosong (W3, `js/city.js`)
+
+Temuan cek live v22.4: baris `"Skor zona (estimasi)"` yang dijanjikan
+v22.4 TIDAK PERNAH muncul saat jalan kosong — ia hanya dirender di
+cabang `else` (kendaraan bergerak), padahal 0 bergerak adalah keadaan
+yang justru paling sering live. `skorZona`/`labelZona` diangkat ke
+atas (~baris 4141) dan dipakai kedua cabang; baris ditambahkan di
+cabang `jalanKosong` (~baris 4155); duplikasi di cabang `else`
+dihapus (~baris 4167). Baris `"Estimasi permintaan (zona)"`
+DIPERTAHANKAN — angkanya berbeda (kend/jam vs /100). Dua asersi lama
+yang flaky (`v22.3-w3 (f)` + `v22.4 (e)`) dipersempit: hapus baris
+skor zona dari HTML sebelum cek `"Padat"`/`"Macet"` (label estimasi
+boleh `"Padat"`/`"Macet"` karena berlabel estimasi; yang dilarang
+adalah klaim kemacetan NYATA). Penyebab flaky: skor zona 40–69
+(→ label `"Padat"`) atau <40 (→ `"Macet"`) di kota awal membuat
+asersi lama yang melarang kata itu di SELURUH panel gagal 2/1233 cek
+pada 2 run pertama pasca-W2 — setelah dipersempit W3, kedua cek
+lolos **5/5 run** (lihat "Tes" di bawah).
+
+**Tes:** suite penuh **1250 cek** (v22.4: 1235 → +15 cek baru v22.5),
+**5 run, semua `TEST_V13_OK`, 0 gagal** (~37 dtk/run). Cek baru:
+(a) REPRODUKSI kota awal (`mulaiGame(true)` + `initKendaraan()` yang
+sesungguhnya, tanpa job/bangunan tambahan, 600 tick live-like
+dt=0,016, 1x, jam 06:00) — truk di-spawn di `jalan[0]`, BERPINDAH
+>0,5 petak (probe: 1,78) DAN lebih banyak bergerak daripada parkir
+(probe: 498 vs 78); (b) mobil warga kota awal BERPINDAH >0,5 petak
+(probe: 1,80; gerak 500 vs parkir 87) — bukan hanya tercantum di
+panel; (c) VARIAN D (kota awal + 8 petak jalan TERPUTUS, 3600 tick
+dt=0,016, 2x — dipakai penuh karena probe 3600 tick hanya ~0,3 dtk,
+jadi tidak ada alasan memangkas) — truk + mobil bergerak >50%
+(ambang 1800/3600; probe: truk 2364/900, mobil 2334/1058) dan
+BERPINDAH >0,5 petak, plus ambang N=6 (6 petak terputus) truk +
+mobil tetap >50% (probe: 2429/835 dan 2315/1064); (d) regresi v22.4
+— rute 8 petak lurus 1 komponen bentang ≥6 petak, mobil vektor
+≥36px (40px), fallback `"TRUK"` tanpa sprite, panel 0 kendaraan
+`"Lancar — jalan kosong"` + `"Skor zona (estimasi)"` tampil; (e)
+regresi — 10 TEST wajib v22 + semua tes v22.3/v22.4/v21/v20/v19/v18/
+v17 tetap lulus (dibuktikan suite penuh 0 gagal); (f) konsistensi
+versi — pin `VERSI_GAME`/`index.html`/`sw.js` diperbarui ke v22.5
+(`city.js?v=32`, `kendaraan?v=4`, `jalan?v=2`, `lalin?v=2` tetap)
++ tidak ada sisa refs v22.4. Kedua cek panel yang flaky
+(`v22.3-w3 (f)` Padat/Macet + `v22.4 (e)` TANPA Padat/Macet) lolos
+**5/5 run** setelah dipersempit W3 — tidak ada lagi cek flaky yang
+diketahui. (Catatan: baris `OK` suite tidak mencetak angka info —
+angka gerak/parkir di atas berasal dari probe `/tmp/probe225.js` +
+`/tmp/probe225b.js` pasca-perbaikan pada kode & skenario yang sama.)
+
+### Batas jujur v22.5
+
+| Batas | Keterangan |
+|---|---|
+| Visibilitas di zoom peta dunia yang sangat jauh BELUM terbukti live | v22.5 memperbaiki SIMULASI (kendaraan kini benar-benar bergerak headless, dibuktikan probe + tes tetap), tapi apakah kendaraan terlihat jelas saat kamera di-zoom jauh (peta dunia) hanya bisa dibuktikan lewat cek live di browser — belum dilakukan untuk v22.5. |
+| Cincin sorotan kuning BELUM terbukti live | Sorotan kuning di bawah kendaraan bergerak (v22.4) hanya terbukti digambar headless; belum pernah terlihat di tangkapan live karena kendaraannya sendiri tidak bergerak saat itu. Kini kendaraan bergerak — cek live berikutnya harus memverifikasi cincinnya muncul. |
+| Berhenti di lampu merah BELUM terbukti live | Tidak ada kendaraan yang melintas lampu merah pada cek live v22.4 (tidak ada yang bergerak); perilaku berhenti di lampu merah tetap belum teruji live. |
+| Pejalan kaki DITUNDA dari v22.5 | Pejalan kaki berjalan headless (probe: pindah 2,12–3,01 petak, ganti tile 39–105x) dan dunianya hanya 3 petak + malam ~30% aktif by design — perbaikannya ditunda, kodenya tidak disentuh v22.5. Cek live v22.4 mencatat figurnya diam di samping truk di semua tangkapan; itu belum diinvestigasi ulang. |
+| Daftar "Ruas Terpadat" masih berbasis zona | Daftar ruas di panel Lalu Lintas (`js/city.js`) masih memakai `S.lalin.detailPetak` (rasio zona), bukan hitungan kendaraan nyata per petak; daftar itu disembunyikan saat jalan kosong, tapi saat ada kendaraan, label ruasnya tetap estimasi zona. |
+| Baris kemacetan di panel ringkasan + pill HUD masih memakai skor zona | Panel "Statistik Kota" (`js/city.js:4062`) dan pill HUD `statMacet` (`js/city.js:3461`) masih menampilkan `S.lalin.skor` + label zona (`"Padat"`/`"Macet"` bisa muncul di ringkasan/HUD padahal panel Lalu Lintas sudah jujur). Yang diperbaiki v22.5 hanya label di panel Lalu Lintas (skor zona kini tampil juga saat jalan kosong). |
+
 ## Yang baru di v22.4 — Kendaraan Terlihat Jelas (2026-11-12)
 
 Perbaikan atas temuan cek live v22.3 (`?v=41`): kendaraan BENAR-BENAR
