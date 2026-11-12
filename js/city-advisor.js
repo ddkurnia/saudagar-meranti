@@ -646,6 +646,13 @@
     // Rencana kilang multi-penyebab: urutkan penyebab dari diagnosa
     // kilang menurut dampak (langkah 1 = penyebab utama), lalu isi
     // dengan langkah standar sampai maks 4 langkah (tanpa duplikat).
+    // v24.2 (T2): JAMINAN SLOT — bila bahan baku habis/menipis ada di
+    // diagnosa, langkah Kebun Sagu SELALU disertakan: cap naik menjadi
+    // 5 langkah khusus kilang (penyebab berdampak >0,9 paling banyak 3
+    // — banjir/listrik/air — jadi bahan 0,9 paling buruk urutan ke-5,
+    // setelah pekerja 0,9 yang urut lebih dulu). Langkah pengisi standar
+    // hanya mengisi sampai 4 bila penyebab sedikit; penyebab ke-6
+    // (dampak terkecil) yang dikorbankan, bukan langkah penyebab.
     function _rencanaKilang(mslh, standar) {
       var kb = _bangunanMasalah(mslh);
       if (!kb) return standar;
@@ -670,7 +677,7 @@
         ada[kunci] = true;
         hasil.push(s);
       }
-      for (var i = 0; i < sebab.length && hasil.length < 4; i++) dorong(_langkahUntukSebab(sebab[i].kode, mslh));
+      for (var i = 0; i < sebab.length && hasil.length < 5; i++) dorong(_langkahUntukSebab(sebab[i].kode, mslh));
       for (var j = 0; j < standar.length && hasil.length < 4; j++) dorong(standar[j]);
       return hasil.length ? hasil : standar;
     }
@@ -699,7 +706,10 @@
         // utama (dampak terbesar dari Diagnostik.diagnosa kilang) —
         // bahan baku, pekerja, listrik, air, jalan, banjir. Langkah 1
         // = penyebab utama. Bila diagnosa tak tersedia, pakai rencana
-        // standar (kebun → jalan → gudang). Maks 4 langkah.
+        // standar (kebun → jalan → gudang). v24.2: maks 5 langkah bila
+        // kilang punya 5+ penyebab (jaminan slot Kebun Sagu, lihat
+        // _rencanaKilang); bila penyebab sedikit, pengisi standar hanya
+        // sampai total 4 langkah.
         var standarBahan = [
           B("pertanian", "bangun", "kebun-sagu", "Bangun Kebun Sagu — Rp50.000 · hasil 3 tual/hari, kerja 3 (minimal 2 kebun per 1 kilang — kilang butuh 4 tual/hari)", "Bangun Kebun Sagu (Rp50.000)"),
           B("jalan", "jalan", "jalan-tanah", "Bangun Jalan Tanah — Rp500/petak · sambungkan kebun → kilang → gudang supaya truk logistik punya jalur", "Bangun Jalan Tanah (Rp500/petak)"),
@@ -888,6 +898,38 @@
       out[i].masalahId = masalah.id || null;
     }
     return out;
+  }
+
+  // v24.2 (T2): rencana aksi untuk SATU bangunan industri dari diagnosa
+  // LENGKAP-nya (bukan hanya penyebabUtama tunggal) — dipakai panel
+  // Diagnostik (UIV24.diagnosisBangunan). Kilang dengan listrik+air+
+  // pekerja+bahan bermasalah mendapat rencana multi-penyebab yang sama
+  // dengan drawer (_rencanaKilang, urutan dampak, listrik tetap
+  // langkah 1); bangunan non-industri -> [] (pemanggil memakai jalur
+  // penyebabUtama seperti sebelumnya). Bila diagnosa kosong/tak
+  // tersedia -> [] (bukan rencana standar — panel tidak boleh
+  // menampilkan langkah untuk masalah yang tidak terdeteksi).
+  function rencanaAksiUntukBangunan(b) {
+    if (!b) return [];
+    var def = null;
+    try { if (typeof BANGUNAN_MAP !== "undefined" && BANGUNAN_MAP) def = BANGUNAN_MAP[b.id]; } catch (e) {}
+    if (!def || !def.produksi || !def.produksi.masuk) return [];
+    var dk = null;
+    try {
+      if (typeof Diagnostik !== "undefined" && Diagnostik && typeof Diagnostik.diagnosa === "function") dk = Diagnostik.diagnosa(b);
+    } catch (e) {}
+    if (!dk || !Array.isArray(dk.masalah) || !dk.masalah.length) return [];
+    var mBahan = null;
+    for (var i = 0; i < dk.masalah.length; i++) {
+      if (dk.masalah[i].kode === "bahan-baku-habis" || dk.masalah[i].kode === "bahan-baku-menipis") { mBahan = dk.masalah[i]; break; }
+    }
+    var kode = mBahan ? mBahan.kode : "bahan-baku-habis";
+    return rencanaAksiUntuk({
+      kode: kode, id: "m-" + kode,
+      lokasi: { x: b.x, y: b.y },
+      penyebab: (dk.penyebabUtama && (dk.penyebabUtama.penyebab || dk.penyebabUtama.teks)) || "",
+      bangunan: [{ id: b.id, nama: dk.nama, x: b.x, y: b.y }],
+    });
   }
 
   // ---------------- Rekomendasi ----------------
@@ -1112,6 +1154,9 @@
     // v24.1: rencana aksi bernomor per masalah (dipakai drawer, panel
     // diagnostik, dan toast kritis).
     rencanaAksi: rencanaAksiUntuk,
+    // v24.2 (T2): rencana multi-penyebab untuk satu bangunan industri
+    // (dipakai panel diagnostik — lihat rencanaAksiUntukBangunan).
+    rencanaAksiUntukBangunan: rencanaAksiUntukBangunan,
     lihatLokasi: lihatLokasi,
     ambilTindakan: ambilTindakan,
     abaikan: abaikan,

@@ -6,6 +6,68 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v24.2 — Toast Kritis, Rencana Kilang & Poles (2026-11-12)
+
+Perbaikan atas temuan cek live v24.1 — tanpa mengubah save key, ekonomi,
+waktu, koordinat bangunan, transportasi, atau rumus pertumbuhan penduduk.
+
+- **Toast kritis akhirnya muncul.** Akar masalahnya dua lapis: (1)
+  `akrualJamGame` menghitung ulang utilitas dulu (menghapus kritis
+  listrik/air dalam radius hub virtual) baru memotret daftar masalah —
+  kini daftar kritis dipotret SEBELUM hitung ulang, dan potret itu yang
+  memicu toast; (2) rencana yang sama hanya tampil sekali per signature
+  lalu diblokir selamanya — kini ada **re-arm 1 hari game**: masalah yang
+  belum selesai ditampilkan lagi setelah 1 hari game (throttle 60 detik
+  tetap), toast kritis tampil **30 detik** (dulu 8), dan lencana 🧭
+  **berkedip** sampai drawer Penasihat dibuka (penanda "ada rencana belum
+  dibaca").
+- **Rencana kilang lengkap di panel diagnostik.** Panel bangunan kini
+  memakai rencana multi-penyebab (`Advisor.rencanaAksiUntukBangunan`)
+  bila bangunannya industri — kilang tanpa listrik + air + pekerja +
+  bahan baku 0% menampilkan Gardu/PLT sebagai langkah 1 DAN Kebun Sagu
+  sebagai langkah lanjutan (dulu hanya 3 langkah listrik dari penyebab
+  utama). Jaminan slot: bila `bahan-baku-habis` ada di diagnosa, langkah
+  Kebun Sagu selalu disertakan (cap naik ke 5 khusus kilang; langkah
+  pengisi standar yang dikorbankan, bukan langkah penyebab). Urutan
+  dampak tetap — listrik langkah 1.
+- **Dedup langkah "Bangun X" lintas kartu.** Di drawer, langkah yang sama
+  (mis. "Bangun Sekolah Dasar" di tiga kartu) kini hanya punya SATU tombol;
+  duplikatnya tampil sebagai baris *"juga menyelesaikan: \<judul masalah\>"*
+  tanpa tombol ganda. Kartu masalahnya sendiri tetap dipertahankan.
+- **Poles:** (a) baris Status panel kanan memakai
+  `Diagnostik.statusBangunan` — rumah kebanjiran kini "Tidak beroperasi",
+  bukan "Beroperasi"; (b) "Lihat Lokasi" masalah tingkat kota kini punya
+  fallback — tanpa-listrik/air → bangunan pertama yang padam,
+  penduduk/bahagia/cakupan → rumah pertama (permukiman), sisanya → pusat
+  kota; (c) bubble klaster (mis. dermaga) kini **ditumpuk vertikal secara
+  eksak** — tiap anggota (tinggi bubble + 8 px) di atas sebelumnya, tidak
+  lagi menumpuk di posisi yang sama; (d) banner "Versi baru tersedia"
+  hanya tampil bila versi SW **lebih baru** dari `VERSI_GAME` (SW
+  mengirimkan versinya via `postMessage` saat activate; halaman
+  membandingkan, bukan sekadar bereaksi pada event install); (e) teks
+  sampah jujur — "menumpuk" hanya bila tumpukan > 50 kg, bila tidak teks
+  menyebut kapasitas olah vs produksi ("tidak menutup produksi … (tumpukan
+  0 kg — belum menumpuk)"); rumus kebersihan tidak diubah; (f) aturan
+  akses jalan disamakan ke **4-arah** (ortogonal, seperti Diagnostik) —
+  bangunan yang hanya menyentuh jalan secara diagonal kini ditolak saat
+  dibangun, dan saat save lama dimuat ada **pesan migrasi satu kali** di
+  log + toast bila ada bangunan terdampak; (g) tooltip listrik diperbaiki
+  — status per bangunan ada di "panel bangunan (klik bangunannya)".
+
+### Batas jujur v24.2
+
+| Batas | Keterangan |
+| --- | --- |
+| Judul agregat sampah di drawer tetap "Sampah kota menumpuk" | Judul per kode masalah, bukan per angka tumpukan — teks per bangunan sudah jujur (lihat (e)), judul agregat belum membedakan. |
+| Jaminan slot Kebun Sagu hanya untuk `bahan-baku-habis` | `bahan-baku-menipis` (dampak 0,35) bisa terkorbankan bila kilang punya 5 penyebab lain yang lebih besar — urutan dampak dipertahankan. |
+| Bubble memudar tidak ikut stagger | Bubble yang sedang memudar (500 ms) memakai posisi terakhir saat aktif. |
+| Jejak rencana hanya memori runtime | Setelah reload, toast kritis boleh tampil sekali lagi untuk masalah yang sama (re-arm memakai `waktuGame`). |
+| Re-arm memakai `waktuGame` | Bila `waktuGame` tidak tersedia, perilaku lama dipakai (tidak tampil lagi). |
+| Animasi lencana berkedip & toast 30 detik | Hanya bisa diuji visual/live, bukan headless. |
+| Banner PWA di browser nyata | Perbandingan versi SW teruji headless (`bandingVersi`/`pwaTerimaVersiSW`); perilaku banner di browser nyata (controller lama vs baru) perlu cek live. |
+| Stagger bubble di dermaga | Teruji headless (rentang y klaster); tampilan visual di klaster dermaga yang padat perlu cek live. |
+| Anti-spam toast | Jejak rencana per signature + throttle 60 detik tetap; re-arm 1 hari game adalah pengecualian yang disengaja. |
+
 ## Yang baru di v24.1 — Notifikasi Aksi Terpandu (2026-11-12)
 
 Setiap masalah kota kini punya **Rencana Aksi bernomor** (langkah 1 =

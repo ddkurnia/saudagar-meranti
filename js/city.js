@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v24.1"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v24.2"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -1166,15 +1166,53 @@ function cekBangun(def, x, y, rot) {
     biayaTotal = Object.assign({}, def.harga, { uang: (def.harga.uang || 0) + tambahan.uang });
     if (!cukupBiaya(biayaTotal)) return { ok: false, alasan: "Biaya tidak cukup: " + hargaTeks(biayaTotal) + " (termasuk +" + rp(tambahan.uang) + " " + tambahan.des + ").", biayaTambahan: tambahan.uang };
   }
-  // Butuh akses jalan (kecuali dermaga/pelabuhan yang di pesisir)
+  // Butuh akses jalan (kecuali dermaga/pelabuhan yang di pesisir).
+  // v24.2 (4f): SAMAKAN KE ARAH DIAGNOSTIK — hanya tetangga 4-arah
+  // (ortogonal) tiap petak footprint yang dihitung, sama seperti
+  // Diagnostik._punyaAksesJalan. Aturan lama (cincin 1 petak termasuk
+  // sudut/diagonal) mengizinkan bangunan yang hanya menyentuh jalan
+  // secara diagonal — padahal model jaringan jalan ortogonal
+  // (koneksiJalanDi/jalanTetangga) dan truk logistik merutekan lewat
+  // graf ortogonal, jadi bangunan itu tidak punya jalur nyata dan
+  // Diagnostik menandainya `tanpa-jalan`. Bangunan lama yang terlanjur
+  // diagonal diberitahu satu kali saat game dimuat (lihat mulaiGame).
   if (!def.pantai) {
     let akses = false;
-    for (let j = -1; j <= k.h && !akses; j++) for (let i = -1; i <= k.w; i++) {
-      if (adaJalanDi(S, x + i, y + j)) { akses = true; break; }
+    const ARAH4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    for (let j = 0; j < k.h && !akses; j++) for (let i = 0; i < k.w && !akses; i++) {
+      for (const [dx, dy] of ARAH4) {
+        if (adaJalanDi(S, x + i + dx, y + j + dy)) { akses = true; break; }
+      }
     }
-    if (!akses) return { ok: false, alasan: "Bangunan butuh akses jalan — bangun jalan di sampingnya dulu." };
+    if (!akses) return { ok: false, alasan: "Bangunan butuh akses jalan — bangun jalan di sampingnya dulu (bersebelahan 4-arah, bukan diagonal)." };
   }
   return { ok: true, biayaTambahan: tambahan.uang, biayaTambahanDes: tambahan.des, biayaTotal: biayaTotal };
+}
+// v24.2 (4f): hitung bangunan selesai yang HANYA menyentuh jalan secara
+// diagonal (aturan lama cekBangun: cincin 1 petak termasuk sudut) tapi
+// TIDAK bersebelahan 4-arah (aturan baru, sama dengan
+// Diagnostik._punyaAksesJalan). Dipakai pesan migrasi satu kali saat
+// game dimuat — bangunan ini sudah ditandai `tanpa-jalan` oleh Diagnostik.
+function hitungBangunanAksesDiagonalSaja() {
+  if (!S || !Array.isArray(S.bangunan)) return 0;
+  let n = 0;
+  for (const b of S.bangunan) {
+    if (!b || !b.selesai) continue;
+    const d = BANGUNAN_MAP[b.id];
+    if (!d || d.pantai) continue;
+    const k = kakiBangunan(d, b.rot || 0);
+    let orto = false, cincin = false;
+    for (let j = -1; j <= k.h && (!orto || !cincin); j++) for (let i = -1; i <= k.w && (!orto || !cincin); i++) {
+      const diDalam = i >= 0 && i < k.w && j >= 0 && j < k.h;
+      if (diDalam) continue; // petak footprint sendiri bukan akses jalan
+      if (!adaJalanDi(S, b.x + i, b.y + j)) continue;
+      cincin = true;
+      const luarX = (i === -1 || i === k.w), luarY = (j === -1 || j === k.h);
+      if (luarX !== luarY) orto = true; // tepi cincin (bukan sudut) = tetangga 4-arah
+    }
+    if (cincin && !orto) n++;
+  }
+  return n;
 }
 function cekJalan(tipe, x, y) {
   const def = JALAN[tipe];
@@ -1640,6 +1678,18 @@ function akrualJamGame() {
   for (const k of Object.keys(rincianKosong())) if (typeof S.rincianBerjalan[k] !== "number") S.rincianBerjalan[k] = 0;
   if (typeof S.akumulasiJual !== "number") S.akumulasiJual = 0;
   if (typeof S.akumulasiEkspor !== "number") S.akumulasiEkspor = 0;
+  // v24.2 (T1 lapis 1): potret masalah kritis SEBELUM hitungUtilitas(true)
+  // menghapus kritis listrik/air bangunan dalam radius hub virtual
+  // (generator awal 100 kW & 1000 L/jam, radius 8 petak) — potret ini
+  // yang dipakai pemicu toast di bawah, bukan daftar pasca-akrual (yang
+  // di game baru selalu kosong: pra-akrual kritis ada, pasca-akrual
+  // kosong, toast 0x — terbukti reproduksi headless v24.1).
+  let kritisPraAkrual = null;
+  try {
+    if (typeof Advisor !== "undefined" && Advisor && typeof Advisor.daftarMasalah === "function") {
+      kritisPraAkrual = Advisor.daftarMasalah().filter(m => m.prioritas === "CRITICAL");
+    }
+  } catch (e) { kritisPraAkrual = null; }
   // v19 Worker 2: hitung ulang utilitas tiap jam game (konektivitas,
   // pemadaman bergilir, banjir, tumpukan sampah) SEBELUM produksi.
   if (typeof hitungUtilitas === "function") { try { hitungUtilitas(true); } catch (e) {} }
@@ -1663,7 +1713,10 @@ function akrualJamGame() {
   if (typeof Diagnostik !== "undefined" && Diagnostik && typeof Diagnostik.invalidateSemua === "function") { try { Diagnostik.invalidateSemua(); } catch (e) {} }
   if (typeof Advisor !== "undefined" && Advisor && typeof Advisor.daftarMasalah === "function" && typeof Notifikasi !== "undefined" && Notifikasi && typeof Notifikasi.kritis === "function") {
     try {
-      const masalahV24 = Advisor.daftarMasalah();
+      // v24.2 (T1 lapis 1): pakai potret pra-akrual bila ada kritis di
+      // sana; daftar pasca-akrual hanya bila potret kosong (kritis yang
+      // baru muncul jam ini, mis. banjir).
+      const masalahV24 = (kritisPraAkrual && kritisPraAkrual.length) ? kritisPraAkrual : Advisor.daftarMasalah();
       const kritisV24 = masalahV24.find(m => m.prioritas === "CRITICAL");
       if (kritisV24) {
         // v24.1: toast rencana aksi terpandu (masalah + langkah 1–2
@@ -4446,7 +4499,20 @@ function renderPanelKanan() {
   const def = BANGUNAN_MAP[b.id];
   let html = "<div class='judulPanel'>" + def.nama + "</div><div class='misiDes'>" + def.des + "</div>";
   if (b.kecamatan) html += "<div class='barisStat'><span>Kecamatan</span><span>" + namaKecamatan(b.kecamatan) + "</span></div>";
-  html += "<div class='barisStat'><span>Status</span><b>" + (b.selesai ? "Beroperasi" : "Konstruksi " + Math.round(b.progres * 100) + "%") + "</b></div>";
+  // v24.2 (4a): Status memakai Diagnostik.statusBangunan bila tersedia
+  // (mengenal kebanjiran/berlistrik/berair) — baris lama hanya memeriksa
+  // `selesai`, sehingga bangunan kebanjiran tetap tertulis "Beroperasi"
+  // sementara baris Banjir di bawahnya bilang "tidak beroperasi".
+  // Fallback ke logika `selesai` bila modul belum dimuat / bangunan
+  // masih konstruksi (statusBangunan bilang "Konstruksi" tanpa %).
+  let statusTampil = b.selesai ? "Beroperasi" : "Konstruksi " + Math.round(b.progres * 100) + "%";
+  try {
+    if (b.selesai && typeof Diagnostik !== "undefined" && Diagnostik && typeof Diagnostik.statusBangunan === "function") {
+      const dStatus = Diagnostik.statusBangunan(b);
+      if (dStatus && dStatus.status) statusTampil = dStatus.status;
+    }
+  } catch (e) {}
+  html += "<div class='barisStat'><span>Status</span><b>" + statusTampil + "</b></div>";
   // v19 Worker 5: status utilitas, banjir, zona & pengunjung bangunan terpilih.
   html += "<div class='barisStat'><span>Listrik</span><span>" + (b.berlistrik === false ? "⚡ Padam" : b.berlistrik ? "⚡ Menyala" : "—") + "</span></div>";
   html += "<div class='barisStat'><span>Air</span><span>" + (b.berair === false ? "💧 Tidak berair" : b.berair ? "💧 Berair" : "—") + "</span></div>";
@@ -5293,6 +5359,20 @@ function mulaiGame(baru) {
     for (const j of S.jalan) if (j.kecamatan == null) j.kecamatan = kecamatanDiPeta(peta, j.x, j.y);
     for (const j of S.jembatan) if (j.kecamatan == null) j.kecamatan = kecamatanDiPeta(peta, j.x, j.y);
     S.log.unshift("Permainan dilanjutkan — Hari " + S.hari + ".");
+    // v24.2 (4f): migrasi aturan akses jalan — beri tahu SATU KALI bila
+    // ada bangunan yang hanya menyentuh jalan secara diagonal (kini
+    // ditandai tanpa-jalan oleh Diagnostik; aturan baru = 4-arah).
+    // Flag S.migrasiAksesJalanV242 di save supaya tidak berulang.
+    if (!S.migrasiAksesJalanV242) {
+      S.migrasiAksesJalanV242 = true;
+      try {
+        const nDiag = (typeof hitungBangunanAksesDiagonalSaja === "function") ? hitungBangunanAksesDiagonalSaja() : 0;
+        if (nDiag > 0) {
+          log("Aturan akses jalan diperketat (v24.2): " + nDiag + " bangunan hanya menyentuh jalan secara diagonal — kini ditandai tanpa akses jalan oleh Diagnostik. Bangun jalan di sampingnya (bersebelahan 4-arah, bukan diagonal) untuk memulihkan akses.");
+          toast("Aturan akses jalan diperketat (v24.2): " + nDiag + " bangunan hanya menyentuh jalan secara diagonal — kini tanpa akses jalan. Bangun jalan di sampingnya (4-arah).", "info");
+        }
+      } catch (e) {}
+    }
   }
   invalidasiMinimapCache(); // peta baru -> cache minimap dibangun ulang
   kameraPusatkan(peta);
@@ -5363,7 +5443,8 @@ function mulaiGame(baru) {
 // =====================================================================
 let pwaPromptInstal = null; // event beforeinstallprompt yang ditangkap
 let pwaSudahTerinstal = false; // true setelah event appinstalled
-let pwaUpdateTersedia = false; // true bila SW baru terinstal (menunggu muat ulang)
+let pwaUpdateTersedia = false; // true bila SW yang LEBIH BARU dari VERSI_GAME terinstal (menunggu muat ulang)
+let pwaVersiSW = null; // v24.2 (4d): versi SW yang diketahui halaman (null = belum tahu)
 
 // true bila game sudah berjalan sebagai PWA (fullscreen/standalone).
 function pwaBerjalanSebagaiPWA() {
@@ -5439,6 +5520,40 @@ function perbaruiTombolPWA() {
   perbaruiTombolFullscreen();
   perbaruiTombolUpdatePWA();
 }
+// v24.2 (4d): bandingkan nomor versi ("v24.2" -> [24,2]) — 1 bila a
+// lebih baru, -1 bila lebih lama, 0 bila sama.
+function bandingVersi(a, b) {
+  const pecah = (s) => String(s || "").replace(/^v/i, "").split(".").map(n => parseInt(n, 10) || 0);
+  const pa = pecah(a), pb = pecah(b);
+  const n = Math.max(pa.length, pb.length);
+  for (let i = 0; i < n; i++) {
+    const da = pa[i] || 0, db = pb[i] || 0;
+    if (da !== db) return da > db ? 1 : -1;
+  }
+  return 0;
+}
+// v24.2 (4d): terima versi SW (dari postMessage SW) dan putuskan apakah
+// banner "Versi baru tersedia" layak tampil: HANYA bila versi SW LEBIH
+// BARU dari VERSI_GAME halaman. Bila sama/lebih lama, banner basi
+// disembunyikan (dulu: updatefound -> installed langsung menandai
+// update, padahal halaman sudah menjalankan versi itu — index.html
+// network-first + city.js?v= baru dari network — dan pemicu yang sama
+// menyala untuk setiap perubahan byte sw.js, bukan hanya kenaikan
+// versi game).
+function pwaTerimaVersiSW(versi) {
+  if (!versi) return;
+  pwaVersiSW = String(versi);
+  if (bandingVersi(pwaVersiSW, VERSI_GAME) > 0) {
+    if (!pwaUpdateTersedia) {
+      pwaUpdateTersedia = true;
+      toast("Versi baru tersedia (" + pwaVersiSW + ") — muat ulang halaman untuk memakai versi terbaru.", "info");
+    }
+  } else if (pwaUpdateTersedia) {
+    pwaUpdateTersedia = false;
+  }
+  perbaruiTombolUpdatePWA();
+  if (typeof panelKiri !== "undefined" && panelKiri === "pengaturan") renderPanelKiri();
+}
 // ---- Service worker: daftar hanya via https/localhost ----
 function daftarkanServiceWorker() {
   try {
@@ -5446,19 +5561,28 @@ function daftarkanServiceWorker() {
     if (typeof location === "undefined") return;
     const aman = location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1";
     if (!aman) return; // file:// & http non-localhost: SW tidak diizinkan browser
+    // v24.2 (4d): dengarkan jawaban versi dari SW (controller maupun yang
+    // baru terinstal) + tanyakan versi controller yang sedang aktif —
+    // halaman yang dimuat saat controller sudah versi terbaru tidak
+    // boleh menampilkan banner basi.
+    try {
+      navigator.serviceWorker.addEventListener("message", (ev) => {
+        if (ev && ev.data && ev.data.tipe === "meranti-rising-versi" && ev.data.versi) pwaTerimaVersiSW(ev.data.versi);
+      });
+      if (navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage({ tipe: "meranti-rising-minta-versi" });
+    } catch (e) {}
     navigator.serviceWorker.register("sw.js").then((reg) => {
       reg.addEventListener("updatefound", () => {
         const baru = reg.installing;
         if (!baru) return;
         baru.addEventListener("statechange", () => {
-          if (baru.state === "installed" && navigator.serviceWorker.controller) {
-            // SW baru terinstal, halaman lama masih berjalan: beri tahu
-            // lewat toast (pola toast yang sudah ada) + tombol muat ulang
-            // di Pengaturan (perbaruiTombolUpdatePWA).
-            pwaUpdateTersedia = true;
-            toast("Versi baru tersedia — muat ulang halaman untuk memakai versi terbaru.", "info");
-            perbaruiTombolUpdatePWA();
-            if (typeof panelKiri !== "undefined" && panelKiri === "pengaturan") renderPanelKiri();
+          if (baru.state === "installed") {
+            // v24.2 (4d): JANGAN langsung menandai update — tanyakan
+            // dulu versi SW baru; halaman mungkin SUDAH menjalankan
+            // versi itu (index.html network-first + city.js?v= baru dari
+            // network). Banner hanya bila versi SW lebih baru
+            // (diputuskan di pwaTerimaVersiSW saat jawaban tiba).
+            try { baru.postMessage({ tipe: "meranti-rising-minta-versi" }); } catch (e) {}
           }
         });
       });

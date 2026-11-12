@@ -58,7 +58,9 @@
   var terakhirRenderAdvisor = 0;
   var intervalPemantau = null;
   var terakhirKritis = {}; // id -> timestamp ms (throttle toast kritis)
-  var rencanaTerakhir = {}; // v24.1: id masalah -> signature rencana yang sudah ditampilkan (anti-spam)
+  var rencanaTerakhir = {}; // v24.1: id masalah -> {sig, waktuGame} rencana yang sudah ditampilkan (anti-spam + re-arm v24.2)
+  var REARM_RENCANA_MENIT_GAME = 1440; // v24.2 (T1 lapis 2): rencana yang sama boleh tampil lagi setelah 1 hari game
+  var adaRencanaBelumDibaca = false; // v24.2 (T1 lapis 2): toast rencana tampil & drawer belum dibuka -> lencana 🧭 berkedip
   var diagLangkahAktif = null; // v24.1: langkah panel diagnostik yang sedang tampil (untuk wiring tombol)
 
   function adaS() { return (typeof S !== "undefined" && S); }
@@ -289,11 +291,16 @@
       html += "<div class='misiDes'>✅ Tidak ada masalah mendesak. Kota berjalan baik — penasihat akan memberi tahu bila ada yang perlu diperhatikan.</div>";
     } else {
       var utama = masalah.slice(0, 3);
+      // v24.2 (T3): dedup langkah "Bangun X" yang sama lintas kartu —
+      // dilacak di tahap RENDER (bukan pada data): kunci target
+      // (tab:jenisMode:idMode) yang sudah tampil sekali; kartu
+      // masalahnya sendiri TETAP dipertahankan (jangan hapus masalah).
+      var langkahSudahTampil = {};
       html += "<div class='judulPanel' style='margin-top:8px'>⚠ Masalah utama</div>";
-      for (var i = 0; i < utama.length; i++) html += barisMasalah(utama[i]);
+      for (var i = 0; i < utama.length; i++) html += barisMasalah(utama[i], langkahSudahTampil);
       if (masalah.length > 3) {
         html += "<div class='judulPanel' style='margin-top:8px'>Daftar masalah (" + masalah.length + ")</div>";
-        for (var j = 3; j < masalah.length; j++) html += barisMasalah(masalah[j]);
+        for (var j = 3; j < masalah.length; j++) html += barisMasalah(masalah[j], langkahSudahTampil);
       }
     }
     html += "<div class='barisAksi'><button class='btnKecil' data-v24-tutup='1'>Tutup</button></div>";
@@ -307,7 +314,7 @@
     } catch (e) {}
     terakhirRenderAdvisor = Date.now();
   }
-  function barisMasalah(m) {
+  function barisMasalah(m, sudahTampil) {
     var chip = m.tingkat >= 4 ? "🔴" : m.tingkat === 3 ? "🟠" : m.tingkat === 2 ? "🟡" : "⚪";
     var html = "<div class='v24Masalah' data-v24-masalah='" + esc(m.id) + "'>";
     html += "<div class='v24MasalahJudul'>" + chip + " <b>" + esc(m.judul) + "</b> <span class='v24Chip'>" + esc(m.prioritas) + "</span></div>";
@@ -325,6 +332,18 @@
       html += "<div class='misiDes' style='margin-top:6px'><b>📋 Rencana Aksi:</b></div>";
       for (var li = 0; li < m.langkah.length; li++) {
         var st = m.langkah[li];
+        // v24.2 (T3): langkah "Bangun X" yang sama sudah tampil di kartu
+        // sebelumnya -> tampilkan sebagai baris "juga menyelesaikan:
+        // <judul masalah pemilik tombol>" TANPA tombol ganda (nomor
+        // langkah tetap dipertahankan supaya urutan tiap kartu konsisten).
+        var kunciLangkah = (st.target && st.target.tab && st.target.jenisMode && st.target.idMode) ? (st.target.tab + ":" + st.target.jenisMode + ":" + st.target.idMode) : null;
+        if (kunciLangkah && sudahTampil) {
+          if (sudahTampil[kunciLangkah]) {
+            html += "<div class='misiDes'>" + st.nomor + ". " + esc(st.teks) + " — <span class='v24Chip'>juga menyelesaikan: " + esc(sudahTampil[kunciLangkah]) + "</span></div>";
+            continue;
+          }
+          sudahTampil[kunciLangkah] = m.judul;
+        }
         html += "<div class='misiDes'>" + st.nomor + ". " + esc(st.teks) + "</div>";
         html += "<div class='barisAksi v24Aksi'><button class='btnKecil' data-v24-langkah='" + li + "'>" + (st.terkunci ? "🔒 " : "") + esc(st.tombol) + "</button></div>";
         if (st.terkunci && st.alasanKunci) html += "<div class='misiDes'>⚠️ " + esc(st.alasanKunci) + "</div>";
@@ -351,7 +370,7 @@
         var aksi = btn.getAttribute ? btn.getAttribute("data-v24-aksi") : "";
         btn.onclick = function () {
           var m = cari();
-          if (aksi === "lokasi") { if (m) lihatLokasi(m.x, m.y, m.bangunanIdx); else tutupAdvisor(); }
+          if (aksi === "lokasi") { if (m) lihatLokasi(m.x, m.y, m.bangunanIdx, m); else tutupAdvisor(); }
           else if (aksi === "penyebab") {
             var det = itemEl.querySelector ? itemEl.querySelector(".v24Detail") : null;
             if (det) det.style.display = (det.style.display === "none") ? "block" : "none";
@@ -384,6 +403,10 @@
   function bukaAdvisor(masalahId) {
     var d = pastikanDrawer();
     if (!d) return false;
+    // v24.2 (T1 lapis 2): drawer dibuka = rencana sudah dibaca — lencana
+    // berhenti berkedip.
+    adaRencanaBelumDibaca = false;
+    try { perbaruiLencana(); } catch (e) {}
     renderAdvisor();
     d.style.display = "block";
     if (masalahId) {
@@ -411,8 +434,10 @@
   }
   // Kamera ke lokasi masalah (klik item daftar masalah). Menutup drawer
   // supaya lokasi terlihat di peta; bila masalah menunjuk bangunan,
-  // bangunan itu dipilih & panel kanannya terbuka.
-  function lihatLokasi(x, y, bangunanIdx) {
+  // bangunan itu dipilih & panel kanannya terbuka. Argumen `masalah`
+  // opsional (objek ternormalisasi, berisi mentah.kode) — dipakai
+  // fallback v24.2 (4b) untuk masalah tingkat kota.
+  function lihatLokasi(x, y, bangunanIdx, masalah) {
     try {
       if (typeof bangunanIdx === "number" && adaS() && S.bangunan[bangunanIdx]) {
         var b = S.bangunan[bangunanIdx];
@@ -434,6 +459,64 @@
         return true;
       }
     } catch (e) {}
+    // v24.2 (4b): masalah tingkat kota (lokasi null, bangunan []) —
+    // cari titik fallback dari kode masalahnya, bukan hanya toast.
+    try {
+      var kode = null;
+      if (masalah && masalah.mentah && masalah.mentah.kode) kode = masalah.mentah.kode;
+      else if (masalah && masalah.kode) kode = masalah.kode;
+      if (kode) {
+        var target = null, pesan = "Masalah tingkat kota — menampilkan pusat kota";
+        if (kode === "tanpa-listrik" || kode === "tanpa-air") {
+          if (adaS() && Array.isArray(S.bangunan)) {
+            for (var i = 0; i < S.bangunan.length; i++) {
+              var bb = S.bangunan[i];
+              if (!bb || !bb.selesai) continue;
+              if (kode === "tanpa-listrik" && bb.berlistrik === false) { target = bb; break; }
+              if (kode === "tanpa-air" && bb.berair === false) { target = bb; break; }
+            }
+          }
+          if (target) pesan = "Masalah tingkat kota — menampilkan bangunan pertama yang " + (kode === "tanpa-listrik" ? "padam" : "kering");
+        } else if (kode === "penduduk-tidak-bertambah" || kode === "bahagia-rendah" || kode.indexOf("cakupan-") === 0) {
+          if (adaS() && Array.isArray(S.bangunan)) {
+            for (var j = 0; j < S.bangunan.length; j++) {
+              var br = S.bangunan[j];
+              if (!br || !br.selesai) continue;
+              var defR = null;
+              try { if (typeof BANGUNAN_MAP !== "undefined" && BANGUNAN_MAP) defR = BANGUNAN_MAP[br.id]; } catch (e2) {}
+              if (defR && defR.rumah) { target = br; break; }
+            }
+          }
+          if (target) pesan = "Masalah tingkat kota — menampilkan permukiman";
+        }
+        if (target) {
+          if (typeof tileTengahDunia === "function" && typeof kamera !== "undefined" && kamera) {
+            var t3 = tileTengahDunia(target.x, target.y);
+            kamera.cx = t3.x; kamera.cy = t3.y;
+          }
+          if (typeof terpilih !== "undefined") terpilih = { jenis: "bangunan", idx: S.bangunan.indexOf(target) };
+          if (typeof renderPanelKanan === "function") renderPanelKanan();
+          tutupAdvisor();
+          toastAman(pesan, "info");
+          return true;
+        }
+        // Umum: tile landing / pusat peta.
+        var px = null, py = null;
+        try {
+          if (typeof peta !== "undefined" && peta && peta.landing) { px = peta.landing.x; py = peta.landing.y; }
+          else if (typeof peta !== "undefined" && peta && typeof peta.W === "number") { px = Math.floor(peta.W / 2); py = Math.floor(peta.H / 2); }
+        } catch (e3) {}
+        if (px !== null && typeof tileTengahDunia === "function" && typeof kamera !== "undefined" && kamera) {
+          var t4 = tileTengahDunia(px, py);
+          kamera.cx = t4.x; kamera.cy = t4.y;
+          if (typeof terpilih !== "undefined") terpilih = { jenis: "tile", x: px, y: py };
+          if (typeof renderPanelKanan === "function") renderPanelKanan();
+          tutupAdvisor();
+          toastAman(pesan, "info");
+          return true;
+        }
+      }
+    } catch (e4) {}
     toastAman("Lokasi masalah ini tidak tercatat di peta.", "info");
     return false;
   }
@@ -585,14 +668,28 @@
       }
     } catch (e) {}
     if (!hasil) hasil = diagnosisLokal(b);
-    // v24.1: lampirkan rencana aksi bernomor dari penyebab utama
-    // (kode + penyebab) — dipakai panel diagnostik untuk tombol
-    // per langkah. Bila tidak ada penyebab utama, langkah kosong.
+    // v24.1: lampirkan rencana aksi bernomor — dipakai panel diagnostik
+    // untuk tombol per langkah. Bila tidak ada penyebab utama, langkah kosong.
     try {
-      if (hasil && hasil.penyebabUtama && typeof Advisor !== "undefined" && Advisor && typeof Advisor.rencanaAksi === "function") {
-        var utama = hasil.penyebabUtama;
-        var rk = Advisor.rencanaAksi({ kode: utama.kode, id: "m-" + utama.kode, lokasi: { x: b.x, y: b.y }, penyebab: utama.penyebab || utama.teks || "" });
-        if (Array.isArray(rk) && rk.length) hasil.langkah = rk;
+      if (hasil && typeof Advisor !== "undefined" && Advisor) {
+        // v24.2 (T2): bangunan industri (def.produksi.masuk) memakai
+        // rencana multi-penyebab dari diagnosa LENGKAP
+        // (Advisor.rencanaAksiUntukBangunan) — jalur lama (hanya
+        // penyebabUtama tunggal) menghilangkan langkah Kebun Sagu bila
+        // penyebab utamanya listrik/air. Urutan dampak tetap: listrik
+        // tetap langkah 1. Bangunan non-industri memakai jalur lama.
+        var defDiag = (typeof BANGUNAN_MAP !== "undefined" && BANGUNAN_MAP) ? BANGUNAN_MAP[b.id] : null;
+        var rkMulti = null;
+        if (defDiag && defDiag.produksi && defDiag.produksi.masuk && typeof Advisor.rencanaAksiUntukBangunan === "function") {
+          rkMulti = Advisor.rencanaAksiUntukBangunan(b);
+        }
+        if (Array.isArray(rkMulti) && rkMulti.length) {
+          hasil.langkah = rkMulti;
+        } else if (hasil.penyebabUtama && typeof Advisor.rencanaAksi === "function") {
+          var utama = hasil.penyebabUtama;
+          var rk = Advisor.rencanaAksi({ kode: utama.kode, id: "m-" + utama.kode, lokasi: { x: b.x, y: b.y }, penyebab: utama.penyebab || utama.teks || "" });
+          if (Array.isArray(rk) && rk.length) hasil.langkah = rk;
+        }
       }
     } catch (e) {}
     return hasil;
@@ -793,8 +890,10 @@
     var n = pk.kritis + pk.tinggi;
     var lama = el("lencanaAdvisor");
     if (n <= 0) {
+      adaRencanaBelumDibaca = false;
       if (lama && lama.parentNode && typeof lama.parentNode.removeChild === "function") lama.parentNode.removeChild(lama);
       btn.textContent = "🧭";
+      try { btn.title = "Penasihat Kota"; } catch (e) {}
       return;
     }
     btn.textContent = "🧭";
@@ -808,7 +907,15 @@
         }
       } catch (e) { return; }
     }
-    if (lama) lama.textContent = String(n);
+    if (lama) {
+      lama.textContent = String(n);
+      // v24.2 (T1 lapis 2): ada rencana belum dibaca -> lencana berkedip
+      // (class .berkedip, css?v=18) sampai drawer dibuka.
+      try {
+        if (adaRencanaBelumDibaca) { lama.classList.add("berkedip"); btn.title = "Penasihat Kota — ada rencana aksi belum dibaca"; }
+        else { lama.classList.remove("berkedip"); btn.title = "Penasihat Kota"; }
+      } catch (e) {}
+    }
   }
   // Refresh ringan (lencana; drawer hanya bila sedang terbuka & sudah
   // >2 detik sejak render terakhir). Dipanggil finalizer dari renderHUD.
@@ -842,13 +949,17 @@
 
   // ---------------- Notifikasi (wrapper toast yang sudah ada) -----------
   // Notifikasi.info/ok/gagal -> toast() langsung. Notifikasi.kritis ->
-  // toast aksi (pesan + tombol "Lihat") 8 detik; bila elemen toast-aksi
+  // toast aksi (pesan + tombol "Lihat") 30 detik (v24.2: dulu 8 detik —
+  // terlalu singkat untuk membaca rencana); bila elemen toast-aksi
   // belum ada, jatuh kembali ke toast() biasa. Throttle: 1x per id per
   // 60 detik supaya masalah kritis tidak membanjiri layar.
   // v24.1: Notifikasi.masalahKritis menampilkan rencana aksi terpandu
   // (langkah 1–2 ringkas + tombol "Lihat Rencana" ke drawer) dan TIDAK
   // mengulang rencana yang sama sampai masalahnya berubah (memori
   // rencanaTerakhir: signature kode+dampak+jumlah+langkah 1).
+  // v24.2: re-arm berbasis waktu — rencana yang sama BOLEH tampil lagi
+  // setelah 1 HARI GAME bila masalah belum selesai (jejak menyimpan
+  // waktuGame saat tampil); urutan dampak/signature TIDAK berubah.
   var Notifikasi = {
     info: function (pesan) { toastAman(pesan, "info"); },
     ok: function (pesan) { toastAman(pesan, "ok"); },
@@ -883,7 +994,7 @@
         }
         t.style.display = "flex";
         clearTimeout(t._timer);
-        t._timer = setTimeout(function () { t.style.display = "none"; }, 8000);
+        t._timer = setTimeout(function () { t.style.display = "none"; }, 30000);
         return true;
       } catch (e) { toastAman(pesan, "gagal"); return true; }
     },
@@ -894,6 +1005,11 @@
       // SAMA sampai masalahnya berubah (signature: kode + dampak +
       // jumlah + langkah 1 + jumlah langkah) atau pemain menekan
       // "Abaikan" (yang menghapus jejak via lupakanRencana).
+      // v24.2 (T1 lapis 2): RE-ARM berbasis waktu — rencana yang sama
+      // BOLEH tampil lagi setelah 1 HARI GAME (1440 menit game) bila
+      // masalah belum selesai; urutan dampak/signature TIDAK berubah,
+      // hanya sumbu waktu pada pengulangan. Throttle 60 detik di
+      // Notifikasi.kritis tetap berlaku di atasnya.
       var mentah = mm.mentah || mm;
       var langkah = mm.langkah || [];
       var l1 = "";
@@ -902,7 +1018,14 @@
         l1 = t0 ? (t0.tab + ":" + t0.jenisMode + ":" + t0.idMode) : (langkah[0].tombol || "");
       }
       var sig = (mentah.kode || mm.id || "") + "|" + (mentah.dampak != null ? mentah.dampak : "") + "|" + (mentah.jumlah != null ? mentah.jumlah : "") + "|" + l1 + "|" + langkah.length;
-      if (rencanaTerakhir[mm.id] === sig) return false;
+      var jejak = rencanaTerakhir[mm.id];
+      if (jejak && jejak.sig === sig) {
+        var wg = null;
+        try { if (typeof waktuGame === "number" && isFinite(waktuGame)) wg = waktuGame; } catch (e) {}
+        if (wg === null || wg - (jejak.waktuGame || 0) < REARM_RENCANA_MENIT_GAME) return false;
+        // Re-arm: sudah >= 1 hari game sejak terakhir tampil — tampil
+        // lagi (jejak diperbarui di bawah bila toast benar-benar tampil).
+      }
       // Toast ringkas: masalah + langkah 1–2 (bentuk pendek) saja.
       var teksLangkah = "";
       if (langkah.length) {
@@ -914,7 +1037,12 @@
         label: "Lihat Rencana",
         aksi: function () { bukaAdvisor(mm.id); },
       });
-      if (tampil) rencanaTerakhir[mm.id] = sig;
+      if (tampil) {
+        var wgTampil = null;
+        try { if (typeof waktuGame === "number" && isFinite(waktuGame)) wgTampil = waktuGame; } catch (e) {}
+        rencanaTerakhir[mm.id] = { sig: sig, waktuGame: (wgTampil === null ? 0 : wgTampil) };
+        adaRencanaBelumDibaca = true; // v24.2: lencana 🧭 berkedip sampai drawer dibuka
+      }
       return tampil;
     },
     // v24.1: hapus jejak rencana yang sudah ditampilkan (dipanggil saat
@@ -948,7 +1076,7 @@
     prioritasKota: prioritasKota,
     status: function () {
       var pk = prioritasKota();
-      return { masalah: pk.masalah.length, kritis: pk.kritis, tinggi: pk.tinggi, bahagia: pk.bahagia };
+      return { masalah: pk.masalah.length, kritis: pk.kritis, tinggi: pk.tinggi, bahagia: pk.bahagia, rencanaBelumDibaca: adaRencanaBelumDibaca };
     },
   };
   if (typeof window !== "undefined") { window.UIV24 = UIV24; window.Notifikasi = Notifikasi; }

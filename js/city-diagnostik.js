@@ -152,7 +152,8 @@
     return false;
   }
   // Bangunan butuh jalan di samping footprint (aturan cekBangun di
-  // city.js:1164) — kecuali bangunan pesisir (def.pantai).
+  // city.js — 4-arah, sama seperti di sini sejak v24.2) — kecuali
+  // bangunan pesisir (def.pantai).
   function _punyaAksesJalan(b, def) {
     if (!def || def.pantai) return true;
     var petak = _petak(b);
@@ -301,7 +302,20 @@
     if (st && st.utilitas && st.utilitas.sampah) {
       var sm = st.utilitas.sampah;
       if (typeof sm.kebersihan === "number" && sm.kebersihan < 100) {
-        out.push({ kode: "sampah-menumpuk", teks: "Sampah kota menumpuk — kebersihan " + sm.kebersihan + "% (tumpukan " + Math.round(sm.tumpukanKg || 0) + " kg).", dampak: Math.min(0.5, (100 - sm.kebersihan) / 100 * 0.5 + 0.1), penyebab: "Produksi sampah penduduk (" + Math.round(sm.produksiKgHari || 0) + " kg/hari) melebihi kapasitas olah sampah (" + Math.round(sm.kapasitasKgHari || 0) + " kg/hari).", kategori: "residential" });
+        // v24.2 (4e): kebersihan = rasio kapasitas/produksi — langsung
+        // 0% begitu kapasitas 0, SEMENTARA tumpukan baru diakru
+        // (produksi-kapasitas)/24 per jam (4 jiwa x 0,7 kg/hari = 2,8
+        // kg/hari -> tumpukan jam-jam pertama ~0,1 kg -> "0 kg").
+        // Teks lama ("menumpuk ... tumpukan 0 kg") kontradiktif, jadi
+        // kata "menumpuk" hanya dipakai bila tumpukan melewati ambang
+        // 50 kg; sebelumnya teks menyebut kapasitas vs produksi apa
+        // adanya. Rumus kebersihan TIDAK diubah.
+        var tumpukanKg = sm.tumpukanKg || 0;
+        var produksi1des = Math.round((sm.produksiKgHari || 0) * 10) / 10;
+        var teksSampah = (tumpukanKg > 50)
+          ? "Sampah kota menumpuk — kebersihan " + sm.kebersihan + "% (tumpukan " + Math.round(tumpukanKg) + " kg)."
+          : "Kapasitas olah sampah " + Math.round(sm.kapasitasKgHari || 0) + " kg/hari tidak menutup produksi " + produksi1des + " kg/hari (tumpukan " + Math.round(tumpukanKg) + " kg — belum menumpuk).";
+        out.push({ kode: "sampah-menumpuk", teks: teksSampah, dampak: Math.min(0.5, (100 - sm.kebersihan) / 100 * 0.5 + 0.1), penyebab: "Produksi sampah penduduk (" + Math.round(sm.produksiKgHari || 0) + " kg/hari) melebihi kapasitas olah sampah (" + Math.round(sm.kapasitasKgHari || 0) + " kg/hari).", kategori: "residential" });
       }
     }
     // Pekerjaan kota (data nyata hitungTenagaKerja).

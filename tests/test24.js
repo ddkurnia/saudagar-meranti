@@ -20,7 +20,7 @@ function buatCtx() {
   return {
     setTransform() {}, clearRect() {}, fillRect() {}, beginPath() {}, moveTo() {}, lineTo() {},
     closePath() {}, fill() {}, stroke() {}, strokeRect() {}, arc() {}, ellipse() {},
-    quadraticCurveTo() {}, bezierCurveTo() {},
+    quadraticCurveTo() {}, bezierCurveTo() {}, arcTo() {}, // v24.2: arcTo dipakai _bulat() (city-bubble.js) — tanpa ini gambarSatu throw (ditelan try/catch) dan rect klik bubble tidak pernah terisi
     fillText() {}, measureText() { return { width: 0 }; }, drawImage() {}, save() {}, restore() {},
     translate() {}, scale() {}, rotate() {}, setLineDash() {},
     fillStyle: "", strokeStyle: "", lineWidth: 1, font: "", textAlign: "", textBaseline: "", globalAlpha: 1,
@@ -103,27 +103,30 @@ function majuSatuHari() { for (let i = 0; i < 6; i++) C.majukanWaktu(240); }
 const idxHtml = fs.readFileSync(ROOT + "/index.html", "utf8");
 const swTxt = fs.readFileSync(ROOT + "/sw.js", "utf8");
 const srcCity = fs.readFileSync(ROOT + "/js/city.js", "utf8");
-cek("A1 VERSI_GAME v24.1", C.VERSI_GAME === "v24.1", C.VERSI_GAME);
-cek("A2 index.html memuat 6 modul v24 dalam urutan benar (advisor + ui-v24 ?v=2, lainnya ?v=1)",
-  idxHtml.indexOf("js/city-warga.js?v=1") !== -1 && idxHtml.indexOf("js/city-bubble.js?v=1") !== -1 &&
-  idxHtml.indexOf("js/city-diagnostik.js?v=1") !== -1 && idxHtml.indexOf("js/city-advisor.js?v=2") !== -1 &&
-  idxHtml.indexOf("js/city-tutorial.js?v=1") !== -1 && idxHtml.indexOf("js/city-ui-v24.js?v=2") !== -1 &&
-  idxHtml.indexOf("js/city-advisor.js?v=2") < idxHtml.indexOf("js/city.js?v=35") &&
-  idxHtml.indexOf("js/city.js?v=35") < idxHtml.indexOf("js/city-tutorial.js?v=1"));
-cek("A3 index.html: #btnAdvisor + #drawerAdvisorV24 + #toastAksiV24 + css?v=17 + city.js?v=35",
+cek("A1 VERSI_GAME v24.2", C.VERSI_GAME === "v24.2", C.VERSI_GAME);
+cek("A2 index.html memuat 6 modul v24 dalam urutan benar (advisor + ui-v24 ?v=3, diagnostik + bubble ?v=2, lainnya ?v=1)",
+  idxHtml.indexOf("js/city-warga.js?v=1") !== -1 && idxHtml.indexOf("js/city-bubble.js?v=2") !== -1 &&
+  idxHtml.indexOf("js/city-diagnostik.js?v=2") !== -1 && idxHtml.indexOf("js/city-advisor.js?v=3") !== -1 &&
+  idxHtml.indexOf("js/city-tutorial.js?v=1") !== -1 && idxHtml.indexOf("js/city-ui-v24.js?v=3") !== -1 &&
+  idxHtml.indexOf("js/city-advisor.js?v=3") < idxHtml.indexOf("js/city.js?v=36") &&
+  idxHtml.indexOf("js/city.js?v=36") < idxHtml.indexOf("js/city-tutorial.js?v=1"));
+cek("A3 index.html: #btnAdvisor + #drawerAdvisorV24 + #toastAksiV24 + css?v=18 + city.js?v=36",
   idxHtml.indexOf('id="btnAdvisor"') !== -1 && idxHtml.indexOf('id="drawerAdvisorV24"') !== -1 &&
-  idxHtml.indexOf('id="toastAksiV24"') !== -1 && idxHtml.includes("css/city.css?v=17") &&
-  idxHtml.includes("js/city.js?v=35"));
-cek("A4 sw.js cache meranti-rising-v24.1 + precache 6 modul baru",
-  swTxt.indexOf("meranti-rising-v24.1") !== -1 && swTxt.indexOf("js/city-warga.js?v=1") !== -1 &&
-  swTxt.indexOf("js/city-bubble.js?v=1") !== -1 && swTxt.indexOf("js/city-diagnostik.js?v=1") !== -1 &&
-  swTxt.indexOf("js/city-advisor.js?v=2") !== -1 && swTxt.indexOf("js/city-tutorial.js?v=1") !== -1 &&
-  swTxt.indexOf("js/city-ui-v24.js?v=2") !== -1);
-cek("A5 tidak ada sisa pin v24 aktif (city.js?v=34 / meranti-rising-v24 / advisor|ui-v24 ?v=1)",
-  !idxHtml.includes("city.js?v=34") && !idxHtml.includes("city-advisor.js?v=1") &&
-  !idxHtml.includes("city-ui-v24.js?v=1") && !swTxt.includes("city.js?v=34") &&
-  !swTxt.includes('"meranti-rising-v24"') && !swTxt.includes("city-advisor.js?v=1") &&
-  !swTxt.includes("city-ui-v24.js?v=1"));
+  idxHtml.indexOf('id="toastAksiV24"') !== -1 && idxHtml.includes("css/city.css?v=18") &&
+  idxHtml.includes("js/city.js?v=36"));
+cek("A4 sw.js cache meranti-rising-v24.2 + precache 6 modul baru",
+  swTxt.indexOf("meranti-rising-v24.2") !== -1 && swTxt.indexOf("js/city-warga.js?v=1") !== -1 &&
+  swTxt.indexOf("js/city-bubble.js?v=2") !== -1 && swTxt.indexOf("js/city-diagnostik.js?v=2") !== -1 &&
+  swTxt.indexOf("js/city-advisor.js?v=3") !== -1 && swTxt.indexOf("js/city-tutorial.js?v=1") !== -1 &&
+  swTxt.indexOf("js/city-ui-v24.js?v=3") !== -1);
+cek("A5 tidak ada sisa pin v24.1 aktif (city.js?v=35 / meranti-rising-v24.1 / advisor|ui-v24 ?v=2 / diagnostik|bubble ?v=1 / css?v=17)",
+  !idxHtml.includes("city.js?v=35") && !idxHtml.includes("city-advisor.js?v=2") &&
+  !idxHtml.includes("city-ui-v24.js?v=2") && !idxHtml.includes("city-diagnostik.js?v=1") &&
+  !idxHtml.includes("city-bubble.js?v=1") && !idxHtml.includes("css/city.css?v=17") &&
+  !swTxt.includes("city.js?v=35") && !swTxt.includes('"meranti-rising-v24.1"') &&
+  !swTxt.includes("city-advisor.js?v=2") && !swTxt.includes("city-ui-v24.js?v=2") &&
+  !swTxt.includes("city-diagnostik.js?v=1") && !swTxt.includes("city-bubble.js?v=1") &&
+  !swTxt.includes("css/city.css?v=17"));
 cek("A6 modul global termuat (Warga/Bubble/Diagnostik/Advisor/Tutorial/UIV24/Notifikasi)",
   !!W && !!Bbl && !!Dg && !!Adv && !!Tut && !!UI && !!Notif);
 cek("A7 adapter kontrak: Diagnostik.diagnosis = diagnosa + statusBangunan; Advisor.pesan + ringkasan",
@@ -595,6 +598,280 @@ C.S.penduduk.total = kapR6;
 cek("R6e kapasitas penuh (pop = kapasitas) -> masalah penduduk-tidak-bertambah hilang", !Adv.daftarMasalah().some(m => m.kode === "penduduk-tidak-bertambah"));
 C.S.penduduk.total = popAwalR6;
 C.S.bahagia.nilai = bahagiaAwalR6;
+Dg.invalidateSemua();
+
+// ---------------- v24.2 ----------------
+// X1: toast kritis — snapshot pra-akrual + re-arm 1 hari game.
+// X2: rencana kilang di panel diagnostik (multi-penyebab + jaminan slot).
+// X3: dedup langkah "Bangun X" lintas kartu drawer.
+// X4: poles (a)–(g).
+// Catatan urutan: X1 menghapus kilang/kilangR2 dulu (flag-nya akan
+// dibalik hitungUtilitas dan mengubah signature toast); X4f memuat
+// ulang save (mulaiGame(false)) sehingga X3 memakai referensi bangunan
+// SEGAR dari C.S.bangunan.
+function cacahSub(teks, sub) { return String(teks).split(sub).length - 1; }
+
+// ---- X1: toast kritis muncul (snapshot pra-akrual), tidak diulang dalam 1 hari game, re-arm setelah 1 hari ----
+// Kilang dibuang dulu: flag listrik/air-nya dibalik hitungUtilitas tiap
+// jam (di luar radius hub) sehingga jumlah kritis berubah-ubah dan
+// signature toast tidak stabil selama loop.
+for (let i = C.S.bangunan.length - 1; i >= 0; i--) if (C.S.bangunan[i].id === "kilang-sagu") C.S.bangunan.splice(i, 1);
+// Normalisasi pra-keadaan (anti-flaky): cuaca acak di majuSatuHari T10c
+// kadang Hujan → dermaga kebanjiran (berlistrik=false) sehingga jumlah
+// tanpa-listrik = 2, lalu banjir surut di pergantian hari (jumlah -> 1)
+// dan signature toast berubah di tengah loop. Keringkan semua bangunan
+// + cuaca Cerah; loop memakai Math.random stub (Cerah) jadi tidak ada
+// banjir baru selama loop.
+for (const b of C.S.bangunan) b.kebanjiran = false;
+C.S.cuaca = "Cerah";
+Dg.invalidateSemua();
+const rumahX1 = C.S.bangunan.find(b => C.BANGUNAN_MAP[b.id].rumah);
+cek("X1a ada rumah hidup untuk patokan posisi rumah jauh", !!rumahX1, JSON.stringify(rumahX1 && { x: rumahX1.x, y: rumahX1.y }));
+let jauhX1 = null;
+for (let dx = 30; dx <= 45 && !jauhX1; dx++) {
+  const x = rumahX1.x + dx, y = rumahX1.y;
+  if (!C.adaBangunanDi(C.S, x, y) && !C.adaJalanDi(C.S, x, y)) jauhX1 = { x: x, y: y };
+}
+cek("X1a ada petak rumah jauh (di luar radius hub virtual 8)", !!jauhX1, JSON.stringify(jauhX1));
+const rumahJauhX1 = jauhX1 ? tambahBangunan("rumah-sederhana", jauhX1.x, jauhX1.y, { berlistrik: false, berair: true }) : null;
+cek("X1a rumah jauh tanpa listrik ditambahkan", !!rumahJauhX1, JSON.stringify(rumahJauhX1 && { x: rumahJauhX1.x, y: rumahJauhX1.y }));
+// Jam palsu (Date.now) + cuaca cerah (Math.random) supaya loop 25 jam
+// deterministik: throttle kritis 60 dtk nyata dilewati tiap jam, dan
+// tidak ada hujan/banjir acak yang memicu toast kritis lain.
+const nowAsliX1 = Date.now;
+const acakAsliX1 = Math.random;
+let jamPalsuX1 = nowAsliX1();
+let toastJam1 = false, toastUlangSehari = false, toastTengahHari = false;
+ctxEval('$("toastAksiV24").style.display = "none";'); // sembunyikan sisa toast R4g
+try {
+  vm.runInContext("Math.random = function(){ return 0.99; }", sandbox);
+  vm.runInContext("Date.now = function(){ return " + jamPalsuX1 + "; }", sandbox);
+  // Jam settling: biarkan hitungUtilitas menstabilkan flag (kilang baru
+  // dibuang — permintaan vs kapasitas bisa mengubah cabang rencana di
+  // jam pertama); toast yang mungkin tampil di sini diabaikan, jejak
+  // rencananya dihapus supaya loop ukur mulai dari keadaan bersih.
+  jamPalsuX1 += 61000;
+  vm.runInContext("Date.now = function(){ return " + jamPalsuX1 + "; }", sandbox);
+  C.majukanWaktu(60);
+  ctxEval('$("toastAksiV24").style.display = "none";');
+  Notif.lupakanRencana("m-tanpa-listrik");
+  Notif.lupakanRencana("m-tanpa-air");
+  for (let jam = 1; jam <= 25; jam++) {
+    jamPalsuX1 += 61000;
+    vm.runInContext("Date.now = function(){ return " + jamPalsuX1 + "; }", sandbox);
+    C.majukanWaktu(60);
+    const tampil = ctxEval('$("toastAksiV24").style.display') === "flex";
+    if (jam === 1) toastJam1 = tampil;
+    else if (jam >= 2 && jam <= 24) { if (tampil) toastTengahHari = true; }
+    else if (jam === 25) toastUlangSehari = tampil;
+    // Sembunyikan toast sebelum jam berikutnya supaya "tampil" per jam terukur.
+    ctxEval('$("toastAksiV24").style.display = "none";');
+  }
+} finally {
+  Date.now = nowAsliX1;
+  Math.random = acakAsliX1;
+}
+cek("X1b loop game sesungguhnya: toast kritis MUNCUL di jam ke-1 (bukan 0x)", toastJam1 === true, "toastJam1=" + toastJam1);
+cek("X1c toast yang sama TIDAK muncul lagi di jam 2-24 (signature sama, <1 hari game)", toastTengahHari === false, "toastTengahHari=" + toastTengahHari);
+cek("X1d toast yang sama muncul LAGI di jam ke-25 (re-arm 1 hari game, masalah belum selesai)", toastUlangSehari === true, "toastUlangSehari=" + toastUlangSehari);
+cek("X1e kritis pertama yang ditampilkan = tanpa-listrik (rumah jauh)", Adv.daftarMasalah().length > 0 && Adv.daftarMasalah()[0].kode === "tanpa-listrik", JSON.stringify(Adv.daftarMasalah().slice(0, 2).map(m => m.kode)));
+// Lencana berkedip: setelah toast tampil, rencana belum dibaca.
+UI.perbarui();
+cek("X1f lencana 🧭 berkedip (class .berkedip) saat ada rencana belum dibaca", ctxEval('$("lencanaAdvisor").classList.contains("berkedip")') === true);
+cek("X1f UIV24.status() melaporkan rencanaBelumDibaca=true", UI.status().rencanaBelumDibaca === true, JSON.stringify(UI.status()));
+// Klik "Lihat Rencana" pada toast jam ke-25 (tombol masih ada meski toast disembunyikan).
+const toastBtnX1 = ctxEval('$("toastAksiV24")').lastElementChild;
+cek("X1g toast re-arm punya tombol 'Lihat Rencana'", !!toastBtnX1 && toastBtnX1.textContent === "Lihat Rencana", String(toastBtnX1 && toastBtnX1.textContent));
+if (toastBtnX1) toastBtnX1.onclick();
+cek("X1g klik 'Lihat Rencana' membuka drawer advisor", ctxEval('$("drawerAdvisorV24").style.display') === "block", String(ctxEval('$("drawerAdvisorV24").style.display')));
+cek("X1g drawer menampilkan kartu tanpa-listrik", String(ctxEval('$("drawerAdvisorV24").innerHTML')).indexOf("tanpa listrik") !== -1);
+UI.tutupAdvisor();
+UI.perbarui();
+cek("X1h setelah drawer dibuka, lencana berhenti berkedip", ctxEval('$("lencanaAdvisor").classList.contains("berkedip")') === false && UI.status().rencanaBelumDibaca === false);
+
+// ---- X2: panel diagnostik kilang multi-penyebab + jaminan slot Kebun Sagu ----
+const tkKilangX2 = petakBangunDekatJalan(2, 2);
+cek("X2a ada petak kilang uji di samping jalan", !!tkKilangX2, JSON.stringify(tkKilangX2));
+const kilangX2 = tambahBangunan("kilang-sagu", tkKilangX2.x, tkKilangX2.y, { berlistrik: false, berair: false, staf: 8 });
+C.S.komoditas.tual = 0;
+Dg.invalidateSemua();
+const rkX2 = Adv.rencanaAksiUntukBangunan(kilangX2);
+cek("X2b rencanaAksiUntukBangunan kilang: ada langkah (multi-penyebab)", Array.isArray(rkX2) && rkX2.length >= 3, JSON.stringify(rkX2.map(s => (s.target && s.target.idMode) || s.tombol)));
+cek("X2c langkah 1 = listrik (Gardu Distribusi / PLT Biomassa), Kebun Sagu di langkah berikutnya", rkX2.length >= 2 && (rkX2[0].target.idMode === "gardu-distribusi" || rkX2[0].target.idMode === "plt-biomassa") && rkX2.some((s, i) => i >= 1 && s.target && s.target.idMode === "kebun-sagu"), JSON.stringify(rkX2.map(s => (s.target && s.target.idMode) || s.tombol)));
+const dgX2 = UI.diagnosisBangunan(kilangX2);
+cek("X2d diagnosisBangunan kilang memakai rencana multi-penyebab (bukan hanya penyebab utama)", !!dgX2 && Array.isArray(dgX2.langkah) && dgX2.langkah.some(s => s.target && s.target.idMode === "kebun-sagu") && dgX2.langkah[0].target.idMode === rkX2[0].target.idMode, JSON.stringify(dgX2 && dgX2.langkah.map(s => (s.target && s.target.idMode) || s.tombol)));
+ctxEval('$("panelKanan").innerHTML = "";');
+UI.saatBangunanDipilih(kilangX2);
+const panelX2 = String(ctxEval('$("panelKanan").innerHTML'));
+cek("X2e panel diagnostik kilang memuat Gardu/PLT DAN Kebun Sagu", panelX2.indexOf("Bangun Kebun Sagu") !== -1 && (panelX2.indexOf("Gardu Distribusi") !== -1 || panelX2.indexOf("PLT Biomassa") !== -1), panelX2.slice(0, 300));
+cek("X2f rencanaAksiUntukBangunan bangunan non-industri = [] (jalur lama dipakai)", Array.isArray(Adv.rencanaAksiUntukBangunan(rumahX1)) && Adv.rencanaAksiUntukBangunan(rumahX1).length === 0);
+// Kilang 6 penyebab sekaligus (banjir+listrik+air+pekerja+jalan+bahan): cap 5, Kebun Sagu tetap ada.
+let tkKilangX2b = null;
+outerX2b: for (let y = 0; y < C.peta.H; y++) for (let x = 0; x < C.peta.W; x++) {
+  let bebas = true;
+  for (let jj = 0; jj < 2 && bebas; jj++) for (let ii = 0; ii < 2 && bebas; ii++) {
+    if (C.adaBangunanDi(C.S, x + ii, y + jj) || C.adaJalanDi(C.S, x + ii, y + jj)) bebas = false;
+  }
+  if (!bebas) continue;
+  for (let jj = 0; jj < 2 && bebas; jj++) for (let ii = 0; ii < 2 && bebas; ii++) {
+    for (const d of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (C.adaJalanDi(C.S, x + ii + d[0], y + jj + d[1])) bebas = false;
+  }
+  if (bebas) { tkKilangX2b = { x: x, y: y }; break outerX2b; }
+}
+cek("X2g ada petak kilang tanpa akses jalan (6 penyebab)", !!tkKilangX2b, JSON.stringify(tkKilangX2b));
+const kilangX2b = tkKilangX2b ? tambahBangunan("kilang-sagu", tkKilangX2b.x, tkKilangX2b.y, { berlistrik: false, berair: false, staf: 0, kebanjiran: true }) : null;
+Dg.invalidateSemua();
+const rkX2b = kilangX2b ? Adv.rencanaAksiUntukBangunan(kilangX2b) : [];
+cek("X2h kilang 6 penyebab: 5 langkah, Kebun Sagu tetap ada (jaminan slot)", rkX2b.length === 5 && rkX2b.some(s => s.target && s.target.idMode === "kebun-sagu"), JSON.stringify(rkX2b.map(s => (s.target && s.target.idMode) || s.tombol)));
+for (const k of [kilangX2, kilangX2b]) if (k) C.S.bangunan.splice(C.S.bangunan.indexOf(k), 1);
+Dg.invalidateSemua();
+
+// ---- X4a: header Status kebun/rumah kebanjiran = "Tidak beroperasi" ----
+const tkRumahX4a = petakBangunDekatJalan(1, 1);
+cek("X4a ada petak rumah uji kebanjiran", !!tkRumahX4a, JSON.stringify(tkRumahX4a));
+const rumahBanjirX4a = tambahBangunan("rumah-sederhana", tkRumahX4a.x, tkRumahX4a.y, { berlistrik: true, berair: true, kebanjiran: true });
+ctxEval("terpilih = { jenis: 'bangunan', idx: " + C.S.bangunan.indexOf(rumahBanjirX4a) + " };");
+C.renderPanelKanan();
+const panelX4a = String(ctxEval('$("panelKanan").innerHTML'));
+cek("X4a panel kanan rumah kebanjiran: Status = 'Tidak beroperasi' (bukan 'Beroperasi')", panelX4a.indexOf("<span>Status</span><b>Tidak beroperasi</b>") !== -1, panelX4a.slice(0, 300));
+cek("X4a baris Banjir tetap ada ('Kebanjiran — tidak beroperasi')", panelX4a.indexOf("Kebanjiran — tidak beroperasi") !== -1);
+C.S.bangunan.splice(C.S.bangunan.indexOf(rumahBanjirX4a), 1);
+Dg.invalidateSemua();
+
+// ---- X4b: "Lihat Lokasi" masalah tingkat kota (fallback, bukan toast saja) ----
+const kapX4b = ctxEval("hitungRumah()");
+const popX4b = C.S.penduduk.total, bahX4b = C.S.bahagia.nilai;
+C.S.penduduk.total = Math.max(1, kapX4b - 2);
+C.S.bahagia.nilai = 40;
+Dg.invalidateSemua();
+const mPendX4b = UI.ambilMasalah().find(m => m.id === "m-penduduk-tidak-bertambah");
+cek("X4b masalah kota penduduk-tidak-bertambah ada (tanpa lokasi)", !!mPendX4b && mPendX4b.x === null && mPendX4b.bangunanIdx === null, JSON.stringify(mPendX4b && { x: mPendX4b.x, bangunanIdx: mPendX4b.bangunanIdx }));
+const rumahPertamaX4b = C.S.bangunan.find(b => C.BANGUNAN_MAP[b.id].rumah);
+const okLokasiX4b = mPendX4b ? UI.lihatLokasi(mPendX4b.x, mPendX4b.y, mPendX4b.bangunanIdx, mPendX4b) : false;
+const tujuanX4b = ctxEval("tileTengahDunia(" + rumahPertamaX4b.x + ", " + rumahPertamaX4b.y + ")");
+cek("X4b Lihat Lokasi masalah kota -> kamera ke rumah pertama (bukan toast saja)", okLokasiX4b === true && ctxEval("kamera.cx") === tujuanX4b.x && ctxEval("kamera.cy") === tujuanX4b.y, "cx=" + ctxEval("kamera.cx") + " vs " + tujuanX4b.x);
+cek("X4b toast fallback menyebut permukiman", String(ctxEval('$("toast").textContent')).indexOf("permukiman") !== -1, String(ctxEval('$("toast").textContent')));
+C.S.penduduk.total = popX4b;
+C.S.bahagia.nilai = bahX4b;
+Dg.invalidateSemua();
+C.S.apbd.hariDefisit = 3;
+Dg.invalidateSemua();
+const mDefX4b = UI.ambilMasalah().find(m => m.id === "m-defisit-apbd");
+cek("X4b masalah kota defisit-apbd ada (tanpa lokasi)", !!mDefX4b && mDefX4b.x === null, JSON.stringify(mDefX4b && { x: mDefX4b.x }));
+const okDefX4b = mDefX4b ? UI.lihatLokasi(mDefX4b.x, mDefX4b.y, mDefX4b.bangunanIdx, mDefX4b) : false;
+const tujuanDefX4b = ctxEval("tileTengahDunia(" + C.peta.landing.x + ", " + C.peta.landing.y + ")");
+cek("X4b Lihat Lokasi defisit -> kamera ke pusat kota (landing)", okDefX4b === true && ctxEval("kamera.cx") === tujuanDefX4b.x && ctxEval("kamera.cy") === tujuanDefX4b.y, "cx=" + ctxEval("kamera.cx") + " vs " + tujuanDefX4b.x);
+cek("X4b toast fallback menyebut pusat kota", String(ctxEval('$("toast").textContent')).indexOf("pusat kota") !== -1, String(ctxEval('$("toast").textContent')));
+C.S.apbd.hariDefisit = 0;
+Dg.invalidateSemua();
+
+// ---- X4c: bubble klaster tidak menumpuk (stagger vertikal) ----
+const rumahX4c = C.S.bangunan.find(b => C.BANGUNAN_MAP[b.id].rumah);
+let barisX4c = null;
+outerX4c: for (let dy = 1; dy <= 6 && !barisX4c; dy++) for (let dx = -6; dx <= 6 && !barisX4c; dx++) {
+  const x0 = rumahX4c.x + dx, y0 = rumahX4c.y + dy;
+  let ok = true;
+  for (let k = 0; k < 3; k++) if (C.adaBangunanDi(C.S, x0 + k, y0) || C.adaJalanDi(C.S, x0 + k, y0)) ok = false;
+  if (ok) barisX4c = { x: x0, y: y0 };
+}
+cek("X4c ada 3 petak horizontal kosong untuk klaster rumah", !!barisX4c, JSON.stringify(barisX4c));
+const rumahKlasterX4c = [];
+if (barisX4c) for (let k = 0; k < 3; k++) rumahKlasterX4c.push(tambahBangunan("rumah-sederhana", barisX4c.x + k, barisX4c.y, { berlistrik: false, berair: true }));
+W.resetCooldown();
+if (barisX4c) ctxEval("kamera.zoom = 1; kamera.cx = tileTengahDunia(" + (barisX4c.x + 1) + ", " + barisX4c.y + ").x; kamera.cy = tileTengahDunia(" + (barisX4c.x + 1) + ", " + barisX4c.y + ").y;");
+Bbl.perbarui(1);
+C.gambarPeta();
+const rectX4c = Bbl.rectTerakhir().filter(r => r.id === "rumah-sederhana" && rumahKlasterX4c.some(b => b.x === r.bx && b.y === r.by));
+cek("X4c 3 bubble klaster tergambar (rect klik ada)", rectX4c.length === 3, JSON.stringify(rectX4c));
+const ysX4c = rectX4c.map(r => r.y).sort((a, b) => a - b);
+cek("X4c bubble klaster TIDAK menumpuk: rentang y >= 70 px (stagger eksak: 2 celah x (tinggi 32 + 8) = 80)", ysX4c.length === 3 && (ysX4c[2] - ysX4c[0]) >= 70, JSON.stringify(ysX4c));
+for (const r of rumahKlasterX4c) C.S.bangunan.splice(C.S.bangunan.indexOf(r), 1);
+Bbl.bersihkan();
+Dg.invalidateSemua();
+
+// ---- X4d: banner "Versi baru tersedia" hanya bila SW lebih baru ----
+cek("X4d bandingVersi: v24.2>v24.1, v24.1<v24.2, sama=0, v24.10>v24.2", ctxEval("bandingVersi('v24.2','v24.1')") === 1 && ctxEval("bandingVersi('v24.1','v24.2')") === -1 && ctxEval("bandingVersi('v24.2','v24.2')") === 0 && ctxEval("bandingVersi('v24.10','v24.2')") === 1);
+ctxEval("pwaTerimaVersiSW('v24.1')");
+cek("X4d SW v24.1 (lebih lama dari halaman v24.2) -> banner TIDAK tampil", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
+ctxEval("pwaTerimaVersiSW('v24.3')");
+cek("X4d SW v24.3 (lebih baru) -> banner tampil", ctxEval("pwaUpdateTersedia") === true && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "");
+ctxEval("pwaTerimaVersiSW('v24.2')");
+cek("X4d SW v24.2 (sama dengan halaman) -> banner basi disembunyikan lagi", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
+cek("X4d sw.js: postMessage versi + handler minta-versi", swTxt.indexOf("meranti-rising-minta-versi") !== -1 && swTxt.indexOf("meranti-rising-versi") !== -1 && swTxt.indexOf("VERSI_SW") !== -1);
+cek("X4d updatefound menanyakan versi SW dulu (bukan langsung menandai update)", srcCity.indexOf('baru.postMessage({ tipe: "meranti-rising-minta-versi" })') !== -1);
+
+// ---- X4e: teks sampah jujur (kapasitas vs produksi, ambang 50 kg) ----
+const rumahX4e = C.S.bangunan.find(b => C.BANGUNAN_MAP[b.id].rumah);
+const tumpukanAwalX4e = C.S.utilitas.sampah.tumpukanKg;
+C.S.utilitas.sampah.tumpukanKg = 0.1;
+Dg.invalidateSemua();
+const mSampahX4e = Dg.diagnosa(rumahX4e).masalah.find(m => m.kode === "sampah-menumpuk");
+cek("X4e tumpukan ~0 kg: teks jujur kapasitas-vs-produksi, tanpa kata 'menumpuk'", !!mSampahX4e && mSampahX4e.teks.indexOf("tidak menutup produksi") !== -1 && mSampahX4e.teks.indexOf("belum menumpuk") !== -1 && mSampahX4e.teks.indexOf("Sampah kota menumpuk") === -1, JSON.stringify(mSampahX4e && mSampahX4e.teks));
+C.S.utilitas.sampah.tumpukanKg = 120;
+Dg.invalidateSemua();
+const mSampahX4e2 = Dg.diagnosa(rumahX4e).masalah.find(m => m.kode === "sampah-menumpuk");
+cek("X4e tumpukan 120 kg (>50): teks 'menumpuk' + 120 kg", !!mSampahX4e2 && mSampahX4e2.teks.indexOf("Sampah kota menumpuk") !== -1 && mSampahX4e2.teks.indexOf("120 kg") !== -1, JSON.stringify(mSampahX4e2 && mSampahX4e2.teks));
+C.S.utilitas.sampah.tumpukanKg = tumpukanAwalX4e;
+Dg.invalidateSemua();
+
+// ---- X4f: cekBangun ortogonal + pesan migrasi diagonal satu kali ----
+cek("X4f-a sebelum injeksi: tidak ada bangunan akses-diagonal-saja", ctxEval("hitungBangunanAksesDiagonalSaja()") === 0, String(ctxEval("hitungBangunanAksesDiagonalSaja()")));
+let diagX4f = null;
+outerDiag: for (const j of C.S.jalan) {
+  for (const [dx, dy] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+    const x = j.x + dx, y = j.y + dy;
+    if (C.adaBangunanDi(C.S, x, y) || C.adaJalanDi(C.S, x, y)) continue;
+    const t = C.terrainDi(C.peta, x, y);
+    if (!C.TERRAIN[t] || !C.TERRAIN[t].bisaBangun || C.TERRAIN[t].butuhBuka || t === "pantai" || t === "hutan") continue;
+    let orto = false;
+    for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (C.adaJalanDi(C.S, x + ox, y + oy)) orto = true;
+    if (!orto) { diagX4f = { x: x, y: y }; break outerDiag; }
+  }
+}
+cek("X4f-b ada petak diagonal-saja untuk uji", !!diagX4f, JSON.stringify(diagX4f));
+const cekDiagX4f = diagX4f ? C.cekBangun(C.BANGUNAN_MAP["rumah-sederhana"], diagX4f.x, diagX4f.y, 0) : { ok: true };
+cek("X4f-c cekBangun menolak rumah diagonal-saja (alasan menyebut 4-arah/diagonal)", !!diagX4f && !cekDiagX4f.ok && /4-arah|diagonal/i.test(cekDiagX4f.alasan || ""), JSON.stringify(cekDiagX4f));
+let ortoX4f = null;
+outerOrto: for (const j of C.S.jalan) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+  const x = j.x + dx, y = j.y + dy;
+  const t = C.terrainDi(C.peta, x, y);
+  if (C.TERRAIN[t] && C.TERRAIN[t].bisaBangun && !C.TERRAIN[t].butuhBuka && t !== "pantai" && t !== "hutan" && !C.adaBangunanDi(C.S, x, y) && !C.adaJalanDi(C.S, x, y)) { ortoX4f = { x: x, y: y }; break outerOrto; }
+}
+const cekOrtoX4f = ortoX4f ? C.cekBangun(C.BANGUNAN_MAP["rumah-sederhana"], ortoX4f.x, ortoX4f.y, 0) : { ok: false };
+cek("X4f-d cekBangun tetap meloloskan rumah di samping jalan (4-arah)", !!ortoX4f && cekOrtoX4f.ok, JSON.stringify(cekOrtoX4f));
+const bDiagX4f = diagX4f ? tambahBangunan("rumah-sederhana", diagX4f.x, diagX4f.y, {}) : null;
+cek("X4f-e bangunan diagonal-saja yang diinjeksi terhitung 1", !!bDiagX4f && ctxEval("hitungBangunanAksesDiagonalSaja()") === 1, String(ctxEval("hitungBangunanAksesDiagonalSaja()")));
+// Reload T10 (baris ~346) sudah mengonsumsi flag satu-kali ini (nDiag=0
+// saat itu) — reset dulu supaya reload ini mensimulasikan save pra-v24.2.
+C.S.migrasiAksesJalanV242 = false;
+C.simpan();
+C.mulaiGame(false);
+cek("X4f-f muat save: pesan migrasi diagonal masuk log (satu kali)", String(C.S.log[0] || "").indexOf("diagonal") !== -1, String(C.S.log[0] || "").slice(0, 140));
+cek("X4f-g flag migrasi tersimpan di save", C.S.migrasiAksesJalanV242 === true);
+C.mulaiGame(false);
+cek("X4f-h muat kedua: pesan migrasi TIDAK berulang (log[0] bukan pesan migrasi)", String(C.S.log[0] || "").indexOf("diperketat") === -1, String(C.S.log[0] || "").slice(0, 120));
+
+// ---- X4g: tooltip listrik tidak lagi mengarahkan ke panel Infrastruktur ----
+cek("X4g tooltip listrik mengarah ke panel bangunan (klik bangunannya)", idxHtml.indexOf("ada di panel Infrastruktur") === -1 && idxHtml.indexOf("panel bangunan (klik bangunannya)") !== -1);
+
+// ---- X3: dedup langkah "Bangun X" lintas kartu drawer (SETELAH X4f — state hasil reload) ----
+// Tiga masalah yang langkah 1-nya sama (Bangun Sekolah Dasar):
+// sekolah-jauh (per rumah) + cakupan-pendidikan-rendah (kota) +
+// sekolah-tak-menjangkau (SD jauh dari permukiman).
+const rumahX3 = C.S.bangunan.find(b => C.BANGUNAN_MAP[b.id].rumah);
+const sdX3 = tambahBangunan("sd", rumahX3.x + 40, rumahX3.y + 40, { berlistrik: true, berair: true, staf: 4 });
+C.S.jalan.push({ x: sdX3.x - 1, y: sdX3.y, tipe: "jalan-tanah", kecamatan: C.kecamatanBangunan(sdX3) });
+Dg.invalidateSemua();
+const mSdX3 = Adv.daftarMasalah().filter(m => ["sekolah-jauh", "cakupan-pendidikan-rendah", "sekolah-tak-menjangkau"].indexOf(m.kode) !== -1);
+cek("X3a ketiga masalah SD ada di daftar (sekolah-jauh + cakupan-rendah + tak-menjangkau)", mSdX3.length === 3, JSON.stringify(mSdX3.map(m => m.kode)));
+UI.bukaAdvisor();
+const drawerX3 = String(ctxEval('$("drawerAdvisorV24").innerHTML'));
+cek("X3b tombol 'Bangun Sekolah Dasar' hanya muncul SEKALI di drawer", cacahSub(drawerX3, ">Bangun Sekolah Dasar<") === 1, "jumlah=" + cacahSub(drawerX3, ">Bangun Sekolah Dasar<"));
+cek("X3c duplikat ditandai 'juga menyelesaikan:' (>= 2 baris)", cacahSub(drawerX3, "juga menyelesaikan:") >= 2, "jumlah=" + cacahSub(drawerX3, "juga menyelesaikan:"));
+cek("X3d ketiga masalah tetap ada di drawer (judul masing-masing)", drawerX3.indexOf("jauh dari sekolah") !== -1 && drawerX3.indexOf("Cakupan pendidikan rendah") !== -1 && drawerX3.indexOf("tidak menjangkau permukiman") !== -1, drawerX3.slice(0, 300));
+UI.tutupAdvisor();
+C.S.bangunan.splice(C.S.bangunan.indexOf(sdX3), 1);
+C.S.jalan.pop();
 Dg.invalidateSemua();
 
 // ---------------- Ringkasan ----------------

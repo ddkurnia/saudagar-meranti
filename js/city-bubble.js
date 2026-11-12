@@ -384,6 +384,65 @@ const Bubble = {
     const modeIkon = zoom < BUBBLE_KONFIG.ambangZoomIkon;
     const skala = _clampB(zoom, BUBBLE_KONFIG.skalaMin, BUBBLE_KONFIG.skalaMaks);
 
+    // v24.2 (4c): stagger vertikal — bubble yang jangkar layarnya
+    // berdekatan (<40 px, mis. klaster dermaga) sebelumnya digambar di
+    // posisi yang sama persis (offset hanya dari footprint) sehingga
+    // saling menutupi. Di sini tiap klaster ditumpuk ke atas secara
+    // eksak: anggota ke-i ditempatkan (tinggi anggota di bawahnya + 8 px)
+    // di atas anggota sebelumnya, jadi tidak tumpang tindih apa pun
+    // kemiringan isometrik jangkarnya. Urutan dalam klaster deterministik
+    // (atasY, prioritas, lalu kunci). Bubble yang sedang memudar TIDAK
+    // ikut dihitung ulang (hilang dalam 500 ms; posisinya tetap seperti
+    // saat terakhir aktif).
+    try {
+      const daftar = [];
+      for (const bub of _aktif.values()) {
+        const wx = (bub.tx - bub.ty) * 32, wy = (bub.tx + bub.ty) * 16 + 16;
+        const sx = (wx - cx) * zoom + lebar / 2;
+        const sy = (wy - cy) * zoom + tinggi / 2;
+        const atasY = sy - bub.offsetPx * zoom;
+        if (sx < -120 || sx > lebar + 120 || sy < -100 || sy > tinggi + 100) { bub._staggerPx = 0; continue; }
+        daftar.push({ bub: bub, sx: sx, atasY: atasY });
+      }
+      // Kelompokkan berantai (transitif): urutkan berdasarkan sx, lalu
+      // gabung bila berjarak <40 px dari anggota terakhir klaster.
+      daftar.sort(function (a, b) { return (a.sx - b.sx) || (a.atasY - b.atasY); });
+      let klaster = [];
+      const tutupKlaster = function () {
+        if (klaster.length <= 1) { for (const k of klaster) k.bub._staggerPx = 0; klaster = []; return; }
+        // Penumpukan eksak: urutkan dari jangkar paling atas (atasY
+        // terkecil), lalu tempatkan tiap anggota tepat (tinggi + 8 px)
+        // di atas anggota sebelumnya — dijamin tidak tumpang tindih
+        // apa pun kemiringan isometrik jangkarnya (langkah tetap
+        // (tinggi+8) akan tergerus hingga 32 px oleh kemiringan bila
+        // jangkar diagonal). Urutan deterministik: atasY, prioritas, kunci.
+        klaster.sort(function (a, b) { return (a.atasY - b.atasY) || (a.bub.prioritas - b.bub.prioritas) || (a.bub.kunci < b.bub.kunci ? -1 : (a.bub.kunci > b.bub.kunci ? 1 : 0)); });
+        let atasBawah = null, tinggiBawah = 0;
+        for (let i = 0; i < klaster.length; i++) {
+          const d = klaster[i];
+          const lay = modeIkon ? null : _layoutTeks(ctx, d.bub.teks);
+          const tinggiBub = modeIkon ? 30 * skala : (lay ? lay.tinggi * skala : 32 * skala);
+          if (atasBawah === null) {
+            d.bub._staggerPx = 0; // anggota paling atas: tetap di jangkarnya
+            atasBawah = d.atasY;
+          } else {
+            const targetAtas = atasBawah - (tinggiBawah + 8);
+            d.bub._staggerPx = d.atasY - targetAtas; // selalu > 0 (atasY terurut naik)
+            atasBawah = targetAtas;
+          }
+          tinggiBawah = tinggiBub;
+        }
+        klaster = [];
+      };
+      for (const d of daftar) {
+        if (!klaster.length) { klaster.push(d); continue; }
+        const akhir = klaster[klaster.length - 1];
+        if (Math.abs(d.sx - akhir.sx) < 40 && Math.abs(d.atasY - akhir.atasY) < 40) klaster.push(d);
+        else { tutupKlaster(); klaster.push(d); }
+      }
+      tutupKlaster();
+    } catch (e) { /* stagger gagal: bubble tetap digambar tanpa stagger */ }
+
     const gambarSatu = function (bub, memudar) {
       // Posisi layar — aritmetika inline (tanpa alokasi objek baru).
       const wx = (bub.tx - bub.ty) * 32, wy = (bub.tx + bub.ty) * 16 + 16;
@@ -401,7 +460,7 @@ const Bubble = {
         const p = (kini - (bub.muncul || kini)) / BUBBLE_KONFIG.durasiMunculMs;
         if (p < 1) { alpha = Math.max(0, p); skalaAnim = 0.85 + 0.15 * Math.max(0, p); }
       }
-      const atasY = sy - bub.offsetPx * zoom;
+      const atasY = sy - bub.offsetPx * zoom - (bub._staggerPx || 0);
       ctx.save();
       ctx.globalAlpha = alpha;
       if (modeIkon) {
@@ -522,6 +581,14 @@ const Bubble = {
       out.push({ kunci: bub.kunci, teks: bub.teks, jenis: bub.jenis, prioritas: bub.prioritas, x: bub.bangunan ? bub.bangunan.x : null, y: bub.bangunan ? bub.bangunan.y : null });
     }
     return out;
+  },
+  // Rect bubble terakhir digambar (debug/tes — salinan, dipakai
+  // klikBubble; v24.2: dipakai tes stagger klaster). bx/by/id =
+  // bangunan pemilik rect (null bila tidak ada).
+  rectTerakhir: function () {
+    return _rectTerakhir.map(function (r) {
+      return { x: r.x, y: r.y, w: r.w, h: r.h, bx: r.bangunan ? r.bangunan.x : null, by: r.bangunan ? r.bangunan.y : null, id: r.bangunan ? r.bangunan.id : null };
+    });
   },
   // Bersihkan semua bubble (dipakai saat permainan baru / muat save).
   bersihkan: function () {

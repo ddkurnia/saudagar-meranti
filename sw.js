@@ -1,8 +1,12 @@
 // =====================================================================
 // Service worker MERANTI RISING — v22-W7 (PWA + Logo Resmi).
-// Nama cache TERIKAT VERSI_GAME ("v24.1"): naikkan bersama VERSI_GAME di
+// Nama cache TERIKAT VERSI_GAME ("v24.2"): naikkan bersama VERSI_GAME di
 // js/city.js setiap rilis, supaya deploy baru tidak pernah menyajikan
 // build basi dari cache lama.
+// v24.2 (4d): SW memberi tahu versinya ke halaman (postMessage saat
+// activate + jawaban atas "meranti-rising-minta-versi") — halaman hanya
+// menampilkan banner "Versi baru tersedia" bila versi SW LEBIH BARU
+// dari VERSI_GAME halaman (lihat pwaTerimaVersiSW di js/city.js).
 // Strategi:
 //  - index.html: NETWORK-FIRST — deploy baru langsung terlihat di
 //    muat ulang berikutnya; cache hanya jadi cadangan saat offline.
@@ -17,7 +21,9 @@
 //    lama — cache aplikasi lain di origin yang sama (mis. repo lain di
 //    GitHub Pages) TIDAK dihapus.
 // =====================================================================
-const NAMA_CACHE = "meranti-rising-v24.1";
+const NAMA_CACHE = "meranti-rising-v24.2";
+// Versi game yang dibawa SW ini (dipakai postMessage ke halaman).
+const VERSI_SW = NAMA_CACHE.replace(/^meranti-rising-/, "");
 // Shell game yang di-precache. Nilai ?v= mengikuti index.html saat
 // v22 ditulis; bila ?v= berubah di deploy berikut, fetch handler
 // v23: file audio .mp3 TIDAK di-precache (total ~14 MB; musik-melayu-1.mp3
@@ -28,7 +34,7 @@ const NAMA_CACHE = "meranti-rising-v24.1";
 const DAFTAR_CACHE = [
   "./",
   "./index.html",
-  "./css/city.css?v=17",
+  "./css/city.css?v=18",
   "./js/city-data.js?v=9",
   "./js/city-map.js?v=4",
   "./js/city-utilitas.js?v=1",
@@ -38,14 +44,14 @@ const DAFTAR_CACHE = [
   "./js/city-kendaraan.js?v=4",
   "./js/city-persimpangan.js?v=1",
   "./js/city-maritim.js?v=1",
-  "./js/city.js?v=35",
+  "./js/city.js?v=36",
   "./js/city-suara.js?v=1",
   "./js/city-warga.js?v=1",
-  "./js/city-bubble.js?v=1",
-  "./js/city-diagnostik.js?v=1",
-  "./js/city-advisor.js?v=2",
+  "./js/city-bubble.js?v=2",
+  "./js/city-diagnostik.js?v=2",
+  "./js/city-advisor.js?v=3",
   "./js/city-tutorial.js?v=1",
-  "./js/city-ui-v24.js?v=2",
+  "./js/city-ui-v24.js?v=3",
   "./manifest.json",
   "./assets/images/logo-meranti-rising.png",
   "./assets/icons/badge-mr.png",
@@ -76,7 +82,21 @@ self.addEventListener("activate", (event) => {
           .map((n) => caches.delete(n))
       ))
       .then(() => self.clients.claim())
+      // v24.2 (4d): beri tahu semua halaman yang terbuka versi SW yang
+      // baru aktif — halaman membandingkan dengan VERSI_GAME-nya
+      // sendiri sebelum menampilkan banner "Versi baru tersedia".
+      .then(() => self.clients.matchAll().then((daftar) => {
+        for (const c of daftar) c.postMessage({ tipe: "meranti-rising-versi", versi: VERSI_SW, cache: NAMA_CACHE });
+      }))
   );
+});
+
+// v24.2 (4d): jawab permintaan versi dari halaman (controller yang
+// sedang aktif maupun SW yang baru terinstal).
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.tipe === "meranti-rising-minta-versi") {
+    if (event.source) event.source.postMessage({ tipe: "meranti-rising-versi", versi: VERSI_SW, cache: NAMA_CACHE });
+  }
 });
 
 self.addEventListener("fetch", (event) => {
