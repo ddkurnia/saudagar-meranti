@@ -1,6 +1,6 @@
 // =====================================================================
 // Service worker MERANTI RISING — v22-W7 (PWA + Logo Resmi).
-// Nama cache TERIKAT VERSI_GAME ("v27.1"): naikkan bersama VERSI_GAME di
+// Nama cache TERIKAT VERSI_GAME ("v28"): naikkan bersama VERSI_GAME di
 // js/city.js setiap rilis, supaya deploy baru tidak pernah menyajikan
 // build basi dari cache lama.
 // v24.2 (4d): SW memberi tahu versinya ke halaman (postMessage saat
@@ -21,7 +21,7 @@
 //    lama — cache aplikasi lain di origin yang sama (mis. repo lain di
 //    GitHub Pages) TIDAK dihapus.
 // =====================================================================
-const NAMA_CACHE = "meranti-rising-v27.1";
+const NAMA_CACHE = "meranti-rising-v28";
 // Versi game yang dibawa SW ini (dipakai postMessage ke halaman).
 const VERSI_SW = NAMA_CACHE.replace(/^meranti-rising-/, "");
 // Shell game yang di-precache. Nilai ?v= mengikuti index.html saat
@@ -42,7 +42,7 @@ const VERSI_SW = NAMA_CACHE.replace(/^meranti-rising-/, "");
 const DAFTAR_CACHE = [
   "./",
   "./index.html",
-  "./css/city.css?v=18",
+  "./css/city.css?v=19",
   "./css/menu.css?v=2", // v26: stylesheet menu utama RISE OF MERANTI; v27 menu-fix: bump ?v=2
   "./js/city-data.js?v=9",
   "./js/city-map.js?v=4",
@@ -50,17 +50,17 @@ const DAFTAR_CACHE = [
   "./js/city-bahagia.js?v=1",
   "./js/city-lalin.js?v=3",
   "./js/city-jalan.js?v=2",
-  "./js/city-kendaraan.js?v=5",
+  "./js/city-kendaraan.js?v=6",
   "./js/city-persimpangan.js?v=1",
   "./js/city-maritim.js?v=1",
-  "./js/city.js?v=40",
+  "./js/city.js?v=42",
   "./js/city-suara.js?v=1",
   "./js/city-warga.js?v=1",
-  "./js/city-bubble.js?v=2",
+  "./js/city-bubble.js?v=3",
   "./js/city-diagnostik.js?v=2",
-  "./js/city-advisor.js?v=3",
+  "./js/city-advisor.js?v=4",
   "./js/city-tutorial.js?v=1",
-  "./js/city-ui-v24.js?v=3",
+  "./js/city-ui-v24.js?v=4",
   "./manifest.json",
   "./assets/images/logo-meranti-rising.png",
   // v26: aset menu utama yang DIPAKAI game (lihat README v26 — lembar

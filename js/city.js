@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v27.1"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v28"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -3772,6 +3772,21 @@ function renderHUD() {
       $("modeChipTeks").textContent = label + " · klik kanan atau Esc untuk batal";
     }
   }
+  // v28: lencana lonceng berita = jumlah masalah advisor nyata
+  // (kritis + tinggi dari UIV24.prioritasKota, sumber yang sama dengan
+  // lencana Penasihat) — bukan angka karangan; 0 = lencana disembunyikan.
+  const lencanaBeritaEl = $("lencanaBerita");
+  if (lencanaBeritaEl) {
+    let jmlMasalah = 0;
+    try {
+      if (typeof window !== "undefined" && window.UIV24 && typeof window.UIV24.prioritasKota === "function") {
+        const pk = window.UIV24.prioritasKota();
+        jmlMasalah = (pk.kritis || 0) + (pk.tinggi || 0);
+      }
+    } catch (e) { jmlMasalah = 0; }
+    if (jmlMasalah > 0) { lencanaBeritaEl.style.display = "flex"; lencanaBeritaEl.textContent = String(jmlMasalah); }
+    else { lencanaBeritaEl.style.display = "none"; lencanaBeritaEl.textContent = ""; }
+  }
   // v24: lencana jumlah masalah di tombol advisor (ringan; drawer hanya
   // di-render ulang bila sedang terbuka).
   if (typeof window !== "undefined" && window.UIV24 && typeof window.UIV24.perbarui === "function") { try { window.UIV24.perbarui(); } catch (e) {} }
@@ -3916,16 +3931,57 @@ function alasanKunci(def, kataLevel) {
   if (def.tech && !S.teknologi[def.tech]) bagian.push("Penelitian: " + TEKNOLOGI_MAP[def.tech].nama);
   return bagian.join(" + ");
 }
+// v28 — URUTAN TAMPIL DOCK: 13 kategori mockup dulu (urutan mockup),
+// lalu 6 kategori lain (Drainase, Keamanan, Hiburan, Pertanian,
+// Perikanan, Dekorasi) sebagai kelompok kedua yang tetap bisa dibuka.
+// TAB_BANGUN (city-data.js) TIDAK diubah — 19 tab + jumlah kartu per
+// tab tetap seperti v20 (dipin test13) — ini hanya urutan & label tampil;
+// katalog tetap memakai deskriptor TAB_BANGUN (fallback di bawah).
+const DOCK_URUTAN_V28 = ["permukiman", "komersial", "perkantoran", "industri", "jalan", "jembatan", "listrik", "air", "pendidikan", "kesehatan", "rekreasi", "transportasi", "lingkungan", "drainase", "keamanan", "hiburan", "pertanian", "perikanan", "dekorasi"];
+const DOCK_LABEL_V28 = { air: "Air & Drainase" };
+const DOCK_LAINNYA_V28 = { drainase: true, keamanan: true, hiburan: true, pertanian: true, perikanan: true, dekorasi: true };
+// Chip sub-kategori (bukan kartu — tidak mengubah hitungan kartu):
+// tab Air menampilkan jalan pintas ke Drainase, dan sebaliknya.
+const DOCK_SUBCHIP_V28 = {
+  air: { label: "Lihat Drainase & banjir →", tab: "drainase" },
+  drainase: { label: "← Kembali ke Air & Drainase", tab: "air" },
+};
+// v28: tombol aksi sidebar (data-aksi) menyala bila drawer bangun
+// terbuka pada konteksnya — Konstruksi: drawer terbuka (tab apa pun);
+// Pendidikan/Kesehatan: drawer terbuka + tab itu aktif. Dipanggil dari
+// renderMenuBangun + akhir renderPanelKiri (yang mengatur .aktif untuk
+// tombol data-tab) supaya kedua sumber status tidak saling menimpa.
+function perbaruiSidebarAktif() {
+  try {
+    const mb = $("menuBangun");
+    const drawerTerbuka = !!(mb && !mb.classList.contains("tersembunyi"));
+    document.querySelectorAll("#relKiri button[data-aksi]").forEach(b => {
+      const aksi = b.dataset.aksi;
+      let aktif = false;
+      if (aksi === "bangun") aktif = drawerTerbuka;
+      else if (aksi === "bangun:pendidikan") aktif = drawerTerbuka && kategoriBangun === "pendidikan";
+      else if (aksi === "bangun:kesehatan") aktif = drawerTerbuka && kategoriBangun === "kesehatan";
+      b.classList.toggle("aktif", aktif);
+    });
+  } catch (e) {}
+}
 function renderMenuBangun() {
   if (!S) return;
   const katEl = $("katBangun");
   katEl.innerHTML = "";
-  for (const k of TAB_BANGUN) {
+  // v28: tombol tab dirender dalam urutan mockup (bukan urutan TAB_BANGUN);
+  // 19 tombol tetap ada (test13), label Air menjadi "Air & Drainase".
+  const urutanDock = DOCK_URUTAN_V28.map(id => TAB_BANGUN.find(t => t.id === id)).filter(Boolean);
+  const daftarDock = urutanDock.length === TAB_BANGUN.length ? urutanDock : TAB_BANGUN.slice();
+  let pertamaLainnya = true;
+  for (const k of daftarDock) {
     const b = document.createElement("button");
-    b.className = "katTab" + (kategoriBangun === k.id ? " aktif" : "");
+    const lainnya = !!DOCK_LAINNYA_V28[k.id];
+    b.className = "katTab" + (kategoriBangun === k.id ? " aktif" : "") + (lainnya ? " katTab-lainnya" : "") + (lainnya && pertamaLainnya ? " katTab-pemisah" : "");
+    if (lainnya) pertamaLainnya = false;
     // v20 Worker 3: ikon tab adalah SVG inline (field `ikon` di
     // TAB_BANGUN), bukan emoji — dirender via innerHTML.
-    b.innerHTML = k.ikon + "<span>" + k.nama + "</span>";
+    b.innerHTML = k.ikon + "<span>" + (DOCK_LABEL_V28[k.id] || k.nama) + "</span>";
     // v21 Worker 3: klik tab kategori MEMBUKA katalog bila sedang
     // terlipat (toolbar saja) — jadi tombol lipat tidak perlu terlihat
     // saat terlipat; katalog kembali dengan satu ketukan.
@@ -4043,6 +4099,25 @@ function renderMenuBangun() {
     else if (jmlTerkunci === jmlKartu) { pk.style.display = "block"; pk.textContent = "Semua bangunan di kategori " + tab.nama + " masih terkunci — naikkan level peradaban atau teliti teknologi yang dibutuhkan untuk membukanya."; }
     else { pk.style.display = "none"; pk.textContent = ""; }
   }
+  // v28: chip sub-kategori Air <-> Drainase (bukan kartu katalog —
+  // hitungan kartu per tab tidak berubah).
+  const chip = $("chipSubKategori");
+  if (chip) {
+    chip.innerHTML = "";
+    const sub = DOCK_SUBCHIP_V28[kategoriBangun];
+    if (sub) {
+      chip.style.display = "flex";
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = sub.label;
+      btn.onclick = () => { kategoriBangun = sub.tab; bunyiKlik(); renderMenuBangun(); };
+      chip.appendChild(btn);
+    } else {
+      chip.style.display = "none";
+    }
+  }
+  // v28: status aktif tombol aksi sidebar (Konstruksi/Pendidikan/Kesehatan).
+  perbaruiSidebarAktif();
 }
 
 // ---------------- Panel kiri (sidebar) ----------------
@@ -4415,11 +4490,18 @@ function renderPanelKiri() {
     // tidak ada kendaraan bergerak (parkir tidak menimbulkan macet).
     // Skor zona/kemacetan & overlay tetap dipakai kebahagiaan + peta
     // (v19) — yang diperbaiki hanya klaim panel ini.
-    const kendaraanBergerak = ik.aktif + ik.menunggu;
+    // v27.2: "bergerak" = benar-benar berpindah posisi dalam 10 detik
+    // terakhir (infoKendaraan.bergerakNyata), BUKAN state — "waiting"
+    // (macet di belakang kendaraan parkir) dan "accelerating" dengan
+    // cepat 0 dulu ikut dihitung bergerak (repro v27.2 skenario B:
+    // panel "2 bergerak" 46 menit padahal 2 truk diam di tempat
+    // dengan cepat 0). Fallback ke rumus lama bila manager lama belum
+    // menyediakan bergerakNyata.
+    const kendaraanBergerak = (typeof ik.bergerakNyata === "number") ? ik.bergerakNyata : (ik.aktif + ik.menunggu);
     const jalanKosong = kendaraanBergerak === 0;
     const volumeEst = (S.lalin && typeof S.lalin.volumeEstimasi === "number") ? S.lalin.volumeEstimasi : ((S.lalin && typeof S.lalin.volumeTotal === "number") ? S.lalin.volumeTotal : null);
     html += "<div class='barisStat'><span>Estimasi permintaan (zona)</span><span>" + (volumeEst !== null ? volumeEst + " kend/jam" : "—") + "</span></div>";
-    html += "<div class='barisStat'><span>Kendaraan aktual di jalan</span><b>" + ik.aktif + " bergerak · " + ik.total + " total</b></div>";
+    html += "<div class='barisStat'><span>Kendaraan aktual di jalan</span><b>" + kendaraanBergerak + " bergerak · " + ik.total + " total</b></div>";
     // v22.5-W3 — SKOR ZONA DI KEDUA CABANG (temuan cek live v22.4):
     // baris "Skor zona (estimasi)" dulu hanya dirender di cabang else
     // (kendaraan bergerak), sehingga saat jalan kosong (0 bergerak —
@@ -4573,6 +4655,8 @@ function renderPanelKiri() {
     html += "<div class='barisStat'><span>Versi game</span><b>" + VERSI_GAME + "</b></div>";
     isi.innerHTML = html;
   }
+  // v28: status aktif tombol aksi sidebar (setelah toggle data-tab di atas).
+  perbaruiSidebarAktif();
 }
 
 // ---------------- Panel kanan ----------------
@@ -4647,9 +4731,18 @@ function renderPanelKanan() {
     }
   } catch (e) {}
   html += "<div class='barisStat'><span>Status</span><b>" + statusTampil + "</b></div>";
+  // v28: teks lengkap bubble bangunan (keluhan/syukur dari data nyata)
+  // tampil di sini saat bangunan dipilih — di peta bubble hanya ikon.
+  try {
+    if (typeof Bubble !== "undefined" && Bubble && typeof Bubble.bubbleUntuk === "function") {
+      const bubPanel = Bubble.bubbleUntuk(b);
+      if (bubPanel && bubPanel.teks) html += "<div class='bubbleTeksPanel' style='border-left:3px solid " + bubPanel.warna + "'><b>" + bubPanel.emoji + "</b> " + bubPanel.teks + "</div>";
+    }
+  } catch (e) {}
   // v19 Worker 5: status utilitas, banjir, zona & pengunjung bangunan terpilih.
-  html += "<div class='barisStat'><span>Listrik</span><span>" + (b.berlistrik === false ? "⚡ Padam" : b.berlistrik ? "⚡ Menyala" : "—") + "</span></div>";
-  html += "<div class='barisStat'><span>Air</span><span>" + (b.berair === false ? "💧 Tidak berair" : b.berair ? "💧 Berair" : "—") + "</span></div>";
+  // v28: nilai utilitas berwarna (hijau menyala/berair, merah padam).
+  html += "<div class='barisStat'><span>Listrik</span><span class='" + (b.berlistrik === false ? "merah" : b.berlistrik ? "hijau" : "") + "'>" + (b.berlistrik === false ? "⚡ Padam" : b.berlistrik ? "⚡ Menyala" : "—") + "</span></div>";
+  html += "<div class='barisStat'><span>Air</span><span class='" + (b.berair === false ? "merah" : b.berair ? "hijau" : "") + "'>" + (b.berair === false ? "💧 Tidak berair" : b.berair ? "💧 Berair" : "—") + "</span></div>";
   if (b.kebanjiran) html += "<div class='barisStat'><span>Banjir</span><b class='merah'>🌊 Kebanjiran — tidak beroperasi</b></div>";
   if (typeof zonaDi === "function") { const zid = zonaDi(b.x, b.y); if (zid) { const zd = (typeof zonaDef === "function") ? zonaDef(zid) : null; html += "<div class='barisStat'><span>Zona</span><span>" + (zd ? zd.nama : zid) + "</span></div>"; } }
   if (typeof b.pengunjung === "number" && b.pengunjung > 0) html += "<div class='barisStat'><span>Pengunjung</span><span>" + b.pengunjung + " /jam</span></div>";
@@ -4704,7 +4797,11 @@ function renderPanelKanan() {
       if (p) html += "<div class='barisStat kecil'><span>✓ " + p.nama + "</span><span>" + rp(perdaganganRute(p)) + "/hari</span></div>";
     }
   }
-  html += "<div class='barisAksi'><button class='btnKecil' onclick='aksiPindah()'>Pindah</button><button class='btnKecil' onclick='aksiPutar()'>Putar</button><button class='btnKecil bahaya' onclick='aksiHapus()'>" + (konfirmasiHapus ? "Yakin Hapus?" : "Hapus") + "</button><button class='btnKecil' onclick='tutupPanelKanan()'>Tutup</button></div>";
+  // v28: tombol Detail membuka drawer Penasihat (diagnosis + Rencana
+  // Aksi bernomor bangunan ini). TIDAK ada tombol "Tingkatkan": game
+  // tidak punya sistem upgrade bangunan (city-diagnostik.js: tidak ada
+  // field b.upgrading) — mekanik upgrade tidak diciptakan.
+  html += "<div class='barisAksi'><button class='btnKecil btnDetail' onclick='if(window.UIV24&&UIV24.bukaAdvisor)UIV24.bukaAdvisor();'>🔍 Detail</button><button class='btnKecil' onclick='aksiPindah()'>Pindah</button><button class='btnKecil' onclick='aksiPutar()'>Putar</button><button class='btnKecil bahaya' onclick='aksiHapus()'>" + (konfirmasiHapus ? "Yakin Hapus?" : "Hapus") + "</button><button class='btnKecil' onclick='tutupPanelKanan()'>Tutup</button></div>";
   el.innerHTML = html;
   // v24: seksi diagnostik di panel kanan (data Diagnostik / fallback lokal).
   if (typeof window !== "undefined" && window.UIV24 && typeof window.UIV24.saatBangunanDipilih === "function") { try { window.UIV24.saatBangunanDipilih(b); } catch (e) {} }
@@ -5128,6 +5225,11 @@ function pasangTombol() {
   // membuka panelnya; ketuk ikon yang sama lagi menutupnya (pola HP).
   document.querySelectorAll("#relKiri button").forEach(b => {
     b.onclick = () => {
+      // v28: tombol aksi sidebar (tanpa data-tab) — Konstruksi membuka
+      // drawer bangun; Pendidikan/Kesehatan membuka drawer pada tab itu.
+      const aksi = b.dataset.aksi;
+      if (aksi === "bangun") { bukaMenuBangunUntuk(kategoriBangun || "permukiman"); return; }
+      if (aksi && aksi.indexOf("bangun:") === 0) { bukaMenuBangunUntuk(aksi.slice(7)); return; }
       const tab = b.dataset.tab;
       bukaTabKiri(tab);
     };
@@ -5183,6 +5285,7 @@ function pasangTombol() {
     // v21 Worker 3: membuka drawer = katalog ikut terbuka (bukan hanya
     // toolbar) & panel lain tertutup supaya peta lega.
     if (!mb.classList.contains("tersembunyi")) { mb.classList.remove("terlipat"); tutupPanelSaatBangun(); kategoriBangun = "permukiman"; renderMenuBangun(); }
+    perbaruiSidebarAktif(); // v28: Konstruksi ikut padam saat drawer ditutup tombol ini
     bunyiKlik();
   };
   $("btnAksiPindah").onclick = () => aksiPindah();

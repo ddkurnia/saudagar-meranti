@@ -161,7 +161,6 @@
 
   // ---------------- Deteksi kendaraan tidak bergerak ----------------
   var STATE_DIAM = { parking: true, waiting: true, loading: true, unloading: true };
-  var STATE_GERAK = { accelerating: true, cruising: true, turning: true, braking: true };
   function _deteksiKendaraanMacet() {
     var wg = _waktuGame();
     if (wg === null) return []; // tanpa waktu game, tidak bisa mengukur "sejak kapan"
@@ -175,12 +174,18 @@
       var k = daftar[i];
       if (!k || typeof k.x !== "number" || typeof k.y !== "number") continue;
       var id = k.id || ("kend-" + i);
-      var bergerak = !!STATE_GERAK[k.state];
       var sebelum = _kendaraanSnapshot[id];
-      if (bergerak || !sebelum) {
+      if (!sebelum) {
         _kendaraanSnapshot[id] = { x: k.x, y: k.y, waktuGame: wg, state: k.state || "" };
         continue;
       }
+      // v27.2: potret HANYA disegarkan bila kendaraan benar-benar
+      // bergeser (> 0,5 petak) atau state-nya berubah — dulu potret
+      // disegarkan untuk SEMUA kendaraan yang state-nya "bergerak"
+      // (accelerating/cruising/turning/braking) TANPA memeriksa
+      // perpindahan, sehingga kendaraan yang beku dengan state
+      // "cruising" (cepat 0, posisi diam) tidak pernah terdeteksi
+      // macet. Deteksi ini murni berbasis perpindahan nyata.
       var geser = Math.hypot(k.x - sebelum.x, k.y - sebelum.y);
       if (geser > 0.5 || k.state !== sebelum.state) {
         _kendaraanSnapshot[id] = { x: k.x, y: k.y, waktuGame: wg, state: k.state || "" };

@@ -153,6 +153,8 @@ const KENDARAAN_KONFIG = {
   parkirAmbientMin: 0.5, parkirAmbientMax: 1.5, // detik jeda truk kota sebelum berangkat lagi (v22.4: 1–3 dtk -> 0,5–1,5 dtk — kendaraan tidak diam lama di ujung rute pendek)
   radiusTiba: 0.4,             // petak — radius tiba gerakAgen (sama seperti truk lama)
   putarMaks: 3.5,              // radian/detik — kemudi gerakAgen (sama seperti truk lama)
+  jendelaGerakNyataDetik: 10,  // v27.2: "bergerak" panel = berpindah >= 0,02 petak dalam jendela ini (bukan state)
+  macetSearahDetik: 30,        // v27.2: macet di belakang kendaraan searah yang berhenti -> tinggalkan rute (30 dtk > fase merah terpanjang 12 dtk pada 0,5x, jadi lampu merah tidak memicu ini)
   kecepatanJembatanKmh: 40,    // jembatan tanpa data kecepatan (sama seperti W1)
   kecepatanDefaultKmh: 20,     // bila petak bukan jalan (pengaman)
 };
@@ -187,6 +189,14 @@ function daftarkanKendaraan(k, opts) {
   if (typeof k.stateTimer !== "number") k.stateTimer = 0;
   if (!k.state) k.state = (k.status === "parkir" || !k.status) ? "parking" : "waiting";
   if (!Array.isArray(k._antreBelok)) k._antreBelok = [];
+  // v27.2-finalizer: inisialisasi pelacakan gerak nyata secara eksplisit
+  // saat pendaftaran — jendela "bergerak nyata" 10 detik tidak membaca
+  // nilai basi/undefined pada kendaraan baru (sebelumnya hanya fallback
+  // `|| 0` di infoKendaraan + inisialisasi malas di perbaruiSatuKendaraan).
+  // DaftarkanKendaraan adalah titik paling awal/umum: semua kendaraan
+  // (jalan, logistik, bus) lewat sini. Bila k.x/k.y belum ada,
+  // _posTerakhir* tetap undefined dan inisialisasi malas yang mengurusnya.
+  k._waktuSejakGerak = 0; k._posTerakhirX = k.x; k._posTerakhirY = k.y;
   if (k._dikelolaManager === undefined) k._dikelolaManager = kelola;
   if (!k.warna) {
     const T = TIPE_KENDARAAN[k.tipe];
@@ -240,12 +250,18 @@ function kendaraanDaruratAktifDi(edgeId) {
 }
 // Ringkasan manager untuk UI/panel & tes.
 function infoKendaraan() {
-  const info = { total: daftarKendaraan.length, aktif: 0, parkir: 0, menunggu: 0, daruratAktif: 0, perTipe: {}, maksAktif: KENDARAAN_KONFIG.maksKendaraanAktif };
+  const info = { total: daftarKendaraan.length, aktif: 0, parkir: 0, menunggu: 0, daruratAktif: 0, perTipe: {}, maksAktif: KENDARAAN_KONFIG.maksKendaraanAktif, bergerakNyata: 0 };
   for (const k of daftarKendaraan) {
     info.perTipe[k.tipe] = (info.perTipe[k.tipe] || 0) + 1;
     if (k.state === "parking") info.parkir++;
     else if (k.state === "waiting") info.menunggu++;
     else info.aktif++;
+    // v27.2: "bergerak nyata" = benar-benar berpindah posisi dalam
+    // jendela terakhir (dilacak perbaruiSatuKendaraan), BUKAN state —
+    // kendaraan "waiting"/"accelerating" yang diam di tempat TIDAK
+    // dihitung (repro v27.2 skenario B: panel "2 bergerak" 46 menit
+    // padahal 2 truk diam dengan cepat 0).
+    if ((k._waktuSejakGerak || 0) < KENDARAAN_KONFIG.jendelaGerakNyataDetik) info.bergerakNyata++;
     const T = TIPE_KENDARAAN[k.tipe];
     if (T && T.darurat && k.state !== "parking" && k.state !== "waiting") info.daruratAktif++;
   }
@@ -462,6 +478,39 @@ function pilihTujuanTerjauhJalan(k, jarakMin, kecuali, hanyaDi) {
   const t = calon[Math.floor(Math.random() * calon.length)];
   return { x: t.x, y: t.y };
 }
+// v27.2: true bila rute ini benar-benar membuat kendaraan BERGERAK
+// dari posisinya SEKARANG. Rute "degenerat" = total sisa perjalanan
+// (jarak ke titik lajur waypoint berikut + jarak antar waypoint
+// berikut) <= radiusTiba + 0,05 — gerakAgen langsung "tiba" tanpa
+// bergerak, lalu kendaraan parkir & mengulang rute yang sama
+// selamanya (repro v27.2 skenario B: mobil warga parkir 167206/
+// 172800 frame di ujung jalan karena _beriTujuanMobil terus
+// "berhasil" memberi rute 1 petak ke rumah yang titik lajurnya sudah
+// dalam radiusTiba — sementara rute jauh di komponen yang sama tidak
+// pernah dicoba karena _beriTujuanMobil selalu kembali duluan).
+// Titik lajur dihitung langsung dari rute (BUKAN _targetBerikut —
+// _antreBelok basi dari rute sebelumnya belum dibersihkan saat
+// pemeriksaan ini jalan). Dipakai _beriTujuanMobil/_beriTujuanDinas/
+// _beriTujuanBaru SAJA (ambient) — W3 (logistik/bus) memanggil
+// buatRuteKendaraan langsung dan tidak tersentuh.
+function _ruteTidakDegenerat(k) {
+  if (!k || !Array.isArray(k.rute) || !k.rute.length) return false;
+  const idx = k.idxWaypoint || 0;
+  if (idx >= k.rute.length) return false;
+  const wp = k.rute[idx];
+  if (!wp) return false;
+  const prev = (idx > 0 && k.rute[idx - 1]) ? k.rute[idx - 1] : { x: Math.round(k.x), y: Math.round(k.y) };
+  let t0 = null;
+  if (typeof posisiLajur === "function") {
+    try { t0 = posisiLajur(k, prev.x, prev.y, wp.x, wp.y); } catch (e) { t0 = null; }
+  }
+  if (!t0) t0 = { x: wp.x, y: wp.y };
+  let sisa = Math.hypot(t0.x - k.x, t0.y - k.y);
+  for (let i = idx + 1; i < k.rute.length; i++) {
+    sisa += Math.hypot(k.rute[i].x - k.rute[i - 1].x, k.rute[i].y - k.rute[i - 1].y);
+  }
+  return sisa > KENDARAAN_KONFIG.radiusTiba + 0.05;
+}
 // Beri tujuan baru (dipakai truk kota/ambient & mobil warga): rute A*
 // ke tujuan; bila gagal (tak ada jalan terjangkau), parkir & coba lagi
 // nanti.
@@ -520,7 +569,7 @@ function _beriTujuanBaru(k) {
     const t = pilihTujuanTerjauhJalan(k, jarakMin, dicoba, hanyaDi);
     if (!t) continue;
     dicoba.add(t.x + "," + t.y);
-    if (typeof buatRuteKendaraan === "function" && buatRuteKendaraan(k, t.x, t.y) && k.status === "menuju") {
+    if (typeof buatRuteKendaraan === "function" && buatRuteKendaraan(k, t.x, t.y) && k.status === "menuju" && _ruteTidakDegenerat(k)) {
       k.state = "accelerating"; k._target = null; k._antreBelok = [];
       return;
     }
@@ -605,7 +654,7 @@ function _beriTujuanMobil(k) {
     // Lewati; mobil mengambil bangunan lain, atau fallback acak di
     // _beriTujuanBaru bila semua bangunan sudah di depan mata.
     if (Math.abs(b.x - kini.x) + Math.abs(b.y - kini.y) <= 1) continue;
-    if (typeof buatRuteKendaraan === "function" && buatRuteKendaraan(k, b.x, b.y) && k.status === "menuju") {
+    if (typeof buatRuteKendaraan === "function" && buatRuteKendaraan(k, b.x, b.y) && k.status === "menuju" && _ruteTidakDegenerat(k)) {
       k.state = "accelerating"; k._target = null; k._antreBelok = [];
       return true;
     }
@@ -629,7 +678,7 @@ function _beriTujuanDinas(k) {
   for (const b of acak) {
     if (percobaan++ >= 5) break;
     if (Math.abs(b.x - kini.x) + Math.abs(b.y - kini.y) <= 1) continue;
-    if (typeof buatRuteKendaraan === "function" && buatRuteKendaraan(k, b.x, b.y) && k.status === "menuju") {
+    if (typeof buatRuteKendaraan === "function" && buatRuteKendaraan(k, b.x, b.y) && k.status === "menuju" && _ruteTidakDegenerat(k)) {
       k.state = "accelerating"; k._target = null; k._antreBelok = [];
       return true;
     }
@@ -934,6 +983,19 @@ function _titikMundur(k) {
 function perbaruiSatuKendaraan(k, dt) {
   if (!k || k._dikelolaManager !== true) return;
   if (k.tipe === "kapal" || k.tipe === "perahu") return;
+  // v27.2: lacak gerak NYATA (bukan state) — dipakai infoKendaraan().
+  // bergerakNyata: posisi acuan hanya diperbarui bila kendaraan sudah
+  // bergeser >= 0,02 petak DARI ACUAN itu (bukan dari frame sebelumnya —
+  // merangkak 0,1 petak/detik pun terhitung bergerak, karena gesernya
+  // terakumulasi sampai melewati ambang). _waktuSejakGerak = detik
+  // nyata sejak terakhir bergeser — kendaraan beku (state apa pun,
+  // termasuk "accelerating"/"cruising" dengan cepat 0) nilainya terus
+  // membesar, jadi panel/advisor tidak lagi mengklaimnya bergerak.
+  if (typeof k._posTerakhirX === "number" && typeof k._posTerakhirY === "number") {
+    const geser = Math.hypot(k.x - k._posTerakhirX, k.y - k._posTerakhirY);
+    if (geser >= 0.02) { k._waktuSejakGerak = 0; k._posTerakhirX = k.x; k._posTerakhirY = k.y; }
+    else k._waktuSejakGerak = (k._waktuSejakGerak || 0) + dt;
+  } else { k._waktuSejakGerak = 0; k._posTerakhirX = k.x; k._posTerakhirY = k.y; }
   const T = TIPE_KENDARAAN[k.tipe] || TIPE_KENDARAAN.truk;
   if (typeof k.cepat !== "number") k.cepat = 0;
   if (typeof k.stateTimer !== "number") k.stateTimer = 0;
@@ -1029,7 +1091,7 @@ function perbaruiSatuKendaraan(k, dt) {
         if (T.darurat) {
           // Darurat lewat: abaikan jarak aman (aturan sederhana W2 —
           // kendaraan lain sudah diperintah menunggu di atas).
-          k._tungguLawanArah = 0;
+          k._tungguLawanArah = 0; k._macetSearah = 0;
         } else if (j < jAman * 0.6 || (depan.cepat || 0) <= 0.01) {
           // v22.3-W1: pengaman deadlock head-on — bila yang di depan
           // BERHENTI dan datang dari arah BERLAWANAN (dot < 0,3;
@@ -1045,6 +1107,7 @@ function perbaruiSatuKendaraan(k, dt) {
           const hgDepan = _arahGerak(k), hoDepan = _arahGerak(depan);
           const dotDepan = hgDepan.x * hoDepan.x + hgDepan.y * hoDepan.y;
           if (dotDepan < 0.3 && (depan.cepat || 0) <= 0.01) {
+            k._macetSearah = 0; // pengaman head-on yang mengurusnya (merangkak/mundur)
             k._tungguLawanArah = (k._tungguLawanArah || 0) + dt;
             if (k._mundur) {
               // Sedang mundur — terus bergerak pelan, KECUALI lawan
@@ -1067,13 +1130,34 @@ function perbaruiSatuKendaraan(k, dt) {
           } else {
             k._tungguLawanArah = 0;
             targetCepat = 0; // terlalu dekat / depan berhenti
+            // v27.2: penghalang SEARAH yang BERHENTI (dot >= 0,3, depan
+            // diam) — sebelumnya timer di-nol-kan dan kendaraan menunggu
+            // selamanya di belakang kendaraan parkir (repro v27.2
+            // skenario B: truk + truk sampah "waiting" 164rb frame di
+            // belakang mobil warga yang parkir di ujung jalan, sementara
+            // panel mengklaim keduanya bergerak). Lawan head-on yang
+            // MASIH BERGERAK tidak dihitung di sini (ia akan lewat /
+            // memicu pengaman head-on sendiri). Setelah macet > 30 detik,
+            // tinggalkan rute ini: status "tiba" -> cabang "tiba"
+            // memarkirkan sejenak lalu _beriTujuanBaru memilih tujuan
+            // baru — bukan menunggu selamanya di belakang satu
+            // kendaraan yang tidak bergerak.
+            if (k.ambient && dotDepan >= 0.3 && (depan.cepat || 0) <= 0.01) {
+              k._macetSearah = (k._macetSearah || 0) + dt;
+              if (k._macetSearah > KENDARAAN_KONFIG.macetSearahDetik) {
+                k._macetSearah = 0;
+                k.status = "tiba";
+              }
+            } else {
+              k._macetSearah = 0;
+            }
           }
         } else {
-          k._tungguLawanArah = 0;
+          k._tungguLawanArah = 0; k._macetSearah = 0;
           targetCepat = Math.min(targetCepat, (depan.cepat || 0) * 0.9); // ikuti dari belakang
         }
-      } else k._tungguLawanArah = 0;
-    } else k._tungguLawanArah = 0;
+      } else { k._tungguLawanArah = 0; k._macetSearah = 0; } // v27.2-finalizer: jarak ke depan sudah >= jarak aman -> timer macet searah ikut di-nol-kan (sebelumnya hanya _tungguLawanArah, sehingga akumulasi lama bisa memicu "menyerah" lebih cepat dari 30 dtk pemblokiran nyata)
+    } else { k._tungguLawanArah = 0; k._macetSearah = 0; }
   }
   // --- percepatan / pengereman menuju kecepatan target ---
   if (k.cepat < targetCepat) {

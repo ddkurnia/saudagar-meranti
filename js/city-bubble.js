@@ -60,12 +60,14 @@ const BUBBLE_KONFIG = {
 };
 
 // 6 jenis bubble — warna + ikon konsisten di semua pemakaian.
+// v28: palet mockup — merah kritis #c3000e, oranye, kuning, hijau baik;
+// biru untuk sumber daya (air/listrik). Warna = urgensi.
 const JENIS_BUBBLE = {
-  complaint:  { ikon: "😡", warna: "#e74c3c", label: "Keluhan" },
-  happiness:  { ikon: "😊", warna: "#27ae60", label: "Senang" },
-  warning:    { ikon: "⚠️", warna: "#f39c12", label: "Peringatan" },
+  complaint:  { ikon: "😡", warna: "#c3000e", label: "Keluhan" },
+  happiness:  { ikon: "😊", warna: "#22a355", label: "Senang" },
+  warning:    { ikon: "⚠️", warna: "#f1c40f", label: "Peringatan" },
   production: { ikon: "🏭", warna: "#2980b9", label: "Produksi" },
-  resource:   { ikon: "⚡", warna: "#8e44ad", label: "Sumber daya" },
+  resource:   { ikon: "⚡", warna: "#1f7ae0", label: "Sumber daya" },
   traffic:    { ikon: "🚗", warna: "#e67e22", label: "Lalu lintas" },
 };
 
@@ -381,7 +383,11 @@ const Bubble = {
     } catch (e) { return; }
     if (!lebar || !tinggi) return;
     const kini = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
-    const modeIkon = zoom < BUBBLE_KONFIG.ambangZoomIkon;
+    // v28: bubble di peta SELALU ikon kecil (lingkaran warna + emoji) —
+    // teks lengkap tampil di panel kanan saat bangunan dipilih
+    // (renderPanelKanan memakai Bubble.bubbleUntuk). Cabang gelembung
+    // teks di bawah dipertahankan untuk pemakaian mendatang.
+    const modeIkon = true;
     const skala = _clampB(zoom, BUBBLE_KONFIG.skalaMin, BUBBLE_KONFIG.skalaMaks);
 
     // v24.2 (4c): stagger vertikal — bubble yang jangkar layarnya

@@ -6,6 +6,123 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v27.2 — Kendaraan Benar-Benar Bergerak: beku 37 jam, panel "bergerak" palsu, dan rute degenerat (2026-11-13)
+
+Laporan cek live v27.1 (?v=51, profil "Laksamana Sagu", Hari 3–5,
+2x): satu-satunya kendaraan yang terlihat (Hatchback kuning di
+(241,161)) bergerak ±30px sekali lalu TIDAK BERUBAH ±37 jam game,
+padahal panel Lalu Lintas berulang kali menyatakan "2 bergerak" dan
+kendaraan "accelerating"/"cruising"; Truk Logistik + Truk Sampah
+tidak pernah ter-render. Cek live v22.5 (?v=43) juga membeku total
+>39 jam game. Investigasi + perbaikan headless (bukti repro di
+`~/workspace/v272-investigasi/`, skrip `repro.js`/`repro2.js`/
+`probe.js`, log JSON sebelum/sesudah perbaikan) menemukan TIGA akar
+masalah yang TERBUKTI dari kode + repro — bukan spekulasi:
+
+- **Akar 1 — rute degenerat mobil warga (kunci).**
+  `_beriTujuanMobil` (`js/city-kendaraan.js`) menerima rute ke rumah
+  yang titik lajunya sudah berada dalam `radiusTiba` (0,4 petak)
+  dari posisi kendaraan — `gerakAgen` langsung "tiba" tanpa
+  bergerak, kendaraan parkir 1,5 detik, lalu mendapat rute YANG
+  SAMA lagi, selamanya. Jebakan ini lolos dari pengaman v22.3 (yang
+  hanya memeriksa jarak BANGUNAN, bukan panjang rute hasil snap
+  A* ke petak jalan terdekat). Repro skenario B (salib jalan
+  terhubung, 2 hari game pada 2x, 172.800 frame): mobil warga
+  parkir 167.206/172.800 frame (97%), maks geser 0,572 petak —
+  sekali jalan 0,5 petak ke titik lajur lalu diam. Perbaikan:
+  `_ruteTidakDegenerat(k)` — rute ditolak bila total sisa
+  perjalanan (jarak ke titik lajur waypoint berikut + jarak antar
+  waypoint berikut) <= `radiusTiba` + 0,05; pemanggil mencoba
+  kandidat berikut (ambient: rute jauh di komponen yang sama).
+  Dipakai `_beriTujuanMobil`, `_beriTujuanDinas`,
+  `_beriTujuanBaru` saja — W3 (logistik/bus) memanggil
+  `buatRuteKendaraan` langsung dan tidak tersentuh. Niat
+  pembatasan komponen v22.5 dipertahankan (tujuan tetap di dalam
+  komponen graph kendaraan sendiri).
+- **Akar 2 — antrean searah tanpa jalan keluar.**
+  Kendaraan yang terhalang kendaraan SEARAH yang berhenti (dot >=
+  0,3) mendapat `targetCepat = 0` dengan timer di-nol-kan —
+  pengaman merangkak/mundur v22.3 HANYA berlaku untuk head-on
+  (dot < 0,3). Repro skenario B: truk sampah menunggu di belakang
+  mobil warga yang parkir (jarak 0,451 < `jarakAman` 0,5), truk
+  menunggu di belakang truk sampah (jarak 0,4998 < 0,5) —
+  keduanya `state "waiting"`, `status "menuju"`, `cepat 0`
+  selama 164.000+ frame. Perbaikan: timer `_macetSearah` —
+  setelah macet > 30 detik (lebih panjang dari fase merah
+  terpanjang 12 detik pada 0,5x, jadi lampu merah tidak memicu
+  ini), kendaraan meninggalkan rutenya (`status "tiba"` ->
+  parkir sejenak -> tujuan baru) daripada menunggu selamanya.
+  Hanya untuk kendaraan ambient (`k.ambient`).
+- **Akar 3 — panel mengklaim "bergerak" dari state, bukan dari
+  perpindahan.** `kendaraanBergerak = ik.aktif + ik.menunggu`
+  (`js/city.js`) menghitung "waiting" sebagai bergerak, dan
+  `infoKendaraan().aktif` menghitung semua state bukan
+  parking/waiting — termasuk "accelerating"/"cruising" dengan
+  `cepat 0`. Angka "12–16,9 km/jam" dan "waktu tempuh 53–84
+  detik/petak" di panel adalah estimasi jalan dari `detailPetak`
+  (`kecJalan × faktor`, `900/kecRata`), BUKAN kecepatan terukur
+  kendaraan. Perbaikan: manager melacak gerak nyata per kendaraan
+  (`_posTerakhirX/Y`, `_waktuSejakGerak` — acuan hanya diperbarui
+  bila bergeser >= 0,02 petak, jadi merangkak pun terhitung);
+  `infoKendaraan()` kini menyediakan `bergerakNyata` (berpindah
+  dalam 10 detik terakhir) dan panel memakai angka itu untuk
+  "Kendaraan aktual di jalan" + kepadatan nyata. Advisor juga
+  diperbaiki: `_deteksiKendaraanMacet` dulu menyegarkan potret
+  untuk semua kendaraan ber-state "bergerak" tanpa memeriksa
+  perpindahan, sehingga kendaraan beku ber-state "cruising" tidak
+  pernah terdeteksi macet — kini potret hanya disegarkan bila
+  benar-benar bergeser > 0,5 petak atau state berubah.
+
+- **Hasil repro sesudah perbaikan (skenario B, 2 hari game, 2x).**
+  Truk cruising 116.756 + accelerating 25.164 frame (82%
+  bergerak), waiting 257 frame; truk sampah cruising 118.336 +
+  accelerating 24.205 (82%), waiting 136; mobil warga cruising
+  130.441 (75%), parking 15.685 (9% — parkir normal antar
+  perjalanan). Maks geser: truk 10,5 petak, mobil warga 9,6,
+  truk sampah 8,5 (sebelum: 10,5 / 0,6 / 8,5 — mobil warga yang
+  tadinya beku kini bergerak). Tidak ada satu pun kendaraan yang
+  diam selama satu sampel 10 detik pun (sebelum: 3 kendaraan diam
+  46 menit nyata). `bergerakNyata` = 3 di semua sampel. Skenario A
+  (petak-tunggal terputus, seperti save ?v=51): TIDAK BERUBAH —
+  ketiga kendaraan parkir jujur 172.800/172.800 frame, 0 petak,
+  panel "0 bergerak" (parkir jujur adalah perilaku yang benar di
+  komponen 1 petak). Tidak ada NaN di semua run (hipotesis
+  keracunan NaN lewat `faktorKecepatan` TIDAK terbukti dan
+  dibuang).
+- **Versi (saat v27.2 ditulis).** `VERSI_GAME "v27.2"`,
+  `js/city.js?v=41`, `js/city-kendaraan.js?v=6`,
+  `js/city-advisor.js?v=4`, SW cache `meranti-rising-v27.2`,
+  pill menu `v27.2`; `city-lalin.js` TETAP `?v=3`, `menu.css`
+  TETAP `?v=2`. **Catatan:** rilis mandiri v27.2 tidak lagi ada
+  di working tree — perbaikan v27.2 di atas DILIPAT ke dalam
+  rilis v28 (tree saat ini: `VERSI_GAME "v28"`,
+  `js/city.js?v=42`, `js/city-kendaraan.js?v=6`,
+  `js/city-advisor.js?v=4`, SW cache `meranti-rising-v28`).
+  Pin versi di butir ini menggambarkan keadaan saat v27.2
+  ditulis, bukan versi berjalan. Tiga perbaikan kecil finalizer
+  (reset `_macetSearah` saat celah >= jarak aman, inisialisasi
+  eksplisit `_waktuSejakGerak`/`_posTerakhir*` di
+  `daftarkanKendaraan`, dan cek regresi AC-d2) ikut terlipat di
+  tree v28 yang sama.
+  Format save, ekonomi, menu, audio, dan logika varian arah
+  (`pilihVarianArah`) TIDAK disentuh. Tes: seksi AC baru di
+  `tests/test24.js` (repro skenario A/B + tolak rute degenerat +
+  lepas antrean searah + panel jujur + advisor macet) — test24
+  305 → 323 cek; semua pin v27.1 di `test24.js` + `test13.js`
+  dinaikkan ke v27.2 (tes banner PWA X4d: halaman saat itu v27.2, jadi
+  SW "lebih baru" yang diuji adalah v27.3 dan SW "sama" adalah
+  v27.2). File yang berubah: `js/city-kendaraan.js`,
+  `js/city.js`, `js/city-advisor.js`, `index.html`, `sw.js`,
+  `tests/test24.js`, `tests/test13.js`, `README.md`.
+
+| Batas v27.2 | Keterangan |
+| --- | --- |
+| Cek live BELUM dilakukan | Semua bukti di atas headless (node, bukan live di tablet user). Yang HANYA bisa dinilai cek live: (1) di save ?v=51 yang sama (atau jaringan serupa), kendaraan bergerak terus-menerus dan tidak ada yang diam > 1 hari game; (2) panel "Kendaraan aktual di jalan" menampilkan angka yang sesuai dengan kendaraan yang terlihat bergerak; (3) truk logistik + truk sampah terlihat di peta (di save ?v=51 keduanya tidak terlihat — repro tidak dapat membuktikan posisi spawn mereka di save itu; bila setelah v27.2 keduanya tetap tidak terlihat padahal panel menghitungnya bergerak, periksa petak spawn `jalan[0]`/petak bebas pertama di save tersebut); (4) advisor menandai kendaraan yang diam 1 hari game sebagai macet. |
+| "Tampak mundur" 30px (H4) — penjelasan paling cocok, bukan bukti | Di kode TIDAK ADA manuver mundur sejati: `gerakAgen` selalu bergerak sepanjang `k.arah` (depan), dan `_mundur` diimplementasikan sebagai putar balik + jalan ke titik mundur, bukan jalan mundur. Perpindahan 30px ke barat laut paling cocok dengan jalan pendek 0,5 petak dari tengah petak ke titik lajur (yang di layar isometri memang bergeser ke barat laut) yang tertangkap di antara dua screenshot berselang 81 menit game — atau kendaraan di-spawn ulang di petak tetangga (arah awal 0 = varian SE). Detail hidung di dua still screenshot tidak bisa dibuktikan headless; bila cek live masih menunjukkan kendaraan bergerak mundur (bodi berlawanan arah hadap) di v27.2, laporkan dengan video/jejak posisi, bukan still. |
+| Truk tidak ter-render (H3) — BUKAN bug render | Render menggambar SEMUA entri `kendaraanVisual` tanpa culling (fallback vektor bila sprite hilang), dan `daftarkanKendaraan` selalu menambahkan ke `kendaraanVisual` — tidak ada jalur kode yang membuat kendaraan ada di panel tapi tidak di render. Di repro B, kedua truk berada 0,5–1 petak dari mobil warga (satu crop yang sama). Kemungkinan besar di live ?v=51 keduanya berada di petak jalan di luar tampilan yang diperiksa checker (spawn di `jalan[0]` / petak bebas pertama — sembarang petak di peta 480×320) atau tertutup bubble peringatan. v27.2 tidak mengubah render; yang diperbaiki adalah kendaraan kini benar-benar bergerak sehingga mudah ditemukan. |
+| Antrean searah > 30 detik masih "menyerah" | Kendaraan yang macet > 30 detik di belakang kendaraan searah yang berhenti kini meninggalkan rutenya dan memilih tujuan baru — ia tidak menunggu selamanya, tetapi bisa juga memilih rute yang melewati kendaraan yang sama lagi (lalu macet lagi 30 detik). Ini sengaja: kendaraan ambient tidak punya sistem menyalip di jalan 1 lajur. Bila cek live menunjukkan kendaraan bolak-balik memilih rute yang sama, itu batas yang diketahui, bukan beku. |
+| Jendela "bergerak nyata" = 10 detik | Kendaraan yang berhenti 10–60 detik (mis. menunggu lampu merah yang lama) tidak dihitung "bergerak" oleh panel selama jeda itu, walau state-nya "waiting" yang wajar. Ini definisi yang dipilih (perpindahan nyata, bukan niat bergerak) — label panel tetap menampilkan rincian state aktif/parkir/menunggu di baris atasnya. |
+
 ## Yang baru di v27.1 — Perbaikan hadap NW/NE: truk tidak lagi miring, mobil tidak lagi mundur (2026-11-12)
 
 Laporan user dari cek live v27 (~20:54 WIB): "Kenapa truck jalan

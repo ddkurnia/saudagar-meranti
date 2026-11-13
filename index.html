@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="48x48" href="assets/icons/favicon-48.png">
 <link rel="shortcut icon" href="assets/icons/favicon-32.png">
-<link rel="stylesheet" href="css/city.css?v=18">
+<link rel="stylesheet" href="css/city.css?v=19">
 <link rel="stylesheet" href="css/menu.css?v=2">
 </head>
 <body>
@@ -34,7 +34,7 @@
       <header class="menu-header">
         <div class="menu-partner"><img src="assets/menu/partner-logos.png" alt="KEDAI MEDIA — kedaimedia.com, dan MALAKA DIGITAL HUB"></div>
         <div class="menu-header-kanan">
-          <span id="menuPillVersi" class="menu-pill-versi">v27.1</span>
+          <span id="menuPillVersi" class="menu-pill-versi">v28</span>
           <button id="btnMenuBantuan" type="button" class="menu-ikon-btn" title="Cara bermain" aria-label="Cara bermain"><img src="assets/menu/crop/header-ikon-lingkaran-bantuan-kecil.png" alt=""></button>
           <button id="btnMenuProfil" type="button" class="menu-ikon-btn" title="Profil Pemain" aria-label="Profil Pemain"><img src="assets/menu/crop/header-ikon-lingkaran-profil-besar.png" alt=""></button>
           <button id="btnMenuPengaturan" type="button" class="menu-ikon-btn" title="Pengaturan" aria-label="Pengaturan"><img src="assets/menu/crop/header-ikon-lingkaran-pengaturan-kecil.png" alt=""></button>
@@ -261,6 +261,7 @@
   <!-- Bar atas v20: 3 zona — identitas | sumber daya | jam + aksi -->
   <header id="barAtas">
     <div class="identitas">
+      <img class="logoHud" src="assets/menu/logo-rise-of-meranti.png" alt="RISE OF MERANTI">
       <img id="avatarPemain" src="assets/characters/player/idle.png" alt="Pengelola Pulau">
       <div class="judulBlok">
         <div class="judulGame">MERANTI <b>RISING</b></div>
@@ -273,13 +274,13 @@
       </div>
     </div>
     <div class="sumberDaya">
-      <span class="sd utama" title="Uang">💰 <b id="uangTeks" class="angka">Rp0</b></span>
-      <span class="sd" title="Kayu">🪵 <b id="kayuTeks">0</b></span>
-      <span class="sd" title="Batu">🪨 <b id="batuTeks">0</b></span>
-      <span class="sd" title="Besi">🔩 <b id="besiTeks">0</b></span>
-      <span class="sd" title="Tual Sagu">🌿 <b id="tualTeks">0</b></span>
-      <span class="sd" title="Penduduk">👥 <b id="pendudukTeks">0 jiwa</b></span>
-      <span class="sd" title="Kebahagiaan">😊 <b id="bahagiaTeks">0%</b></span>
+      <span class="sd utama" title="Uang — kas kota. Pajak & penjualan masuk; gaji & biaya operasional keluar.">💰 <b id="uangTeks" class="angka">Rp0</b></span>
+      <span class="sd" title="Kayu — bahan bangunan dari hutan & kebun">🪵 <b id="kayuTeks">0</b></span>
+      <span class="sd" title="Batu — bahan bangunan">🪨 <b id="batuTeks">0</b></span>
+      <span class="sd" title="Besi — bahan bangunan & industri">🔩 <b id="besiTeks">0</b></span>
+      <span class="sd" title="Tual Sagu — hasil kebun, bahan baku kilang">🌿 <b id="tualTeks">0</b></span>
+      <span class="sd" title="Penduduk — tumbuh bila kebahagiaan ≥ 50% & ada rumah kosong">👥 <b id="pendudukTeks">0 jiwa</b></span>
+      <span class="sd" title="Kebahagiaan — rata-rata kepuasan warga kota">😊 <b id="bahagiaTeks">0%</b></span>
       <span class="sd sekunder" title="Listrik jaringan: total dipakai / kapasitas — status tiap bangunan (Menyala/Padam) ada di panel bangunan (klik bangunannya)">⚡ <b id="listrikTeks">0/0 kW</b></span>
       <span class="sd sekunder" title="Air dipakai / kapasitas">💧 <b id="airTeks">0/0 L</b></span>
     </div>
@@ -292,7 +293,7 @@
       <span id="jamAtasCuaca" class="jamCuaca">Cerah | 31°C</span>
     </div>
     <div class="tombolAtas">
-      <button id="btnBerita" class="btnIkon" title="Berita Pulau"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 9a6 6 0 1 0-12 0c0 6-2.5 7-2.5 7h17S18 15 18 9"/><path d="M10 20a2.2 2.2 0 0 0 4 0"/></svg></button>
+      <button id="btnBerita" class="btnIkon" title="Berita Pulau"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 9a6 6 0 1 0-12 0c0 6-2.5 7-2.5 7h17S18 15 18 9"/><path d="M10 20a2.2 2.2 0 0 0 4 0"/></svg><span id="lencanaBerita" class="lencanaBerita" style="display:none"></span></button>
       <button id="btnSimpan" class="btnIkon" title="Simpan"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l3 3v15H5V3Z"/><path d="M8 3v5h7V3"/><path d="M8 21v-7h8v7"/></svg></button>
       <button id="btnSuara" class="btnIkon" title="Suara"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg></button>
       <button id="btnPengaturan" class="btnIkon" title="Pengaturan"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.7M12 18.5v2.7M2.8 12h2.7M18.5 12h2.7M5.2 5.2l1.9 1.9M16.9 16.9l1.9 1.9M18.8 5.2l-1.9 1.9M7.1 16.9l-1.9 1.9"/></svg></button>
@@ -313,16 +314,31 @@
       <div class="cuacaTeks"><span id="jamTeks">06:00</span> WIB<br><span id="cuacaTeks">☀ Cerah</span> · <span id="suhuTeks">31°C</span></div>
     </div>
     <div id="barisKiri">
+      <!-- v28: sidebar mockup — 9 baris utama berlabel (ikon SVG konsisten),
+           satu panel terbuka per klik. Pemetaan ke panel nyata:
+           Ringkasan Kota -> peta (Overview); Peta Meranti -> pulau
+           (Kepulauan, 27 pulau); Penduduk -> penduduk; Statistik ->
+           statistik; Konstruksi -> drawer bangun; Infrastruktur ->
+           infrastruktur; Pemerintahan -> peradaban; Pendidikan/Kesehatan
+           -> drawer bangun pada tab itu (data-aksi, ditangani pasangTombol).
+           Misi/Ekonomi/Lalu Lintas/Penelitian tetap ada di grup Lainnya
+           (data-tab dipertahankan, dipakai tes + renderPanelKiri). -->
       <nav id="relKiri" aria-label="Navigasi utama">
-        <button data-tab="peta" aria-label="Overview" title="Overview"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg><span class="navTip">Overview</span></button>
-        <button data-tab="misi" aria-label="Misi" title="Misi"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg><span class="navTip">Misi</span></button>
-        <button data-tab="penduduk" aria-label="Penduduk" title="Penduduk"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.6c2.6.3 4.4 1.9 5 4.4"/></svg><span class="navTip">Penduduk</span></button>
-        <button data-tab="ekonomi" aria-label="Ekonomi" title="Ekonomi"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-8M21 20H3"/></svg><span class="navTip">Ekonomi</span></button>
-        <button data-tab="infrastruktur" aria-label="Infrastruktur" title="Infrastruktur"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 0 0-5.6 5L3 17.4V21h3.6l5.9-5.9a4 4 0 0 0 5-5.6L14 12.9l-2.4-2.4 2.9-4Z"/></svg><span class="navTip">Infrastruktur</span></button>
-        <button data-tab="lalin" aria-label="Lalu Lintas" title="Lalu Lintas"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="19" rx="3"/><circle cx="12" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="17" r="1.5" fill="currentColor" stroke="none"/></svg><span class="navTip">Lalu Lintas</span></button>
-        <button data-tab="peradaban" aria-label="Pemerintahan" title="Pemerintahan"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-6 9 6M4 9v11M20 9v11M8 12v5M12 12v5M16 12v5M2 20h20"/></svg><span class="navTip">Pemerintahan</span></button>
-        <button data-tab="riset" aria-label="Penelitian" title="Penelitian"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v5.5L4.5 18a2 2 0 0 0 1.8 3h11.4a2 2 0 0 0 1.8-3L14 8.5V3"/><path d="M7.5 14h9"/></svg><span class="navTip">Penelitian</span></button>
-        <button data-tab="statistik" aria-label="Statistik" title="Statistik"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20V4"/><path d="M4 20h16"/><path d="M8 16v-5M12 16V8M16 16v-3"/></svg><span class="navTip">Statistik</span></button>
+        <button data-tab="peta" aria-label="Ringkasan Kota" title="Ringkasan Kota"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/></svg><span class="navLabel">Ringkasan Kota</span><span class="navTip">Ringkasan Kota</span></button>
+        <button data-tab="pulau" aria-label="Peta Meranti" title="Peta Meranti"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.2-6-10a6 6 0 0 1 12 0c0 4.8-6 10-6 10Z"/><circle cx="12" cy="11" r="2.2"/></svg><span class="navLabel">Peta Meranti</span><span class="navTip">Peta Meranti</span></button>
+        <button data-tab="penduduk" aria-label="Penduduk" title="Penduduk"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.6c2.6.3 4.4 1.9 5 4.4"/></svg><span class="navLabel">Penduduk</span><span class="navTip">Penduduk</span></button>
+        <button data-tab="statistik" aria-label="Statistik" title="Statistik"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20V4"/><path d="M4 20h16"/><path d="M8 16v-5M12 16V8M16 16v-3"/></svg><span class="navLabel">Statistik</span><span class="navTip">Statistik</span></button>
+        <button data-aksi="bangun" aria-label="Konstruksi" title="Konstruksi — buka menu bangun"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a4 4 0 0 0-5.6 5L3 17.4V21h3.6l5.9-5.9a4 4 0 0 0 5-5.6L14 12.9l-2.4-2.4 2.9-4Z"/></svg><span class="navLabel">Konstruksi</span><span class="navTip">Konstruksi</span></button>
+        <button data-tab="infrastruktur" aria-label="Infrastruktur" title="Infrastruktur"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3l2.5 18M16 3l-2.5 18"/><path d="M12 5v2.5M12 10.5v2.5M12 16v2.5"/></svg><span class="navLabel">Infrastruktur</span><span class="navTip">Infrastruktur</span></button>
+        <button data-tab="peradaban" aria-label="Pemerintahan" title="Pemerintahan"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-6 9 6M4 9v11M20 9v11M8 12v5M12 12v5M16 12v5M2 20h20"/></svg><span class="navLabel">Pemerintahan</span><span class="navTip">Pemerintahan</span></button>
+        <button data-aksi="bangun:pendidikan" aria-label="Pendidikan" title="Pendidikan — buka menu bangun"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 9 12 4l9.5 5L12 14 2.5 9Z"/><path d="M6.5 11.5V16c0 1.6 2.5 3 5.5 3s5.5-1.4 5.5-3v-4.5"/><path d="M21.5 9V15"/></svg><span class="navLabel">Pendidikan</span><span class="navTip">Pendidikan</span></button>
+        <button data-aksi="bangun:kesehatan" aria-label="Kesehatan" title="Kesehatan — buka menu bangun"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg><span class="navLabel">Kesehatan</span><span class="navTip">Kesehatan</span></button>
+        <div class="navPemisah" aria-hidden="true"></div>
+        <div class="navGrupLabel" aria-hidden="true">Lainnya</div>
+        <button data-tab="misi" class="kompak" aria-label="Misi" title="Misi"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg><span class="navLabel">Misi</span><span class="navTip">Misi</span></button>
+        <button data-tab="ekonomi" class="kompak" aria-label="Ekonomi" title="Ekonomi"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-8M21 20H3"/></svg><span class="navLabel">Ekonomi</span><span class="navTip">Ekonomi</span></button>
+        <button data-tab="lalin" class="kompak" aria-label="Lalu Lintas" title="Lalu Lintas"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="19" rx="3"/><circle cx="12" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="17" r="1.5" fill="currentColor" stroke="none"/></svg><span class="navLabel">Lalu Lintas</span><span class="navTip">Lalu Lintas</span></button>
+        <button data-tab="riset" class="kompak" aria-label="Penelitian" title="Penelitian"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v5.5L4.5 18a2 2 0 0 0 1.8 3h11.4a2 2 0 0 0 1.8-3L14 8.5V3"/><path d="M7.5 14h9"/></svg><span class="navLabel">Penelitian</span><span class="navTip">Penelitian</span></button>
       </nav>
       <!-- v21 Worker 2: panel kiri COLLAPSED secara default — saat game
            dimulai hanya ikon nav yang terlihat (termasuk Misi); panel
@@ -353,7 +369,7 @@
        (data-tab="statistik", cabang renderPanelKiri oleh Worker 2). -->
   <div id="kolomKanan">
     <div id="kartuPeta" class="kartuKaca">
-      <div class="kartuJudul"><span>Peta Meranti</span><span class="kartuJudulAksi"><button id="btnPetaBesar" title="Perbesar minimap" aria-label="Perbesar minimap">⤢</button><button id="btnPetaTutup" title="Tutup minimap" aria-label="Tutup minimap" aria-expanded="true">▾</button><span class="kompas">🧭</span></span></div>
+      <div class="kartuJudul"><span>Peta Meranti</span><span class="kartuJudulAksi"><button id="btnPetaBesar" title="Perbesar minimap" aria-label="Perbesar minimap">⤢</button><button id="btnPetaTutup" title="Tutup minimap" aria-label="Tutup minimap" aria-expanded="true">▾</button><span class="kompas" title="Utara">N</span></span></div>
       <canvas id="minimap" width="220" height="132"></canvas>
       <div class="miniKontrol">
         <button id="btnZoomIn" title="Perbesar">＋</button>
@@ -432,6 +448,7 @@
       </span>
     </div>
     <div id="pesanKatalog" class="pesanKatalog" style="display:none"></div>
+    <div id="chipSubKategori" class="chipSubKategori" style="display:none"></div>
     <div id="itemBangunWrap">
       <button id="btnGeserKiri" class="geser">‹</button>
       <div id="itemBangun"></div>
@@ -463,16 +480,16 @@
 <script src="js/city-bahagia.js?v=1"></script>
 <script src="js/city-lalin.js?v=3"></script>
 <script src="js/city-jalan.js?v=2"></script>
-<script src="js/city-kendaraan.js?v=5"></script>
+<script src="js/city-kendaraan.js?v=6"></script>
 <script src="js/city-persimpangan.js?v=1"></script>
 <script src="js/city-maritim.js?v=1"></script>
 <script src="js/city-suara.js?v=1"></script>
 <script src="js/city-warga.js?v=1"></script>
-<script src="js/city-bubble.js?v=2"></script>
+<script src="js/city-bubble.js?v=3"></script>
 <script src="js/city-diagnostik.js?v=2"></script>
-<script src="js/city-advisor.js?v=3"></script>
-<script src="js/city.js?v=40"></script>
+<script src="js/city-advisor.js?v=4"></script>
+<script src="js/city.js?v=42"></script>
 <script src="js/city-tutorial.js?v=1"></script>
-<script src="js/city-ui-v24.js?v=3"></script>
+<script src="js/city-ui-v24.js?v=4"></script>
 </body>
 </html>

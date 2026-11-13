@@ -725,6 +725,8 @@
           var hb = bahagiaRumah(b);
           if (hb && typeof hb.nilai === "number") {
             html += "<div class='barisStat'><span>Kebahagiaan penghuni</span><span>" + hb.emosi + " " + hb.nilai + "% (target " + (hb.target == null ? "—" : hb.target + "%") + ")</span></div>";
+            // v28: bar kebahagiaan (seperti mockup panel rumah).
+            if (typeof bar === "function") html += bar(hb.nilai, hb.nilai >= 60 ? "#00b894" : hb.nilai >= 40 ? "#fdcb6e" : "#e74c3c");
             if (hb.alasan && hb.alasan.length) html += "<div class='misiDes'>Kurang: " + hb.alasan.map(function (a) { return esc(a.indikator) + " (" + a.skor + ")"; }).join(", ") + ".</div>";
           }
         }
