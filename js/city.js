@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v28"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v29"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -580,17 +580,19 @@ function namaKecamatan(id) {
 
 // v19 Worker 5 (APBD): satu sumber kunci rincian ekonomi — dipakai
 // stateBaru, akrualJamGame, prosesPergantianHari & migrasi save lama.
-// Pendapatan: pajak, pajakProperti, penjualan, ekspor, wisata, bunga,
-// perdagangan, daurUlang, tiketBus, tiketRekreasi. Belanja: upkeep
+// Pendapatan: pajak, pajakProperti, penjualan, ekspor, wisata,
+// perdagangan, daurUlang, tiketBus, tiketRekreasi. Kunci `bunga`
+// DIPERTAHANKAN tapi selalu 0 sejak v29 (Q6: bunga pasif saldo dihapus).
+// Belanja: upkeep
 // (dipartisi jadi upkeepPendidikan/Kesehatan/Lingkungan/Infra/Lain —
 // jumlah kelimanya SELALU = upkeep, tanpa ganda hitung) + gaji.
 function rincianKosong() {
-  return { pajak: 0, pajakProperti: 0, penjualan: 0, ekspor: 0, wisata: 0, bunga: 0, perdagangan: 0, daurUlang: 0, upkeep: 0, upkeepPendidikan: 0, upkeepKesehatan: 0, upkeepLingkungan: 0, upkeepInfra: 0, upkeepLain: 0, gaji: 0, tiketBus: 0, tiketRekreasi: 0 };
+  return { pajak: 0, pajakProperti: 0, pajakUsaha: 0, pajakPerdagangan: 0, pajakEkspor: 0, penjualan: 0, ekspor: 0, wisata: 0, bunga: 0, perdagangan: 0, daurUlang: 0, upkeep: 0, upkeepPendidikan: 0, upkeepKesehatan: 0, upkeepLingkungan: 0, upkeepInfra: 0, upkeepLain: 0, gaji: 0, cicilanPinjaman: 0, tiketBus: 0, tiketRekreasi: 0 };
 }
 function stateBaru(petaBaru) {
   const st = {
     versi: CITY.VERSI_SAVE, seed: CITY.SEED, hari: 1, cuaca: "Cerah",
-    uang: 750000, kayu: 60, batu: 40, besi: 10, xp: 0, level: 1, akumulasi: 0,
+    uang: cfgEco("modalAwal.uang", 10000000), kayu: 60, batu: 40, besi: 10, xp: 0, level: 1, akumulasi: 0,
     waktuGame: 360, kecepatan: 1, // v18-A: waktu mulai 06:00 hari ke-0; akumulasi = cermin lama
     komoditas: {}, bangunan: [], jalan: [], jembatan: [],
     teknologi: {}, riset: null,
@@ -600,8 +602,29 @@ function stateBaru(petaBaru) {
     // kuota jual/ekspor fraksional (maks harian / 24 per jam).
     akumulasiProduksi: {},
     rincianBerjalan: rincianKosong(),
-    tarifPajakProperti: 10, // v19 Worker 5: APBD — tarif pajak properti % (0-20, diubah di dashboard Ekonomi)
-    apbd: { hariDefisit: 0 }, // v19 Worker 5: hitung hari defisit berturut-turut (peringatan bila >= 3)
+    tarifPajakProperti: cfgEco("pajak.properti.tarifDefault", 10), // v19 Worker 5: APBD — tarif pajak properti % (0-20, diubah di dashboard Ekonomi)
+    // v29 Fase B: tarif pajak dinamis (%, 0-20, diubah di dashboard
+    // Ekonomi) — usaha (produk industri dijual), perdagangan
+    // (komoditas mentah dijual), ekspor (semua ekspor). Satu transaksi
+    // = satu pajak; lihat economyConfig.pajak.
+    tarifPajakUsaha: cfgEco("pajak.usaha.tarifDefault", 5),
+    tarifPajakPerdagangan: cfgEco("pajak.perdagangan.tarifDefault", 5),
+    tarifPajakEkspor: cfgEco("pajak.ekspor.tarifDefault", 5),
+    // v29 Fase B: harga pasar komoditas berjalan (Rp/unit; default =
+    // harga dasar KOMODITAS) + harga kemarin (untuk tren). Diperbarui
+    // tiap hari di perbaruiHargaPasar() (supply/demand, maks ±5%/hari,
+    // batas 50%-150% harga dasar).
+    hargaPasar: {}, hargaPasarKemarin: {},
+    // v29 Fase B: riwayat keuangan harian (maks 90 entri) untuk grafik
+    // dashboard: {hari, masuk, keluar, pajak, ekspor, cicilan, saldo}.
+    riwayatKeuangan: [],
+    // v29 Fase B: pinjaman kota — {pinjamanAktif: [], riwayat: [],
+    // nomor: n}. Pokok pinjaman adalah ARUS MODAL (masuk kas seketika,
+    // dicatat di riwayat — TIDAK masuk rincianBerjalan/APBD, seperti
+    // konstruksi/hadiah); cicilan harian MASUK APBD (j.cicilanPinjaman).
+    bank: { pinjamanAktif: [], riwayat: [], nomor: 0 },
+    apbd: { hariDefisit: 0, alokasi: {} }, // v19 Worker 5: hitung hari defisit berturut-turut (peringatan bila >= 3); v29 Fase B: alokasi % per kategori dari kebutuhan (default 100%)
+    migrasiEkonomiV29: false, // v29: flag satu-kali migrasi perilaku ekonomi (pembulatan kas saat load)
     akumulasiJual: 0, akumulasiEkspor: 0,
     misiSelesai: {}, statistik: { dibangun: {}, dibangunKat: {}, jalan: 0, jembatan: 0, produksi: {}, ekspor: 0, pendudukMax: 4, pendapatanHari: 0, pengeluaranHari: 0 },
     bersih: [], // tile hutan yang sudah ditebang (agar peta sama setelah reload)
@@ -621,25 +644,13 @@ function stateBaru(petaBaru) {
     pemimpin: profilPemain ? { nama: profilPemain.nama, gender: profilPemain.gender, avatar: profilPemain.avatar } : { nama: "Pemimpin", gender: "pria", avatar: AVATAR_KARAKTER.pria },
     tutorial: { aktif: profilPemain ? !profilPemain.tutorialSelesai : true, langkah: 0, selesai: profilPemain ? !!profilPemain.tutorialSelesai : false },
   };
-  for (const k of Object.keys(KOMODITAS)) st.komoditas[k] = 0;
-  // Migrasi v17: dunia BARU — simpanan lama (kunci SAVE_LAMA) TIDAK membawa
-  // bangunan/jalan/jembatan, hanya uang + kayu/batu/besi sebagai modal awal.
-  // Dibaca SEKALI di sini (permainan baru); simpanan baru memakai SAVE_KEY baru.
-  try {
-    const lama = JSON.parse(localStorage.getItem(CITY.SAVE_LAMA) || "null");
-    if (lama) {
-      if (typeof lama.uang === "number" && lama.uang > 0) {
-        const bonus = Math.min(Math.floor(lama.uang), 1000000);
-        st.uang += bonus;
-        st.log.unshift("Modal awal dari usaha sebelumnya: " + rp(bonus) + ".");
-      }
-      for (const k of ["kayu", "batu", "besi"]) {
-        if (typeof lama[k] === "number" && lama[k] > 0) {
-          st[k] += Math.min(Math.floor(lama[k]), 200);
-        }
-      }
-    }
-  } catch (e) {}
+  for (const k of Object.keys(KOMODITAS)) { st.komoditas[k] = 0; st.hargaPasar[k] = KOMODITAS[k].harga; st.hargaPasarKemarin[k] = KOMODITAS[k].harga; }
+  // v29 Fase B: alokasi APBD default 100% dari kebutuhan, semua kategori.
+  for (const kat of cfgEco("apbd.kategori", ["pendidikan", "kesehatan", "infrastruktur", "kebersihan", "keamanan", "transportasi", "lingkungan"])) st.apbd.alokasi[kat] = cfgEco("apbd.alokasiDefaultPersen", 100);
+  // v29 Q7: bonus migrasi SAVE_LAMA DIMATIKAN — modal awal persis
+  // Rp10.000.000 untuk semua pemain baru (brief §1). Kunci localStorage
+  // lama (CITY.SAVE_LAMA) TIDAK dihapus, hanya tidak dibaca lagi di sini;
+  // bangunan/jalan simpanan lama tetap tidak dibawa (aturan v17).
   // Permukiman awal (v17): dermaga di landing, 3 jalan-tanah ke darat
   // (mengarah ke Selatpanjang bila diketahui), 1 rumah-sederhana.
   // Petak valid = terrain yang bisa dibangun (pesisir/permukiman/dll.),
@@ -1392,14 +1403,46 @@ function catatDibangun(def) {
   S.statistik.dibangunKat[def.kat] = (S.statistik.dibangunKat[def.kat] || 0) + 1;
   cekMisi();
 }
+// ---------------- v29: laporan ekonomi bangunan + penonaktifan ----------------
+// Keputusan v29 (tidak dicakup brief): bangunan NONAKTIF = tidak beroperasi
+// = tidak dipajaki; upkeep 10% (config), pekerja dilepas, produksi &
+// penjualan berhenti, tidak butuh listrik/air. Rumah nonaktif kehilangan
+// kapasitas hunian. Aktifkan lagi kapan saja tanpa biaya.
+function laporanEkonomiBangunan(b) {
+  if (!b) return { upkeep: 0, gaji: 0, pajakProperti: 0, pendapatan: 0, laba: 0, catatan: "" };
+  const d = BANGUNAN_MAP[b.id] || {};
+  const nonaktif = (typeof bangunanNonaktif === "function" && bangunanNonaktif(b));
+  const upkeep = Math.round((d.upkeep || 0) * (nonaktif ? cfgEco("bangunan.fraksiUpkeepNonaktif", 0.1) : 1));
+  const gaji = nonaktif ? 0 : Math.round((b.staf || 0) * cfgEco("upah.perPekerja", 400));
+  const katPajak = cfgEco("pajak.properti.katKenaPajak", ["permukiman", "perkantoran", "industri"]);
+  const kecualikanPajak = cfgEco("pajak.properti.pengecualianId", []);
+  const kenaPajak = !nonaktif && katPajak.indexOf(d.kat) >= 0 && kecualikanPajak.indexOf(b.id) < 0;
+  const tarifPP = (typeof S !== "undefined" && S && typeof S.tarifPajakProperti === "number") ? S.tarifPajakProperti : cfgEco("pajak.properti.tarifDefault", 10);
+  const pajakProperti = kenaPajak ? Math.round(((d.harga && d.harga.uang) || 0) * (tarifPP / 100) / cfgEco("pajak.properti.periodeHari", 30)) : 0;
+  const pendapatan = nonaktif ? 0 : Math.round((d.wisata || 0) + ((d.pendapatan && d.kapasitasSampah) ? d.pendapatan : 0));
+  const laba = pendapatan + pajakProperti - upkeep - gaji;
+  return { upkeep: upkeep, gaji: gaji, pajakProperti: pajakProperti, pendapatan: pendapatan, laba: laba,
+    catatan: "Pajak penduduk & penjualan pasar/pelabuhan tidak diatribusikan per bangunan — laba di sini hanya pendapatan langsung (wisata/daur ulang) + pajak properti, minus biaya." };
+}
+function toggleNonaktif(idx) {
+  const b = S && S.bangunan[idx];
+  if (!b) return;
+  const def = BANGUNAN_MAP[b.id];
+  b.nonaktif = !b.nonaktif;
+  if (b.nonaktif) { b.staf = 0; b.efisiensi = 0; }
+  toast(def.nama + (b.nonaktif ? " dinonaktifkan — produksi/penjualan berhenti, upkeep tinggal 10%, pekerja dilepas, tidak kena pajak properti." : " diaktifkan kembali."), b.nonaktif ? "info" : "ok");
+  log((b.nonaktif ? "Menonaktifkan " : "Mengaktifkan ") + def.nama + ".");
+  bunyiKlik(); simpan(); renderHUD(); renderPanelKanan();
+}
 function hapusBangunan(idx) {
   const b = S.bangunan[idx];
   if (!b) return;
   const def = BANGUNAN_MAP[b.id];
-  kembalikanBiaya(def.harga, 0.5);
+  const faktorRefund = cfgEco("bangunan.refundHapus", 0.5);
+  kembalikanBiaya(def.harga, faktorRefund);
   S.bangunan.splice(idx, 1);
   terpilih = null;
-  toast(def.nama + " dihapus (pengembalian 50%).", "ok");
+  toast(def.nama + " dihapus (pengembalian " + Math.round(faktorRefund * 100) + "%).", "ok");
   log("Menghapus " + def.nama + ".");
   bunyiKlik(); simpan(); renderHUD(); renderPanelKanan();
 }
@@ -1479,7 +1522,8 @@ function toast(pesan, jenis) {
 function bangunanSelesai() { return S.bangunan.filter(b => b.selesai); }
 function hitungRumah() {
   let kap = 0;
-  for (const b of bangunanSelesai()) { const d = BANGUNAN_MAP[b.id]; if (d.rumah) kap += d.rumah; }
+  // v29: rumah nonaktif tidak dihitung kapasitasnya (penghuni pergi).
+  for (const b of bangunanSelesai()) { if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) continue; const d = BANGUNAN_MAP[b.id]; if (d.rumah) kap += d.rumah; }
   return kap;
 }
 function hitungLayanan() {
@@ -1492,10 +1536,11 @@ function hitungLayanan() {
   // kapasitas 20) ikut dihitung sebagai fasilitas kesehatan kecil
   // lewat d.layanan — tanpa cabang khusus.
   let edu = 0, kes = 0, jmlLayanan = 0;
-  const rumah = bangunanSelesai().filter(b => { const d = BANGUNAN_MAP[b.id]; return d && d.rumah > 0; });
+  const rumah = bangunanSelesai().filter(b => { if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) return false; const d = BANGUNAN_MAP[b.id]; return d && d.rumah > 0; });
   for (const b of bangunanSelesai()) {
     const d = BANGUNAN_MAP[b.id];
     if (d.layanan) {
+      if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) continue; // v29: layanan nonaktif = 0
       // v19 Worker 2: layanan di bangunan kebanjiran / tanpa listrik /
       // tanpa air = 0 (tidak beroperasi).
       if (typeof bangunanBeroperasi === "function" && !bangunanBeroperasi(b)) continue;
@@ -1512,19 +1557,24 @@ function hitungLayanan() {
     }
   }
   const pop = Math.max(1, S.penduduk.total);
-  return { edu: Math.min(1, edu / pop), kes: Math.min(1, kes / pop), jumlah: jmlLayanan };
+  // v29 Fase B: cakupan layanan dikali kualitas APBD kategorinya —
+  // alokasi di bawah kebutuhan menurunkan kualitas layanan (dan
+  // kebahagiaan lewat indikator pendidikan/kesehatan).
+  const kualLay = (typeof kualitasAPBD === "function") ? kualitasAPBD() : { pendidikan: 1, kesehatan: 1 };
+  return { edu: Math.min(1, edu / pop) * (kualLay.pendidikan == null ? 1 : kualLay.pendidikan), kes: Math.min(1, kes / pop) * (kualLay.kesehatan == null ? 1 : kualLay.kesehatan), jumlah: jmlLayanan };
 }
 function hitungTenagaKerja() {
   const pop = S.penduduk.total;
-  const angkatan = Math.floor(pop * 0.55);
+  const angkatan = Math.floor(pop * cfgEco("pertumbuhan.angkatanKerjaPerPopulasi", 0.55));
   const selesai = bangunanSelesai();
   let butuh = 0;
-  for (const b of selesai) { const d = BANGUNAN_MAP[b.id]; butuh += d.pekerja || 0; }
+  // v29: bangunan nonaktif tidak memesan pekerja (staf dilepas).
+  for (const b of selesai) { if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) { b.staf = 0; b.efisiensi = 0; continue; } const d = BANGUNAN_MAP[b.id]; butuh += d.pekerja || 0; }
   let bekerja = 0;
   if (butuh === 0) {
-    for (const b of selesai) { b.staf = 0; b.efisiensi = 1; }
+    for (const b of selesai) { if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) { b.staf = 0; b.efisiensi = 0; continue; } b.staf = 0; b.efisiensi = 1; }
   } else if (butuh <= angkatan) {
-    for (const b of selesai) { const d = BANGUNAN_MAP[b.id]; b.staf = d.pekerja || 0; b.efisiensi = 1; }
+    for (const b of selesai) { if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) { b.staf = 0; b.efisiensi = 0; continue; } const d = BANGUNAN_MAP[b.id]; b.staf = d.pekerja || 0; b.efisiensi = 1; }
     bekerja = butuh;
   } else {
     // Alokasi proporsional + sisa ke bangunan dengan kekurangan terbesar
@@ -1533,6 +1583,7 @@ function hitungTenagaKerja() {
     for (const b of selesai) {
       const d = BANGUNAN_MAP[b.id];
       const perlu = d.pekerja || 0;
+      if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) { b.staf = 0; b.efisiensi = 0; continue; }
       if (perlu === 0) { b.staf = 0; b.efisiensi = 1; continue; }
       const alokasi = Math.floor(perlu * angkatan / butuh);
       b.staf = alokasi; sisa -= alokasi;
@@ -1540,20 +1591,572 @@ function hitungTenagaKerja() {
     }
     antre.sort((a, b) => b.sisa - a.sisa);
     for (const a of antre) { if (sisa <= 0) break; if (a.b.staf < a.perlu) { a.b.staf++; sisa--; } }
-    for (const b of selesai) { const d = BANGUNAN_MAP[b.id]; b.efisiensi = (d.pekerja || 0) === 0 ? 1 : b.staf / d.pekerja; }
+    for (const b of selesai) { if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) { b.efisiensi = 0; continue; } const d = BANGUNAN_MAP[b.id]; b.efisiensi = (d.pekerja || 0) === 0 ? 1 : b.staf / d.pekerja; }
     bekerja = angkatan;
   }
   return { angkatan: angkatan, bekerja: bekerja, menganggur: Math.max(0, angkatan - bekerja) };
 }
 function kapasitasSimpan() {
-  let kap = KAPASITAS_GUDANG;
-  for (const b of bangunanSelesai()) { const d = BANGUNAN_MAP[b.id]; if (d.gudang) kap += d.gudang; }
+  let kap = cfgEco("gudang.kapasitasDasar", KAPASITAS_GUDANG);
+  for (const b of bangunanSelesai()) { if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) continue; const d = BANGUNAN_MAP[b.id]; if (d.gudang) kap += d.gudang; }
   return kap;
 }
 function bonusEkspor() {
   let bonus = 0;
-  for (const b of bangunanSelesai()) { const d = BANGUNAN_MAP[b.id]; if (d.eksporBonus) bonus += d.eksporBonus; }
+  for (const b of bangunanSelesai()) { if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) continue; const d = BANGUNAN_MAP[b.id]; if (d.eksporBonus) bonus += d.eksporBonus; }
   return bonus;
+}
+// v29 Q4: SATU rumus harga ekspor untuk kedua jalur (akrual pelabuhan &
+// kapal kargo): harga PASAR (dinamis, Fase B) x (1 + bonusPelabuhan + ΣeksporBonus gedung).
+function hargaEksporUnit(k) {
+  const h = hargaPasar(k);
+  return h * (1 + cfgEco("penjualan.ekspor.bonusPelabuhan", 0.2) + bonusEkspor());
+}
+// v29 Q2: bonus produktivitas kawasan-industri — bangunan kat industri
+// (bukan kawasan itu sendiri) dalam radius config dari SATU kawasan
+// industri yang selesai, beroperasi & aktif mendapat +bonus produksi.
+function pengaliKawasanIndustri(b) {
+  if (!b || !b.selesai) return 1;
+  const d = BANGUNAN_MAP[b.id];
+  if (!d || d.kat !== "industri" || b.id === "kawasan-industri") return 1;
+  if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) return 1;
+  const bonus = cfgEco("kawasanIndustri.bonusProduksi", 0.15);
+  const radius = cfgEco("kawasanIndustri.radius", 8);
+  const pb = pusatBangunan(b);
+  for (const k of bangunanSelesai()) {
+    if (k.id !== "kawasan-industri") continue;
+    if (typeof bangunanNonaktif === "function" && bangunanNonaktif(k)) continue;
+    if (typeof bangunanBeroperasi === "function" && !bangunanBeroperasi(k)) continue;
+    const pk = pusatBangunan(k);
+    if (Math.hypot(pk.x - pb.x, pk.y - pb.y) <= radius) return 1 + bonus;
+  }
+  return 1;
+}
+
+// =====================================================================
+// v29 Fase B — SISTEM EKONOMI LANJUTAN: harga pasar dinamis, pajak
+// dinamis, perbankan, anggaran APBD, dashboard & pemulihan.
+// Semua angka di economyConfig (js/city-data.js); semua arus lewat
+// kunci j.* yang sama (akrual per jam, satu penjumlahan S.uang).
+// =====================================================================
+
+// ---------------- Harga pasar dinamis (supply/demand) ----------------
+function pastikanHargaPasar() {
+  if (!S) return;
+  if (!S.hargaPasar || typeof S.hargaPasar !== "object") S.hargaPasar = {};
+  if (!S.hargaPasarKemarin || typeof S.hargaPasarKemarin !== "object") S.hargaPasarKemarin = {};
+  for (const k of Object.keys(KOMODITAS)) {
+    if (typeof S.hargaPasar[k] !== "number") S.hargaPasar[k] = KOMODITAS[k].harga;
+    if (typeof S.hargaPasarKemarin[k] !== "number") S.hargaPasarKemarin[k] = S.hargaPasar[k];
+  }
+}
+// Harga pasar yang berlaku (Rp/unit) — dipakai penjualan pasar & ekspor.
+// Fallback harga dasar bila save lama belum punya S.hargaPasar.
+function hargaPasar(k) {
+  if (S && S.hargaPasar && typeof S.hargaPasar[k] === "number") return S.hargaPasar[k];
+  return (KOMODITAS[k] && KOMODITAS[k].harga) || 0;
+}
+// Permintaan harian (unit/hari) = kebutuhan industri (bahan baku pabrik
+// yang beroperasi) + konsumsi penduduk (komoditas pangan) + 1 unit dasar.
+// Ini SINYAL permintaan untuk harga pasar, bukan konsumsi nyata (stok
+// tidak dikurangi penduduk).
+function permintaanHarianKomoditas(k) {
+  let perlu = 1;
+  for (const b of bangunanSelesai()) {
+    if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) continue;
+    const d = BANGUNAN_MAP[b.id];
+    if (!d || !d.produksi || !d.produksi.masuk || !d.produksi.masuk[k]) continue;
+    if (typeof bangunanBeroperasi === "function" && !bangunanBeroperasi(b)) continue;
+    perlu += d.produksi.masuk[k];
+  }
+  const kons = cfgEco("komoditas.konsumsiPerJiwa", {});
+  if (kons && typeof kons[k] === "number") perlu += (S.penduduk.total || 0) * kons[k];
+  return perlu;
+}
+// Pembaruan harga harian (dipanggil prosesPergantianHari): rasio stok /
+// permintaan — rasio 0 (langka) -> +maks; rasio 1 -> 0; rasio >=2 ->
+// -maks. Dibatasi ±5%/hari dan 50%-150% harga dasar.
+function perbaruiHargaPasar() {
+  if (!S) return;
+  pastikanHargaPasar();
+  const maks = cfgEco("komoditas.dinamis.perubahanMaksHarian", 0.05);
+  const bawah = cfgEco("komoditas.dinamis.batasBawah", 0.5);
+  const atas = cfgEco("komoditas.dinamis.batasAtas", 2.0);
+  for (const k of Object.keys(KOMODITAS)) {
+    const dasar = KOMODITAS[k].harga;
+    const stok = S.komoditas[k] || 0;
+    const minta = Math.max(1, permintaanHarianKomoditas(k));
+    const rasio = stok / minta;
+    const delta = clamp((1 - rasio) * maks, -maks, maks);
+    let baru = Math.round(((S.hargaPasar[k] || dasar) * (1 + delta)) / 10) * 10;
+    baru = clamp(baru, Math.round(dasar * bawah), Math.round(dasar * atas));
+    S.hargaPasarKemarin[k] = S.hargaPasar[k];
+    S.hargaPasar[k] = baru;
+  }
+}
+
+// ---------------- Pajak dinamis ----------------
+function tarifPajakBaru(jenis) {
+  const kunci = jenis === "usaha" ? "tarifPajakUsaha" : jenis === "perdagangan" ? "tarifPajakPerdagangan" : "tarifPajakEkspor";
+  const def = cfgEco("pajak." + jenis + ".tarifDefault", 5);
+  return (S && typeof S[kunci] === "number") ? S[kunci] : def;
+}
+function aturTarifPajakDinamis(jenis, n) {
+  if (!S) return;
+  if (["usaha", "perdagangan", "ekspor"].indexOf(jenis) < 0) return;
+  const tarif = clamp(Math.round(Number(n) || 0), cfgEco("pajak." + jenis + ".min", 0), cfgEco("pajak." + jenis + ".maks", 20));
+  if (jenis === "usaha") S.tarifPajakUsaha = tarif;
+  else if (jenis === "perdagangan") S.tarifPajakPerdagangan = tarif;
+  else S.tarifPajakEkspor = tarif;
+  simpan(); renderPanelKiri(); renderHUD();
+  toast("Tarif pajak " + jenis + ": " + tarif + "%" + (tarif > 5 ? " — pendapatan naik, kebahagiaan turun sedikit" + (tarif > 10 ? ", kuota jual/ekspor menyusut." : ".") : tarif < 5 ? " — kebahagiaan naik sedikit, pendapatan turun." : " (default)."), "ok");
+  bunyiKlik();
+}
+// Efek ketiga tarif baru ke kebahagiaan: tiap 1% di atas default (5%)
+// = -0,1 poin; di bawah default = +0,1; clamp ±1,5 (di luar efek
+// pajak properti ±3 dari efekPajakPropertiBahagia).
+function efekPajakBaruBahagia() {
+  const per = cfgEco("pajak.efekBahagiaPerPersen", 0.1);
+  const maks = cfgEco("pajak.efekBahagiaMaks", 1.5);
+  let d = 0;
+  for (const jenis of ["usaha", "perdagangan", "ekspor"]) d += (cfgEco("pajak." + jenis + ".tarifDefault", 5) - tarifPajakBaru(jenis)) * per;
+  return clamp(d, -maks, maks);
+}
+// Tarif >10% mengurangi kuota (aktivitas perdagangan melemah): -2%
+// kuota per 1% di atas ambang, min 50%. Tarif <=10% -> kuota penuh.
+function pengaliKuotaDariTarif(tarif) {
+  const ambang = cfgEco("pajak.ambangKuotaPenuh", 10);
+  const per = cfgEco("pajak.pengurangKuotaPerPersen", 0.02);
+  if (tarif <= ambang) return 1;
+  return clamp(1 - (tarif - ambang) * per, 0.5, 1);
+}
+function pengaliKuotaPerdagangan() { return pengaliKuotaDariTarif(tarifPajakBaru("perdagangan")); }
+function pengaliKuotaEkspor() { return pengaliKuotaDariTarif(tarifPajakBaru("ekspor")); }
+// Bagi nilai kotor SATU penjualan pasar menjadi {net, pajak, jenis}.
+// Produk industri -> pajak usaha; komoditas mentah -> pajak perdagangan.
+// Satu transaksi = satu pajak (tidak ganda dengan pajak ekspor —
+// ekspor memakai bagiPajakEkspor, bukan fungsi ini).
+function bagiPajakPenjualan(k, nilaiKotor) {
+  const industri = cfgEco("pajak.komoditasIndustri", ["tepung", "mie", "kue", "minyak", "olahan"]);
+  const jenis = industri.indexOf(k) >= 0 ? "usaha" : "perdagangan";
+  const tarif = tarifPajakBaru(jenis) / 100;
+  const pajak = nilaiKotor * tarif;
+  return { net: nilaiKotor - pajak, pajak: pajak, jenis: jenis };
+}
+function bagiPajakEkspor(nilaiKotor) {
+  const tarif = tarifPajakBaru("ekspor") / 100;
+  const pajak = nilaiKotor * tarif;
+  return { net: nilaiKotor - pajak, pajak: pajak };
+}
+// Catat SATU penjualan ekspor di LUAR akrual (kapal kargo, js/city-maritim.js):
+// uang masuk penuh (net + pajak), rincian terpisah. Di DALAM akrual,
+// pakai bagiPajakEkspor langsung ke j.* (jangan fungsi ini — S.uang
+// di akrual hanya diubah sekali di akhir).
+function catatEkspor(nilaiKotor, jumlahUnit) {
+  if (!S || !(nilaiKotor > 0)) return { net: 0, pajak: 0 };
+  const bagi = bagiPajakEkspor(nilaiKotor);
+  S.uang += nilaiKotor;
+  if (!S.rincianBerjalan) S.rincianBerjalan = rincianKosong();
+  S.rincianBerjalan.ekspor = (S.rincianBerjalan.ekspor || 0) + bagi.net;
+  S.rincianBerjalan.pajakEkspor = (S.rincianBerjalan.pajakEkspor || 0) + bagi.pajak;
+  if (S.statistik && jumlahUnit) S.statistik.ekspor = (S.statistik.ekspor || 0) + jumlahUnit;
+  return bagi;
+}
+function totalPajakRincian(r) {
+  r = r || {};
+  return (r.pajak || 0) + (r.pajakProperti || 0) + (r.pajakUsaha || 0) + (r.pajakPerdagangan || 0) + (r.pajakEkspor || 0);
+}
+
+// ---------------- Anggaran APBD per kategori ----------------
+function kategoriAPBDdariKat(kat) {
+  const petaKat = cfgEco("apbd.katKeKategori", {});
+  return (petaKat && petaKat[kat]) || null;
+}
+function pastikanAlokasiAPBD() {
+  if (!S) return;
+  if (!S.apbd || typeof S.apbd !== "object") S.apbd = { hariDefisit: 0, alokasi: {} };
+  if (typeof S.apbd.hariDefisit !== "number") S.apbd.hariDefisit = 0;
+  if (!S.apbd.alokasi || typeof S.apbd.alokasi !== "object") S.apbd.alokasi = {};
+  for (const kat of cfgEco("apbd.kategori", [])) {
+    if (typeof S.apbd.alokasi[kat] !== "number") S.apbd.alokasi[kat] = cfgEco("apbd.alokasiDefaultPersen", 100);
+  }
+}
+// Kebutuhan APBD per kategori (Rp/hari): Σ upkeep bangunan SELESAI
+// kategori itu (nonaktif dihitung 10%). Di luar 7 kategori -> "lain".
+function kebutuhanAPBD() {
+  const butuh = {};
+  for (const kat of cfgEco("apbd.kategori", [])) butuh[kat] = 0;
+  let lain = 0;
+  for (const b of bangunanSelesai()) {
+    const d = BANGUNAN_MAP[b.id];
+    if (!d) continue;
+    const nonaktif = (typeof bangunanNonaktif === "function" && bangunanNonaktif(b));
+    const up = (d.upkeep || 0) * (nonaktif ? cfgEco("bangunan.fraksiUpkeepNonaktif", 0.1) : 1);
+    const kat = kategoriAPBDdariKat(d.kat);
+    if (kat) butuh[kat] += up; else lain += up;
+  }
+  butuh.lain = lain;
+  return butuh;
+}
+// Kualitas layanan per kategori (0..1) = min(alokasi%, 100)/100 bila ada
+// kebutuhan; 1 bila tidak ada kebutuhan (tidak ada yang dilayani).
+// `butuh` boleh dalam Rp/jam atau Rp/hari — rasio tidak bergantung skala.
+function kualitasAPBD(butuh) {
+  butuh = butuh || kebutuhanAPBD();
+  pastikanAlokasiAPBD();
+  const out = {};
+  for (const kat of cfgEco("apbd.kategori", [])) {
+    const persen = (S.apbd.alokasi && typeof S.apbd.alokasi[kat] === "number") ? S.apbd.alokasi[kat] : cfgEco("apbd.alokasiDefaultPersen", 100);
+    out[kat] = (butuh[kat] || 0) <= 0 ? 1 : clamp(persen, 0, 100) / 100;
+  }
+  return out;
+}
+function aturAlokasiAPBD(kat, persen) {
+  if (!S) return;
+  pastikanAlokasiAPBD();
+  if (cfgEco("apbd.kategori", []).indexOf(kat) < 0) return;
+  S.apbd.alokasi[kat] = clamp(Math.round(Number(persen) || 0), 0, cfgEco("apbd.alokasiMaksPersen", 150));
+  simpan(); renderPanelKiri(); renderHUD();
+  const nama = (cfgEco("apbd.namaKategori", {}) || {})[kat] || kat;
+  toast("Alokasi " + nama + ": " + S.apbd.alokasi[kat] + "% dari kebutuhan" + (S.apbd.alokasi[kat] < 100 ? " — kualitas layanan turun, belanja lebih hemat." : S.apbd.alokasi[kat] > 100 ? " — kualitas mentok 100% (kelebihan tidak dibelanjakan)." : " (penuh)."), "ok");
+  bunyiKlik();
+}
+// Efek kualitas APBD ke kebahagiaan (5 kategori di luar pendidikan &
+// kesehatan — keduanya sudah masuk lewat hitungLayanan): rata-rata
+// kualitas tertimbang kebutuhan; (rata-1) x 4 poin, clamp ±4.
+function efekKualitasAPBDKeBahagiaan() {
+  if (!S) return 0;
+  const butuh = kebutuhanAPBD();
+  const kual = kualitasAPBD(butuh);
+  let totButuh = 0, totKual = 0;
+  for (const kat of ["infrastruktur", "kebersihan", "keamanan", "transportasi", "lingkungan"]) {
+    const b = butuh[kat] || 0;
+    totButuh += b; totKual += b * (kual[kat] == null ? 1 : kual[kat]);
+  }
+  if (totButuh <= 0) return 0;
+  const rata = totKual / totButuh;
+  const maks = cfgEco("apbd.efekBahagiaPerKualitas", 4);
+  return clamp(Math.round((rata - 1) * maks), -maks, maks);
+}
+function terapkanEfekKualitasAPBD() {
+  if (!S || !S.bahagia || typeof S.bahagia.nilai !== "number") return;
+  const d = efekKualitasAPBDKeBahagiaan();
+  if (!d) return;
+  S.bahagia.nilai = clamp(Math.round(S.bahagia.nilai + d), 0, 100);
+  S.penduduk.bahagia = S.bahagia.nilai;
+}
+
+// ---------------- Perbankan (pinjaman kota) ----------------
+function pastikanBank() {
+  if (!S) return;
+  if (!S.bank || typeof S.bank !== "object") S.bank = { pinjamanAktif: [], riwayat: [], nomor: 0 };
+  if (!Array.isArray(S.bank.pinjamanAktif)) S.bank.pinjamanAktif = [];
+  if (!Array.isArray(S.bank.riwayat)) S.bank.riwayat = [];
+  if (typeof S.bank.nomor !== "number") S.bank.nomor = S.bank.riwayat.length;
+}
+// Bank selesai & aktif (tidak nonaktif) memberi +1 maks pinjaman berjalan.
+function adaBankAktif() {
+  for (const b of bangunanSelesai()) {
+    if (b.id !== "bank") continue;
+    if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) continue;
+    return true;
+  }
+  return false;
+}
+function maksPinjamanBerjalan() {
+  return cfgEco("pinjaman.maksPinjamanBerjalan", 2) + (adaBankAktif() ? cfgEco("pinjaman.bonusBankMaksPinjaman", 1) : 0);
+}
+// Rata-rata pemasukan harian (Rp/hari): 7 hari terakhir riwayat;
+// fallback rincianHari kemarin; fallback estimasi hari berjalan
+// (akrual sejauh ini x 24/jam berjalan); 0 bila belum ada data.
+function rataPemasukanHarian() {
+  if (!S) return 0;
+  if (Array.isArray(S.riwayatKeuangan) && S.riwayatKeuangan.length) {
+    const ambil = S.riwayatKeuangan.slice(-7);
+    return ambil.reduce((a, e) => a + (e.masuk || 0), 0) / ambil.length;
+  }
+  const rh = S.statistik && S.statistik.rincianHari;
+  if (rh) {
+    const m = totalRincian(rh).masuk;
+    if (m > 0) return m;
+  }
+  const rb = S.rincianBerjalan;
+  if (rb) {
+    const m = totalRincian(rb).masuk;
+    if (m > 0) {
+      const jam = Math.max(1, Math.floor(((typeof waktuGame === "number" ? waktuGame : 0) % 1440) / 60));
+      return m * 24 / jam;
+    }
+  }
+  return 0;
+}
+function angsuranHarianPinjaman(pokok, tenor) {
+  return pokok / tenor + pokok * cfgEco("pinjaman.bungaHarian", 0.002);
+}
+function kelayakanPinjaman(jenisId, tenor) {
+  const def = (cfgEco("pinjaman.jenis", {}) || {})[jenisId];
+  if (!def) return { layak: false, alasan: "Jenis pinjaman tidak dikenal: " + jenisId + "." };
+  if (!cfgEco("pinjaman.tersedia", false)) return { layak: false, alasan: "Sistem pinjaman belum tersedia." };
+  if ((S.level || 1) < (def.levelMin || 1)) return { layak: false, alasan: "Pinjaman " + def.nama + " butuh kota level " + def.levelMin + " (saat ini level " + (S.level || 1) + ")." };
+  pastikanBank();
+  if (cfgEco("pinjaman.maksSatuPerJenis", true) && S.bank.pinjamanAktif.some(p => p.jenis === jenisId && p.status !== "lunas")) return { layak: false, alasan: "Sudah ada pinjaman " + def.nama + " yang berjalan (maks 1 per jenis)." };
+  const maks = maksPinjamanBerjalan();
+  if (S.bank.pinjamanAktif.length >= maks) return { layak: false, alasan: "Sudah ada " + S.bank.pinjamanAktif.length + " pinjaman berjalan (maks " + maks + (adaBankAktif() ? ", termasuk +1 dari Bank" : "") + ")." };
+  const tenorPilih = tenor || def.tenor[0];
+  if (def.tenor.indexOf(tenorPilih) < 0) return { layak: false, alasan: "Tenor " + tenorPilih + " hari tidak tersedia untuk pinjaman " + def.nama + " (pilihan: " + def.tenor.join(", ") + " hari)." };
+  const cicilan = angsuranHarianPinjaman(def.pokok, tenorPilih);
+  const pemasukan = rataPemasukanHarian();
+  const maksCicilan = pemasukan * cfgEco("pinjaman.maksCicilanDariPemasukan", 0.3);
+  if (cicilan > maksCicilan) return { layak: false, alasan: "Cicilan Rp" + Math.round(cicilan).toLocaleString("id-ID") + "/hari melebihi 30% pemasukan harian rata-rata (Rp" + Math.round(maksCicilan).toLocaleString("id-ID") + "/hari dari pemasukan Rp" + Math.round(pemasukan).toLocaleString("id-ID") + "/hari). Naikkan pemasukan atau pilih tenor lebih panjang.", cicilanHarian: cicilan, pemasukanRata: pemasukan, maksCicilan: maksCicilan };
+  return { layak: true, alasan: "", cicilanHarian: cicilan, pemasukanRata: pemasukan, maksCicilan: maksCicilan, tenor: tenorPilih, pokok: def.pokok };
+}
+function ajukanPinjaman(jenisId, tenor) {
+  if (!S) return { ok: false, alasan: "Tidak ada state." };
+  const cek = kelayakanPinjaman(jenisId, tenor);
+  if (!cek.layak) { toast("Pinjaman ditolak: " + cek.alasan, "gagal"); bunyiGagal(); return { ok: false, alasan: cek.alasan }; }
+  const def = cfgEco("pinjaman.jenis", {})[jenisId];
+  pastikanBank();
+  S.bank.nomor = (S.bank.nomor || 0) + 1;
+  const p = {
+    id: "PJ-" + S.hari + "-" + S.bank.nomor, jenis: jenisId, nama: def.nama,
+    pokok: def.pokok, tenor: cek.tenor, sisaPokok: def.pokok,
+    cicilanPokokHarian: def.pokok / cek.tenor,
+    bungaHariIni: def.pokok * cfgEco("pinjaman.bungaHarian", 0.002),
+    hariBerjalan: 0, totalDibayar: 0, totalBungaDibayar: 0, dendaTotal: 0,
+    hariMenunggak: 0, status: "berjalan", hariAmbil: S.hari, hariLunas: null,
+    pelunasanDipercepat: false,
+  };
+  // Pokok MASUK KAS seketika — arus modal (dicatat di riwayat pinjaman
+  // + log; TIDAK masuk rincianBerjalan/APBD, seperti konstruksi/hadiah).
+  S.uang += def.pokok;
+  S.bank.pinjamanAktif.push(p);
+  log("Pinjaman " + def.nama + " disetujui: Rp" + def.pokok.toLocaleString("id-ID") + " (" + cek.tenor + " hari, cicilan ±Rp" + Math.round(cek.cicilanHarian).toLocaleString("id-ID") + "/hari).");
+  toast("Pinjaman " + def.nama + " Rp" + def.pokok.toLocaleString("id-ID") + " masuk kas — cicilan ±Rp" + Math.round(cek.cicilanHarian).toLocaleString("id-ID") + "/hari selama " + cek.tenor + " hari.", "ok");
+  bunyiSukses(); simpan(); renderPanelKiri(); renderHUD();
+  return { ok: true, pinjaman: p, cicilanHarian: cek.cicilanHarian };
+}
+// Pelunasan dipercepat: bayar sisa pokok (dikurangi bagian pokok yang
+// sudah terakru hari ini) + bunga berjalan hari ini (bagian yang belum
+// terakru) — tanpa penalti tersembunyi (tidak ada penalti pelunasan).
+function hitungPelunasanDipercepat(p) {
+  if (!p) return 0;
+  const jam = Math.max(0, Math.min(23, Math.floor(((typeof waktuGame === "number" ? waktuGame : 0) % 1440) / 60)));
+  const pokokSudah = (p.cicilanPokokHarian || 0) * (jam / 24);
+  const bungaSisa = (p.bungaHariIni || 0) * ((24 - jam) / 24);
+  return Math.max(0, (p.sisaPokok || 0) - pokokSudah + bungaSisa);
+}
+function lunasiPinjaman(id) {
+  if (!S) return { ok: false, alasan: "Tidak ada state." };
+  pastikanBank();
+  const idx = S.bank.pinjamanAktif.findIndex(p => p.id === id);
+  if (idx < 0) return { ok: false, alasan: "Pinjaman tidak ditemukan / sudah lunas." };
+  const p = S.bank.pinjamanAktif[idx];
+  const bayar = Math.round(hitungPelunasanDipercepat(p));
+  if (S.uang < bayar) { toast("Kas tidak cukup untuk pelunasan dipercepat (butuh " + rp(bayar) + ", kas " + rp(S.uang) + ").", "gagal"); bunyiGagal(); return { ok: false, alasan: "Kas tidak cukup." }; }
+  S.uang -= bayar;
+  p.totalDibayar += bayar;
+  p.sisaPokok = 0; p.status = "lunas"; p.hariLunas = S.hari; p.pelunasanDipercepat = true;
+  S.bank.pinjamanAktif.splice(idx, 1);
+  S.bank.riwayat.unshift(p);
+  log("Pinjaman " + p.nama + " dilunasi dipercepat: " + rp(bayar) + " (hari ke-" + p.hariBerjalan + " dari " + p.tenor + ").");
+  toast("Pinjaman " + p.nama + " lunas (" + rp(bayar) + ") — tanpa penalti pelunasan.", "ok");
+  bunyiSukses(); simpan(); renderPanelKiri(); renderHUD();
+  return { ok: true, dibayar: bayar, pinjaman: p };
+}
+// Rollover harian pinjaman (dipanggil prosesPergantianHari SETELAH
+// rekap — angsuran hari itu sudah terakru per jam ke j.cicilanPinjaman):
+// pokok berkurang sebesar cicilan pokok harian; bunga hari berikut
+// dihitung dari sisa pokok baru; bila kas negatif -> menunggak + denda
+// 1% angsuran dikapitalisasi ke sisa pokok; lunas -> pindah ke riwayat.
+function prosesPinjamanHarian() {
+  if (!S) return;
+  pastikanBank();
+  if (!S.bank.pinjamanAktif.length) return;
+  const dendaPersen = cfgEco("pinjaman.dendaPersenPerHari", 0.01);
+  const bungaHarian = cfgEco("pinjaman.bungaHarian", 0.002);
+  const selesai = [];
+  for (const p of S.bank.pinjamanAktif) {
+    p.hariBerjalan = (p.hariBerjalan || 0) + 1;
+    const angsuran = (p.cicilanPokokHarian || 0) + (p.bungaHariIni || 0);
+    p.totalDibayar = (p.totalDibayar || 0) + angsuran;
+    p.totalBungaDibayar = (p.totalBungaDibayar || 0) + (p.bungaHariIni || 0);
+    p.sisaPokok = Math.max(0, (p.sisaPokok || 0) - (p.cicilanPokokHarian || 0));
+    if (p.sisaPokok <= 0.5) {
+      p.sisaPokok = 0; p.status = "lunas"; p.hariLunas = S.hari;
+      selesai.push(p);
+      log("Pinjaman " + p.nama + " lunas setelah " + p.hariBerjalan + " hari (total dibayar " + rp(p.totalDibayar) + ").");
+      continue;
+    }
+    p.bungaHariIni = p.sisaPokok * bungaHarian;
+    if (S.uang < 0) {
+      p.status = "menunggak";
+      p.hariMenunggak = (p.hariMenunggak || 0) + 1;
+      const denda = Math.round(angsuran * dendaPersen);
+      p.sisaPokok += denda;
+      p.dendaTotal = (p.dendaTotal || 0) + denda;
+      log("Pinjaman " + p.nama + " menunggak (kas negatif) — denda " + rp(denda) + " ditambahkan ke sisa pokok.");
+    } else if (p.status === "menunggak") {
+      p.status = "berjalan";
+    }
+  }
+  for (const p of selesai) {
+    const i = S.bank.pinjamanAktif.indexOf(p);
+    if (i >= 0) S.bank.pinjamanAktif.splice(i, 1);
+    S.bank.riwayat.unshift(p);
+  }
+  if (selesai.length) toast("Pinjaman " + selesai.map(p => p.nama).join(", ") + " lunas!", "ok");
+}
+
+// ---------------- Dashboard & pemulihan kebangkrutan ----------------
+function pastikanRiwayatKeuangan() {
+  if (!S) return;
+  if (!Array.isArray(S.riwayatKeuangan)) S.riwayatKeuangan = [];
+}
+function ringkasanKeuanganHarian() {
+  pastikanRiwayatKeuangan();
+  const data = S.riwayatKeuangan || [];
+  const rata = (arr, kunci) => arr.length ? arr.reduce((a, e) => a + (e[kunci] || 0), 0) / arr.length : 0;
+  const rb = S.rincianBerjalan || {};
+  return {
+    masuk7: rata(data.slice(-7), "masuk"), keluar7: rata(data.slice(-7), "keluar"),
+    pajak7: rata(data.slice(-7), "pajak"), ekspor7: rata(data.slice(-7), "ekspor"), cicilan7: rata(data.slice(-7), "cicilan"),
+    masuk30: rata(data.slice(-30), "masuk"), keluar30: rata(data.slice(-30), "keluar"),
+    masuk90: rata(data, "masuk"), keluar90: rata(data, "keluar"),
+    masukHariIni: totalRincian(rb).masuk, keluarHariIni: totalRincian(rb).keluar,
+  };
+}
+// Grafik batang vertikal dari S.riwayatKeuangan (inline style saja —
+// tanpa class CSS baru). Hijau = surplus, merah = defisit.
+function htmlGrafikKeuangan(jumlahHari) {
+  pastikanRiwayatKeuangan();
+  const data = (S.riwayatKeuangan || []).slice(-jumlahHari);
+  if (!data.length) return "<div class='misiDes'>Belum ada riwayat harian — grafik terisi setelah hari pertama berakhir.</div>";
+  let maks = 1;
+  for (const e of data) maks = Math.max(maks, Math.abs((e.masuk || 0) - (e.keluar || 0)));
+  let h = "<div style='display:flex;align-items:flex-end;gap:2px;height:64px;margin:6px 0 2px'>";
+  for (const e of data) {
+    const net = (e.masuk || 0) - (e.keluar || 0);
+    const tinggi = Math.max(2, Math.round(100 * Math.abs(net) / maks));
+    const warna = net >= 0 ? "#00b894" : "#e74c3c";
+    h += "<div title='Hari " + e.hari + ": " + (net >= 0 ? "+" : "") + rp(net) + "' style='flex:1;background:" + warna + ";height:" + tinggi + "%;min-width:2px;border-radius:2px 2px 0 0'></div>";
+  }
+  h += "</div>";
+  h += "<div class='barisStat kecil'><span>Hari " + data[0].hari + " – " + data[data.length - 1].hari + "</span><span><span class='hijau'>■ surplus</span> <span class='merah'>■ defisit</span></span></div>";
+  return h;
+}
+// Bangunan termahal yang TIDAK produktif: tanpa produksi/jual/wisata/
+// pendapatan/layanan/rumah, ATAU punya produksi tapi kurang bahan
+// (kurangBahan) / efisiensi 0 — diurutkan upkeep tertinggi.
+function bangunanTermahalTidakProduktif(n) {
+  const out = [];
+  if (!S) return out;
+  for (let i = 0; i < S.bangunan.length; i++) {
+    const b = S.bangunan[i];
+    if (!b || !b.selesai) continue;
+    if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) continue;
+    const d = BANGUNAN_MAP[b.id];
+    if (!d || !(d.upkeep > 0)) continue;
+    const produktif = (!!d.produksi && !b.kurangBahan && (b.efisiensi == null || b.efisiensi > 0)) || d.jual || d.wisata || d.pendapatan || d.layanan || d.rumah;
+    if (produktif) continue;
+    out.push({ idx: i, id: b.id, nama: d.nama, upkeep: d.upkeep });
+  }
+  out.sort((a, b) => b.upkeep - a.upkeep);
+  return out.slice(0, Math.max(1, n || 1));
+}
+function nonaktifkanBangunanTermahal(n) {
+  if (!S) return [];
+  const daftar = bangunanTermahalTidakProduktif(n || 3);
+  const hasil = [];
+  for (const t of daftar) {
+    toggleNonaktif(t.idx);
+    hasil.push(t.nama);
+  }
+  if (!hasil.length) toast("Tidak ada bangunan tidak produktif yang bisa dinonaktifkan.", "info");
+  return hasil;
+}
+// Turunkan alokasi kategori APBD terbesar 25 poin (penghematan =
+// 25% kebutuhan kategori itu). Dipakai dashboard pemulihan.
+function turunkanAlokasiTerbesar() {
+  if (!S) return null;
+  pastikanAlokasiAPBD();
+  const butuh = kebutuhanAPBD();
+  let katBesar = null, nilBesar = 0;
+  for (const kat of cfgEco("apbd.kategori", [])) if ((butuh[kat] || 0) > nilBesar) { nilBesar = butuh[kat] || 0; katBesar = kat; }
+  if (!katBesar) { toast("Tidak ada kategori APBD yang punya kebutuhan (belum ada bangunan layanan).", "info"); return null; }
+  const persenBaru = Math.max(0, (S.apbd.alokasi[katBesar] || 100) - 25);
+  aturAlokasiAPBD(katBesar, persenBaru);
+  return { kategori: katBesar, persen: persenBaru, hematPerHari: nilBesar * 0.25 };
+}
+// Rekomendasi keuangan dari DATA NYATA (rincianHari + pinjaman +
+// bangunan): penyebab belanja terbesar + aksi. Dipakai dashboard & advisor.
+function rekomendasiKeuangan() {
+  if (!S) return { defisit: false, penyebab: [], saran: [] };
+  const r = (S.statistik && S.statistik.rincianHari) || {};
+  const masuk = totalRincian(r).masuk, keluar = totalRincian(r).keluar;
+  const net = masuk - keluar;
+  const belanja = [
+    { kunci: "upkeep", label: "Upkeep bangunan", nilai: r.upkeep || 0 },
+    { kunci: "gaji", label: "Gaji pegawai", nilai: r.gaji || 0 },
+    { kunci: "cicilanPinjaman", label: "Cicilan pinjaman", nilai: r.cicilanPinjaman || 0 },
+  ].sort((a, b) => b.nilai - a.nilai);
+  const pemasukan = [
+    { kunci: "pajak", label: "Pajak penduduk", nilai: r.pajak || 0 },
+    { kunci: "pajakProperti", label: "Pajak properti", nilai: r.pajakProperti || 0 },
+    { kunci: "penjualan", label: "Penjualan pasar", nilai: r.penjualan || 0 },
+    { kunci: "ekspor", label: "Ekspor", nilai: r.ekspor || 0 },
+    { kunci: "perdagangan", label: "Perdagangan feri", nilai: r.perdagangan || 0 },
+  ].sort((a, b) => b.nilai - a.nilai);
+  const penyebab = belanja.filter(b => b.nilai > 0).slice(0, 3);
+  const saran = [];
+  // v29 Fase B: saran muncul juga bila KAS NEGATIF meski net kemarin
+  // positif (mis. habis untuk pembelian besar) — kota yang bangkrut
+  // harus selalu dapat langkah pemulihan, bukan daftar kosong.
+  const krisis = net < 0 || S.uang < 0;
+  if (krisis) {
+    if (penyebab[0]) saran.push({ teks: "Belanja terbesar: " + penyebab[0].label + " " + rp(penyebab[0].nilai) + "/hari (" + Math.round(100 * penyebab[0].nilai / Math.max(1, keluar)) + "% dari belanja).", aksi: null });
+    const butuh = kebutuhanAPBD();
+    let katBesar = null, nilBesar = 0;
+    for (const kat of cfgEco("apbd.kategori", [])) if ((butuh[kat] || 0) > nilBesar) { nilBesar = butuh[kat] || 0; katBesar = kat; }
+    if (katBesar && nilBesar > 0) saran.push({ teks: "Turunkan alokasi " + ((cfgEco("apbd.namaKategori", {}) || {})[katBesar] || katBesar) + " (kebutuhan " + rp(nilBesar) + "/hari) 25% — hemat " + rp(nilBesar * 0.25) + "/hari, kualitas layanan kategori itu turun 25%.", aksi: "turunkanAlokasiTerbesar" });
+    const mahal = bangunanTermahalTidakProduktif(1);
+    if (mahal.length) saran.push({ teks: "Nonaktifkan " + mahal[0].nama + " (upkeep " + rp(mahal[0].upkeep) + "/hari, tidak menghasilkan) — hemat " + rp(mahal[0].upkeep * 0.9) + "/hari.", aksi: "nonaktifkanTermahal" });
+    const jenisPinjaman = ["mikro", "usaha", "infrastruktur", "pengembangan"];
+    const layak = jenisPinjaman.map(j => ({ jenis: j, cek: kelayakanPinjaman(j) })).find(x => x.cek.layak);
+    if (layak) saran.push({ teks: "Ajukan pinjaman " + ((cfgEco("pinjaman.jenis", {}) || {})[layak.jenis] || {}).nama + " (cicilan ±" + rp(layak.cek.cicilanHarian) + "/hari) — dana segar, tetap berbunga dan berbatas.", aksi: "ajukanPinjaman:" + layak.jenis });
+    else saran.push({ teks: "Pinjaman belum layak saat ini (" + (kelayakanPinjaman("mikro").alasan || "") + ") — naikkan pemasukan dulu.", aksi: null });
+    // Kenaikan pajak properti +1%: Σ harga.uang bangunan kena pajak x 1% / 30 hari.
+    let dasarPajak = 0;
+    const katPajak = cfgEco("pajak.properti.katKenaPajak", ["permukiman", "perkantoran", "industri"]);
+    const kecualikanPajak = cfgEco("pajak.properti.pengecualianId", []);
+    for (const b of bangunanSelesai()) {
+      const d = BANGUNAN_MAP[b.id];
+      if (!d || !d.harga || !d.harga.uang) continue;
+      if (katPajak.indexOf(d.kat) < 0 || kecualikanPajak.indexOf(b.id) >= 0) continue;
+      if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) continue;
+      dasarPajak += d.harga.uang;
+    }
+    saran.push({ teks: "Naikkan tarif pajak properti +1% (≈ +" + rp(dasarPajak * 0.01 / cfgEco("pajak.properti.periodeHari", 30)) + "/hari) bila kebahagiaan masih di atas 50%.", aksi: null });
+  }
+  return { defisit: net < 0, krisis: krisis, net: net, masuk: masuk, keluar: keluar, penyebab: penyebab, pemasukanTerbesar: pemasukan[0] || null, saran: saran };
+}
+// Diagnosis kebangkrutan (kas negatif): penyebab + kelayakan pinjaman
+// + langkah pemulihan 1-2-3. Dipakai panel Ekonomi & advisor.
+function diagnosisKasNegatif() {
+  if (!S) return { bangkrut: false };
+  const bangkrut = S.uang < 0;
+  const rek = rekomendasiKeuangan();
+  const pinjamanLayak = ["mikro", "usaha", "infrastruktur", "pengembangan"].map(j => ({ jenis: j, cek: kelayakanPinjaman(j) })).filter(x => x.cek.layak);
+  return {
+    bangkrut: bangkrut, saldo: S.uang,
+    penyebab: rek.penyebab,
+    pinjamanLayak: pinjamanLayak,
+    langkah: [
+      "1. Hentikan pendarahan: nonaktifkan bangunan termahal yang tidak menghasilkan (hemat upkeep 90%) dan/atau turunkan alokasi APBD kategori terbesar 25%.",
+      "2. Tambah kas: ajukan pinjaman yang layak (tetap berbunga, berbatas — bukan uang gratis) atau jual komoditas di pasar.",
+      "3. Pulihkan pemasukan: pastikan rantai kebun → kilang → pasar beroperasi (bahan baku + pekerja + listrik/air), lalu naikkan tarif pajak secukupnya bila kebahagiaan ≥50%.",
+    ],
+    saran: rek.saran,
+  };
 }
 
 // =====================================================================
@@ -1673,7 +2276,8 @@ function efekPajakPropertiBahagia() {
 }
 function terapkanEfekPajakKebahagiaan() {
   if (!S || !S.bahagia || typeof S.bahagia.nilai !== "number") return;
-  const d = efekPajakPropertiBahagia();
+  // v29 Fase B: efek pajak properti (±3) + efek ketiga tarif baru (±1,5).
+  const d = efekPajakPropertiBahagia() + ((typeof efekPajakBaruBahagia === "function") ? efekPajakBaruBahagia() : 0);
   if (!d) return;
   S.bahagia.nilai = clamp(Math.round(S.bahagia.nilai + d), 0, 100);
   S.penduduk.bahagia = S.bahagia.nilai;
@@ -1681,7 +2285,7 @@ function terapkanEfekPajakKebahagiaan() {
 // Ubah tarif pajak properti (0-20%) dari dashboard APBD (panel Ekonomi).
 function aturTarifPajak(n) {
   if (!S) return;
-  const tarif = clamp(Math.round(Number(n) || 0), 0, 20);
+  const tarif = clamp(Math.round(Number(n) || 0), cfgEco("pajak.properti.min", 0), cfgEco("pajak.properti.maks", 20));
   S.tarifPajakProperti = tarif;
   simpan(); renderPanelKiri(); renderHUD();
   toast("Tarif pajak properti: " + tarif + "%" + (tarif > 10 ? " — pendapatan naik, kebahagiaan turun sedikit." : tarif < 10 ? " — kebahagiaan naik sedikit, pendapatan turun." : " (netral)."), "ok");
@@ -1696,6 +2300,11 @@ function akrualJamGame() {
   for (const k of Object.keys(rincianKosong())) if (typeof S.rincianBerjalan[k] !== "number") S.rincianBerjalan[k] = 0;
   if (typeof S.akumulasiJual !== "number") S.akumulasiJual = 0;
   if (typeof S.akumulasiEkspor !== "number") S.akumulasiEkspor = 0;
+  // v29 Fase B: field ekonomi baru (default-if-missing, pola audit §6.3).
+  pastikanHargaPasar(); pastikanBank(); pastikanAlokasiAPBD(); pastikanRiwayatKeuangan();
+  if (typeof S.tarifPajakUsaha !== "number") S.tarifPajakUsaha = cfgEco("pajak.usaha.tarifDefault", 5);
+  if (typeof S.tarifPajakPerdagangan !== "number") S.tarifPajakPerdagangan = cfgEco("pajak.perdagangan.tarifDefault", 5);
+  if (typeof S.tarifPajakEkspor !== "number") S.tarifPajakEkspor = cfgEco("pajak.ekspor.tarifDefault", 5);
   // v24.2 (T1 lapis 1): potret masalah kritis SEBELUM hitungUtilitas(true)
   // menghapus kritis listrik/air bangunan dalam radius hub virtual
   // (generator awal 100 kW & 1000 L/jam, radius 8 petak) — potret ini
@@ -1750,12 +2359,13 @@ function akrualJamGame() {
       }
     } catch (e) {}
   }
-  terapkanEfekPajakKebahagiaan(); // v19 Worker 5: efek tarif pajak properti
+  terapkanEfekPajakKebahagiaan(); // v19 Worker 5: efek tarif pajak properti (+ Fase B: tarif usaha/perdagangan/ekspor)
+  terapkanEfekKualitasAPBD(); // v29 Fase B: efek kualitas layanan APBD ke kebahagiaan
   const r = S.rincianBerjalan;
   const j = rincianKosong();
   const kapSimpan = kapasitasSimpan();
   const tk = hitungTenagaKerja(); // segarkan b.staf / b.efisiensi tiap jam
-  const pengaliCuaca = S.cuaca === "Hujan" ? 1.2 : 1;
+  const pengaliCuaca = S.cuaca === "Hujan" ? cfgEco("cuaca.pengaliHujan", 1.2) : 1;
   // 1. Produksi (fraksional, per jam = tarif harian / 24).
   for (const b of bangunanSelesai()) {
     const d = BANGUNAN_MAP[b.id];
@@ -1792,6 +2402,7 @@ function akrualJamGame() {
     }
     for (const k of Object.keys(prod.keluar)) {
       let jmlJam = (prod.keluar[k] * eff * skala) / 24;
+      jmlJam *= pengaliKawasanIndustri(b); // v29 Q2
       if (d.kat === "lahan") jmlJam *= pengaliCuaca;
       S.akumulasiProduksi[k] = (S.akumulasiProduksi[k] || 0) + jmlJam;
       const utuh = Math.floor(S.akumulasiProduksi[k] + 1e-9);
@@ -1809,15 +2420,22 @@ function akrualJamGame() {
   }
   // 2. Penjualan pasar lokal & ekspor pelabuhan (kuota harian / 24 per jam,
   // diakumulasi fraksional agar total 24 jam = kuota harian penuh).
-  const hargaJual = (k) => KOMODITAS[k].harga;
+  // v29 Fase B: harga PASAR dinamis (bukan harga dasar statis); satu
+  // penjualan kena SATU pajak (produk industri -> pajak usaha,
+  // mentah -> pajak perdagangan, ekspor -> pajak ekspor); kuota
+  // menyusut bila tarif >10%.
+  const hargaJual = (k) => hargaPasar(k);
   const urutJual = Object.keys(KOMODITAS).sort((a, b) => hargaJual(b) - hargaJual(a));
   let adaPelabuhan = false, adaPasar = 0;
   for (const b of bangunanSelesai()) {
     const d = BANGUNAN_MAP[b.id];
+    // v29 Q10: penjualan digate bangunanBeroperasi — pasar/pelabuhan
+    // padam, kebanjiran, atau nonaktif TIDAK menjual (sama spt produksi).
+    if (typeof bangunanBeroperasi === "function" && !bangunanBeroperasi(b)) continue;
     if (d.id === "pelabuhan") adaPelabuhan = true;
     if (d.jual) adaPasar += d.jual.maks;
   }
-  S.akumulasiJual += adaPasar / 24;
+  S.akumulasiJual += (adaPasar * pengaliKuotaPerdagangan()) / 24;
   let sisaJual = Math.floor(S.akumulasiJual + 1e-9);
   let terjual = 0;
   for (const k of urutJual) {
@@ -1826,13 +2444,14 @@ function akrualJamGame() {
     if (stok <= 0) continue;
     const jual = Math.min(stok, sisaJual);
     S.komoditas[k] -= jual;
-    j.penjualan += jual * hargaJual(k);
+    const bagiJual = bagiPajakPenjualan(k, jual * hargaJual(k));
+    j.penjualan += bagiJual.net;
+    if (bagiJual.jenis === "usaha") j.pajakUsaha += bagiJual.pajak; else j.pajakPerdagangan += bagiJual.pajak;
     sisaJual -= jual; terjual += jual;
   }
   S.akumulasiJual -= terjual;
   if (adaPelabuhan) {
-    const bonus = HARGA_JUAL_EKSPOR_BONUS + bonusEkspor();
-    S.akumulasiEkspor += 15 / 24;
+    S.akumulasiEkspor += (cfgEco("penjualan.ekspor.kuotaHarian", 15) * pengaliKuotaEkspor()) / 24;
     let sisaEkspor = Math.floor(S.akumulasiEkspor + 1e-9);
     let terekspor = 0;
     for (const k of urutJual) {
@@ -1841,7 +2460,9 @@ function akrualJamGame() {
       if (stok <= 0) continue;
       const jual = Math.min(stok, sisaEkspor);
       S.komoditas[k] -= jual;
-      j.ekspor += jual * hargaJual(k) * (1 + bonus);
+      const bagiExp = bagiPajakEkspor(jual * hargaEksporUnit(k)); // v29 Q4: satu rumus ekspor
+      j.ekspor += bagiExp.net;
+      j.pajakEkspor += bagiExp.pajak;
       S.statistik.ekspor += jual;
       sisaEkspor -= jual; terekspor += jual;
     }
@@ -1857,27 +2478,36 @@ function akrualJamGame() {
     const ps = S.pulau[p.id];
     if (ps) ps.perdagangan += pemasukan;
   }
-  // 4. Pajak, wisata, bunga bank (bunga dari saldo saat ini — lihat batas
-  // di laporan: bunga jam memakai saldo berjalan, bukan saldo awal hari).
-  j.pajak = S.penduduk.total * PAJAK_PER_JIWA / 24;
+  // 4. Pajak, wisata, daur ulang.
+  // v29 Q6: bunga bank pasif 2%/hari atas saldo DIHAPUS — j.bunga tidak
+  // lagi diisi dari saldo (kunci dipertahankan = 0; bank tetap ada,
+  // pinjaman direncanakan Fase B).
+  j.pajak = S.penduduk.total * cfgEco("pajak.perJiwa", PAJAK_PER_JIWA) / 24;
   for (const b of bangunanSelesai()) {
     const d = BANGUNAN_MAP[b.id];
+    if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) continue;
     if (d.wisata) j.wisata += d.wisata / 24;
-    if (d.bunga) j.bunga += Math.min(20000, Math.round(S.uang * d.bunga)) / 24;
     // v19 Worker 2: pendapatan bank sampah & pabrik daur ulang (Rp/hari / 24).
     if (d.pendapatan && d.kapasitasSampah) j.daurUlang += d.pendapatan / 24;
   }
-  // 4a. v19 Worker 5 (APBD): pajak properti — tarif% dari nilai bangunan
-  // (harga.uang) per bulan, diakru per jam: Σ harga.uang × tarif/100 / 30 / 24.
-  // Hanya properti hunian/komersial/industri (kat permukiman, perkantoran,
-  // industri) — fasilitas publik (sekolah, puskesmas, kantor pemerintah)
-  // tidak dipajaki. Tarif default 10% (0-20, diubah di dashboard Ekonomi).
-  const tarifPP = (typeof S.tarifPajakProperti === "number") ? S.tarifPajakProperti : 10;
+  // 4a. v19 Worker 5 (APBD) + v29 Q3/Q12/D6: pajak properti — tarif% dari
+  // nilai bangunan (harga.uang SAJA, Q12) per periode config (30 hari),
+  // diakru per jam: Σ harga.uang × tarif/100 / periode / 24.
+  // Hanya kat di config (permukiman/perkantoran/industri); fasilitas
+  // publik (sekolah, puskesmas) tidak dipajaki; kantor pemerintah
+  // DIKECUALIKAN (Q3 — komentar lama yang mengklaim itu kini benar).
+  // Bangunan nonaktif tidak dipajaki (v29: nonaktif = tidak beroperasi).
+  const tarifPP = (typeof S.tarifPajakProperti === "number") ? S.tarifPajakProperti : cfgEco("pajak.properti.tarifDefault", 10);
+  const katPajak = cfgEco("pajak.properti.katKenaPajak", ["permukiman", "perkantoran", "industri"]);
+  const kecualikanPajak = cfgEco("pajak.properti.pengecualianId", []);
+  const periodePajak = cfgEco("pajak.properti.periodeHari", 30);
   for (const b of bangunanSelesai()) {
     const d = BANGUNAN_MAP[b.id];
     if (!d || !d.harga || !d.harga.uang) continue;
-    if (d.kat !== "permukiman" && d.kat !== "perkantoran" && d.kat !== "industri") continue;
-    j.pajakProperti += d.harga.uang * (tarifPP / 100) / 30 / 24;
+    if (katPajak.indexOf(d.kat) < 0) continue;
+    if (kecualikanPajak.indexOf(b.id) >= 0) continue;
+    if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) continue;
+    j.pajakProperti += d.harga.uang * (tarifPP / 100) / periodePajak / 24;
   }
   // 4b. v19 Worker 4: tiket bus/taksi & tiket rekreasi (per jam).
   // hitungRekreasi() menyegarkan b.pengunjung & S.lalin.rekreasi jam ini;
@@ -1889,21 +2519,48 @@ function akrualJamGame() {
     if (S.lalin.rekreasi) j.tiketRekreasi += S.lalin.rekreasi.pendapatanPerJam || 0;
   }
   // 5. Upkeep + gaji (staf dari hitungTenagaKerja() di atas).
+  // v29 Q8: bangunan aktif-tapi-padam tetap bayar upkeep PENUH; hemat
+  // didapat lewat PENONAKTIFAN (upkeep = fraksi config, staf 0).
+  // v29 Fase B: upkeep dibebankan per kategori APBD — kebutuhan per
+  // kategori (Rp/jam) lalu dibayar = kebutuhan x kualitas kategori
+  // (min(alokasi%,100)/100). Alokasi <100% menghemat belanja SEKALIGUS
+  // menurunkan kualitas layanan (lihat kualitasAPBD). Partisi 5
+  // kategori dihitung dari yang DIBAYAR — jumlah kelimanya SELALU =
+  // upkeep (tanpa ganda hitung).
+  const butuhKatJam = { pendidikan: 0, kesehatan: 0, infrastruktur: 0, kebersihan: 0, keamanan: 0, transportasi: 0, lingkungan: 0 };
+  let butuhLainJam = 0;
   for (const b of bangunanSelesai()) {
     const d = BANGUNAN_MAP[b.id];
-    const up = (d.upkeep || 0) / 24;
-    j.upkeep += up;
-    // v19 Worker 5 (APBD): upkeep dipartisi per kategori belanja — jumlah
-    // kelima kategori SELALU = upkeep (tanpa ganda hitung).
-    if (d.kat === "pendidikan") j.upkeepPendidikan += up;
-    else if (d.kat === "kesehatan") j.upkeepKesehatan += up;
-    else if (d.kat === "lingkungan" || d.kat === "drainase") j.upkeepLingkungan += up;
-    else if (d.kat === "listrik" || d.kat === "air" || d.kat === "transportasi") j.upkeepInfra += up;
-    else j.upkeepLain += up;
-    j.gaji += (b.staf || 0) * GAJI_PER_PEKERJA / 24;
+    const nonaktif = (typeof bangunanNonaktif === "function" && bangunanNonaktif(b));
+    const up = (d.upkeep || 0) * (nonaktif ? cfgEco("bangunan.fraksiUpkeepNonaktif", 0.1) : 1) / 24;
+    const katAPBD = kategoriAPBDdariKat(d.kat);
+    if (katAPBD) butuhKatJam[katAPBD] += up; else butuhLainJam += up;
+    j.gaji += (b.staf || 0) * cfgEco("upah.perPekerja", GAJI_PER_PEKERJA) / 24;
+  }
+  const kualKat = kualitasAPBD(butuhKatJam);
+  const bayarKat = {};
+  for (const kat of Object.keys(butuhKatJam)) {
+    bayarKat[kat] = butuhKatJam[kat] * (kualKat[kat] == null ? 1 : kualKat[kat]);
+    j.upkeep += bayarKat[kat];
+  }
+  j.upkeep += butuhLainJam;
+  j.upkeepPendidikan += bayarKat.pendidikan || 0;
+  j.upkeepKesehatan += bayarKat.kesehatan || 0;
+  j.upkeepLingkungan += (bayarKat.kebersihan || 0) + (bayarKat.lingkungan || 0);
+  j.upkeepInfra += (bayarKat.infrastruktur || 0) + (bayarKat.transportasi || 0);
+  j.upkeepLain += (bayarKat.keamanan || 0) + butuhLainJam;
+  // 6. v29 Fase B: cicilan pinjaman — angsuran harian (pokok/tenor +
+  // bunga atas sisa pokok) / 24 per jam, sebagai kunci j.cicilanPinjaman
+  // (masuk APBD sebagai belanja; pokok pinjaman sendiri adalah arus
+  // modal di luar APBD).
+  if (S.bank && Array.isArray(S.bank.pinjamanAktif)) {
+    for (const p of S.bank.pinjamanAktif) {
+      if (!p || p.status === "lunas") continue;
+      j.cicilanPinjaman += ((p.cicilanPokokHarian || 0) + (p.bungaHariIni || 0)) / 24;
+    }
   }
   for (const k of Object.keys(j)) r[k] = (r[k] || 0) + j[k];
-  S.uang += (j.pajak + j.pajakProperti + j.penjualan + j.ekspor + j.wisata + j.bunga + j.perdagangan + j.daurUlang + j.tiketBus + j.tiketRekreasi) - (j.upkeep + j.gaji);
+  S.uang += (j.pajak + j.pajakProperti + j.pajakUsaha + j.pajakPerdagangan + j.pajakEkspor + j.penjualan + j.ekspor + j.wisata + j.bunga + j.perdagangan + j.daurUlang + j.tiketBus + j.tiketRekreasi) - (j.upkeep + j.gaji + j.cicilanPinjaman);
 }
 // Feri berbasis waktu game (SATU jalur: majukanWaktu -> perbaruiFeriMenit
 // tiap menit). Durasi seberang 12,5 menit game = ~25 detik nyata pada 1x
@@ -1957,8 +2614,8 @@ function prosesPergantianHari() {
   const rb = S.rincianBerjalan;
   const rincian = {};
   for (const k of Object.keys(rincianKosong())) rincian[k] = rb[k] || 0;
-  const masukTotal = rincian.pajak + rincian.pajakProperti + rincian.penjualan + rincian.ekspor + rincian.wisata + rincian.bunga + rincian.perdagangan + rincian.daurUlang + rincian.tiketBus + rincian.tiketRekreasi;
-  const keluarTotal = rincian.upkeep + rincian.gaji;
+  const masukTotal = rincian.pajak + rincian.pajakProperti + rincian.pajakUsaha + rincian.pajakPerdagangan + rincian.pajakEkspor + rincian.penjualan + rincian.ekspor + rincian.wisata + rincian.bunga + rincian.perdagangan + rincian.daurUlang + rincian.tiketBus + rincian.tiketRekreasi;
+  const keluarTotal = rincian.upkeep + rincian.gaji + rincian.cicilanPinjaman;
   S.statistik.pendapatanHari = masukTotal;
   S.statistik.pengeluaranHari = keluarTotal;
   S.statistik.rincianHari = rincian;
@@ -1968,10 +2625,19 @@ function prosesPergantianHari() {
   if (!S.apbd || typeof S.apbd !== "object") S.apbd = { hariDefisit: 0 };
   if (keluarTotal > masukTotal) S.apbd.hariDefisit = (S.apbd.hariDefisit || 0) + 1;
   else S.apbd.hariDefisit = 0;
-  if (S.apbd.hariDefisit >= 3) {
+  if (S.apbd.hariDefisit >= cfgEco("apbd.hariDefisitPeringatan", 3)) {
     log("⚠️ Defisit APBD " + S.apbd.hariDefisit + " hari berturut-turut — naikkan tarif pajak properti atau kurangi belanja.");
     toast("⚠️ Defisit APBD " + S.apbd.hariDefisit + " hari berturut-turut!", "gagal");
   }
+  // v29 Fase B: riwayat keuangan harian (maks 90 entri, untuk grafik
+  // dashboard) + rollover pinjaman + harga pasar harian. Urutan:
+  // rekap dulu (angsuran hari ini sudah terakru ke j.cicilanPinjaman),
+  // baru pokok pinjaman berkurang & harga diperbarui.
+  pastikanRiwayatKeuangan();
+  S.riwayatKeuangan.push({ hari: S.hari, masuk: masukTotal, keluar: keluarTotal, pajak: totalPajakRincian(rincian), ekspor: rincian.ekspor || 0, cicilan: rincian.cicilanPinjaman || 0, saldo: Math.round(S.uang) });
+  if (S.riwayatKeuangan.length > 90) S.riwayatKeuangan = S.riwayatKeuangan.slice(-90);
+  prosesPinjamanHarian();
+  perbaruiHargaPasar();
   // 1. Riset — TETAP HARIAN (v18-C butir 5): S.riset.sisa-- per hari,
   // `waktu` TEKNOLOGI tetap dalam hari, tidak diubah.
   if (S.riset) {
@@ -2012,13 +2678,14 @@ function prosesPergantianHari() {
   // bahagia < 35 turun — dipertahankan.)
   if (typeof hitungKebahagiaan === "function") { try { hitungKebahagiaan(); } catch (e) {} }
   terapkanEfekPajakKebahagiaan(); // v19 Worker 5: efek tarif pajak properti
+  terapkanEfekKualitasAPBD(); // v29 Fase B: efek kualitas layanan APBD ke kebahagiaan
   const layanan = hitungLayanan();
   const rumahKap = hitungRumah();
   const pop = S.penduduk.total;
   const bahagia = (S.bahagia && typeof S.bahagia.nilai === "number") ? S.bahagia.nilai : 60;
   let popBaru = pop;
-  if (pop < rumahKap && bahagia >= 50) popBaru = Math.min(rumahKap, pop + Math.max(1, Math.round(pop * 0.03)) + 2);
-  else if (bahagia < 35) popBaru = Math.max(0, pop - Math.max(1, Math.round(pop * 0.02)));
+  if (pop < rumahKap && bahagia >= cfgEco("pertumbuhan.ambangBahagiaNaik", 50)) popBaru = Math.min(rumahKap, pop + Math.max(1, Math.round(pop * 0.03)) + 2);
+  else if (bahagia < cfgEco("pertumbuhan.ambangBahagiaTurun", 35)) popBaru = Math.max(0, pop - Math.max(1, Math.round(pop * 0.02)));
   if (popBaru > rumahKap) popBaru = Math.max(rumahKap, popBaru - Math.max(1, Math.round((popBaru - rumahKap) * 0.5)));
   S.penduduk = { total: popBaru, bahagia: bahagia, bekerja: tk.bekerja, menganggur: tk.menganggur, cakupanPendidikan: Math.round(layanan.edu * 100), cakupanKesehatan: Math.round(layanan.kes * 100) };
   S.statistik.pendudukMax = Math.max(S.statistik.pendudukMax, popBaru);
@@ -2029,7 +2696,7 @@ function prosesPergantianHari() {
   cekLevel();
   sinkronWarga();
   log("Hari " + S.hari + " — pemasukan " + rp(masukTotal) + ", pengeluaran " + rp(keluarTotal) + ", penduduk " + popBaru + ".");
-  if (S.uang < 0) { toast("Kas minus! Jual komoditas atau kurangi biaya operasional.", "gagal"); }
+  if (S.uang < 0) { toast("Kas minus! Jual komoditas atau kurangi biaya operasional — rencana pemulihan ada di panel Ekonomi (nonaktifkan bangunan / turunkan alokasi / pinjaman).", "gagal"); }
   simpan(); renderHUD(); renderPanelKiri(); renderPanelKanan(); renderMenuBangun();
   cekTutorial();
 }
@@ -3201,8 +3868,8 @@ function bukaRuteFeri(pulauId) {
   if (!terminal) { toast("Bangun Terminal Feri dulu di Pulau Tebing Tinggi.", "gagal"); bunyiGagal(); return false; }
   const dermaga = cariDermagaPulau(idx);
   if (!dermaga) { toast("Bangun Dermaga di pantai pulau tujuan dulu.", "gagal"); bunyiGagal(); return false; }
-  const BIAYA_RUTE = 50000;
-  if (S.uang < BIAYA_RUTE) { toast("Biaya membuka rute: Rp50.000.", "gagal"); bunyiGagal(); return false; }
+  const BIAYA_RUTE = cfgEco("rute.biayaBuka", 50000);
+  if (S.uang < BIAYA_RUTE) { toast("Biaya membuka rute: " + rp(BIAYA_RUTE) + ".", "gagal"); bunyiGagal(); return false; }
   S.uang -= BIAYA_RUTE;
   const p = peta.pulau[idx];
   const ruteBaru = { id: "rute-" + pulauId, pulauId: pulauId, dari: { x: terminal.x, y: terminal.y }, ke: { x: dermaga.x, y: dermaga.y }, t: 0, arah: 1 };
@@ -3224,7 +3891,7 @@ function jalinKerjasama(pulauId) {
   const ps = S.pulau[pulauId];
   if (!ps || !ps.terhubung) { toast("Pulau harus terhubung dulu (buka rute feri).", "gagal"); return false; }
   if (ps.kerjasama >= 3) { toast("Kerjasama sudah level maksimal (3).", "gagal"); return false; }
-  const biaya = 100000 * (ps.kerjasama + 1);
+  const biaya = cfgEco("rute.biayaKerjasamaPerLevel", 100000) * (ps.kerjasama + 1);
   if (S.uang < biaya) { toast("Biaya kerjasama level " + (ps.kerjasama + 1) + ": " + rp(biaya) + ".", "gagal"); bunyiGagal(); return false; }
   S.uang -= biaya;
   ps.kerjasama++;
@@ -3238,12 +3905,14 @@ function jalinKerjasama(pulauId) {
 // Pendapatan & kiriman komoditas per rute per hari
 function perdaganganRute(p) {
   const ps = S.pulau[p.id];
-  const dasar = p.ukuran === "besar" ? 25000 : p.ukuran === "sedang" ? 15000 : 8000;
-  const pengali = 1 + 0.5 * (ps ? ps.kerjasama : 0);
+  const perUkuran = cfgEco("perdaganganFeri.perUkuran", { besar: 25000, sedang: 15000, kecil: 8000 });
+  const dasar = perUkuran[p.ukuran] || 8000;
+  const pengali = 1 + cfgEco("perdaganganFeri.bonusKerjasamaPerLevel", 0.5) * (ps ? ps.kerjasama : 0);
   return Math.round(dasar * pengali);
 }
 function jumlahKiriman(p) {
-  return p.ukuran === "besar" ? 6 : p.ukuran === "sedang" ? 4 : 2;
+  const perUkuran = cfgEco("perdaganganFeri.kirimanPerUkuran", { besar: 6, sedang: 4, kecil: 2 });
+  return perUkuran[p.ukuran] || 2;
 }
 function pusatkanPulau(pulauId) {
   if (!peta) return;
@@ -3642,13 +4311,13 @@ function bar(persen, warna) {
 // semua kunci pemasukan dikurangi upkeep + gaji.
 function netRincian(r) {
   r = r || {};
-  return ((r.pajak || 0) + (r.pajakProperti || 0) + (r.penjualan || 0) + (r.ekspor || 0) + (r.wisata || 0) + (r.bunga || 0) + (r.perdagangan || 0) + (r.daurUlang || 0) + (r.tiketBus || 0) + (r.tiketRekreasi || 0)) - ((r.upkeep || 0) + (r.gaji || 0));
+  return ((r.pajak || 0) + (r.pajakProperti || 0) + (r.pajakUsaha || 0) + (r.pajakPerdagangan || 0) + (r.pajakEkspor || 0) + (r.penjualan || 0) + (r.ekspor || 0) + (r.wisata || 0) + (r.bunga || 0) + (r.perdagangan || 0) + (r.daurUlang || 0) + (r.tiketBus || 0) + (r.tiketRekreasi || 0)) - ((r.upkeep || 0) + (r.gaji || 0) + (r.cicilanPinjaman || 0));
 }
 // Pemasukan & pengeluaran total satu rincian (untuk rata-rata per jam).
 function totalRincian(r) {
   r = r || {};
-  const masuk = (r.pajak || 0) + (r.pajakProperti || 0) + (r.penjualan || 0) + (r.ekspor || 0) + (r.wisata || 0) + (r.bunga || 0) + (r.perdagangan || 0) + (r.daurUlang || 0) + (r.tiketBus || 0) + (r.tiketRekreasi || 0);
-  const keluar = (r.upkeep || 0) + (r.gaji || 0);
+  const masuk = (r.pajak || 0) + (r.pajakProperti || 0) + (r.pajakUsaha || 0) + (r.pajakPerdagangan || 0) + (r.pajakEkspor || 0) + (r.penjualan || 0) + (r.ekspor || 0) + (r.wisata || 0) + (r.bunga || 0) + (r.perdagangan || 0) + (r.daurUlang || 0) + (r.tiketBus || 0) + (r.tiketRekreasi || 0);
+  const keluar = (r.upkeep || 0) + (r.gaji || 0) + (r.cicilanPinjaman || 0);
   return { masuk: masuk, keluar: keluar };
 }
 // Penghitung pemanggilan renderHUD (v19 Worker 5, untuk tes regresi
@@ -4209,8 +4878,12 @@ function renderPanelKiri() {
     const rb = S.rincianBerjalan || {};
     const r = S.statistik.rincianHari || {};
     const apbdDari = (o) => {
-      const masuk = { "Pajak penduduk": o.pajak || 0, "Pajak properti": o.pajakProperti || 0, "Pajak perdagangan": o.perdagangan || 0, "Pendapatan fasilitas": (o.wisata || 0) + (o.bunga || 0), "Pendapatan pelabuhan": o.ekspor || 0, "Pendapatan industri": (o.penjualan || 0) + (o.daurUlang || 0), "Tiket (bus/taksi/rekreasi)": (o.tiketBus || 0) + (o.tiketRekreasi || 0) };
-      const keluar = { "Gaji pegawai": o.gaji || 0, "Kesehatan": o.upkeepKesehatan || 0, "Pendidikan": o.upkeepPendidikan || 0, "Lingkungan": o.upkeepLingkungan || 0, "Infrastruktur": o.upkeepInfra || 0, "Pemeliharaan": o.upkeepLain || 0 };
+      // v29 Q6: "Pendapatan fasilitas" kini hanya wisata — bunga pasif saldo dihapus (j.bunga selalu 0).
+      // v29 Fase B: tiga pajak baru + cicilan pinjaman; "Pajak perdagangan"
+      // lama (pendapatan rute feri) diganti namanya jadi "Perdagangan feri"
+      // agar tidak tertukar dengan pajak perdagangan yang baru.
+      const masuk = { "Pajak penduduk": o.pajak || 0, "Pajak properti": o.pajakProperti || 0, "Pajak usaha": o.pajakUsaha || 0, "Pajak perdagangan": o.pajakPerdagangan || 0, "Pajak ekspor": o.pajakEkspor || 0, "Perdagangan feri": o.perdagangan || 0, "Pendapatan fasilitas (wisata)": (o.wisata || 0), "Pendapatan pelabuhan": o.ekspor || 0, "Pendapatan industri": (o.penjualan || 0) + (o.daurUlang || 0), "Tiket (bus/taksi/rekreasi)": (o.tiketBus || 0) + (o.tiketRekreasi || 0) };
+      const keluar = { "Gaji pegawai": o.gaji || 0, "Cicilan pinjaman": o.cicilanPinjaman || 0, "Kesehatan": o.upkeepKesehatan || 0, "Pendidikan": o.upkeepPendidikan || 0, "Lingkungan": o.upkeepLingkungan || 0, "Infrastruktur": o.upkeepInfra || 0, "Pemeliharaan": o.upkeepLain || 0 };
       const totMasuk = Object.values(masuk).reduce((a, b) => a + b, 0);
       const totKeluar = Object.values(keluar).reduce((a, b) => a + b, 0);
       return { masuk: masuk, keluar: keluar, totMasuk: totMasuk, totKeluar: totKeluar, saldo: totMasuk - totKeluar };
@@ -4229,11 +4902,104 @@ function renderPanelKiri() {
     };
     let html = "<div class='judulPanel'>Ekonomi — Hari " + S.hari + "</div>";
     html += "<div class='barisStat'><span>Saldo kas</span><b>" + rp(S.uang) + "</b></div>";
+    pastikanBank(); pastikanHargaPasar(); pastikanAlokasiAPBD(); pastikanRiwayatKeuangan();
+    // ---- v29 Fase B: ringkasan + grafik arus kas (riwayat harian) ----
+    const ringk = ringkasanKeuanganHarian();
+    const net7 = ringk.masuk7 - ringk.keluar7;
+    html += "<div class='judulPanel' style='margin-top:10px'>Ringkasan Keuangan</div>";
+    html += "<div class='barisStat'><span>Pendapatan/hari (7 hari)</span><b class='hijau'>" + rp(ringk.masuk7) + "</b></div>";
+    html += "<div class='barisStat'><span>Pengeluaran/hari (7 hari)</span><b class='merah'>" + rp(ringk.keluar7) + "</b></div>";
+    html += "<div class='barisStat'><span>Arus kas bersih/hari (7 hari)</span><b class='" + (net7 >= 0 ? "hijau" : "merah") + "'>" + rp(net7) + "</b></div>";
+    html += "<div class='barisStat kecil'><span>Pajak/hari (7 hari)</span><span>" + rp(ringk.pajak7) + "</span></div>";
+    html += "<div class='barisStat kecil'><span>Ekspor/hari (7 hari)</span><span>" + rp(ringk.ekspor7) + "</span></div>";
+    html += "<div class='barisStat kecil'><span>Cicilan utang/hari (7 hari)</span><span>" + rp(ringk.cicilan7) + "</span></div>";
+    html += "<div class='barisStat kecil'><span>Rata-rata 30 hari: masuk " + rp(ringk.masuk30) + " · keluar " + rp(ringk.keluar30) + "</span></div>";
+    html += "<div class='barisStat kecil'><span>Rata-rata 90 hari: masuk " + rp(ringk.masuk90) + " · keluar " + rp(ringk.keluar90) + "</span></div>";
+    html += "<div class='judulPanel' style='margin-top:10px'>Grafik Arus Kas — 7 Hari Terakhir</div>";
+    html += htmlGrafikKeuangan(7);
+    html += "<div class='judulPanel' style='margin-top:10px'>Grafik Arus Kas — 30 Hari Terakhir</div>";
+    html += htmlGrafikKeuangan(30);
+    html += "<div class='judulPanel' style='margin-top:10px'>Grafik Arus Kas — 90 Hari Terakhir</div>";
+    html += htmlGrafikKeuangan(90);
+    // ---- v29 Fase B: pemulihan (kas negatif / defisit beruntun) ----
+    const diagNeg = diagnosisKasNegatif();
+    if (diagNeg.bangkrut || (S.apbd && S.apbd.hariDefisit >= cfgEco("apbd.hariDefisitPeringatan", 3))) {
+      html += "<div class='judulPanel' style='margin-top:10px'>🚨 Pemulihan " + (diagNeg.bangkrut ? "Kas Negatif" : "Defisit") + "</div>";
+      if (diagNeg.bangkrut) html += "<div class='catatan merah'>Kas negatif (" + rp(S.uang) + ") — kota tidak bangkrut permanen, tapi pinjaman yang berjalan menunggak dan dendanya berjalan. Tidak ada uang gratis: pulihkan lewat langkah di bawah.</div>";
+      if (diagNeg.penyebab.length) html += "<div class='misiDes'>Penyebab terbesar (kemarin): " + diagNeg.penyebab.map(p => p.label + " " + rp(p.nilai) + "/hari").join(", ") + ".</div>";
+      for (const lg of diagNeg.langkah) html += "<div class='misiDes'>" + lg + "</div>";
+      const rekPem = rekomendasiKeuangan();
+      for (const s of rekPem.saran) html += "<div class='misiDes'>• " + s.teks + "</div>";
+      html += "<div class='barisAksi'><button class='btnKecil' onclick='turunkanAlokasiTerbesar()'>Turunkan alokasi terbesar −25%</button><button class='btnKecil' onclick='nonaktifkanBangunanTermahal(3)'>Nonaktifkan 3 bangunan termahal</button><button class='btnKecil' onclick='if(typeof UIV24!==\"undefined\"&&UIV24)UIV24.bukaAdvisor();'>Lihat Rencana Advisor</button></div>";
+    }
+    // ---- tarif pajak properti (v19) + tarif dinamis (Fase B) ----
     const tarifSekarang = (typeof S.tarifPajakProperti === "number") ? S.tarifPajakProperti : 10;
+    html += "<div class='judulPanel' style='margin-top:10px'>Tarif Pajak</div>";
     html += "<div class='barisStat'><span>Tarif pajak properti</span><b>" + tarifSekarang + "%</b></div>";
-    html += "<div class='misiDes'>Tarif 0–20% (default 10%): makin tinggi, pendapatan pajak properti naik tapi kebahagiaan turun 0,3 poin per 1% di atas 10 (maks −3); makin rendah, kebahagiaan naik sedikit tapi pendapatan turun.</div>";
-    html += "<div class='barisAksi'><button class='btnKecil' onclick='aturTarifPajak(" + (tarifSekarang - 1) + ")'>− 1%</button><input type='range' min='0' max='20' step='1' value='" + tarifSekarang + "' style='flex:1;min-width:80px' onchange='aturTarifPajak(this.value)'><button class='btnKecil' onclick='aturTarifPajak(" + (tarifSekarang + 1) + ")'>+ 1%</button></div>";
-    if (S.apbd && S.apbd.hariDefisit >= 3) html += "<div class='catatan merah'>⚠️ Defisit APBD " + S.apbd.hariDefisit + " hari berturut-turut — pengeluaran melebihi pendapatan. Naikkan tarif pajak properti atau kurangi belanja (hapus bangunan ber-upkeep tinggi).</div>";
+    html += "<div class='misiDes'>Tarif " + cfgEco("pajak.properti.min", 0) + "–" + cfgEco("pajak.properti.maks", 20) + "% (default " + cfgEco("pajak.properti.tarifDefault", 10) + "%): makin tinggi, pendapatan pajak properti naik tapi kebahagiaan turun 0,3 poin per 1% di atas 10 (maks −3); makin rendah, kebahagiaan naik sedikit tapi pendapatan turun.</div>";
+    html += "<div class='barisAksi'><button class='btnKecil' onclick='aturTarifPajak(" + (tarifSekarang - 1) + ")'>− 1%</button><input type='range' min='" + cfgEco("pajak.properti.min", 0) + "' max='" + cfgEco("pajak.properti.maks", 20) + "' step='1' value='" + tarifSekarang + "' style='flex:1;min-width:80px' onchange='aturTarifPajak(this.value)'><button class='btnKecil' onclick='aturTarifPajak(" + (tarifSekarang + 1) + ")'>+ 1%</button></div>";
+    const tarifDinamis = [
+      { jenis: "usaha", label: "Tarif pajak usaha", des: "Atas penjualan produk industri (tepung, mie, kue, minyak, olahan). Default 5%: makin tinggi, pendapatan naik tapi kebahagiaan turun 0,1 poin per 1% dan hasil jual bersih usaha berkurang." },
+      { jenis: "perdagangan", label: "Tarif pajak perdagangan", des: "Atas penjualan komoditas mentah (tual, kopra, pinang, karet, kopi, padi, pangan, ikan). Default 5%; di atas 10% kuota jual pasar menyusut (perdagangan melemah)." },
+      { jenis: "ekspor", label: "Tarif pajak ekspor", des: "Atas semua ekspor (pelabuhan + kapal kargo). Default 5%; di atas 10% kuota ekspor menyusut. Satu transaksi ekspor hanya kena pajak ini (tidak ditambah pajak usaha/perdagangan)." },
+    ];
+    for (const td of tarifDinamis) {
+      const t = tarifPajakBaru(td.jenis);
+      html += "<div class='barisStat'><span>" + td.label + "</span><b>" + t + "%</b></div>";
+      html += "<div class='misiDes'>" + td.des + "</div>";
+      html += "<div class='barisAksi'><button class='btnKecil' onclick='aturTarifPajakDinamis(\"" + td.jenis + "\", " + (t - 1) + ")'>− 1%</button><input type='range' min='" + cfgEco("pajak." + td.jenis + ".min", 0) + "' max='" + cfgEco("pajak." + td.jenis + ".maks", 20) + "' step='1' value='" + t + "' style='flex:1;min-width:80px' onchange='aturTarifPajakDinamis(\"" + td.jenis + "\", this.value)'><button class='btnKecil' onclick='aturTarifPajakDinamis(\"" + td.jenis + "\", " + (t + 1) + ")'>+ 1%</button></div>";
+    }
+    // ---- v29 Fase B: pinjaman kota ----
+    html += "<div class='judulPanel' style='margin-top:10px'>Pinjaman Kota</div>";
+    html += "<div class='misiDes'>Pinjaman adalah layanan kota — tidak butuh bangunan Bank untuk meminjam. Bunga 0,2%/hari atas sisa pokok; cicilan harian maks 30% pemasukan harian rata-rata; maks " + maksPinjamanBerjalan() + " pinjaman berjalan" + (adaBankAktif() ? " (termasuk +1 dari Bank)" : "") + ", maks 1 per jenis. Pokok masuk kas seketika (arus modal); cicilan dipotong tiap hari lewat APBD.</div>";
+    if (S.bank.pinjamanAktif.length) {
+      for (const p of S.bank.pinjamanAktif) {
+        const lunasi = Math.round(hitungPelunasanDipercepat(p));
+        html += "<div class='barisMisi'><div class='misiNama'>" + p.nama + " — " + p.status + "</div><div class='misiDes'>Sisa pokok " + rp(p.sisaPokok) + " dari " + rp(p.pokok) + " · hari " + p.hariBerjalan + "/" + p.tenor + " · cicilan ±" + rp((p.cicilanPokokHarian || 0) + (p.bungaHariIni || 0)) + "/hari" + (p.hariMenunggak ? " · menunggak " + p.hariMenunggak + " hari (denda total " + rp(p.dendaTotal || 0) + ")" : "") + "</div><div class='barisAksi'><button class='btnKecil' onclick='lunasiPinjaman(\"" + p.id + "\")'>Lunasi dipercepat — " + rp(lunasi) + "</button></div></div>";
+      }
+    } else {
+      html += "<div class='misiDes'>Tidak ada pinjaman berjalan.</div>";
+    }
+    const defPinjaman = cfgEco("pinjaman.jenis", {});
+    for (const jenisId of Object.keys(defPinjaman)) {
+      const def = defPinjaman[jenisId];
+      html += "<div class='barisStat'><span>" + def.nama + " — " + rp(def.pokok) + " (level " + def.levelMin + "+)</span></div>";
+      for (const tenor of def.tenor) {
+        const cek = kelayakanPinjaman(jenisId, tenor);
+        if (cek.layak) html += "<div class='barisAksi'><button class='btnKecil' onclick='ajukanPinjaman(\"" + jenisId + "\", " + tenor + ")'>Ajukan — " + tenor + " hari (cicilan ±" + rp(cek.cicilanHarian) + "/hari)</button></div>";
+        else html += "<div class='misiDes'>Tenor " + tenor + " hari: " + cek.alasan + "</div>";
+      }
+    }
+    if (S.bank.riwayat.length) {
+      const lunas = S.bank.riwayat.filter(p => p.status === "lunas");
+      const totalDibayar = S.bank.riwayat.reduce((a, p) => a + (p.totalDibayar || 0), 0);
+      html += "<div class='barisStat kecil'><span>Riwayat pinjaman: " + lunas.length + " lunas dari " + S.bank.riwayat.length + " · total dibayar " + rp(totalDibayar) + "</span></div>";
+    }
+    // ---- v29 Fase B: anggaran APBD per kategori ----
+    html += "<div class='judulPanel' style='margin-top:10px'>Anggaran APBD per Kategori</div>";
+    html += "<div class='misiDes'>Alokasi = % dari kebutuhan kategori (upkeep bangunan layanan). 100% = layanan penuh & belanja penuh; di bawah 100% = kualitas layanan turun TAPI belanja lebih hemat; di atas 100% tidak menambah kualitas maupun belanja.</div>";
+    const butuhAPBD = kebutuhanAPBD();
+    const kualAPBD = kualitasAPBD(butuhAPBD);
+    for (const kat of cfgEco("apbd.kategori", [])) {
+      const namaKat = (cfgEco("apbd.namaKategori", {}) || {})[kat] || kat;
+      const persen = (S.apbd.alokasi && typeof S.apbd.alokasi[kat] === "number") ? S.apbd.alokasi[kat] : 100;
+      const q = Math.round((kualAPBD[kat] == null ? 1 : kualAPBD[kat]) * 100);
+      html += "<div class='barisStat'><span>" + namaKat + " — butuh " + rp(butuhAPBD[kat] || 0) + "/hari</span><b>" + persen + "% · kualitas " + q + "%</b></div>";
+      html += bar(q, q >= 100 ? "#00b894" : q >= 50 ? "#fdcb6e" : "#e74c3c");
+      html += "<div class='barisAksi'><button class='btnKecil' onclick='aturAlokasiAPBD(\"" + kat + "\", " + (persen - 25) + ")'>−25%</button><input type='range' min='0' max='" + cfgEco("apbd.alokasiMaksPersen", 150) + "' step='5' value='" + persen + "' style='flex:1;min-width:80px' onchange='aturAlokasiAPBD(\"" + kat + "\", this.value)'><button class='btnKecil' onclick='aturAlokasiAPBD(\"" + kat + "\", " + (persen + 25) + ")'>+25%</button></div>";
+    }
+    // ---- v29 Fase B: harga pasar komoditas ----
+    html += "<div class='judulPanel' style='margin-top:10px'>Harga Pasar Komoditas</div>";
+    html += "<div class='misiDes'>Harga bergerak tiap hari dari penawaran/permintaan (stok vs permintaan harian): stok menumpuk → turun, stok langka → naik; maks ±5%/hari, batas 50%–150% harga dasar. Harga pasar dipakai penjualan pasar & ekspor.</div>";
+    for (const k of Object.keys(KOMODITAS)) {
+      const stok = S.komoditas[k] || 0;
+      const hrg = hargaPasar(k);
+      const kmrn = (S.hargaPasarKemarin && typeof S.hargaPasarKemarin[k] === "number") ? S.hargaPasarKemarin[k] : hrg;
+      const delta = kmrn > 0 ? Math.round(100 * (hrg - kmrn) / kmrn) : 0;
+      const tren = delta > 0 ? "▲ +" + delta + "%" : delta < 0 ? "▼ " + delta + "%" : "– 0%";
+      html += "<div class='barisStat kecil'><span>" + KOMODITAS[k].nama + " × " + stok + " · minta " + (Math.round(permintaanHarianKomoditas(k) * 10) / 10) + "/hari</span><span>" + rp(hrg) + " " + tren + "</span></div>";
+    }
+    if (S.apbd && S.apbd.hariDefisit >= cfgEco("apbd.hariDefisitPeringatan", 3)) html += "<div class='catatan merah'>⚠️ Defisit APBD " + S.apbd.hariDefisit + " hari berturut-turut — pengeluaran melebihi pendapatan. Naikkan tarif pajak properti atau kurangi belanja (nonaktifkan/hapus bangunan ber-upkeep tinggi).</div>";
     else if (S.apbd && S.apbd.hariDefisit > 0) html += "<div class='catatan'>Defisit APBD " + S.apbd.hariDefisit + " hari berturut-turut (peringatan bila mencapai 3 hari).</div>";
     html += barisAPBD(apbdHariIni, "APBD — Hari ini (berjalan)");
     html += barisAPBD(apbdKemarin, "APBD — Kemarin");
@@ -4241,7 +5007,7 @@ function renderPanelKiri() {
     for (const k of Object.keys(KOMODITAS)) {
       const stok = S.komoditas[k] || 0;
       if (stok <= 0) continue;
-      html += "<div class='barisStat kecil'><span>" + KOMODITAS[k].nama + " × " + stok + "</span><span>" + rp(stok * KOMODITAS[k].harga) + "</span></div>";
+      html += "<div class='barisStat kecil'><span>" + KOMODITAS[k].nama + " × " + stok + "</span><span>" + rp(stok * hargaPasar(k)) + "</span></div>";
     }
     html += "<div class='barisStat kecil'><span>Total ekspor</span><span>" + S.statistik.ekspor + " unit</span></div>";
     isi.innerHTML = html;
@@ -4688,7 +5454,7 @@ function renderPanelKanan() {
     const jalan = S.jalan.find(j => j.x === terpilih.x && j.y === terpilih.y);
     const jemb = S.jembatan.find(j => j.x === terpilih.x && j.y === terpilih.y);
     let html = "<div class='judulPanel'>" + namaTerrain(t) + " (" + (terpilih.x + 1) + ", " + (terpilih.y + 1) + ")</div>";
-    html += "<div class='misiDes'>" + (terrainBisaBangun(t) ? "Lahan ini bisa dibangun." : "Lahan ini tidak bisa dibangun.") + (t === "hutan" ? " Menebang hutan memberi +2 kayu." : "") + (t === "rawa" ? " Membangun di rawa +Rp10.000 (drainase)." : "") + (t === "gambut" ? " Membangun di gambut +Rp15.000 (pengelolaan air)." : "") + "</div>";
+    html += "<div class='misiDes'>" + (terrainBisaBangun(t) ? "Lahan ini bisa dibangun." : "Lahan ini tidak bisa dibangun.") + (t === "hutan" ? " Menebang hutan memberi +2 kayu." : "") + (t === "rawa" ? " Membangun di rawa +" + rp(cfgEco("lahan.rawa", 10000)) + " (drainase)." : "") + (t === "gambut" ? " Membangun di gambut +" + rp(cfgEco("lahan.gambut", 15000)) + " (pengelolaan air)." : "") + "</div>";
     const kecTile = kecamatanDiPeta(peta, terpilih.x, terpilih.y);
     if (kecTile) html += "<div class='barisStat'><span>Kecamatan</span><span>" + namaKecamatan(kecTile) + "</span></div>";
     if (jalan) {
@@ -4730,6 +5496,7 @@ function renderPanelKanan() {
       if (dStatus && dStatus.status) statusTampil = dStatus.status;
     }
   } catch (e) {}
+  if (b.nonaktif) statusTampil = "⏸ Nonaktif"; // v29: penonaktifan mengalahkan status operasi
   html += "<div class='barisStat'><span>Status</span><b>" + statusTampil + "</b></div>";
   // v28: teks lengkap bubble bangunan (keluhan/syukur dari data nyata)
   // tampil di sini saat bangunan dipilih — di peta bubble hanya ikon.
@@ -4775,6 +5542,20 @@ function renderPanelKanan() {
   if (def.jual) html += "<div class='barisStat'><span>Menjual</span><span>maks " + def.jual.maks + " unit/hari</span></div>";
   if (def.wisata) html += "<div class='barisStat'><span>Wisata</span><span>+" + rp(def.wisata) + "/hari</span></div>";
   html += "<div class='barisStat'><span>Biaya operasional</span><span>" + rp(def.upkeep || 0) + "/hari</span></div>";
+  // v29: laporan ekonomi per bangunan + tombol Aktif/Nonaktif (gaya v28, class yang sudah ada).
+  try {
+    if (typeof laporanEkonomiBangunan === "function") {
+      const lap = laporanEkonomiBangunan(b);
+      html += "<div class='judulPanel' style='margin-top:10px'>Laporan Ekonomi</div>";
+      html += "<div class='barisStat'><span>Upkeep</span><span>" + rp(lap.upkeep) + "/hari" + (b.nonaktif ? " (nonaktif: 10%)" : "") + "</span></div>";
+      html += "<div class='barisStat'><span>Gaji pekerja</span><span>" + rp(lap.gaji) + "/hari</span></div>";
+      html += "<div class='barisStat'><span>Pajak properti (masuk kota)</span><span>" + rp(lap.pajakProperti) + "/hari</span></div>";
+      html += "<div class='barisStat'><span>Pendapatan langsung</span><span>" + rp(lap.pendapatan) + "/hari</span></div>";
+      html += "<div class='barisStat'><span>Laba bersih langsung</span><b class='" + (lap.laba >= 0 ? "hijau" : "merah") + "'>" + rp(lap.laba) + "/hari</b></div>";
+      if (lap.catatan) html += "<div class='misiDes'>" + lap.catatan + "</div>";
+    }
+  } catch (e) {}
+  html += "<div class='barisAksi'><button class='btnKecil' onclick='toggleNonaktif(" + terpilih.idx + ")'>" + (b.nonaktif ? "▶ Aktifkan" : "⏸ Nonaktifkan") + "</button></div>";
   // Terminal Feri: daftar pulau yang bisa dibuka rutenya
   if (def.id === "terminal-feri" && b.selesai) {
     const tujuan = [];
@@ -4788,7 +5569,7 @@ function renderPanelKanan() {
       html += "<div class='misiDes'>Belum ada pulau tujuan yang siap — bangun Dermaga di pantai pulau lain dulu, lalu kembali ke sini.</div>";
     } else {
       for (const p of tujuan) {
-        html += "<div class='barisStat kecil'><span>⛴ " + p.nama + " (" + p.ukuran + ")</span><button class='btnKecil' onclick='bukaRuteFeri(\"" + p.id + "\")'>Buka Rute — Rp50.000</button></div>";
+        html += "<div class='barisStat kecil'><span>⛴ " + p.nama + " (" + p.ukuran + ")</span><button class='btnKecil' onclick='bukaRuteFeri(\"" + p.id + "\")'>Buka Rute — " + rp(cfgEco("rute.biayaBuka", 50000)) + "</button></div>";
       }
     }
     const ruteSaya = S.ruteFeri.filter(r => r.dari.x === b.x && r.dari.y === b.y);
@@ -5581,10 +6362,29 @@ function mulaiGame(baru) {
     if (!S.rincianBerjalan) S.rincianBerjalan = rincianKosong();
     for (const k of Object.keys(rincianKosong())) if (typeof S.rincianBerjalan[k] !== "number") S.rincianBerjalan[k] = 0;
     // v19 Worker 5 (APBD): migrasi save lama — tarif default 10%, penghitung defisit 0.
-    if (typeof S.tarifPajakProperti !== "number") S.tarifPajakProperti = 10;
+    if (typeof S.tarifPajakProperti !== "number") S.tarifPajakProperti = cfgEco("pajak.properti.tarifDefault", 10);
     if (!S.apbd || typeof S.apbd !== "object") S.apbd = { hariDefisit: 0 };
     if (typeof S.apbd.hariDefisit !== "number") S.apbd.hariDefisit = 0;
+    // v29 Fase B: migrasi save lama — semua field baru default-if-missing
+    // (tanpa menimpa nilai yang sudah ada): tarif pajak dinamis, harga
+    // pasar (= harga dasar bila belum ada), riwayat keuangan, bank,
+    // alokasi APBD (= 100% semua kategori bila belum ada).
+    if (typeof S.tarifPajakUsaha !== "number") S.tarifPajakUsaha = cfgEco("pajak.usaha.tarifDefault", 5);
+    if (typeof S.tarifPajakPerdagangan !== "number") S.tarifPajakPerdagangan = cfgEco("pajak.perdagangan.tarifDefault", 5);
+    if (typeof S.tarifPajakEkspor !== "number") S.tarifPajakEkspor = cfgEco("pajak.ekspor.tarifDefault", 5);
+    pastikanHargaPasar(); pastikanBank(); pastikanAlokasiAPBD(); pastikanRiwayatKeuangan();
     if (typeof S.akumulasiEkspor !== "number") S.akumulasiEkspor = 0;
+    // v29 Q11: bulatkan kas ke integer SEKALI saat load (akrual /24 lama
+    // menyimpan float). Jangan dibulatkan tiap jam. Flag satu-kali +
+    // catatan log bila pembulatan benar-benar mengubah nilai.
+    if (typeof S.uang === "number" && !Number.isInteger(S.uang)) {
+      S.uang = Math.round(S.uang);
+      if (!S.migrasiEkonomiV29) {
+        S.migrasiEkonomiV29 = true;
+        try { log("Migrasi ekonomi v29: kas dibulatkan ke rupiah bulat. Perilaku baru: penjualan digate bangunan beroperasi, bunga pasif saldo dihapus, bangunan bisa dinonaktifkan."); } catch (e) {}
+      }
+    }
+    if (typeof S.migrasiEkonomiV29 === "undefined") S.migrasiEkonomiV29 = false;
     // Simpanan lama (sebelum v16) belum punya pemimpin/tutorial — isi dari profil, tutorial dianggap selesai
     if (!S.pemimpin && profilPemain) S.pemimpin = { nama: profilPemain.nama, gender: profilPemain.gender, avatar: profilPemain.avatar };
     if (!S.pemimpin) S.pemimpin = { nama: "Pemimpin", gender: "pria", avatar: AVATAR_KARAKTER.pria };
@@ -5626,6 +6426,7 @@ function mulaiGame(baru) {
   // permainan baru harus 45-60 — lihat hitungKebahagiaan).
   if (typeof hitungKebahagiaan === "function") { try { hitungKebahagiaan(); } catch (e) {} }
   terapkanEfekPajakKebahagiaan(); // v19 Worker 5: efek tarif pajak properti
+  terapkanEfekKualitasAPBD(); // v29 Fase B: efek kualitas layanan APBD ke kebahagiaan
   initKendaraan();
   // v19 Worker 4: hitung lalu lintas awal (skor, bus, rekreasi) setelah
   // kendaraan di-init — bus visual disinkronkan di sini.

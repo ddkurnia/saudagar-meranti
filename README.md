@@ -6,6 +6,139 @@ pusat perdagangan Nusantara: membangun rumah, jalan, jembatan, kebun,
 sekolah, pasar, pelabuhan, dan industri di atas peta pulau yang bisa
 dimainkan.
 
+## Yang baru di v29 — Fondasi Ekonomi (Fase A) + Sistem Ekonomi (Fase B) (2026-11-13)
+
+Fondasi ekonomi ditulis ulang terhadap skala modal awal baru: satu sumber
+konfigurasi (`economyConfig` di `js/city-data.js`), rebalancing 118 bangunan,
+penonaktifan bangunan, dan gating penjualan yang konsisten. Detail lengkap di
+`~/workspace/v29-ekonomi/balancing-v29.md` (Fase A) dan
+`~/workspace/v29-ekonomi/balancing-v29-fase-b.md` (Fase B), simulasi 90 hari
+5 gaya di `~/workspace/v29-ekonomi/sim-90-hari-fase-a.json` (Fase A) dan
+`~/workspace/v29-ekonomi/sim-90-hari-fase-b.json` (Fase B, + skenario
+pelunasan F dan kota-boros-pulih G).
+
+- **Modal awal Rp10.000.000** (dulu Rp750.000) — diberikan sekali saat game
+  baru; reload tidak menambah. Material awal tetap kayu/batu/besi 60/40/10.
+- **Kota baru tidak lagi defisit struktural:** net harian +Rp167/hari (masuk
+  Rp2.267: pajak 4×Rp250 + pajak properti Rp67 + wisata dermaga Rp1.200;
+  keluar Rp2.100: upkeep Rp1.300 + gaji Rp800). Dulu −Rp2.617/hari.
+- **Rebalancing:** upkeep semua bangunan ×0,6/×0,7/×0,8 (total upkeep
+  Rp884.800 → Rp660.400/hari bila semua dibangun); kilang 150.000/upkeep
+  5.000/pekerja 6 (dulu 200.000/8.000/8 — bukan lagi jebakan −Rp8.333/hari);
+  pasar 90.000; toko 30.000 dan kini **menjual** (maks 5 unit/hari);
+  dermaga upkeep 1.000 + wisata 1.200/hari; hadiah level dan misi ×2.
+- **Penonaktifan bangunan (baru):** tombol Aktif/Nonaktifkan di panel kanan
+  bangunan; bangunan nonaktif berhenti produksi/penjualan, pekerja dilepas,
+  upkeep 10%, tidak kena pajak properti, tidak butuh listrik/air, tidak
+  memperluas jaringan. Status "⏸ Nonaktif" terlihat jelas + laporan ekonomi
+  per bangunan (upkeep, gaji, pajak properti, pendapatan, laba bersih).
+- **Kawasan industri kini benar-benar memberi +15% produksi** untuk bangunan
+  industri dalam radius 8 petak (dulu hanya deskripsi).
+- **Penjualan kargo kini masuk APBD** (kunci `j.ekspor` yang sama) dan harga
+  ekspor disatukan satu rumus: harga dasar × (1 + 0,2 bonus pelabuhan +
+  ΣeksporBonus gedung).
+- **Bunga pasif bank 2%/hari atas saldo DIHAPUS** (digantikan sistem
+  perbankan Fase B). Panel Ekonomi kini menulis "Pendapatan fasilitas
+  (wisata)".
+- **Kantor pemerintah tidak lagi kena pajak properti** (8 id di
+  `pengecualianId`); perkantoran swasta tetap kena. Pasar/pelabuhan yang
+  padam, kebanjiran, atau nonaktif **tidak lagi menjual** (dulu tetap
+  menjual).
+- **Simulasi 90 hari, 5 gaya (modal Rp10jt):** A Permukiman saldo akhir
+  Rp10.084.456 (surplus hari 3); B Industri Rp11.066.835 (hari 6); C
+  Perdagangan Rp10.072.392 (hari 3); D Ekspor Rp13.583.108 (hari 5);
+  E Infrastruktur dulu Rp11.719.667 (hari 4). Tidak ada gaya yang pernah
+  kas negatif atau bangkrut permanen.
+- **Perubahan perilaku yang perlu diketahui:** (1) game baru tidak lagi
+  mendapat bonus dari simpanan lama `saudagarSaguMerantiCityV1` (maks
+  +Rp1.000.000) — modal awal persis Rp10.000.000 untuk semua pemain;
+  (2) penjualan pasar/pelabuhan padam kini digate — kota di save lama yang
+  bergantung pada itu akan kehilangan pemasukan tersebut (kompensasi lewat
+  rebalancing upkeep −25–40% + penonaktifan); (3) bunga pasif bank dihapus;
+  (4) kantor pemerintah bebas pajak properti.
+
+### Sistem Ekonomi (Fase B) (2026-11-13)
+
+- **Perbankan:** pinjaman Mikro Rp1jt / Usaha Rp3jt / Infrastruktur Rp5jt /
+  Pengembangan Rp10jt; bunga 0,2%/hari atas **sisa pokok** (bukan plafon);
+  tenor per jenis di config (mis. Mikro 90/180/360 hari); cicilan harian =
+  pokok/tenor + bunga sisa pokok, dipotong tiap hari lewat APBD
+  (`j.cicilanPinjaman`). Batas kredit: level kota + cicilan harian maks 30%
+  pemasukan harian rata-rata. **Pinjaman adalah layanan kota — tidak butuh
+  bangunan Bank** (kota baru tanpa bank tetap bisa meminjam); Bank yang aktif
+  memberi +1 maks pinjaman berjalan (default maks 2, maks 1 per jenis).
+  Pelunasan dipercepat = sisa pokok + bunga berjalan hari ini, tanpa penalti
+  tersembunyi. Kas negatif saat rollover → pinjaman menunggak, denda 1%
+  angsuran hari itu dikapitalisasi ke sisa pokok (bukan game over). Riwayat
+  pinjaman lengkap (lunas/berjalan/menunggak) di panel Ekonomi.
+- **Pajak dinamis:** tarif usaha, perdagangan, dan ekspor bisa diatur pemain
+  (default 5%, 0–20%) di panel Ekonomi, di samping pajak properti yang sudah
+  ada. Satu transaksi = satu pajak: produk industri → pajak usaha, komoditas
+  mentah → pajak perdagangan, semua ekspor → pajak ekspor (bukan ganda).
+  Tarif di atas default menurunkan kebahagiaan (0,1 poin per 1%, maks −1,5
+  gabungan) dan di atas 10% menyusutkan kuota jual/ekspor 2% per 1%.
+- **Harga komoditas dinamis:** harga pasar tiap komoditas bergerak dari harga
+  dasar menurut rasio stok terhadap permintaan harian (stok menumpuk → turun,
+  stok langka → naik), maks ±5%/hari, batas 50%–200% harga dasar. Permintaan
+  = kebutuhan bahan baku industri yang beroperasi + konsumsi penduduk + 1
+  unit dasar. Harga pasar dipakai penjualan pasar DAN ekspor (konsisten).
+  Biaya logistik per unit = Rp0 (truk/kapal adalah layanan kota yang sudah
+  dibayar lewat upkeep terminal/pelabuhan/pusat logistik).
+- **Anggaran APBD 7 kategori** (Pendidikan, Kesehatan, Infrastruktur,
+  Kebersihan, Keamanan, Transportasi, Lingkungan): pemain mengalokasikan
+  persen dari **kebutuhan** tiap kategori (default 100%, 0–150%). Di bawah
+  100% → upkeep yang dibayar berkurang DAN kualitas layanan kategori itu
+  turun (terhubung ke `hitungLayanan`/`hitungKebahagiaan` yang sudah ada);
+  di atas 100% tidak menambah biaya maupun kualitas. Kategori di luar 7
+  (mis. permukiman/industri) tetap upkeep penuh di "Pemeliharaan".
+- **Dashboard keuangan** di panel Ekonomi: saldo, pendapatan/pengeluaran
+  harian (rata-rata 7 hari), pajak, ekspor, cicilan utang, arus kas bersih,
+  grafik batang 7/30/90 hari dari `S.riwayatKeuangan[]` (1 entri/hari, maks
+  90), rekomendasi dari data nyata (penyebab belanja terbesar + aksi:
+  turunkan alokasi / nonaktifkan bangunan termahal / ajukan pinjaman bila
+  layak), plus tabel harga pasar + tren.
+- **Pemulihan kebangkrutan:** kas negatif → peringatan + penyebab dari data
+  (3 belanja terbesar) + langkah 1-2-3 + tombol cepat (turunkan alokasi
+  kategori terbesar −25%, nonaktifkan N bangunan termahal) + tawaran
+  pinjaman bila layak (bila tidak, dijelaskan kenapa). Tidak ada uang
+  gratis tanpa syarat. Advisor: masalah "kas-negatif" CRITICAL dengan
+  rencana aksi bernomor (nonaktifkan / turunkan alokasi / ajukan Mikro).
+- **Simulasi 90 hari Fase B, 5 gaya + 2 skenario:** A Permukiman saldo akhir
+  Rp10.083.453 (tidak pernah layak pinjam — pemasukan terlalu rendah);
+  B Industri Rp13.472.848 (pinjam hari 30 tenor 360, berjalan);
+  C Perdagangan Rp11.396.208 (tarif perdagangan 15% sejak hari 10, pinjam
+  hari 30 tenor 360); D Ekspor Rp18.893.959 (pinjam hari 30 tenor 360);
+  E Infrastruktur Rp15.309.223 (alokasi pendidikan/kesehatan 50%, pinjam
+  hari 30 tenor 360). Tidak ada gaya yang pernah kas negatif atau menunggak.
+  Skenario F: Mikro 90 hari pinjam hari 11, **lunas hari 100**, total
+  dibayar Rp1.091.000 (bunga Rp91.000). Skenario G: kota boros (kilang tanpa
+  kebun) net −Rp11.167/hari → nonaktifkan 2 kilang hari 45 → net +Rp21.258
+  di 30 hari terakhir, **pulih**, pinjam hari 51. Detail + temuan harga
+  (tepung menempel Rp16.000 = batas 200%) di
+  `~/workspace/v29-ekonomi/balancing-v29-fase-b.md`.
+
+### Batasan jujur (v29)
+
+- Belum ada live check — semua bukti headless (node + suite). Jangan klaim
+  "terbukti live" sebelum live check.
+- Jalur ekspor pelabuhan/kargo belum teruji end-to-end dalam sim (pelabuhan
+  butuh level 3 = pop 80; sim mentok level 2). Gaya D paling kuat
+  (+Rp48.867/hari di 30 hari terakhir) lewat penjualan pasar, bukan ekspor.
+- `S.uang` masih float dalam satu sesi; dibulatkan hanya saat load.
+- Sim tidak mencakup jalan, rute feri antar-pulau, cuaca hujan, bencana,
+  dan kapal kargo.
+- Advisor/diagnostik belum menyarankan penonaktifan sebagai aksi.
+- (Fase B, baru) Pinjaman TIDAK butuh bangunan Bank — keputusan sadar
+  (lihat `balancing-v29-fase-b.md`); Bank hanya +1 maks pinjaman berjalan.
+  Denda keterlambatan hanya berjalan bila kas negatif saat rollover harian;
+  kota yang kasnya negatif di tengah hari tapi pulih sebelum tengah malam
+  tidak didenda. Toast "Kas minus!" muncul tiap rollover selama kas negatif
+  (tanpa throttle) — bisa terasa berulang bila krisis berlangsung lama.
+- (Fase B, baru) Harga pasar diperbarui sekali sehari (saat rollover), bukan
+  per jam; tren harga hanya "kemarin vs hari ini" (naik/turun), tanpa
+  persentase perubahan. Riwayat keuangan maks 90 entri — grafik 90 hari
+  pada kota berumur >90 hari hanya menampilkan 90 hari terakhir.
+
 ## Yang baru di v27.2 — Kendaraan Benar-Benar Bergerak: beku 37 jam, panel "bergerak" palsu, dan rute degenerat (2026-11-13)
 
 Laporan cek live v27.1 (?v=51, profil "Laksamana Sagu", Hari 3–5,

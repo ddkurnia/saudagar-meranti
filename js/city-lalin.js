@@ -158,8 +158,12 @@ const LALIN_KONFIG = {
   faktorJamSiang: 1.0,           // selebihnya
   ambangPadat: 0.6,              // rasio < ini = lancar
   ambangMacet: 1.0,              // rasio > ini = macet
-  tarifBus: 2000,                // Rp/penumpang (tarif harian, /24 per jam)
-  tarifTaksi: 5000,              // Rp/penumpang (tarif harian, /24 per jam)
+  // v29 Q5: tarif = penumpang HARIAN — pendapatan per jam = penumpang x
+  // tarif / pembagiJam (24). Nilai & pembagi dari economyConfig (satu
+  // sumber); fallback = nilai lama bila config belum ada.
+  tarifBus: (typeof cfgEco === "function" ? cfgEco("transportasi.bus.tarifDefault", 2000) : 2000),
+  tarifTaksi: (typeof cfgEco === "function" ? cfgEco("transportasi.taksi.tarifDefault", 5000) : 5000),
+  pembagiJam: (typeof cfgEco === "function" ? cfgEco("transportasi.bus.pembagiJam", 24) : 24),
   pengurangBusPerPenumpang: 0.5, // kendaraan/jam yang dihemat per kursi bus
   pangsaPenumpangHalte: 0.1,     // 10% penduduk dalam radius halte naik bus
   pangsaPenumpangTaksi: 0.05,    // 5% penduduk dalam radius stand naik taksi
@@ -288,7 +292,7 @@ function hitungTransportasiUmum() {
     bus.beroperasi = true;
     bus.jumlahBus = Math.min(LALIN_KONFIG.maksBus, terminal.length);
     bus.penumpangPerJam = _bulat1(penumpang);
-    bus.pendapatanPerJam = penumpang * LALIN_KONFIG.tarifBus / 24;
+    bus.pendapatanPerJam = penumpang * LALIN_KONFIG.tarifBus / (LALIN_KONFIG.pembagiJam || 24);
     bus.pengurangVolume = bus.jumlahBus * ((tDef && tDef.kapasitasPenumpang) || 200) * LALIN_KONFIG.pengurangBusPerPenumpang;
     bus.terminal = { x: t0.x, y: t0.y };
   }
@@ -305,7 +309,7 @@ function hitungTransportasiUmum() {
     penumpang = Math.min(kapTotal, penumpang);
     taksi.beroperasi = true;
     taksi.penumpangPerJam = _bulat1(penumpang);
-    taksi.pendapatanPerJam = penumpang * LALIN_KONFIG.tarifTaksi / 24;
+    taksi.pendapatanPerJam = penumpang * LALIN_KONFIG.tarifTaksi / (LALIN_KONFIG.pembagiJam || 24);
   }
   L.bus = bus;
   L.taksi = taksi;
@@ -922,7 +926,7 @@ const RUTE_BUS_KONFIG = {
   jadwalDefaultMenit: 60,        // interval keberangkatan default (menit game)
   jadwalMinMenit: 5,
   jadwalMaksMenit: 240,
-  tarifDefault: 2000,            // Rp/penumpang (sama dengan tarifBus v19)
+  tarifDefault: (typeof cfgEco === "function" ? cfgEco("transportasi.bus.tarifDefault", 2000) : 2000), // v29 Q5/D9: SATU sumber tarif bus (dulu duplikat tarifBus di LALIN_KONFIG)
   tarifMaks: 50000,
   antreanMaksPerHalte: 60,       // antrean per stop tidak menumpuk tanpa batas
   pangsaNaikPerJam: 0.1,         // 10% penduduk radius halte antre per jam
@@ -1220,7 +1224,7 @@ function _tibaDiHalte(route, bus, skrg) {
   if (route.antrean) route.antrean[kunci] = antre - naik;
   bus.penumpangSaatIni += naik;
   bus.okupansi = bus.kapasitas > 0 ? Math.round(bus.penumpangSaatIni / bus.kapasitas * 100) / 100 : 0;
-  const pendapatan = naik * (route.tarif || RUTE_BUS_KONFIG.tarifDefault) / 24;
+  const pendapatan = naik * (route.tarif || RUTE_BUS_KONFIG.tarifDefault) / (typeof cfgEco === "function" ? cfgEco("transportasi.bus.pembagiJam", 24) : 24);
   route.penumpangTotal = (route.penumpangTotal || 0) + naik;
   route.pendapatanTotal = (route.pendapatanTotal || 0) + pendapatan;
   bus.halteSaatIni = idx;

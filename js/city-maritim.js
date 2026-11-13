@@ -61,7 +61,7 @@ const MARITIM_KONFIG = {
   radiusCariLaut: 6,        // petak — dermaga di pantai dicari laut terdekat
   maksKunjungBFS: 120000,   // petak — pengaman BFS jalur laut
   maksKapalKargo: 4,        // kapal kargo aktif bersamaan
-  bonusJualKargo: 1.2,      // jual di pulau lain = harga x 1,2
+  bonusJualKargo: 1.2,      // v29 Q4: TIDAK lagi dipakai sebagai pengali sendiri — harga kargo kini = hargaEksporUnit() (1 + bonusPelabuhan + ΣeksporBonus); nilai ini hanya fallback bila helper belum ada
   ikanPerTangkapan: 2,      // ikan dibawa pulang tiap kapal nelayan tiba di dermaga
   jarakTangkapMin: 8,       // petak — titik tangkap nelayan sejauh ini dari dermaga
   jarakTangkapMaks: 15,
@@ -299,11 +299,23 @@ function _tibaKapal(k, ujung) {
   if (!S || !k) return;
   if (k.tipe === "kapal-kargo" && ujung === "ke" && k.muatan && k.muatan.komoditas) {
     const def = (typeof KOMODITAS !== "undefined") ? KOMODITAS[k.muatan.komoditas] : null;
-    const harga = (def && def.harga) || 0;
-    const nilai = Math.round((k.muatan.jumlah || 0) * harga * MARITIM_KONFIG.bonusJualKargo);
+    // v29 Q4: SATU rumus harga ekspor (sama seperti akrual pelabuhan) DAN
+    // masuk APBD (j.ekspor) agar panel Ekonomi/HUD/penghitung defisit
+    // tidak lagi buta terhadap pemasukan kargo.
+    // v29 Fase B: harga pasar dinamis (lewat hargaEksporUnit) + pajak
+    // ekspor (j.pajakEkspor) — satu transaksi ekspor kena satu pajak,
+    // sama seperti ekspor akrual pelabuhan.
+    const nilai = (typeof hargaEksporUnit === "function")
+      ? Math.round((k.muatan.jumlah || 0) * hargaEksporUnit(k.muatan.komoditas))
+      : Math.round((k.muatan.jumlah || 0) * ((def && def.harga) || 0) * MARITIM_KONFIG.bonusJualKargo);
     if (nilai > 0) {
-      S.uang += nilai;
-      if (S.statistik) S.statistik.ekspor = (S.statistik.ekspor || 0) + (k.muatan.jumlah || 0);
+      if (typeof catatEkspor === "function") {
+        catatEkspor(nilai, k.muatan.jumlah || 0);
+      } else {
+        S.uang += nilai;
+        if (S.rincianBerjalan) S.rincianBerjalan.ekspor = (S.rincianBerjalan.ekspor || 0) + nilai;
+        if (S.statistik) S.statistik.ekspor = (S.statistik.ekspor || 0) + (k.muatan.jumlah || 0);
+      }
       if (typeof log === "function") {
         try { log("Kapal kargo menjual " + (k.muatan.jumlah || 0) + " " + (def ? def.nama : k.muatan.komoditas) + " di pulau tujuan (+" + nilai + ")."); } catch (e) {}
       }
@@ -335,8 +347,8 @@ function kirimKargoKePulau(pulauId, komoditas, jumlah) {
   if (idx < 0) return { ok: false, alasan: "pulau-tidak-ditemukan" };
   const dermaga = (typeof cariDermagaPulau === "function") ? cariDermagaPulau(idx) : null;
   if (!dermaga) return { ok: false, alasan: "tanpa-dermaga" };
-  const asal = (S.bangunan || []).find(b => b.id === "pelabuhan" && b.selesai)
-    || (S.bangunan || []).find(b => b.id === "terminal-feri" && b.selesai);
+  const asal = (S.bangunan || []).find(b => b.id === "pelabuhan" && b.selesai && !(typeof bangunanNonaktif === "function" && bangunanNonaktif(b)))
+    || (S.bangunan || []).find(b => b.id === "terminal-feri" && b.selesai && !(typeof bangunanNonaktif === "function" && bangunanNonaktif(b)));
   if (!asal) return { ok: false, alasan: "tanpa-pelabuhan" };
   if (pastikanKapal().filter(k => k.tipe === "kapal-kargo" && k.status === "berlayar").length >= MARITIM_KONFIG.maksKapalKargo) {
     return { ok: false, alasan: "kapal-penuh" };

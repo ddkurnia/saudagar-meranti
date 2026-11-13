@@ -148,6 +148,7 @@ function terhubungJaringan(b, jenis) {
   const pB = petakBangunan(b);
   for (const h of bangunanSelesai()) {
     if (h === b) continue;
+    if (bangunanNonaktif(h)) continue; // v29: hub nonaktif tidak menyalurkan
     const dh = BANGUNAN_MAP[h.id];
     if (!dh) continue;
     // (a) dalam radius hub
@@ -229,6 +230,7 @@ function hitungBanjir() {
   for (const b of bangunanSelesai()) {
     const d = BANGUNAN_MAP[b.id];
     if (!d || !d.radiusDrainase) continue;
+    if (bangunanNonaktif(b)) continue; // v29: drainase nonaktif tidak melindungi
     const r = d.radiusDrainase;
     for (const t of petakBangunan(b)) {
       for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
@@ -284,6 +286,7 @@ function hitungUtilitas(akrual) {
   for (const b of selesai) {
     const d = BANGUNAN_MAP[b.id];
     if (!d || !d.listrikProduksi) continue;
+    if (bangunanNonaktif(b)) continue; // v29: pembangkit nonaktif tidak menghasilkan
     if (d.hanyaSiang && !(jam >= 6 && jam < 18)) continue; // PLT Surya: siang saja
     kapasitasKW += d.listrikProduksi;
   }
@@ -294,6 +297,7 @@ function hitungUtilitas(akrual) {
     if (!b.selesai) continue;
     const d = BANGUNAN_MAP[b.id];
     if (!d) continue;
+    if (bangunanNonaktif(b)) { b.berlistrik = true; continue; } // v29: nonaktif tidak butuh listrik
     if ((d.listrik || 0) <= 0 || d.listrikProduksi) { b.berlistrik = true; continue; } // tidak butuh / sumber
     if (b.kebanjiran) { b.berlistrik = false; continue; }
     if (!terhubungJaringan(b, "listrik")) { b.berlistrik = false; continue; }
@@ -325,6 +329,7 @@ function hitungUtilitas(akrual) {
   for (const b of selesai) {
     const d = BANGUNAN_MAP[b.id];
     if (!d) continue;
+    if (bangunanNonaktif(b)) continue; // v29: sumber air nonaktif tidak menghasilkan
     if (d.airProduksi) {
       kapasitasL += d.airProduksi;
       bobotKualitas += d.airProduksi;
@@ -345,6 +350,7 @@ function hitungUtilitas(akrual) {
     if (!b.selesai) continue;
     const d = BANGUNAN_MAP[b.id];
     if (!d) continue;
+    if (bangunanNonaktif(b)) { b.berair = true; continue; } // v29: nonaktif tidak butuh air
     if ((d.air || 0) <= 0 || d.airProduksi) { b.berair = true; continue; } // tidak butuh / sumber
     if (b.kebanjiran) { b.berair = false; continue; }
     if (!terhubungJaringan(b, "air")) { b.berair = false; continue; }
@@ -376,6 +382,7 @@ function hitungUtilitas(akrual) {
   const produksiKgHari = S.penduduk.total * SAMPAH_PER_JIWA_HARI;
   let kapasitasKgHari = 0;
   for (const b of selesai) {
+    if (bangunanNonaktif(b)) continue; // v29
     const d = BANGUNAN_MAP[b.id];
     if (d && d.kapasitasSampah) kapasitasKgHari += d.kapasitasSampah;
   }
@@ -394,12 +401,17 @@ function hitungUtilitas(akrual) {
   return U;
 }
 
+// v29: bangunan nonaktif (flag S.bangunan[].nonaktif, tersimpan) = ditutup
+// sementara: tidak beroperasi, tidak butuh listrik/air, tidak kena pajak
+// properti, upkeep 10%. undefined = aktif (save lama tetap jalan).
+function bangunanNonaktif(b) { return !!b && b.nonaktif === true; }
 // Apakah bangunan ini beroperasi jam ini? (dipakai gating produksi di
 // akrualJamGame & layanan di hitungLayanan.) Sengaja defensif: flag yang
 // belum pernah dihitung (undefined, mis. sebelum hitungUtilitas pertama)
 // TIDAK mematikan bangunan.
 function bangunanBeroperasi(b) {
   if (!b) return false;
+  if (bangunanNonaktif(b)) return false; // v29: nonaktif = tidak beroperasi
   if (b.kebanjiran) return false;
   const d = BANGUNAN_MAP[b.id];
   if (!d) return true;

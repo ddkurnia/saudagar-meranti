@@ -92,6 +92,7 @@
     "banjir": "CRITICAL", "faskes-tidak-beroperasi": "CRITICAL",
     "rs-tidak-beroperasi": "CRITICAL", "bahan-baku-habis": "CRITICAL",
     "defisit-apbd": "HIGH", "pekerjaan-kurang": "HIGH",
+    "kas-negatif": "CRITICAL", // v29 Fase B: kas negatif = krisis kas
     "pekerja-kurang": "HIGH", "sampah-menumpuk": "HIGH",
     "kesehatan-jauh": "HIGH", "sekolah-jauh": "HIGH",
     "kendaraan-macet": "HIGH", "akses-macet": "HIGH",
@@ -138,6 +139,7 @@
       case "pasokan-kosong": return "Toko/pasar kehabisan barang";
       case "anggaran-defisit": return "APBD defisit beruntun";
       case "defisit-apbd": return "APBD defisit beruntun";
+      case "kas-negatif": return "Kas negatif — kota butuh pemulihan";
       case "kendaraan-macet": return jumlah + " kendaraan tidak bergerak";
       case "akses-macet": return "Jalan akses macet di " + jumlah + " lokasi";
       case "akses-padat": return "Jalan akses padat di " + jumlah + " lokasi";
@@ -294,7 +296,36 @@
       } catch (e) {}
       // APBD defisit.
       if (st.apbd && (st.apbd.hariDefisit || 0) >= 3) {
-        _tambah({ kode: "defisit-apbd", dampak: 0.7, jumlah: st.apbd.hariDefisit, lokasi: null, penyebab: "Belanja (upkeep + gaji) melebihi pemasukan (pajak + penjualan + ekspor) selama " + st.apbd.hariDefisit + " hari.", contohNama: "APBD", bangunan: [] });
+        // v29 Fase B: penyebab dari DATA NYATA (rincianHari) — belanja
+        // terbesar termasuk cicilan pinjaman, bukan teks generik.
+        var sebabDef = "Belanja (upkeep + gaji) melebihi pemasukan (pajak + penjualan + ekspor) selama " + st.apbd.hariDefisit + " hari.";
+        try {
+          if (typeof rekomendasiKeuangan === "function") {
+            var rkDef = rekomendasiKeuangan();
+            if (rkDef && rkDef.penyebab && rkDef.penyebab.length) {
+              sebabDef = "Defisit " + st.apbd.hariDefisit + " hari — belanja terbesar kemarin: " +
+                rkDef.penyebab.map(function (p) { return p.label + " " + (typeof rp === "function" ? rp(p.nilai) : p.nilai) + "/hari"; }).join(", ") + ".";
+            }
+          }
+        } catch (e) {}
+        _tambah({ kode: "defisit-apbd", dampak: 0.7, jumlah: st.apbd.hariDefisit, lokasi: null, penyebab: sebabDef, contohNama: "APBD", bangunan: [] });
+      }
+      // v29 Fase B: kas negatif — krisis kas (bukan hanya defisit
+      // beruntun): penyebab dari data nyata + kelayakan pinjaman.
+      if (st.uang < 0) {
+        var sebabNeg = "Kas negatif — belanja melebihi pemasukan.";
+        try {
+          if (typeof diagnosisKasNegatif === "function") {
+            var dgNeg = diagnosisKasNegatif();
+            if (dgNeg && dgNeg.penyebab && dgNeg.penyebab.length) {
+              sebabNeg = "Kas negatif (" + (typeof rp === "function" ? rp(st.uang) : st.uang) + ") — penyebab terbesar kemarin: " +
+                dgNeg.penyebab.map(function (p) { return p.label + " " + (typeof rp === "function" ? rp(p.nilai) : p.nilai) + "/hari"; }).join(", ") + ".";
+              if (dgNeg.pinjamanLayak && dgNeg.pinjamanLayak.length) sebabNeg += " Pinjaman layak: " + dgNeg.pinjamanLayak.map(function (x) { return x.jenis; }).join(", ") + ".";
+              else sebabNeg += " Tidak ada pinjaman yang layak saat ini.";
+            }
+          }
+        } catch (e) {}
+        _tambah({ kode: "kas-negatif", dampak: 1, jumlah: 1, lokasi: null, penyebab: sebabNeg, contohNama: "Kas", bangunan: [] });
       }
       // Pengangguran (angka nyata; bila belum diagregasi per rumah).
       try {
@@ -873,8 +904,35 @@
         break;
       case "defisit-apbd":
       case "anggaran-defisit":
-        out = [B("industri", "bangun", "industri-ekspor", "Bangun Industri Ekspor — Rp900.000 · level 4 + penelitian Industri Makanan, untuk menambah pemasukan ekspor", "Bangun Industri Ekspor (Rp900.000)")];
+      case "kas-negatif": {
+        // v29 Fase B: langkah pemulihan dari data nyata (bukan hanya
+        // bangun gedung baru) — nonaktifkan bangunan termahal yang
+        // tidak menghasilkan + turunkan alokasi APBD + pinjaman bila layak.
+        var langkahPemulihan = [];
+        try {
+          if (typeof bangunanTermahalTidakProduktif === "function") {
+            var mahal = bangunanTermahalTidakProduktif(1);
+            if (mahal && mahal.length) langkahPemulihan.push({ nomor: 0, teks: "Nonaktifkan " + mahal[0].nama + " (upkeep Rp" + (mahal[0].upkeep || 0).toLocaleString("id-ID") + "/hari, tidak menghasilkan) dari panel bangunan — hemat 90% upkeep.", tombol: "Lihat Lokasi", ringkas: "Nonaktifkan bangunan termahal", target: null, lokasi: lok, terkunci: false, alasanKunci: null });
+          }
+        } catch (e) {}
+        try {
+          if (typeof kebutuhanAPBD === "function") {
+            var butuhKat = kebutuhanAPBD();
+            var katB = null, nilB = 0;
+            var daftarKat = (typeof cfgEco === "function") ? cfgEco("apbd.kategori", []) : [];
+            for (var ik = 0; ik < daftarKat.length; ik++) if ((butuhKat[daftarKat[ik]] || 0) > nilB) { nilB = butuhKat[daftarKat[ik]] || 0; katB = daftarKat[ik]; }
+            if (katB && nilB > 0) langkahPemulihan.push({ nomor: 0, teks: "Turunkan alokasi APBD kategori terbesar (" + katB + ", kebutuhan Rp" + Math.round(nilB).toLocaleString("id-ID") + "/hari) 25% dari panel Ekonomi — hemat Rp" + Math.round(nilB * 0.25).toLocaleString("id-ID") + "/hari.", tombol: "Lihat Lokasi", ringkas: "Turunkan alokasi APBD", target: null, lokasi: lok, terkunci: false, alasanKunci: null });
+          }
+        } catch (e) {}
+        try {
+          if (typeof kelayakanPinjaman === "function") {
+            var cekMikro = kelayakanPinjaman("mikro");
+            if (cekMikro && cekMikro.layak) langkahPemulihan.push({ nomor: 0, teks: "Ajukan pinjaman Mikro dari panel Ekonomi (cicilan ±Rp" + Math.round(cekMikro.cicilanHarian || 0).toLocaleString("id-ID") + "/hari) — dana segar, tetap berbunga dan berbatas.", tombol: "Lihat Lokasi", ringkas: "Ajukan pinjaman Mikro", target: null, lokasi: lok, terkunci: false, alasanKunci: null });
+          }
+        } catch (e) {}
+        out = langkahPemulihan.concat([B("industri", "bangun", "industri-ekspor", "Bangun Industri Ekspor — Rp900.000 · level 4 + penelitian Industri Makanan, untuk menambah pemasukan ekspor", "Bangun Industri Ekspor (Rp900.000)")]);
         break;
+      }
       case "pekerja-kurang":
         out = [B("permukiman", "bangun", "rumah-sederhana", "Bangun Rumah Sederhana — Rp25.000 · menambah penduduk (angkatan kerja)", "Bangun Rumah Sederhana (Rp25.000)")];
         break;

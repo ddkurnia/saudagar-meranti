@@ -103,21 +103,21 @@ function majuSatuHari() { for (let i = 0; i < 6; i++) C.majukanWaktu(240); }
 const idxHtml = fs.readFileSync(ROOT + "/index.html", "utf8");
 const swTxt = fs.readFileSync(ROOT + "/sw.js", "utf8");
 const srcCity = fs.readFileSync(ROOT + "/js/city.js", "utf8");
-cek("A1 VERSI_GAME v28", C.VERSI_GAME === "v28", C.VERSI_GAME);
-cek("A2 index.html memuat 6 modul v24 dalam urutan benar (advisor ?v=4, ui-v24 ?v=4, diagnostik ?v=2 + bubble ?v=3, lainnya ?v=1)",
+cek("A1 VERSI_GAME v29", C.VERSI_GAME === "v29", C.VERSI_GAME);
+cek("A2 index.html memuat 6 modul v24 dalam urutan benar (advisor ?v=5, ui-v24 ?v=4, diagnostik ?v=2 + bubble ?v=3, lainnya ?v=1)",
   idxHtml.indexOf("js/city-warga.js?v=1") !== -1 && idxHtml.indexOf("js/city-bubble.js?v=3") !== -1 &&
-  idxHtml.indexOf("js/city-diagnostik.js?v=2") !== -1 && idxHtml.indexOf("js/city-advisor.js?v=4") !== -1 &&
+  idxHtml.indexOf("js/city-diagnostik.js?v=2") !== -1 && idxHtml.indexOf("js/city-advisor.js?v=5") !== -1 &&
   idxHtml.indexOf("js/city-tutorial.js?v=1") !== -1 && idxHtml.indexOf("js/city-ui-v24.js?v=4") !== -1 &&
-  idxHtml.indexOf("js/city-advisor.js?v=4") < idxHtml.indexOf("js/city.js?v=42") &&
-  idxHtml.indexOf("js/city.js?v=42") < idxHtml.indexOf("js/city-tutorial.js?v=1"));
-cek("A3 index.html: #btnAdvisor + #drawerAdvisorV24 + #toastAksiV24 + css?v=19 + city.js?v=42",
+  idxHtml.indexOf("js/city-advisor.js?v=5") < idxHtml.indexOf("js/city.js?v=43") &&
+  idxHtml.indexOf("js/city.js?v=43") < idxHtml.indexOf("js/city-tutorial.js?v=1"));
+cek("A3 index.html: #btnAdvisor + #drawerAdvisorV24 + #toastAksiV24 + css?v=19 + city.js?v=43",
   idxHtml.indexOf('id="btnAdvisor"') !== -1 && idxHtml.indexOf('id="drawerAdvisorV24"') !== -1 &&
   idxHtml.indexOf('id="toastAksiV24"') !== -1 && idxHtml.includes("css/city.css?v=19") &&
-  idxHtml.includes("js/city.js?v=42"));
-cek("A4 sw.js cache meranti-rising-v28 + precache 6 modul baru",
-  swTxt.indexOf("meranti-rising-v28") !== -1 && swTxt.indexOf("js/city-warga.js?v=1") !== -1 &&
+  idxHtml.includes("js/city.js?v=43"));
+cek("A4 sw.js cache meranti-rising-v29 + precache 6 modul baru",
+  swTxt.indexOf("meranti-rising-v29") !== -1 && swTxt.indexOf("js/city-warga.js?v=1") !== -1 &&
   swTxt.indexOf("js/city-bubble.js?v=3") !== -1 && swTxt.indexOf("js/city-diagnostik.js?v=2") !== -1 &&
-  swTxt.indexOf("js/city-advisor.js?v=4") !== -1 && swTxt.indexOf("js/city-tutorial.js?v=1") !== -1 &&
+  swTxt.indexOf("js/city-advisor.js?v=5") !== -1 && swTxt.indexOf("js/city-tutorial.js?v=1") !== -1 &&
   swTxt.indexOf("js/city-ui-v24.js?v=4") !== -1);
 cek("A5 tidak ada sisa pin v24.1/v24.2 aktif (city.js?v=35/36 / meranti-rising-v24.1/v24.2 / advisor|ui-v24 ?v=2 / diagnostik|bubble ?v=1 / kendaraan ?v=4 / lalin ?v=2 / css?v=17) + v26 (city.js?v=38 / cache v26) + v27.1 (city.js?v=40 / cache v27.1 / kendaraan ?v=5 / advisor ?v=3)",
   !idxHtml.includes("city.js?v=35") && !idxHtml.includes("city-advisor.js?v=2") &&
@@ -153,6 +153,13 @@ cek("A5 tidak ada sisa pin v24.1/v24.2 aktif (city.js?v=35/36 / meranti-rising-v
   !swTxt.includes("city.js?v=41") && !swTxt.includes('"meranti-rising-v27.2"') &&
   !swTxt.includes("css/city.css?v=18") && !swTxt.includes("js/city-bubble.js?v=2") &&
   !swTxt.includes("js/city-ui-v24.js?v=3"));
+cek("A5b tidak ada sisa pin v28 aktif (city.js?v=42 / cache v28 / city-data v=9 / utilitas v=1 / lalin v=3 / maritim v=1)",
+  !idxHtml.includes("js/city.js?v=42") && !idxHtml.includes("js/city-data.js?v=9") &&
+  !idxHtml.includes("js/city-utilitas.js?v=1") && !idxHtml.includes("js/city-lalin.js?v=3") &&
+  !idxHtml.includes("js/city-maritim.js?v=1") && !idxHtml.includes("meranti-rising-v28") &&
+  !swTxt.includes("js/city.js?v=42") && !swTxt.includes("js/city-data.js?v=9") &&
+  !swTxt.includes("js/city-utilitas.js?v=1") && !swTxt.includes("js/city-lalin.js?v=3") &&
+  !swTxt.includes("js/city-maritim.js?v=1") && !swTxt.includes('"meranti-rising-v28"'));
 cek("A6 modul global termuat (Warga/Bubble/Diagnostik/Advisor/Tutorial/UIV24/Notifikasi)",
   !!W && !!Bbl && !!Dg && !!Adv && !!Tut && !!UI && !!Notif);
 cek("A7 adapter kontrak: Diagnostik.diagnosis = diagnosa + statusBangunan; Advisor.pesan + ringkasan",
@@ -816,13 +823,13 @@ Bbl.bersihkan();
 Dg.invalidateSemua();
 
 // ---- X4d: banner "Versi baru tersedia" hanya bila SW lebih baru ----
-cek("X4d bandingVersi: v24.2>v24.1, v24.1<v24.2, sama=0, v24.10>v24.2, v27.1>v27, v27.2>v27.1, v27.3>v27.2, v28>v27.3", ctxEval("bandingVersi('v24.2','v24.1')") === 1 && ctxEval("bandingVersi('v24.1','v24.2')") === -1 && ctxEval("bandingVersi('v24.2','v24.2')") === 0 && ctxEval("bandingVersi('v24.10','v24.2')") === 1 && ctxEval("bandingVersi('v27.1','v27')") === 1 && ctxEval("bandingVersi('v27.2','v27.1')") === 1 && ctxEval("bandingVersi('v27.3','v27.2')") === 1 && ctxEval("bandingVersi('v28','v27.3')") === 1);
+cek("X4d bandingVersi: v24.2>v24.1, v24.1<v24.2, sama=0, v24.10>v24.2, v27.1>v27, v27.2>v27.1, v27.3>v27.2, v28>v27.3, v29>v28", ctxEval("bandingVersi('v24.2','v24.1')") === 1 && ctxEval("bandingVersi('v24.1','v24.2')") === -1 && ctxEval("bandingVersi('v24.2','v24.2')") === 0 && ctxEval("bandingVersi('v24.10','v24.2')") === 1 && ctxEval("bandingVersi('v27.1','v27')") === 1 && ctxEval("bandingVersi('v27.2','v27.1')") === 1 && ctxEval("bandingVersi('v27.3','v27.2')") === 1 && ctxEval("bandingVersi('v28','v27.3')") === 1 && ctxEval("bandingVersi('v29','v28')") === 1);
 ctxEval("pwaTerimaVersiSW('v24.1')");
-cek("X4d SW v24.1 (lebih lama dari halaman v28) -> banner TIDAK tampil", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
-ctxEval("pwaTerimaVersiSW('v28.1')");
-cek("X4d SW v28.1 (lebih baru) -> banner tampil", ctxEval("pwaUpdateTersedia") === true && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "");
-ctxEval("pwaTerimaVersiSW('v28')");
-cek("X4d SW v28 (sama dengan halaman) -> banner basi disembunyikan lagi", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
+cek("X4d SW v24.1 (lebih lama dari halaman v29) -> banner TIDAK tampil", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
+ctxEval("pwaTerimaVersiSW('v29.1')");
+cek("X4d SW v29.1 (lebih baru) -> banner tampil", ctxEval("pwaUpdateTersedia") === true && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "");
+ctxEval("pwaTerimaVersiSW('v29')");
+cek("X4d SW v29 (sama dengan halaman) -> banner basi disembunyikan lagi", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
 cek("X4d sw.js: postMessage versi + handler minta-versi", swTxt.indexOf("meranti-rising-minta-versi") !== -1 && swTxt.indexOf("meranti-rising-versi") !== -1 && swTxt.indexOf("VERSI_SW") !== -1);
 cek("X4d updatefound menanyakan versi SW dulu (bukan langsung menandai update)", srcCity.indexOf('baru.postMessage({ tipe: "meranti-rising-minta-versi" })') !== -1);
 
@@ -1153,12 +1160,12 @@ cek("Y-e2 spawn ke-41 mengembalikan null + sinkron tidak memaksa (sampah & warga
 bersihSemuaKendaraanV25();
 
 // ---- (g) refs v25 ----
-cek("Y-g1 VERSI_GAME v28 + index.html refs v28 (city.js v=42, kendaraan v=6, lalin v=3, css v=19 tetap)",
-  C.VERSI_GAME === "v28" && idxHtml.includes("js/city.js?v=42") && idxHtml.includes("js/city-kendaraan.js?v=6") &&
-  idxHtml.includes("js/city-lalin.js?v=3") && idxHtml.includes("css/city.css?v=19"));
-cek("Y-g2 sw.js cache meranti-rising-v28 + precache ?v= baru (city.js v=42, kendaraan v=6, lalin v=3)",
-  swTxt.indexOf("meranti-rising-v28") !== -1 && swTxt.indexOf("js/city.js?v=42") !== -1 &&
-  swTxt.indexOf("js/city-kendaraan.js?v=6") !== -1 && swTxt.indexOf("js/city-lalin.js?v=3") !== -1);
+cek("Y-g1 VERSI_GAME v29 + index.html refs v29 (city.js v=43, kendaraan v=6, lalin v=4, css v=19 tetap)",
+  C.VERSI_GAME === "v29" && idxHtml.includes("js/city.js?v=43") && idxHtml.includes("js/city-kendaraan.js?v=6") &&
+  idxHtml.includes("js/city-lalin.js?v=4") && idxHtml.includes("css/city.css?v=19"));
+cek("Y-g2 sw.js cache meranti-rising-v29 + precache ?v= baru (city.js v=43, kendaraan v=6, lalin v=4)",
+  swTxt.indexOf("meranti-rising-v29") !== -1 && swTxt.indexOf("js/city.js?v=43") !== -1 &&
+  swTxt.indexOf("js/city-kendaraan.js?v=6") !== -1 && swTxt.indexOf("js/city-lalin.js?v=4") !== -1);
 
 // ---- pulihkan keadaan seksi Y ----
 C.S.jalan = jalanV25Lama;
@@ -1171,8 +1178,8 @@ vm.runInContext("waktuGame = 12 * 60;", sandbox);
 
 // ---------------- Z: v26 Main Menu RISE OF MERANTI ----------------
 const menuCss = fs.readFileSync(ROOT + "/css/menu.css", "utf8");
-cek("Z1 VERSI_GAME v28 + index.html memuat css/menu.css?v=2 SETELAH city.css + city.js?v=42",
-  C.VERSI_GAME === "v28" && idxHtml.includes("css/menu.css?v=2") && idxHtml.includes("js/city.js?v=42") &&
+cek("Z1 VERSI_GAME v29 + index.html memuat css/menu.css?v=2 SETELAH city.css + city.js?v=43",
+  C.VERSI_GAME === "v29" && idxHtml.includes("css/menu.css?v=2") && idxHtml.includes("js/city.js?v=43") &&
   idxHtml.indexOf("css/city.css?v=19") < idxHtml.indexOf("css/menu.css?v=2"));
 cek("Z2 struktur DOM menu lengkap (header/logo/5 tombol/panel muat/promo/7 kategori/detail)",
   ["menuPillVersi", "btnMenuBantuan", "btnMenuProfil", "btnMenuPengaturan",
@@ -1230,8 +1237,8 @@ const logoInfo = infoPng(fs.readFileSync(ROOT + "/assets/menu/logo-rise-of-meran
 cek("Z4b logo RISE OF MERANTI RGBA 2172x724 (transparan, bukan JPEG latar putih)",
   !!logoInfo && logoInfo.lebar === 2172 && logoInfo.tinggi === 724 && logoInfo.tipeWarna === 6,
   JSON.stringify(logoInfo));
-cek("Z5 sw.js cache v28 + precache menu.css + 26 aset menu; arsip & pil palsu TIDAK di-precache",
-  swTxt.indexOf("meranti-rising-v28") !== -1 && swTxt.indexOf("css/menu.css?v=2") !== -1 &&
+cek("Z5 sw.js cache v29 + precache menu.css + 26 aset menu; arsip & pil palsu TIDAK di-precache",
+  swTxt.indexOf("meranti-rising-v29") !== -1 && swTxt.indexOf("css/menu.css?v=2") !== -1 &&
   ASET_MENU_DIPAKAI.every(f => swTxt.indexOf("./" + f) !== -1) &&
   ["menu-background.png", "menu-buttons.png", "category-icons.png", "category-cards.png",
    "header-icons.png", "google-save", "sinkron-cloud"].every(s => swTxt.indexOf(s) === -1));
@@ -1241,13 +1248,13 @@ cek("Z6 save key TIDAK berubah (merantiRisingWorldV1, VERSI_SAVE 1)",
 vm.runInContext('profilPemain = { nama: "Sukma", gender: "wanita", avatar: AVATAR_KARAKTER.wanita, tutorialSelesai: true, dibuat: "2026-11-11T00:00:00.000Z" }; simpanProfil();', sandbox);
 C.mulaiGame(true);
 C.kembaliKeMenuUtama();
-cek("Z7 menu: profil+save -> LANJUTKAN/MUAT/ikon tampil, MULAI sembunyi, pill versi v28",
+cek("Z7 menu: profil+save -> LANJUTKAN/MUAT/ikon tampil, MULAI sembunyi, pill versi v29",
   C.document.getElementById("btnLanjut").style.display === "inline-block" &&
   C.document.getElementById("btnMuat").style.display === "inline-block" &&
   C.document.getElementById("btnMenuProfil").style.display === "inline-block" &&
   C.document.getElementById("btnMenuPengaturan").style.display === "inline-block" &&
   C.document.getElementById("btnMulai").style.display === "none" &&
-  C.document.getElementById("menuPillVersi").textContent === "v28" &&
+  C.document.getElementById("menuPillVersi").textContent === "v29" &&
   C.document.getElementById("sambutanKembali").textContent.indexOf("Sukma") !== -1);
 cek("Z8 MUAT (ada save): panel tampil + detail simpanan nyata + tombol Muat aktif",
   (() => { C.document.getElementById("btnMuat").onclick(); return C.document.getElementById("menuPanelMuat").style.display === "block"; })() &&
@@ -1479,9 +1486,9 @@ cek("AA-g1 histeresis: varian SE dipertahankan saat sudutLayar 94° (<5° dari b
 cek("AA-g2 histeresis: ganti ke SW saat sudutLayar ~96° (>5° dari batas) + bungkus 0°: NE dipertahankan di 317°",
   (() => { const k = { _varianArah: "se" }; const a = C.pilihVarianArah(48 * Math.PI / 180, k); const k2 = { _varianArah: "ne" }; const b = C.pilihVarianArah(317 * Math.PI / 180, k2); return a === "sw" && k._varianArah === "sw" && b === "ne" && k2._varianArah === "ne"; })());
 // ---- (h) refs v28 ----
-cek("AA-h1 VERSI_GAME v28 + index.html city.js?v=42 + pill v28 + sw.js cache meranti-rising-v28",
-  C.VERSI_GAME === "v28" && idxHtml.includes("js/city.js?v=42") && idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v28<') &&
-  swTxt.indexOf("meranti-rising-v28") !== -1 && swTxt.indexOf("js/city.js?v=42") !== -1);
+cek("AA-h1 VERSI_GAME v29 + index.html city.js?v=43 + pill v29 + sw.js cache meranti-rising-v29",
+  C.VERSI_GAME === "v29" && idxHtml.includes("js/city.js?v=43") && idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v29<') &&
+  swTxt.indexOf("meranti-rising-v29") !== -1 && swTxt.indexOf("js/city.js?v=43") !== -1);
 cek("AA-h2 sw.js TIDAK mem-precache 36 varian (runtime-cache seperti audio) + TIDAK ada sisa pin v26",
   !swTxt.includes("mobil-sedan-sw.png") && !swTxt.includes("bus-nw.png") &&
   !swTxt.includes("meranti-rising-v26") && !idxHtml.includes("city.js?v=38") && !swTxt.includes("city.js?v=38"));
@@ -1816,10 +1823,10 @@ const srcDiagV28 = fs.readFileSync(ROOT + "/js/city-diagnostik.js", "utf8");
 const menuCssV28 = fs.readFileSync(ROOT + "/css/menu.css", "utf8");
 
 // ---- AD-a: versi + data katalog tidak berubah ----
-cek("AD-a1 VERSI_GAME v28 + refs v28 (css v=19, city.js v=42, bubble v=3, ui-v24 v=4, pill v28, cache v28)",
-  C.VERSI_GAME === "v28" && idxHtml.includes("css/city.css?v=19") && idxHtml.includes("js/city.js?v=42") &&
+cek("AD-a1 VERSI_GAME v29 + refs v29 (css v=19, city.js v=43, bubble v=3, ui-v24 v=4, pill v29, cache v29)",
+  C.VERSI_GAME === "v29" && idxHtml.includes("css/city.css?v=19") && idxHtml.includes("js/city.js?v=43") &&
   idxHtml.includes("js/city-bubble.js?v=3") && idxHtml.includes("js/city-ui-v24.js?v=4") &&
-  idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v28<') && swTxt.indexOf("meranti-rising-v28") !== -1);
+  idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v29<') && swTxt.indexOf("meranti-rising-v29") !== -1);
 const tabIdsAD = ctxEval("TAB_BANGUN.map(function(t){ return t.id; })");
 const dockUrutanAD = ctxEval("DOCK_URUTAN_V28");
 cek("AD-a2 TAB_BANGUN tetap 19 (data tidak diubah v28) + DOCK_URUTAN_V28 memuat ke-19 id tepat sekali",
@@ -1965,6 +1972,637 @@ cek("AD-f6 HUD 1024/1366: judul + fase disembunyikan di ≤1100px; tanggal + fas
   (cssV28.match(/\.xpTeks \{ display: none; \}/g) || []).length >= 2 &&
   (cssV28.match(/\.kartuDes \{ display: none; \}/g) || []).length >= 2);
 C.mulaiGame(true);
+
+// ---------------- AB: v29 Fondasi Ekonomi (Fase A) ----------------
+// economyConfig satu sumber; modal awal Rp10jt sekali; migrasi save lama;
+// rebalancing spot-check; penonaktifan; gating penjualan; kargo masuk
+// APBD; bunga pasif hilang; sim 30 hari x 5 gaya (ringkas dari
+// ~/workspace/v29-ekonomi/sim-v29.js — sim penuh 90 hari ada di sana).
+cek("AB1 economyConfig satu sumber: modal Rp10jt, pajak 250, upah 400, cfgEco fallback",
+  ctxEval("economyConfig.modalAwal.uang") === 10000000 && ctxEval("cfgEco('pajak.perJiwa', 200)") === 250 &&
+  ctxEval("cfgEco('upah.perPekerja', 500)") === 400 && ctxEval("cfgEco('jalur.tidak.ada', 123)") === 123 &&
+  ctxEval("economyConfig.penjualan.ekspor.kuotaHarian") === 15 && ctxEval("economyConfig.bank.bungaSaldo") === 0);
+cek("AB1b ubah config -> harga ikut berubah (pajak per jiwa 1000 => akrual 1 jam = 4x1000/24)",
+  (() => {
+    C.mulaiGame(true);
+    const sblm = C.S.rincianBerjalan.pajak || 0;
+    ctxEval("economyConfig.pajak.perJiwa = 1000;");
+    C.majukanWaktu(60);
+    const delta = (C.S.rincianBerjalan.pajak || 0) - sblm;
+    ctxEval("economyConfig.pajak.perJiwa = 250;");
+    return Math.abs(delta - 4000 / 24) < 1;
+  })(), "cek AB1b");
+cek("AB1c tarif bus/taksi SATU sumber (LALIN = RUTE_BUS = config 2000, pembagiJam 24)",
+  ctxEval("LALIN_KONFIG.tarifBus") === 2000 && ctxEval("RUTE_BUS_KONFIG.tarifDefault") === 2000 &&
+  ctxEval("cfgEco('transportasi.bus.pembagiJam', 0)") === 24 && ctxEval("LALIN_KONFIG.tarifTaksi") === 5000);
+cek("AB1d satu rumus harga ekspor: tepung 8000 x (1+0,2) = 9600; +kantor-dagang 10% -> 10400",
+  ctxEval("hargaEksporUnit('tepung')") === 9600 &&
+  (() => { C.mulaiGame(true); C.S.bangunan.push({ id: "kantor-dagang", x: 0, y: 0, rot: 0, selesai: true, progres: 1 }); return ctxEval("hargaEksporUnit('tepung')") === 10400; })());
+cek("AB2 modal awal Rp10.000.000 SEKALI: game baru 10jt, reload tidak menambah",
+  (() => { C.mulaiGame(true); if (C.S.uang !== 10000000) return false; C.simpan(); C.mulaiGame(false); return C.S.uang === 10000000; })(), "uang=" + C.S.uang);
+cek("AB3 migrasi save lama: uang float dibulatkan SEKALI saat load + flag, tanpa top-up Rp10jt",
+  (() => {
+    C.mulaiGame(true);
+    ctxEval("S.uang = 1234567.89; delete S.migrasiEkonomiV29;");
+    C.simpan(); C.mulaiGame(false);
+    return C.S.uang === 1234568 && C.S.migrasiEkonomiV29 === true;
+  })(), "uang=" + C.S.uang + " flag=" + C.S.migrasiEkonomiV29);
+cek("AB4 rebalancing spot-check: rumah 20rb/300, kilang 5rb/6 pekerja, dermaga 1rb + wisata 1200, toko jual 5, bank tanpa bunga",
+  C.BANGUNAN_MAP["rumah-sederhana"].harga.uang === 20000 && C.BANGUNAN_MAP["rumah-sederhana"].upkeep === 300 &&
+  C.BANGUNAN_MAP["kilang-sagu"].upkeep === 5000 && C.BANGUNAN_MAP["kilang-sagu"].pekerja === 6 &&
+  C.BANGUNAN_MAP["dermaga"].upkeep === 1000 && C.BANGUNAN_MAP["dermaga"].wisata === 1200 &&
+  C.BANGUNAN_MAP["toko"].jual.maks === 5 && C.BANGUNAN_MAP["bank"].bunga === undefined &&
+  C.BANGUNAN_MAP["kawasan-industri"].des.indexOf("+15%") !== -1);
+cek("AB4b kota baru TIDAK defisit struktural: net 24 jam >= 0 (target v29)",
+  (() => { C.mulaiGame(true); const u0 = C.S.uang; majuSatuHari(); return (C.S.uang - u0) >= 0; })(), "cek AB4b");
+// Helper petak sim (penempatan langsung dlm radius hub; jalan tidak diuji di sini).
+function cariTileSimAB(w, h, pantai) {
+  const L = C.peta.landing;
+  for (let r = 0; r <= 9; r++) for (let y = L.y - r; y <= L.y + r; y++) for (let x = L.x - r; x <= L.x + r; x++) {
+    if (Math.hypot(x - L.x, y - L.y) > 8.5) continue;
+    let ok = true;
+    for (let j = 0; j < h && ok; j++) for (let i = 0; i < w && ok; i++) {
+      const t = C.terrainDi(C.peta, x + i, y + j);
+      if (pantai) { if (t !== "pantai" && t !== "laut") ok = false; }
+      else if (!C.TERRAIN[t] || !C.TERRAIN[t].bisaBangun || C.TERRAIN[t].butuhBuka || t === "pantai") ok = false;
+      if (C.adaBangunanDi(C.S, x + i, y + j) || C.adaJalanDi(C.S, x + i, y + j)) ok = false;
+    }
+    if (ok) return { x: x, y: y };
+  }
+  return null;
+}
+cek("AB5 penonaktifan: upkeep 10%, gaji 0, pajak properti 0, staf dilepas (laporan + hitungTenagaKerja)",
+  (() => {
+    C.mulaiGame(true);
+    const idx = C.S.bangunan.length;
+    C.S.bangunan.push({ id: "kilang-sagu", x: 0, y: 0, rot: 0, selesai: true, progres: 1, staf: 6, efisiensi: 1 });
+    const lapAktif = C.laporanEkonomiBangunan(C.S.bangunan[idx]);
+    C.toggleNonaktif(idx);
+    const lapNon = C.laporanEkonomiBangunan(C.S.bangunan[idx]);
+    C.hitungTenagaKerja();
+    const ok = lapAktif.upkeep === 5000 && lapNon.upkeep === 500 && lapNon.gaji === 0 && lapNon.pajakProperti === 0 &&
+      C.S.bangunan[idx].nonaktif === true && C.S.bangunan[idx].staf === 0;
+    C.toggleNonaktif(idx); // kembalikan aktif
+    return ok && C.S.bangunan[idx].nonaktif === false && C.laporanEkonomiBangunan(C.S.bangunan[idx]).upkeep === 5000;
+  })(), "cek AB5");
+cek("AB5b produksi berhenti saat nonaktif: kebun aktif +tual, nonaktif tetap",
+  (() => {
+    C.mulaiGame(true);
+    const t = cariTileSimAB(2, 2, false);
+    if (!t) return false;
+    C.S.bangunan.push({ id: "kebun-sagu", x: t.x, y: t.y, rot: 0, selesai: true, progres: 1 });
+    const idx = C.S.bangunan.length - 1;
+    const tual0 = C.S.komoditas.tual || 0;
+    majuSatuHari();
+    const naik = (C.S.komoditas.tual || 0) - tual0;
+    C.toggleNonaktif(idx);
+    const tual1 = C.S.komoditas.tual || 0;
+    majuSatuHari();
+    return naik > 0 && (C.S.komoditas.tual || 0) === tual1;
+  })(), "cek AB5b");
+cek("AB5c penjualan digate saat nonaktif: pasar aktif menjual, nonaktif tidak (Q10)",
+  (() => {
+    C.mulaiGame(true);
+    const t = cariTileSimAB(2, 2, false);
+    if (!t) return false;
+    C.S.bangunan.push({ id: "pasar-tradisional", x: t.x, y: t.y, rot: 0, selesai: true, progres: 1 });
+    const idx = C.S.bangunan.length - 1;
+    C.S.komoditas.tepung = 50;
+    majuSatuHari();
+    const terjualAktif = 50 - (C.S.komoditas.tepung || 0);
+    const jualAktif = (C.S.statistik.rincianHari.penjualan || 0);
+    // Fase nonaktif di game BARU (snapshot rincianHari bersih — ekor
+    // penjualan fase 1 tidak ikut terhitung).
+    C.mulaiGame(true);
+    const t2 = cariTileSimAB(2, 2, false);
+    if (!t2) return false;
+    C.S.bangunan.push({ id: "pasar-tradisional", x: t2.x, y: t2.y, rot: 0, selesai: true, progres: 1, nonaktif: true });
+    C.S.komoditas.tepung = 50;
+    majuSatuHari();
+    const terjualNon = 50 - (C.S.komoditas.tepung || 0);
+    const jualNon = (C.S.statistik.rincianHari.penjualan || 0);
+    return terjualAktif > 0 && jualAktif > 0 && terjualNon === 0 && jualNon === 0;
+  })(), "cek AB5c");
+cek("AB5d bangunanBeroperasi: padam/nonaktif = false, normal = true (Q10)",
+  ctxEval("bangunanBeroperasi({id:'pasar-tradisional', berlistrik:false, berair:true})") === false &&
+  ctxEval("bangunanBeroperasi({id:'pasar-tradisional', nonaktif:true, berlistrik:true, berair:true})") === false &&
+  ctxEval("bangunanBeroperasi({id:'pasar-tradisional', berlistrik:true, berair:true})") === true);
+cek("AB6 penjualan kapal kargo masuk APBD (Q4 + Fase B pajak ekspor 5%): 10 tepung -> uang +Rp96.000 (kotor), j.ekspor net Rp91.200, j.pajakEkspor Rp4.800",
+  (() => {
+    C.mulaiGame(true);
+    const u0 = C.S.uang, e0 = C.S.rincianBerjalan.ekspor || 0, px0 = C.S.rincianBerjalan.pajakEkspor || 0, s0 = C.S.statistik.ekspor || 0;
+    ctxEval("_tibaKapal({tipe:'kapal-kargo', muatan:{komoditas:'tepung', jumlah:10}}, 'ke')");
+    return C.S.uang === u0 + 96000 && (C.S.rincianBerjalan.ekspor || 0) === e0 + 91200 && (C.S.rincianBerjalan.pajakEkspor || 0) === px0 + 4800 && (C.S.statistik.ekspor || 0) === s0 + 10;
+  })(), "uang=" + C.S.uang + " ekspor=" + (C.S.rincianBerjalan && C.S.rincianBerjalan.ekspor) + " pajakEkspor=" + (C.S.rincianBerjalan && C.S.rincianBerjalan.pajakEkspor));
+cek("AB7 bunga pasif 2% HILANG (Q6): bank + saldo Rp5jt, 1 hari -> j.bunga tetap 0",
+  (() => {
+    C.mulaiGame(true);
+    C.S.bangunan.push({ id: "bank", x: 0, y: 0, rot: 0, selesai: true, progres: 1 });
+    C.S.uang = 5000000;
+    majuSatuHari();
+    return (C.S.statistik.rincianHari.bunga || 0) === 0 && ctxEval("economyConfig.bank.bungaSaldo") === 0;
+  })(), "bunga=" + ((C.S.statistik.rincianHari || {}).bunga));
+cek("AB8 panel kanan: Laporan Ekonomi + tombol Nonaktifkan; panel Ekonomi: label fasilitas (wisata), tanpa klaim bunga",
+  (() => {
+    C.mulaiGame(true);
+    ctxEval("terpilih = {jenis:'bangunan', idx:0};");
+    C.renderPanelKanan();
+    const kanan = C.document.getElementById("panelKanan").innerHTML;
+    vm.runInContext("panelKiri = 'ekonomi';", sandbox);
+    C.renderPanelKiri();
+    const kiri = C.document.getElementById("panelKiriIsi").innerHTML;
+    ctxEval("terpilih = null;");
+    C.renderPanelKanan();
+    return kanan.indexOf("Laporan Ekonomi") !== -1 && kanan.indexOf("Nonaktifkan") !== -1 &&
+      kiri.indexOf("Pendapatan fasilitas (wisata)") !== -1;
+  })(), "cek AB8");
+cek("AB9 pajak properti: kantor pemerintah DIKECUALIKAN (Q3), perkantoran swasta tetap kena",
+  (() => {
+    C.mulaiGame(true);
+    const lapPem = C.laporanEkonomiBangunan({ id: "kantor-pemerintah", selesai: true });
+    const lapSwasta = C.laporanEkonomiBangunan({ id: "perkantoran-swasta", selesai: true });
+    return lapPem.pajakProperti === 0 && lapSwasta.pajakProperti > 0;
+  })(), "cek AB9");
+// AB10: sim 30 hari x 5 gaya (ringkas; sim penuh 90 hari di sim-90-hari-fase-a.json).
+function bangunSimAB(id) {
+  const def = C.BANGUNAN_MAP[id];
+  if (!def) return false;
+  if ((def.level || 1) > C.S.level) return false;
+  if (def.tech && !C.S.teknologi[def.tech]) return false;
+  if (!C.cukupBiaya(def.harga)) return false;
+  if (C.S.uang - (def.harga.uang || 0) < 20000) return false;
+  const k = C.kakiBangunan(def, 0);
+  const t = cariTileSimAB(k.w, k.h, !!def.pantai);
+  if (!t) return false;
+  C.bayarBiaya(def.harga);
+  C.S.bangunan.push({ id: def.id, x: t.x, y: t.y, rot: 0, selesai: false, progres: 0, kecamatan: C.kecamatanDiPeta(C.peta, t.x, t.y) });
+  C.catatDibangun(def); C.cekMisi();
+  return true;
+}
+const ANTRE_AB = {
+  A: [["rumah-sederhana", 10], ["rumah-permanen", 4], ["paud", 1], ["sd", 1], ["posyandu", 1], ["toko", 1], ["pasar-tradisional", 1]],
+  B: [["rumah-sederhana", 8], ["kebun-sagu", 3], ["kilang-sagu", 2], ["pasar-tradisional", 1], ["kebun-kelapa", 2], ["pabrik-kelapa", 1], ["gudang", 1]],
+  C: [["rumah-sederhana", 8], ["kebun-sagu", 2], ["toko", 2], ["pasar-tradisional", 1], ["kedai-liberika", 1], ["pasar-modern", 1]],
+  D: [["rumah-sederhana", 10], ["kebun-sagu", 3], ["kilang-sagu", 1], ["pasar-tradisional", 1], ["kebun-kelapa", 2]],
+  E: [["rumah-sederhana", 8], ["plt-surya", 1], ["intake", 1], ["kebun-sagu", 2], ["kilang-sagu", 1], ["pasar-tradisional", 1]],
+};
+ctxEval("cuacaBaru = function() { return 'Cerah'; };");
+for (const kode of Object.keys(ANTRE_AB)) {
+  C.mulaiGame(true);
+  let minUang = C.S.uang, surplusHari = null, masukTotal = 0;
+  for (let hari = 1; hari <= 30; hari++) {
+    let n = 0;
+    for (const [id, target] of ANTRE_AB[kode]) {
+      if (n >= 2) break;
+      if ((C.S.statistik.dibangun[id] || 0) < target && bangunSimAB(id)) n++;
+    }
+    majuSatuHari();
+    const r = C.S.statistik.rincianHari || {};
+    const masuk = (r.pajak || 0) + (r.pajakProperti || 0) + (r.penjualan || 0) + (r.ekspor || 0) + (r.wisata || 0) + (r.perdagangan || 0) + (r.daurUlang || 0) + (r.tiketBus || 0) + (r.tiketRekreasi || 0);
+    const keluar = (r.upkeep || 0) + (r.gaji || 0);
+    masukTotal += masuk;
+    if (surplusHari === null && masuk - keluar > 0) surplusHari = hari;
+    if (C.S.uang < minUang) minUang = C.S.uang;
+  }
+  cek("AB10 sim 30 hari gaya " + kode + ": saldo akhir > 0, kas tidak pernah negatif, pendapatan tumbuh, penduduk bertambah",
+    C.S.uang > 0 && minUang > 0 && masukTotal > 0 && C.S.penduduk.total > 4,
+    "gaya=" + kode + " saldo=" + Math.round(C.S.uang) + " min=" + Math.round(minUang) + " pop=" + C.S.penduduk.total);
+  if (kode === "A") cek("AB10b sim 30 hari gaya A (permukiman): surplus tercapai dalam 30 hari",
+    surplusHari !== null, "surplusHari=" + surplusHari);
+}
+
+// ---------------- AC: v29 Sistem Ekonomi Fase B ----------------
+// Perbankan, pajak dinamis, harga komoditas dinamis, anggaran APBD,
+// dashboard keuangan, pemulihan kebangkrutan + sim 30 hari 5 gaya
+// dengan sistem Fase B. (Sim penuh 90 hari ada di
+// ~/workspace/v29-ekonomi/sim-90-hari-fase-b.json.)
+cek("AC0 refs Fase B: bahagia ?v=2, advisor ?v=5 (index.html + sw.js), tanpa sisa ?v= lama",
+  idxHtml.includes("js/city-bahagia.js?v=2") && idxHtml.includes("js/city-advisor.js?v=5") &&
+  swTxt.includes("js/city-bahagia.js?v=2") && swTxt.includes("js/city-advisor.js?v=5") &&
+  !idxHtml.includes("js/city-bahagia.js?v=1") && !idxHtml.includes("js/city-advisor.js?v=4") &&
+  !swTxt.includes("js/city-bahagia.js?v=1") && !swTxt.includes("js/city-advisor.js?v=4"));
+cek("AC1 config Fase B: pinjaman tersedia (4 jenis, pokok/tenor/levelMin), pajak dinamis default 5%, harga dinamis ±5%/50-150%, APBD 7 kategori, biaya logistik 0",
+  ctxEval("economyConfig.pinjaman.tersedia") === true &&
+  ctxEval("economyConfig.pinjaman.jenis.mikro.pokok") === 1000000 && ctxEval("economyConfig.pinjaman.jenis.pengembangan.pokok") === 10000000 &&
+  ctxEval("economyConfig.pinjaman.jenis.usaha.levelMin") === 2 && ctxEval("economyConfig.pinjaman.bungaHarian") === 0.002 &&
+  ctxEval("cfgEco('pajak.usaha.tarifDefault', 0)") === 5 && ctxEval("cfgEco('pajak.perdagangan.tarifDefault', 0)") === 5 && ctxEval("cfgEco('pajak.ekspor.tarifDefault', 0)") === 5 &&
+  ctxEval("cfgEco('komoditas.dinamis.perubahanMaksHarian', 0)") === 0.05 && ctxEval("cfgEco('transportasi.biayaLogistikPerUnit', -1)") === 0 &&
+  ctxEval("economyConfig.apbd.kategori.length") === 7 && ctxEval("economyConfig.pinjaman.maksPinjamanBerjalan") === 2);
+// Helper: beri kota riwayat pemasukan tinggi (agar lolos batas kredit
+// 30% pemasukan) — simulasi pendapatan, bukan uang gratis.
+function beriPemasukanSimulasi() {
+  const riw = [];
+  for (let i = 1; i <= 7; i++) riw.push({ hari: i, masuk: 200000, keluar: 10000, pajak: 1000, ekspor: 0, cicilan: 0, saldo: 10000000 });
+  C.S.riwayatKeuangan = riw;
+}
+cek("AC2 batas kredit: kota baru ditolak (cicilan > 30% pemasukan); usaha ditolak level; mikro layak bila pemasukan tinggi",
+  (() => {
+    C.mulaiGame(true);
+    const tolakBaru = C.kelayakanPinjaman("mikro", 90);
+    const tolakLevel = C.kelayakanPinjaman("usaha", 180);
+    beriPemasukanSimulasi();
+    const layak = C.kelayakanPinjaman("mikro", 90);
+    return tolakBaru.layak === false && tolakLevel.layak === false && tolakLevel.alasan.indexOf("level 2") !== -1 &&
+      layak.layak === true && Math.abs(layak.cicilanHarian - (1000000 / 90 + 2000)) < 0.01;
+  })(), "cek AC2");
+cek("AC3 pengajuan pinjaman: pokok masuk kas seketika, status berjalan, 1 per jenis, maks pinjaman berjalan",
+  (() => {
+    C.mulaiGame(true);
+    beriPemasukanSimulasi();
+    const u0 = C.S.uang;
+    const hasil = C.ajukanPinjaman("mikro", 90);
+    const p = C.S.bank.pinjamanAktif[0];
+    const duplikat = C.ajukanPinjaman("mikro", 180);
+    return hasil.ok === true && C.S.uang === u0 + 1000000 && C.S.bank.pinjamanAktif.length === 1 &&
+      p.status === "berjalan" && p.sisaPokok === 1000000 && p.bungaHariIni === 2000 &&
+      Math.abs(p.cicilanPokokHarian - 1000000 / 90) < 0.01 && duplikat.ok === false &&
+      C.S.bank.riwayat.length === 0;
+  })(), "cek AC3");
+cek("AC4 cicilan harian masuk APBD (j.cicilanPinjaman) + pokok berkurang + delta uang = net rincian",
+  (() => {
+    C.mulaiGame(true);
+    ctxEval("waktuGame = 0;"); // hari penuh 24 jam di rincianHari (pola test13)
+    beriPemasukanSimulasi();
+    C.ajukanPinjaman("mikro", 90);
+    const u0 = C.S.uang;
+    majuSatuHari();
+    const r = C.S.statistik.rincianHari || {};
+    const p = C.S.bank.pinjamanAktif[0];
+    const masuk = (r.pajak || 0) + (r.pajakProperti || 0) + (r.pajakUsaha || 0) + (r.pajakPerdagangan || 0) + (r.pajakEkspor || 0) + (r.penjualan || 0) + (r.ekspor || 0) + (r.wisata || 0) + (r.bunga || 0) + (r.perdagangan || 0) + (r.daurUlang || 0) + (r.tiketBus || 0) + (r.tiketRekreasi || 0);
+    const keluar = (r.upkeep || 0) + (r.gaji || 0) + (r.cicilanPinjaman || 0);
+    return Math.abs((r.cicilanPinjaman || 0) - (1000000 / 90 + 2000)) < 2 &&
+      Math.abs((p.sisaPokok || 0) - (1000000 - 1000000 / 90)) < 2 && p.hariBerjalan === 1 &&
+      Math.abs((C.S.uang - u0) - (masuk - keluar)) < 2 && Math.abs(C.netRincian(r) - (masuk - keluar)) < 0.01;
+  })(), "cek AC4");
+cek("AC5 bunga 0,2%/hari atas SISA POKOK (bukan plafon): bunga hari ke-31 < bunga hari ke-1",
+  (() => {
+    C.mulaiGame(true);
+    beriPemasukanSimulasi();
+    C.ajukanPinjaman("mikro", 90);
+    for (let i = 0; i < 30; i++) { if (C.S.uang < 50000) C.S.uang += 100000; majuSatuHari(); }
+    const p = C.S.bank.pinjamanAktif[0];
+    return Math.abs((p.sisaPokok || 0) - (1000000 - 30 * 1000000 / 90)) < 5 &&
+      Math.abs((p.bungaHariIni || 0) - (1000000 - 30 * 1000000 / 90) * 0.002) < 2 &&
+      (p.bungaHariIni || 0) < 2000 && p.status === "berjalan";
+  })(), "cek AC5");
+cek("AC6 pelunasan dipercepat: sisa pokok + bunga berjalan hari ini, tanpa penalti, masuk riwayat lunas",
+  (() => {
+    C.mulaiGame(true);
+    ctxEval("waktuGame = 0;"); // jam 0 -> pelunasan = sisa pokok + bunga 1 hari penuh
+    beriPemasukanSimulasi();
+    C.ajukanPinjaman("mikro", 90);
+    const p = C.S.bank.pinjamanAktif[0];
+    const u0 = C.S.uang;
+    const hasil = C.lunasiPinjaman(p.id);
+    return hasil.ok === true && hasil.dibayar === 1002000 && C.S.uang === u0 - 1002000 &&
+      C.S.bank.pinjamanAktif.length === 0 && C.S.bank.riwayat.length === 1 &&
+      C.S.bank.riwayat[0].status === "lunas" && C.S.bank.riwayat[0].pelunasanDipercepat === true &&
+      C.S.bank.riwayat[0].totalDibayar === 1002000;
+  })(), "cek AC6");
+cek("AC7 denda keterlambatan: kas negatif -> menunggak + denda 1% angsuran dikapitalisasi; kas pulih -> berjalan lagi",
+  (() => {
+    C.mulaiGame(true);
+    beriPemasukanSimulasi();
+    C.ajukanPinjaman("mikro", 90);
+    C.S.uang = -1000;
+    majuSatuHari();
+    const p = C.S.bank.pinjamanAktif[0];
+    const dendaOk = p.status === "menunggak" && p.hariMenunggak === 1 &&
+      Math.abs((p.dendaTotal || 0) - Math.round((1000000 / 90 + 2000) * 0.01)) < 2 &&
+      Math.abs((p.sisaPokok || 0) - (1000000 - 1000000 / 90 + Math.round((1000000 / 90 + 2000) * 0.01))) < 2;
+    C.S.uang = 5000000;
+    majuSatuHari();
+    return dendaOk && C.S.bank.pinjamanAktif[0].status === "berjalan";
+  })(), "cek AC7");
+cek("AC8 bank aktif +1 maks pinjaman berjalan (2 -> 3)",
+  (() => {
+    C.mulaiGame(true);
+    const tanpa = C.maksPinjamanBerjalan();
+    C.S.bangunan.push({ id: "bank", x: 0, y: 0, rot: 0, selesai: true, progres: 1 });
+    const dengan = C.maksPinjamanBerjalan();
+    C.S.bangunan[C.S.bangunan.length - 1].nonaktif = true;
+    const nonaktif = C.maksPinjamanBerjalan();
+    return tanpa === 2 && dengan === 3 && nonaktif === 2;
+  })(), "cek AC8");
+// --- Pajak dinamis ---
+cek("AC9a pajak usaha vs perdagangan: tepung (industri) -> pajak usaha 5%, tual (mentah) -> pajak perdagangan 5%",
+  (() => {
+    C.mulaiGame(true);
+    ctxEval("waktuGame = 0;"); // hari penuh 24 jam di rincianHari (pola test13)
+    const t = cariTileSimAB(2, 2, false);
+    if (!t) return false;
+    C.S.bangunan.push({ id: "pasar-tradisional", x: t.x, y: t.y, rot: 0, selesai: true, progres: 1 });
+    C.S.komoditas.tepung = 50;
+    majuSatuHari();
+    const r1 = C.S.statistik.rincianHari || {};
+    const ok1 = Math.abs((r1.pajakUsaha || 0) - 4000) < 1 && Math.abs((r1.penjualan || 0) - 76000) < 1 && (r1.pajakPerdagangan || 0) === 0;
+    C.mulaiGame(true);
+    ctxEval("waktuGame = 0;");
+    const t2 = cariTileSimAB(2, 2, false);
+    if (!t2) return false;
+    C.S.bangunan.push({ id: "pasar-tradisional", x: t2.x, y: t2.y, rot: 0, selesai: true, progres: 1 });
+    C.S.komoditas.tual = 50;
+    majuSatuHari();
+    const r2 = C.S.statistik.rincianHari || {};
+    return ok1 && Math.abs((r2.pajakPerdagangan || 0) - 1000) < 1 && Math.abs((r2.penjualan || 0) - 19000) < 1 && (r2.pajakUsaha || 0) === 0;
+  })(), "cek AC9a");
+cek("AC9b ubah tarif usaha 5% -> 20%: pajak usaha naik 4x (Rp16.000/hari atas 10 tepung)",
+  (() => {
+    C.mulaiGame(true);
+    ctxEval("waktuGame = 0;");
+    const t = cariTileSimAB(2, 2, false);
+    if (!t) return false;
+    C.S.bangunan.push({ id: "pasar-tradisional", x: t.x, y: t.y, rot: 0, selesai: true, progres: 1 });
+    C.S.komoditas.tepung = 50;
+    C.aturTarifPajakDinamis("usaha", 20);
+    majuSatuHari();
+    const r = C.S.statistik.rincianHari || {};
+    return C.tarifPajakBaru("usaha") === 20 && Math.abs((r.pajakUsaha || 0) - 16000) < 1;
+  })(), "cek AC9b");
+cek("AC9c tanpa pajak ganda: ekspor hanya kena pajak ekspor (usaha & perdagangan 0)",
+  (() => {
+    C.mulaiGame(true);
+    ctxEval("waktuGame = 0;");
+    const def = C.BANGUNAN_MAP["pelabuhan"];
+    const k = C.kakiBangunan(def, 0);
+    const t = cariTileSimAB(k.w, k.h, true);
+    if (!t) return false;
+    C.S.bangunan.push({ id: "pelabuhan", x: t.x, y: t.y, rot: 0, selesai: true, progres: 1 });
+    C.S.komoditas.tepung = 50;
+    majuSatuHari();
+    const r = C.S.statistik.rincianHari || {};
+    return Math.abs((r.pajakEkspor || 0) - 7200) < 1 && Math.abs((r.ekspor || 0) - 136800) < 1 &&
+      (r.pajakUsaha || 0) === 0 && (r.pajakPerdagangan || 0) === 0 && (r.penjualan || 0) === 0;
+  })(), "cek AC9c");
+cek("AC9d tarif perdagangan 20% -> kuota jual x0,8 (8 dari 10 unit/hari)",
+  (() => {
+    C.mulaiGame(true);
+    ctxEval("waktuGame = 0;");
+    const t = cariTileSimAB(2, 2, false);
+    if (!t) return false;
+    C.S.bangunan.push({ id: "pasar-tradisional", x: t.x, y: t.y, rot: 0, selesai: true, progres: 1 });
+    C.S.komoditas.tual = 50;
+    C.aturTarifPajakDinamis("perdagangan", 20);
+    const pengali = C.pengaliKuotaPerdagangan();
+    majuSatuHari();
+    return pengali === 0.8 && (C.S.komoditas.tual || 0) === 42 && Math.abs((C.S.statistik.rincianHari.pajakPerdagangan || 0) - 3200) < 1;
+  })(), "cek AC9d");
+cek("AC9e efek pajak ke kebahagiaan: default 0; ketiga tarif 20% -> -1,5; ketiga 0% -> +1,5",
+  (() => {
+    C.mulaiGame(true);
+    const netral = C.efekPajakBaruBahagia();
+    ctxEval("S.tarifPajakUsaha = 20; S.tarifPajakPerdagangan = 20; S.tarifPajakEkspor = 20;");
+    const tinggi = C.efekPajakBaruBahagia();
+    ctxEval("S.tarifPajakUsaha = 0; S.tarifPajakPerdagangan = 0; S.tarifPajakEkspor = 0;");
+    const rendah = C.efekPajakBaruBahagia();
+    return netral === 0 && tinggi === -1.5 && rendah === 1.5;
+  })(), "cek AC9e");
+// --- Harga komoditas dinamis ---
+cek("AC10a stok menumpuk -> harga turun 5%/hari (tepung 8000 -> 7600)",
+  (() => { C.mulaiGame(true); C.S.komoditas.tepung = 100; majuSatuHari(); return C.hargaPasar("tepung") === 7600; })(), "cek AC10a");
+cek("AC10b stok langka -> harga naik 5%/hari (tepung 8000 -> 8400)",
+  (() => { C.mulaiGame(true); majuSatuHari(); return C.hargaPasar("tepung") === 8400; })(), "cek AC10b");
+cek("AC10c batas harga: 150% tidak tertembus saat langka, 50% tidak tertembus saat menumpuk",
+  (() => {
+    C.mulaiGame(true);
+    ctxEval("S.hargaPasar.tepung = 12000; S.komoditas.tepung = 0;");
+    majuSatuHari();
+    const atas = C.hargaPasar("tepung");
+    C.mulaiGame(true);
+    ctxEval("S.hargaPasar.tepung = 4000; S.komoditas.tepung = 100;");
+    majuSatuHari();
+    return atas === 12000 && C.hargaPasar("tepung") === 4000;
+  })(), "cek AC10c");
+cek("AC10d harga pasar dipakai penjualan (tepung Rp10.000 -> jual bersih Rp95.000 + pajak usaha Rp5.000)",
+  (() => {
+    C.mulaiGame(true);
+    ctxEval("waktuGame = 0;");
+    const t = cariTileSimAB(2, 2, false);
+    if (!t) return false;
+    C.S.bangunan.push({ id: "pasar-tradisional", x: t.x, y: t.y, rot: 0, selesai: true, progres: 1 });
+    C.S.komoditas.tepung = 50;
+    ctxEval("S.hargaPasar.tepung = 10000;");
+    majuSatuHari();
+    const r = C.S.statistik.rincianHari || {};
+    return Math.abs((r.penjualan || 0) - 95000) < 1 && Math.abs((r.pajakUsaha || 0) - 5000) < 1;
+  })(), "cek AC10d");
+cek("AC10e permintaan dari industri: kilang butuh 4 tual/hari (permintaan 1 -> 5)",
+  (() => {
+    C.mulaiGame(true);
+    const sblm = C.permintaanHarianKomoditas("tual");
+    const t = cariTileSimAB(2, 2, false);
+    if (!t) return false;
+    C.S.bangunan.push({ id: "kilang-sagu", x: t.x, y: t.y, rot: 0, selesai: true, progres: 1 });
+    majuSatuHari();
+    return sblm === 1 && C.permintaanHarianKomoditas("tual") === 5;
+  })(), "cek AC10e");
+// --- Anggaran APBD ---
+cek("AC11a kebutuhan APBD kota baru: transportasi = upkeep dermaga, lain = upkeep rumah",
+  (() => {
+    C.mulaiGame(true);
+    const b = C.kebutuhanAPBD();
+    return b.transportasi === C.BANGUNAN_MAP["dermaga"].upkeep && b.lain === C.BANGUNAN_MAP["rumah-sederhana"].upkeep &&
+      b.pendidikan === 0 && b.kesehatan === 0;
+  })(), "cek AC11a");
+cek("AC11b alokasi 50% -> upkeep pendidikan dibayar 50% (SD 1800 -> 900/hari)",
+  (() => {
+    C.mulaiGame(true);
+    ctxEval("waktuGame = 0;");
+    const t = cariTileSimAB(2, 1, false);
+    if (!t) return false;
+    C.S.bangunan.push({ id: "sd", x: t.x, y: t.y, rot: 0, selesai: true, progres: 1 });
+    C.aturAlokasiAPBD("pendidikan", 50);
+    const kual = C.kualitasAPBD();
+    majuSatuHari();
+    return kual.pendidikan === 0.5 && Math.abs((C.S.statistik.rincianHari.upkeepPendidikan || 0) - C.BANGUNAN_MAP["sd"].upkeep / 2) < 2;
+  })(), "cek AC11b");
+cek("AC11c kualitas layanan turun: cakupan pendidikan 100% -> 50% -> 0% mengikuti alokasi",
+  (() => {
+    C.mulaiGame(true);
+    const rumah = C.S.bangunan.find(b => b.id === "rumah-sederhana");
+    if (!rumah) return false;
+    let t = null;
+    for (const [dx, dy] of [[1, 0], [2, 0], [-2, 0], [0, 1], [0, -1], [1, 1], [-1, -1]]) {
+      const x = rumah.x + dx, y = rumah.y + dy;
+      let ok = true;
+      for (let i = 0; i < 2 && ok; i++) {
+        const tt = C.terrainDi(C.peta, x + i, y);
+        if (!C.TERRAIN[tt] || !C.TERRAIN[tt].bisaBangun || C.TERRAIN[tt].butuhBuka || tt === "pantai") ok = false;
+        if (C.adaBangunanDi(C.S, x + i, y) || C.adaJalanDi(C.S, x + i, y)) ok = false;
+      }
+      if (ok) { t = { x: x, y: y }; break; }
+    }
+    if (!t) return false;
+    C.S.bangunan.push({ id: "sd", x: t.x, y: t.y, rot: 0, selesai: true, progres: 1 });
+    majuSatuHari();
+    const edu100 = C.hitungLayanan().edu;
+    C.aturAlokasiAPBD("pendidikan", 50);
+    const edu50 = C.hitungLayanan().edu;
+    C.aturAlokasiAPBD("pendidikan", 0);
+    const edu0 = C.hitungLayanan().edu;
+    return edu100 === 1 && edu50 === 0.5 && edu0 === 0;
+  })(), "cek AC11c");
+cek("AC11d alokasi >100% mentok: kualitas 100%, upkeep tetap penuh (tidak lebih)",
+  (() => {
+    C.mulaiGame(true);
+    ctxEval("waktuGame = 0;");
+    const t = cariTileSimAB(2, 1, false);
+    if (!t) return false;
+    C.S.bangunan.push({ id: "sd", x: t.x, y: t.y, rot: 0, selesai: true, progres: 1 });
+    C.aturAlokasiAPBD("pendidikan", 150);
+    const kual = C.kualitasAPBD();
+    majuSatuHari();
+    return kual.pendidikan === 1 && Math.abs((C.S.statistik.rincianHari.upkeepPendidikan || 0) - C.BANGUNAN_MAP["sd"].upkeep) < 2;
+  })(), "cek AC11d");
+// --- Dashboard & riwayat ---
+cek("AC12a riwayat keuangan: 1 entri/hari (hari/masuk/keluar/pajak/ekspor/cicilan/saldo), dibatasi 90 entri",
+  (() => {
+    C.mulaiGame(true);
+    majuSatuHari(); majuSatuHari(); majuSatuHari();
+    const rw = C.S.riwayatKeuangan || [];
+    const ok = rw.length === 3 && rw.every(e => typeof e.hari === "number" && typeof e.masuk === "number" && typeof e.keluar === "number" && typeof e.pajak === "number" && typeof e.ekspor === "number" && typeof e.cicilan === "number" && typeof e.saldo === "number") && rw[0].hari < rw[2].hari;
+    const palsu = [];
+    for (let i = 0; i < 95; i++) palsu.push({ hari: i + 1, masuk: 1000, keluar: 500, pajak: 100, ekspor: 0, cicilan: 0, saldo: 1000000 });
+    C.S.riwayatKeuangan = palsu;
+    majuSatuHari();
+    return ok && C.S.riwayatKeuangan.length === 90;
+  })(), "cek AC12a");
+cek("AC12b panel Ekonomi: ringkasan + grafik 7/30/90 + pinjaman + alokasi APBD + harga pasar + tarif dinamis",
+  (() => {
+    C.mulaiGame(true);
+    vm.runInContext("panelKiri = 'ekonomi';", sandbox);
+    C.renderPanelKiri();
+    const kiri = C.document.getElementById("panelKiriIsi").innerHTML;
+    return kiri.indexOf("Ringkasan Keuangan") !== -1 && kiri.indexOf("Grafik Arus Kas — 7 Hari Terakhir") !== -1 &&
+      kiri.indexOf("Grafik Arus Kas — 30 Hari Terakhir") !== -1 && kiri.indexOf("Grafik Arus Kas — 90 Hari Terakhir") !== -1 &&
+      kiri.indexOf("Pinjaman Kota") !== -1 && kiri.indexOf("Tidak ada pinjaman berjalan.") !== -1 &&
+      kiri.indexOf("Anggaran APBD per Kategori") !== -1 && kiri.indexOf("Harga Pasar Komoditas") !== -1 &&
+      kiri.indexOf("Tarif pajak usaha") !== -1 && kiri.indexOf("Pendapatan fasilitas (wisata)") !== -1;
+  })(), "cek AC12b");
+cek("AC12c rekomendasi defisit dari data nyata: penyebab terbesar = upkeep, saran berisi aksi konkret",
+  (() => {
+    C.mulaiGame(true);
+    const def = C.BANGUNAN_MAP["pltd"];
+    const k = C.kakiBangunan(def, 0);
+    const t = cariTileSimAB(k.w, k.h, false);
+    if (!t) return false;
+    C.S.bangunan.push({ id: "pltd", x: t.x, y: t.y, rot: 0, selesai: true, progres: 1 });
+    majuSatuHari();
+    const rek = C.rekomendasiKeuangan();
+    return rek.defisit === true && rek.penyebab.length > 0 && rek.penyebab[0].kunci === "upkeep" &&
+      rek.saran.length >= 3 && rek.saran.some(s => (s.teks || "").indexOf("alokasi") !== -1);
+  })(), "cek AC12c");
+// --- Pemulihan kebangkrutan ---
+cek("AC13a diagnosis kas negatif: bangkrut + penyebab + langkah 1-2-3 + saran",
+  (() => {
+    C.mulaiGame(true);
+    ctxEval("waktuGame = 0;");
+    majuSatuHari();
+    C.S.uang = -5000;
+    const dg = C.diagnosisKasNegatif();
+    return dg.bangkrut === true && dg.saldo === -5000 && dg.penyebab.length > 0 &&
+      dg.langkah.length === 3 && dg.saran.length > 0;
+  })(), "cek AC13a");
+cek("AC13b nonaktifkan bangunan termahal: stadion (upkeep tertinggi, tak produktif) dinonaktifkan",
+  (() => {
+    C.mulaiGame(true);
+    const defS = C.BANGUNAN_MAP["stadion"];
+    const kS = C.kakiBangunan(defS, 0);
+    const tS = cariTileSimAB(kS.w, kS.h, false);
+    const tT = cariTileSimAB(1, 1, false);
+    if (!tS || !tT) return false;
+    C.S.bangunan.push({ id: "stadion", x: tS.x, y: tS.y, rot: 0, selesai: true, progres: 1 });
+    C.S.bangunan.push({ id: "taman", x: tT.x, y: tT.y, rot: 0, selesai: true, progres: 1 });
+    const hasil = C.nonaktifkanBangunanTermahal(1);
+    const stadion = C.S.bangunan.find(b => b.id === "stadion");
+    const taman = C.S.bangunan.find(b => b.id === "taman");
+    return hasil.length === 1 && hasil[0] === "Stadion" && stadion.nonaktif === true && !taman.nonaktif;
+  })(), "cek AC13b");
+cek("AC13c turunkan alokasi terbesar: kesehatan (puskesmas) 100% -> 75%, hemat 25% kebutuhan",
+  (() => {
+    C.mulaiGame(true);
+    const t1 = cariTileSimAB(2, 1, false);
+    if (!t1) return false;
+    C.S.bangunan.push({ id: "sd", x: t1.x, y: t1.y, rot: 0, selesai: true, progres: 1 });
+    // puskesmas di petak lain (cari lagi setelah SD ditempatkan)
+    const t2b = cariTileSimAB(2, 1, false);
+    if (!t2b) return false;
+    C.S.bangunan.push({ id: "puskesmas", x: t2b.x, y: t2b.y, rot: 0, selesai: true, progres: 1 });
+    const hasil = C.turunkanAlokasiTerbesar();
+    return hasil && hasil.kategori === "kesehatan" && hasil.persen === 75 &&
+      Math.abs(hasil.hematPerHari - C.BANGUNAN_MAP["puskesmas"].upkeep * 0.25) < 1;
+  })(), "cek AC13c");
+cek("AC13d advisor: kas negatif -> masalah CRITICAL 'kas-negatif' + rencana berisi langkah alokasi/pemulihan",
+  (() => {
+    C.mulaiGame(true);
+    majuSatuHari();
+    C.S.uang = -100;
+    const daftar = Adv.daftarMasalah();
+    const m = daftar.find(x => x.kode === "kas-negatif");
+    const rencana = Adv.rencanaAksi({ kode: "kas-negatif", id: "m-kas-negatif" });
+    return !!m && m.prioritas === "CRITICAL" && Array.isArray(rencana) && rencana.length >= 2 &&
+      rencana.some(s => (s.teks || "").indexOf("alokasi") !== -1);
+  })(), "cek AC13d");
+// AC14: sim 30 hari x 5 gaya dengan sistem Fase B (pinjaman dicoba tiap
+// hari sejak hari 15, tenor terpanjang dulu = cicilan paling ringan;
+// gaya C menaikkan tarif perdagangan hari 10; gaya E memangkas alokasi
+// pendidikan/kesehatan hari 10).
+for (const kode of Object.keys(ANTRE_AB)) {
+  C.mulaiGame(true);
+  let minUang = C.S.uang, hariPinjam = null, tenorPinjam = null, pernahNegatif = false;
+  for (let hari = 1; hari <= 30; hari++) {
+    if (hari === 10 && kode === "C") C.aturTarifPajakDinamis("perdagangan", 15);
+    if (hari === 10 && kode === "E") { C.aturAlokasiAPBD("pendidikan", 50); C.aturAlokasiAPBD("kesehatan", 50); }
+    if (hari >= 15 && !hariPinjam) {
+      for (const tenor of [360, 180, 90]) {
+        const h = C.ajukanPinjaman("mikro", tenor);
+        if (h.ok) { hariPinjam = hari; tenorPinjam = tenor; break; }
+      }
+    }
+    let n = 0;
+    for (const [id, target] of ANTRE_AB[kode]) {
+      if (n >= 2) break;
+      if ((C.S.statistik.dibangun[id] || 0) < target && bangunSimAB(id)) n++;
+    }
+    majuSatuHari();
+    if (C.S.uang < 0) pernahNegatif = true;
+    if (C.S.uang < minUang) minUang = C.S.uang;
+  }
+  const hargaBergerak = C.hargaPasar("tepung") !== 8000 || C.hargaPasar("tual") !== 2000 || C.hargaPasar("kopra") !== 6000;
+  const pinj = C.S.bank.pinjamanAktif[0];
+  cek("AC14 sim 30 hari gaya " + kode + " (Fase B): saldo > 0, kas tak pernah negatif, penduduk bertambah, riwayat 30 hari, harga bergerak" + (hariPinjam ? ", pinjam hari " + hariPinjam + " tenor " + tenorPinjam : ", belum layak pinjam"),
+    C.S.uang > 0 && minUang > 0 && !pernahNegatif && C.S.penduduk.total > 4 &&
+    (C.S.riwayatKeuangan || []).length === 30 && hargaBergerak &&
+    (!hariPinjam || (pinj && pinj.sisaPokok < pinj.pokok && (pinj.status === "berjalan" || pinj.status === "menunggak"))),
+    "gaya=" + kode + " saldo=" + Math.round(C.S.uang) + " min=" + Math.round(minUang) + " pop=" + C.S.penduduk.total + " pinjam=" + hariPinjam);
+}
+// AC15: pelunasan penuh — kota gaya B 20 hari, pinjam Mikro 90 hari,
+// lalu 90 hari cicilan (top-up kas simulasi pendapatan agar uji ini
+// mengisolasi MEKANISME pinjaman, bukan pendapatan kota).
+cek("AC15 pinjaman lunas penuh setelah tenor 90 hari (total dibayar = pokok + bunga wajar)",
+  (() => {
+    C.mulaiGame(true);
+    for (let hari = 1; hari <= 20; hari++) {
+      let n = 0;
+      for (const [id, target] of ANTRE_AB.B) {
+        if (n >= 2) break;
+        if ((C.S.statistik.dibangun[id] || 0) < target && bangunSimAB(id)) n++;
+      }
+      majuSatuHari();
+    }
+    beriPemasukanSimulasi();
+    const h = C.ajukanPinjaman("mikro", 90);
+    if (!h.ok) return false;
+    const id = C.S.bank.pinjamanAktif[0].id;
+    for (let hari = 1; hari <= 90; hari++) {
+      if (C.S.uang < 20000) C.S.uang += 50000; // top-up simulasi (lihat komentar AC15)
+      majuSatuHari();
+    }
+    const riw = C.S.bank.riwayat.find(p => p.id === id);
+    return C.S.bank.pinjamanAktif.length === 0 && !!riw && riw.status === "lunas" &&
+      riw.hariBerjalan === 90 && riw.totalDibayar > 1000000 && riw.totalDibayar < 1200000 &&
+      riw.totalBungaDibayar > 0;
+  })(), "cek AC15");
 
 // Pulihkan keadaan akhir bersih (profil + simpanan + menu sinematik).
 C.mulaiGame(true);

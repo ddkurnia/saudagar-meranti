@@ -31,8 +31,8 @@
 //     pekerjaan      % angkatan kerja yang bekerja (hitungTenagaKerja);
 //                    tanpa angkatan = 100.
 //     pendapatan     min(100, (uang/jiwa) / 5000 x 100) — ambang
-//                    Rp5.000/jiwa = skor penuh (uang awal Rp750.000
-//                    untuk 4 jiwa sudah di atas ambang).
+//                    Rp5.000/jiwa = skor penuh (uang awal v29
+//                    Rp10.000.000 untuk 4 jiwa sudah di atas ambang).
 //     pendidikan     cakupanPendidikan (layanan.edu x 100).
 //     kesehatan      cakupanKesehatan (layanan.kes x 100).
 //     keamanan       % rumah dalam radius kantor-polisi (efekKeamanan,
@@ -465,9 +465,22 @@ function hitungKebahagiaan() {
     pendapatan: clamp(Math.round((S.uang / Math.max(1, S.penduduk.total)) / BAHAGIA_KONFIG.pendapatanPerJiwaPenuh * 100), 0, 100),
     pendidikan: Math.round(layanan.edu * 100),
     kesehatan: Math.round(layanan.kes * 100),
+    // v29 Fase B: indikator kebersihan & lingkungan dikali kualitas APBD
+    // kategorinya — alokasi Kebersihan/Lingkungan di bawah kebutuhan
+    // menurunkan skor layanan terkait (pendidikan/kesehatan sudah masuk
+    // lewat hitungLayanan()).
     kebersihan: (S.utilitas && S.utilitas.sampah) ? (S.utilitas.sampah.kebersihan || 0) : 100,
     lingkungan: 100 - ((S.lingkungan && typeof S.lingkungan.polusi === "number") ? S.lingkungan.polusi : hitungPolusi().polusi),
   };
+  if (typeof kualitasAPBD === "function") {
+    try {
+      const kual = kualitasAPBD();
+      if (kual) {
+        if (typeof kual.kebersihan === "number") global.kebersihan = Math.round(global.kebersihan * kual.kebersihan);
+        if (typeof kual.lingkungan === "number") global.lingkungan = Math.round(global.lingkungan * kual.lingkungan);
+      }
+    } catch (e) {}
+  }
   if (S.lalin && typeof S.lalin.skor === "number") global.kemacetan = clamp(Math.round(S.lalin.skor), 0, 100);
   else if (S.lalin && typeof S.lalin.kemacetan === "number") global.kemacetan = clamp(Math.round(100 - S.lalin.kemacetan), 0, 100);
   else global.kemacetan = 100;
