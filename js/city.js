@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v29"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v29.1"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -25,10 +25,10 @@ function simpanProfil() { try { localStorage.setItem(CITY.PROFIL_KEY, JSON.strin
 const TUTORIAL = [
   { judul: "Kenali peta Kepulauan Meranti", des: "Seret peta dengan 1 jari (atau mouse) untuk menggeser, cubit 2 jari (atau roda mouse) untuk zoom. Lihat pulau utama, sungai, dan laut di sekelilingnya." },
   { judul: "Pilih lahan kosong", des: "Ketuk sebuah petak kosong di dekat jalan. Petak yang dipilih akan menampilkan info lahannya." },
-  { judul: "Bangun rumah pertama", des: "Buka menu bangun, pilih Rumah Sederhana (Rp25.000 + 4 kayu), lalu ketuk lahan kosong di samping jalan.", aksi: { label: "🏠 Buka menu bangun", fn: () => bukaMenuBangunUntuk("permukiman") } },
+  { judul: "Bangun rumah pertama", des: "Buka menu bangun, pilih Rumah Sederhana (" + hargaTeks(BANGUNAN_MAP["rumah-sederhana"].harga) + "), lalu ketuk lahan kosong di samping jalan.", aksi: { label: "🏠 Buka menu bangun", fn: () => bukaMenuBangunUntuk("permukiman") } },
   { judul: "Buka jalan pertama", des: "Pilih Jalan Tanah di menu Jalan, lalu seret di peta untuk menggambar jalan. Bangunan butuh jalan di sampingnya.", aksi: { label: "🛣️ Pilih Jalan Tanah", fn: () => bukaMenuBangunUntuk("jalan", "jalan", "jalan-tanah") } },
   { judul: "Rekrut pekerja", des: "Penduduk yang tinggal di rumahmu siap bekerja. Biarkan waktu berjalan — atau percepat ke 2× — dan lihat pekerja dipekerjakan di dermaga.", aksi: { label: "⏩ Percepat ke 2×", fn: () => aturKecepatan(2) } },
-  { judul: "Bangun kebun sagu", des: "Buka menu Pertanian, pilih Kebun Sagu (Rp50.000 + 2 kayu), lalu bangun di lahan kosong. Kebun menghasilkan 3 tual sagu per hari.", aksi: { label: "🌱 Pilih Kebun Sagu", fn: () => bukaMenuBangunUntuk("pertanian", "bangun", "kebun-sagu") } },
+  { judul: "Bangun kebun sagu", des: "Buka menu Pertanian, pilih Kebun Sagu (" + hargaTeks(BANGUNAN_MAP["kebun-sagu"].harga) + "), lalu bangun di lahan kosong. Kebun menghasilkan 3 tual sagu per hari.", aksi: { label: "🌱 Pilih Kebun Sagu", fn: () => bukaMenuBangunUntuk("pertanian", "bangun", "kebun-sagu") } },
   { judul: "Kembangkan permukiman", des: "Bangun satu bangunan lagi (apa saja) atau tunggu penduduk bertambah sampai 10 jiwa. Permukimanmu sudah berjalan — lanjutkan sampai menjadi kota!" },
 ];
 let tutorialKameraAwal = null, tutorialJalanAwal = 0, tutorialBangunanAwal = 0, tutorialRumahAwal = 0, tutorialWaktuAwal = 0;

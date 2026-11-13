@@ -65,6 +65,26 @@
     } catch (e) {}
     return id;
   }
+  // v29.1: harga di teks saran TIDAK di-hardcode — semua dibaca dari
+  // katalog (BANGUNAN_MAP / JALAN / JEMBATAN di city-data.js, sumber
+  // kebenaran yang sama dengan katalog bangun & yang dipakai cek
+  // harga saat membangun). Teks memakai placeholder "{RP:<id>}"
+  // yang diisi _isiHarga() saat langkah dibuat (_langkahBangun) —
+  // jadi harga lama pra-v29 tidak bisa tertinggal lagi bila katalog berubah.
+  function _hargaRp(id) {
+    try {
+      var def = null;
+      if (typeof BANGUNAN_MAP !== "undefined" && BANGUNAN_MAP && BANGUNAN_MAP[id]) def = BANGUNAN_MAP[id];
+      else if (typeof JALAN !== "undefined" && JALAN && JALAN[id]) def = JALAN[id];
+      else if (typeof JEMBATAN !== "undefined" && JEMBATAN && JEMBATAN[id]) def = JEMBATAN[id];
+      if (def && def.harga && typeof def.harga.uang === "number") return "Rp" + def.harga.uang.toLocaleString("id-ID");
+    } catch (e) {}
+    return "Rp?";
+  }
+  function _isiHarga(teks) {
+    if (typeof teks !== "string") return teks;
+    return teks.replace(/\{RP:([a-z0-9-]+)\}/g, function (cocok, id) { return _hargaRp(id); });
+  }
   function _muatAbaikan() {
     try {
       if (typeof localStorage === "undefined") return;
@@ -538,40 +558,40 @@
       var altTarget = { tab: alternatif.tab, jenisMode: alternatif.jenisMode, idMode: alternatif.idMode };
       var kunciAlt = _cekKunciTarget(altTarget);
       if (!kunciAlt.terkunci) {
-        return { nomor: 0, teks: alternatif.teks + " (pengganti " + _namaTarget(target) + " yang masih terkunci — " + kunci.alasan + ")", tombol: "Bangun " + _namaTarget(altTarget), ringkas: alternatif.ringkas, target: altTarget, lokasi: null, terkunci: false, alasanKunci: null, alternatifDari: idMode };
+        return { nomor: 0, teks: _isiHarga(alternatif.teks) + " (pengganti " + _namaTarget(target) + " yang masih terkunci — " + kunci.alasan + ")", tombol: "Bangun " + _namaTarget(altTarget), ringkas: _isiHarga(alternatif.ringkas), target: altTarget, lokasi: null, terkunci: false, alasanKunci: null, alternatifDari: idMode };
       }
     }
-    return { nomor: 0, teks: teks, tombol: "Bangun " + _namaTarget(target), ringkas: ringkas, target: target, lokasi: null, terkunci: kunci.terkunci, alasanKunci: kunci.terkunci ? kunci.alasan : null };
+    return { nomor: 0, teks: _isiHarga(teks), tombol: "Bangun " + _namaTarget(target), ringkas: _isiHarga(ringkas), target: target, lokasi: null, terkunci: kunci.terkunci, alasanKunci: kunci.terkunci ? kunci.alasan : null };
   }
   // Alternatif tidak terkunci (dipakai _langkahBangun bila primer terkunci).
-  var ALT_INTAKE = { tab: "air", jenisMode: "bangun", idMode: "intake", teks: "Bangun Intake Air Baku — Rp150.000 · produksi 3.000 L/jam (kualitas 60, harus di tepi pantai)", ringkas: "Bangun Intake Air Baku (Rp150.000)" };
-  var ALT_PASAR = { tab: "komersial", jenisMode: "bangun", idMode: "pasar-tradisional", teks: "Bangun Pasar Tradisional — Rp120.000 · jual hasil lokal (maks 10/hari) untuk mengosongkan gudang", ringkas: "Bangun Pasar Tradisional (Rp120.000)" };
-  var ALT_TRAFFIC = { tab: "jalan", jenisMode: "bangun", idMode: "traffic-light", teks: "Bangun Traffic Light — Rp25.000 · efek lalu lintas 0,3 di persimpangan macet", ringkas: "Bangun Traffic Light (Rp25.000)" };
+  var ALT_INTAKE = { tab: "air", jenisMode: "bangun", idMode: "intake", teks: "Bangun Intake Air Baku — {RP:intake} · produksi 3.000 L/jam (kualitas 60, harus di tepi pantai)", ringkas: "Bangun Intake Air Baku ({RP:intake})" };
+  var ALT_PASAR = { tab: "komersial", jenisMode: "bangun", idMode: "pasar-tradisional", teks: "Bangun Pasar Tradisional — {RP:pasar-tradisional} · jual hasil lokal (maks 10/hari) untuk mengosongkan gudang", ringkas: "Bangun Pasar Tradisional ({RP:pasar-tradisional})" };
+  var ALT_TRAFFIC = { tab: "jalan", jenisMode: "bangun", idMode: "traffic-light", teks: "Bangun Traffic Light — {RP:traffic-light} · efek lalu lintas 0,3 di persimpangan macet", ringkas: "Bangun Traffic Light ({RP:traffic-light})" };
   // v24.1 (kasus penduduk-tidak-bertambah): indikator kebahagiaan ->
   // fasilitas yang memperbaikinya. Urutan = prioritas bila skor seri
   // (pendidikan dulu). SEMUA id/tab/harga terverifikasi dari
   // city-data.js. "perumahan" TIDAK dipetakan (kapasitas rumah justru
   // kosong dalam kasus ini — bangun rumah bukan solusinya).
   var PETA_INDIKATOR = [
-    { indikator: "pendidikan", tab: "pendidikan", jenisMode: "bangun", idMode: "sd", teks: "Bangun Sekolah Dasar — Rp80.000 · radius 6 petak, kapasitas 60 siswa", ringkas: "Bangun Sekolah Dasar (Rp80.000)" },
-    { indikator: "kesehatan", tab: "kesehatan", jenisMode: "bangun", idMode: "puskesmas", teks: "Bangun Puskesmas — Rp100.000 · radius 6 petak, kapasitas 80, level 2", ringkas: "Bangun Puskesmas (Rp100.000)" },
-    { indikator: "sanitasi", tab: "drainase", jenisMode: "bangun", idMode: "ipal", teks: "Bangun IPAL di dekat permukiman — Rp350.000 · level 3", ringkas: "Bangun IPAL (Rp350.000)" },
-    { indikator: "kebersihan", tab: "drainase", jenisMode: "bangun", idMode: "tps", teks: "Bangun TPS — Rp40.000 · olah 500 kg sampah/hari", ringkas: "Bangun TPS (Rp40.000)" },
-    { indikator: "rekreasi", tab: "lingkungan", jenisMode: "bangun", idMode: "taman", teks: "Bangun Taman Kota di dekat permukiman — Rp15.000", ringkas: "Bangun Taman Kota (Rp15.000)" },
-    { indikator: "ruangHijau", tab: "lingkungan", jenisMode: "bangun", idMode: "taman", teks: "Bangun Taman Kota di dekat permukiman — Rp15.000", ringkas: "Bangun Taman Kota (Rp15.000)" },
-    { indikator: "lingkungan", tab: "lingkungan", jenisMode: "bangun", idMode: "taman", teks: "Bangun Taman Kota di dekat permukiman — Rp15.000 · ruang hijau penyerap polusi", ringkas: "Bangun Taman Kota (Rp15.000)" },
-    { indikator: "listrik", tab: "listrik", jenisMode: "bangun", idMode: "tiang-listrik", teks: "Bangun Tiang Listrik — Rp10.000 · jaringan listrik 3 petak", ringkas: "Bangun Tiang Listrik (Rp10.000)" },
-    { indikator: "air", tab: "air", jenisMode: "bangun", idMode: "pompa-air", teks: "Bangun Pompa Air — Rp60.000 · jaringan air 6 petak", ringkas: "Bangun Pompa Air (Rp60.000)" },
-    { indikator: "pekerjaan", tab: "pertanian", jenisMode: "bangun", idMode: "kebun-sagu", teks: "Bangun Kebun Sagu — Rp50.000 · kerja 3", ringkas: "Bangun Kebun Sagu (Rp50.000)" },
-    { indikator: "transportasi", tab: "transportasi", jenisMode: "bangun", idMode: "halte", teks: "Bangun Halte — Rp15.000 · radius halte 4 petak", ringkas: "Bangun Halte (Rp15.000)" },
-    { indikator: "keamanan", tab: "keamanan", jenisMode: "bangun", idMode: "kantor-polisi", teks: "Bangun Kantor Polisi — Rp200.000 · radius keamanan 10 petak, level 2", ringkas: "Bangun Kantor Polisi (Rp200.000)" },
-    { indikator: "hargaPokok", tab: "komersial", jenisMode: "bangun", idMode: "pasar-tradisional", teks: "Bangun Pasar Tradisional — Rp120.000 · kerja 6", ringkas: "Bangun Pasar Tradisional (Rp120.000)" },
-    { indikator: "pelayananPublik", tab: "perkantoran", jenisMode: "bangun", idMode: "kantor-pemerintah", teks: "Bangun Kantor Pemerintahan — Rp500.000 · level 3", ringkas: "Bangun Kantor Pemerintahan (Rp500.000)" },
-    { indikator: "hiburan", tab: "hiburan", jenisMode: "bangun", idMode: "bioskop", teks: "Bangun Bioskop — Rp350.000 · level 3", ringkas: "Bangun Bioskop (Rp350.000)" },
-    { indikator: "drainase", tab: "drainase", jenisMode: "bangun", idMode: "kolam-retensi", teks: "Bangun Kolam Retensi — Rp100.000 · menampung banjir di zona rawan", ringkas: "Bangun Kolam Retensi (Rp100.000)" },
-    { indikator: "kualitasJalan", tab: "jalan", jenisMode: "jalan", idMode: "jalan-aspal", teks: "Bangun jalan alternatif dari Jalan Aspal — Rp2.000 + batu 1/petak · kapasitas 40", ringkas: "Bangun jalan alternatif (Jalan Aspal)" },
-    { indikator: "kemacetan", tab: "jalan", jenisMode: "jalan", idMode: "jalan-aspal", teks: "Bangun jalan alternatif dari Jalan Aspal — Rp2.000 + batu 1/petak · kapasitas 40", ringkas: "Bangun jalan alternatif (Jalan Aspal)" },
-    { indikator: "pendapatan", tab: "komersial", jenisMode: "bangun", idMode: "pasar-tradisional", teks: "Bangun Pasar Tradisional — Rp120.000 · kerja 6", ringkas: "Bangun Pasar Tradisional (Rp120.000)" },
+    { indikator: "pendidikan", tab: "pendidikan", jenisMode: "bangun", idMode: "sd", teks: "Bangun Sekolah Dasar — {RP:sd} · radius 6 petak, kapasitas 60 siswa", ringkas: "Bangun Sekolah Dasar ({RP:sd})" },
+    { indikator: "kesehatan", tab: "kesehatan", jenisMode: "bangun", idMode: "puskesmas", teks: "Bangun Puskesmas — {RP:puskesmas} · radius 6 petak, kapasitas 80, level 2", ringkas: "Bangun Puskesmas ({RP:puskesmas})" },
+    { indikator: "sanitasi", tab: "drainase", jenisMode: "bangun", idMode: "ipal", teks: "Bangun IPAL di dekat permukiman — {RP:ipal} · level 3", ringkas: "Bangun IPAL ({RP:ipal})" },
+    { indikator: "kebersihan", tab: "drainase", jenisMode: "bangun", idMode: "tps", teks: "Bangun TPS — {RP:tps} · olah 500 kg sampah/hari", ringkas: "Bangun TPS ({RP:tps})" },
+    { indikator: "rekreasi", tab: "lingkungan", jenisMode: "bangun", idMode: "taman", teks: "Bangun Taman Kota di dekat permukiman — {RP:taman}", ringkas: "Bangun Taman Kota ({RP:taman})" },
+    { indikator: "ruangHijau", tab: "lingkungan", jenisMode: "bangun", idMode: "taman", teks: "Bangun Taman Kota di dekat permukiman — {RP:taman}", ringkas: "Bangun Taman Kota ({RP:taman})" },
+    { indikator: "lingkungan", tab: "lingkungan", jenisMode: "bangun", idMode: "taman", teks: "Bangun Taman Kota di dekat permukiman — {RP:taman} · ruang hijau penyerap polusi", ringkas: "Bangun Taman Kota ({RP:taman})" },
+    { indikator: "listrik", tab: "listrik", jenisMode: "bangun", idMode: "tiang-listrik", teks: "Bangun Tiang Listrik — {RP:tiang-listrik} · jaringan listrik 3 petak", ringkas: "Bangun Tiang Listrik ({RP:tiang-listrik})" },
+    { indikator: "air", tab: "air", jenisMode: "bangun", idMode: "pompa-air", teks: "Bangun Pompa Air — {RP:pompa-air} · jaringan air 6 petak", ringkas: "Bangun Pompa Air ({RP:pompa-air})" },
+    { indikator: "pekerjaan", tab: "pertanian", jenisMode: "bangun", idMode: "kebun-sagu", teks: "Bangun Kebun Sagu — {RP:kebun-sagu} · kerja 3", ringkas: "Bangun Kebun Sagu ({RP:kebun-sagu})" },
+    { indikator: "transportasi", tab: "transportasi", jenisMode: "bangun", idMode: "halte", teks: "Bangun Halte — {RP:halte} · radius halte 4 petak", ringkas: "Bangun Halte ({RP:halte})" },
+    { indikator: "keamanan", tab: "keamanan", jenisMode: "bangun", idMode: "kantor-polisi", teks: "Bangun Kantor Polisi — {RP:kantor-polisi} · radius keamanan 10 petak, level 2", ringkas: "Bangun Kantor Polisi ({RP:kantor-polisi})" },
+    { indikator: "hargaPokok", tab: "komersial", jenisMode: "bangun", idMode: "pasar-tradisional", teks: "Bangun Pasar Tradisional — {RP:pasar-tradisional} · kerja 6", ringkas: "Bangun Pasar Tradisional ({RP:pasar-tradisional})" },
+    { indikator: "pelayananPublik", tab: "perkantoran", jenisMode: "bangun", idMode: "kantor-pemerintah", teks: "Bangun Kantor Pemerintahan — {RP:kantor-pemerintah} · level 3", ringkas: "Bangun Kantor Pemerintahan ({RP:kantor-pemerintah})" },
+    { indikator: "hiburan", tab: "hiburan", jenisMode: "bangun", idMode: "bioskop", teks: "Bangun Bioskop — {RP:bioskop} · level 3", ringkas: "Bangun Bioskop ({RP:bioskop})" },
+    { indikator: "drainase", tab: "drainase", jenisMode: "bangun", idMode: "kolam-retensi", teks: "Bangun Kolam Retensi — {RP:kolam-retensi} · menampung banjir di zona rawan", ringkas: "Bangun Kolam Retensi ({RP:kolam-retensi})" },
+    { indikator: "kualitasJalan", tab: "jalan", jenisMode: "jalan", idMode: "jalan-aspal", teks: "Bangun jalan alternatif dari Jalan Aspal — {RP:jalan-aspal} + batu 1/petak · kapasitas 40", ringkas: "Bangun jalan alternatif (Jalan Aspal)" },
+    { indikator: "kemacetan", tab: "jalan", jenisMode: "jalan", idMode: "jalan-aspal", teks: "Bangun jalan alternatif dari Jalan Aspal — {RP:jalan-aspal} + batu 1/petak · kapasitas 40", ringkas: "Bangun jalan alternatif (Jalan Aspal)" },
+    { indikator: "pendapatan", tab: "komersial", jenisMode: "bangun", idMode: "pasar-tradisional", teks: "Bangun Pasar Tradisional — {RP:pasar-tradisional} · kerja 6", ringkas: "Bangun Pasar Tradisional ({RP:pasar-tradisional})" },
   ];
   // Indikator kebahagiaan TERBURUK kota (untuk langkah 1 kasus
   // penduduk-tidak-bertambah). Heuristik sederhana, dari data yang
@@ -660,7 +680,7 @@
       switch (kodeSebab) {
         case "bahan-baku-habis":
         case "bahan-baku-menipis":
-          return B("pertanian", "bangun", "kebun-sagu", "Bangun Kebun Sagu — Rp50.000 · hasil 3 tual/hari, kerja 3 (minimal 2 kebun per 1 kilang — kilang butuh 4 tual/hari)", "Bangun Kebun Sagu (Rp50.000)");
+          return B("pertanian", "bangun", "kebun-sagu", "Bangun Kebun Sagu — {RP:kebun-sagu} · hasil 3 tual/hari, kerja 3 (minimal 2 kebun per 1 kilang — kilang butuh 4 tual/hari)", "Bangun Kebun Sagu ({RP:kebun-sagu})");
         case "tanpa-listrik": {
           var rL = rencanaAksiUntuk({ kode: "tanpa-listrik", id: "m-tanpa-listrik", lokasi: lokSebab, penyebab: penyebabSebab });
           return (rL && rL[0]) ? rL[0] : null;
@@ -670,11 +690,11 @@
           return (rA && rA[0]) ? rA[0] : null;
         }
         case "pekerja-kurang":
-          return B("permukiman", "bangun", "rumah-sederhana", "Bangun Rumah Sederhana — Rp25.000 · menambah penduduk (angkatan kerja)", "Bangun Rumah Sederhana (Rp25.000)");
+          return B("permukiman", "bangun", "rumah-sederhana", "Bangun Rumah Sederhana — {RP:rumah-sederhana} · menambah penduduk (angkatan kerja)", "Bangun Rumah Sederhana ({RP:rumah-sederhana})");
         case "tanpa-jalan":
-          return B("jalan", "jalan", "jalan-tanah", "Bangun Jalan Tanah di samping bangunan — Rp500/petak", "Bangun Jalan Tanah (Rp500/petak)");
+          return B("jalan", "jalan", "jalan-tanah", "Bangun Jalan Tanah di samping bangunan — {RP:jalan-tanah}/petak", "Bangun Jalan Tanah ({RP:jalan-tanah}/petak)");
         case "banjir":
-          return B("drainase", "bangun", "kolam-retensi", "Bangun Kolam Retensi — Rp100.000 · menampung banjir di zona rawan", "Bangun Kolam Retensi (Rp100.000)");
+          return B("drainase", "bangun", "kolam-retensi", "Bangun Kolam Retensi — {RP:kolam-retensi} · menampung banjir di zona rawan", "Bangun Kolam Retensi ({RP:kolam-retensi})");
         default:
           return null;
       }
@@ -721,17 +741,17 @@
     switch (kode) {
       case "tanpa-air": {
         var cabA = _cabangUtilitas("tanpa-air", masalah);
-        var ipa = B("air", "bangun", "ipa", "Bangun Instalasi Pengolahan Air (IPA) — Rp500.000 · produksi 5.000 L/jam", "Bangun IPA (Rp500.000)", ALT_INTAKE);
-        var menara = B("air", "bangun", "menara-air", "Bangun Menara Air — Rp120.000 · jaringan air 8 petak", "Bangun Menara Air (Rp120.000)");
-        var pompa = B("air", "bangun", "pompa-air", "Bangun Pompa Air — Rp60.000 · jaringan air 6 petak (atau Kantor PDAM Rp200.000 · jaringan 10 petak)", "Bangun Pompa Air (Rp60.000)");
+        var ipa = B("air", "bangun", "ipa", "Bangun Instalasi Pengolahan Air (IPA) — {RP:ipa} · produksi 5.000 L/jam", "Bangun IPA ({RP:ipa})", ALT_INTAKE);
+        var menara = B("air", "bangun", "menara-air", "Bangun Menara Air — {RP:menara-air} · jaringan air 8 petak", "Bangun Menara Air ({RP:menara-air})");
+        var pompa = B("air", "bangun", "pompa-air", "Bangun Pompa Air — {RP:pompa-air} · jaringan air 6 petak (atau Kantor PDAM {RP:pdam} · jaringan 10 petak)", "Bangun Pompa Air ({RP:pompa-air})");
         out = (cabA === "jaringan") ? [menara, ipa, pompa] : [ipa, menara, pompa];
         break;
       }
       case "tanpa-listrik": {
         var cabL = _cabangUtilitas("tanpa-listrik", masalah);
-        var bio = B("listrik", "bangun", "plt-biomassa", "Bangun PLT Biomassa — Rp600.000 · 2.000 kW, level 3 (atau PLTD Rp1.200.000 · 5.000 kW, level 4)", "Bangun PLT Biomassa (Rp600.000)");
-        var gardu = B("listrik", "bangun", "gardu-distribusi", "Bangun Gardu Distribusi — Rp80.000 · jaringan listrik 6 petak (atau Gardu Induk Rp300.000 · jaringan 12 petak, level 3)", "Bangun Gardu Distribusi (Rp80.000)");
-        var tiang = B("listrik", "bangun", "tiang-listrik", "Bangun Tiang Listrik — Rp10.000 · jaringan listrik 3 petak", "Bangun Tiang Listrik (Rp10.000)");
+        var bio = B("listrik", "bangun", "plt-biomassa", "Bangun PLT Biomassa — {RP:plt-biomassa} · 2.000 kW, level 3 (atau PLTD {RP:pltd} · 5.000 kW, level 4)", "Bangun PLT Biomassa ({RP:plt-biomassa})");
+        var gardu = B("listrik", "bangun", "gardu-distribusi", "Bangun Gardu Distribusi — {RP:gardu-distribusi} · jaringan listrik 6 petak (atau Gardu Induk {RP:gardu-induk} · jaringan 12 petak, level 3)", "Bangun Gardu Distribusi ({RP:gardu-distribusi})");
+        var tiang = B("listrik", "bangun", "tiang-listrik", "Bangun Tiang Listrik — {RP:tiang-listrik} · jaringan listrik 3 petak", "Bangun Tiang Listrik ({RP:tiang-listrik})");
         out = (cabL === "jaringan") ? [gardu, bio, tiang] : [bio, gardu, tiang];
         break;
       }
@@ -747,9 +767,9 @@
         // _rencanaKilang); bila penyebab sedikit, pengisi standar hanya
         // sampai total 4 langkah.
         var standarBahan = [
-          B("pertanian", "bangun", "kebun-sagu", "Bangun Kebun Sagu — Rp50.000 · hasil 3 tual/hari, kerja 3 (minimal 2 kebun per 1 kilang — kilang butuh 4 tual/hari)", "Bangun Kebun Sagu (Rp50.000)"),
-          B("jalan", "jalan", "jalan-tanah", "Bangun Jalan Tanah — Rp500/petak · sambungkan kebun → kilang → gudang supaya truk logistik punya jalur", "Bangun Jalan Tanah (Rp500/petak)"),
-          B("industri", "bangun", "gudang", "Bangun Gudang — Rp80.000 · +500 unit penyimpanan bahan baku", "Bangun Gudang (Rp80.000)"),
+          B("pertanian", "bangun", "kebun-sagu", "Bangun Kebun Sagu — {RP:kebun-sagu} · hasil 3 tual/hari, kerja 3 (minimal 2 kebun per 1 kilang — kilang butuh 4 tual/hari)", "Bangun Kebun Sagu ({RP:kebun-sagu})"),
+          B("jalan", "jalan", "jalan-tanah", "Bangun Jalan Tanah — {RP:jalan-tanah}/petak · sambungkan kebun → kilang → gudang supaya truk logistik punya jalur", "Bangun Jalan Tanah ({RP:jalan-tanah}/petak)"),
+          B("industri", "bangun", "gudang", "Bangun Gudang — {RP:gudang} · +500 unit penyimpanan bahan baku", "Bangun Gudang ({RP:gudang})"),
         ];
         out = _rencanaKilang(masalah, standarBahan);
         break;
@@ -801,105 +821,105 @@
       case "tanpa-jalan":
         out = [
           L("Lihat lokasi bangunan yang terputus aksesnya, lalu bangun jalan di sampingnya"),
-          B("jalan", "jalan", "jalan-tanah", "Bangun Jalan Tanah di samping bangunan — Rp500/petak", "Bangun Jalan Tanah (Rp500/petak)"),
-          B("jalan", "jalan", "jalan-aspal", "Bangun Jalan Aspal — Rp2.000 + batu 1/petak · kapasitas 40 (untuk akses yang lebih ramai)", "Bangun Jalan Aspal (Rp2.000/petak)"),
+          B("jalan", "jalan", "jalan-tanah", "Bangun Jalan Tanah di samping bangunan — {RP:jalan-tanah}/petak", "Bangun Jalan Tanah ({RP:jalan-tanah}/petak)"),
+          B("jalan", "jalan", "jalan-aspal", "Bangun Jalan Aspal — {RP:jalan-aspal} + batu 1/petak · kapasitas 40 (untuk akses yang lebih ramai)", "Bangun Jalan Aspal ({RP:jalan-aspal}/petak)"),
         ];
         break;
       case "sampah-menumpuk":
         out = [
-          B("drainase", "bangun", "tps", "Bangun TPS — Rp40.000 · olah 500 kg sampah/hari", "Bangun TPS (Rp40.000)"),
-          B("drainase", "bangun", "tps-3r", "Bangun TPS 3R — Rp90.000 · olah 800 kg/hari, level 2", "Bangun TPS 3R (Rp90.000)"),
-          B("drainase", "bangun", "bank-sampah", "Bangun Bank Sampah — Rp60.000 · olah 300 kg/hari + Rp2.000/hari (atau TPA Rp300.000 · 5.000 kg/hari, level 3, polusi 7 — jauh dari permukiman)", "Bangun Bank Sampah (Rp60.000)"),
+          B("drainase", "bangun", "tps", "Bangun TPS — {RP:tps} · olah 500 kg sampah/hari", "Bangun TPS ({RP:tps})"),
+          B("drainase", "bangun", "tps-3r", "Bangun TPS 3R — {RP:tps-3r} · olah 800 kg/hari, level 2", "Bangun TPS 3R ({RP:tps-3r})"),
+          B("drainase", "bangun", "bank-sampah", "Bangun Bank Sampah — {RP:bank-sampah} · olah 300 kg/hari + Rp2.000/hari (atau TPA {RP:tpa} · 5.000 kg/hari, level 3, polusi 7 — jauh dari permukiman)", "Bangun Bank Sampah ({RP:bank-sampah})"),
         ];
         break;
       case "sekolah-jauh":
       case "cakupan-pendidikan-rendah":
       case "sekolah-tak-menjangkau":
         out = [
-          B("pendidikan", "bangun", "sd", "Bangun Sekolah Dasar — Rp80.000 · radius 6 petak, kapasitas 60 siswa", "Bangun Sekolah Dasar (Rp80.000)"),
-          B("pendidikan", "bangun", "paud", "Bangun PAUD — Rp30.000 · radius 4 petak, kapasitas 20", "Bangun PAUD (Rp30.000)"),
-          B("transportasi", "bangun", "halte", "Bangun Halte — Rp15.000 · radius halte 4 petak (atau SMP Rp150.000 · radius 7 bila SD sudah ada)", "Bangun Halte (Rp15.000)"),
+          B("pendidikan", "bangun", "sd", "Bangun Sekolah Dasar — {RP:sd} · radius 6 petak, kapasitas 60 siswa", "Bangun Sekolah Dasar ({RP:sd})"),
+          B("pendidikan", "bangun", "paud", "Bangun PAUD — {RP:paud} · radius 4 petak, kapasitas 20", "Bangun PAUD ({RP:paud})"),
+          B("transportasi", "bangun", "halte", "Bangun Halte — {RP:halte} · radius halte 4 petak (atau SMP {RP:smp} · radius 7 bila SD sudah ada)", "Bangun Halte ({RP:halte})"),
         ];
         break;
       case "kesehatan-jauh":
       case "cakupan-kesehatan-rendah":
       case "rs-tak-menjangkau":
         out = [
-          B("kesehatan", "bangun", "puskesmas", "Bangun Puskesmas — Rp100.000 · radius 6 petak, kapasitas 80, level 2", "Bangun Puskesmas (Rp100.000)"),
-          B("kesehatan", "bangun", "posyandu", "Bangun Posyandu — Rp20.000 · radius 4 petak, kapasitas 30", "Bangun Posyandu (Rp20.000)"),
-          B("kesehatan", "bangun", "klinik", "Bangun Klinik — Rp150.000 · radius 5 petak, kapasitas 60, level 2 (atau Rumah Sakit Rp600.000 · radius 10, level 4)", "Bangun Klinik (Rp150.000)"),
+          B("kesehatan", "bangun", "puskesmas", "Bangun Puskesmas — {RP:puskesmas} · radius 6 petak, kapasitas 80, level 2", "Bangun Puskesmas ({RP:puskesmas})"),
+          B("kesehatan", "bangun", "posyandu", "Bangun Posyandu — {RP:posyandu} · radius 4 petak, kapasitas 30", "Bangun Posyandu ({RP:posyandu})"),
+          B("kesehatan", "bangun", "klinik", "Bangun Klinik — {RP:klinik} · radius 5 petak, kapasitas 60, level 2 (atau Rumah Sakit {RP:rumah-sakit} · radius 10, level 4)", "Bangun Klinik ({RP:klinik})"),
         ];
         break;
       case "faskes-tidak-beroperasi":
       case "rs-tidak-beroperasi":
         out = [
-          B("listrik", "bangun", "gardu-distribusi", "Periksa listrik — Bangun Gardu Distribusi (Rp80.000 · jaringan 6 petak) bila faskes padam", "Bangun Gardu Distribusi (Rp80.000)"),
-          B("air", "bangun", "ipa", "Periksa air — Bangun IPA (Rp500.000 · 5.000 L/jam) bila faskes kering", "Bangun IPA (Rp500.000)", ALT_INTAKE),
+          B("listrik", "bangun", "gardu-distribusi", "Periksa listrik — Bangun Gardu Distribusi ({RP:gardu-distribusi} · jaringan 6 petak) bila faskes padam", "Bangun Gardu Distribusi ({RP:gardu-distribusi})"),
+          B("air", "bangun", "ipa", "Periksa air — Bangun IPA ({RP:ipa} · 5.000 L/jam) bila faskes kering", "Bangun IPA ({RP:ipa})", ALT_INTAKE),
           L("Lihat lokasi fasilitas kesehatan yang tidak beroperasi"),
         ];
         break;
       case "pekerjaan-kurang":
         out = [
-          B("pertanian", "bangun", "kebun-sagu", "Bangun Kebun Sagu — Rp50.000 · kerja 3 (bila banyak bangunan kekurangan pekerja, bangun Rumah Sederhana dulu — tab Permukiman, Rp25.000)", "Bangun Kebun Sagu (Rp50.000)"),
-          B("industri", "bangun", "kilang-sagu", "Bangun Kilang Sagu — Rp200.000 · kerja 8", "Bangun Kilang Sagu (Rp200.000)"),
-          B("komersial", "bangun", "pasar-tradisional", "Bangun Pasar Tradisional — Rp120.000 · kerja 6", "Bangun Pasar Tradisional (Rp120.000)"),
+          B("pertanian", "bangun", "kebun-sagu", "Bangun Kebun Sagu — {RP:kebun-sagu} · kerja 3 (bila banyak bangunan kekurangan pekerja, bangun Rumah Sederhana dulu — tab Permukiman, {RP:rumah-sederhana})", "Bangun Kebun Sagu ({RP:kebun-sagu})"),
+          B("industri", "bangun", "kilang-sagu", "Bangun Kilang Sagu — {RP:kilang-sagu} · kerja 8", "Bangun Kilang Sagu ({RP:kilang-sagu})"),
+          B("komersial", "bangun", "pasar-tradisional", "Bangun Pasar Tradisional — {RP:pasar-tradisional} · kerja 6", "Bangun Pasar Tradisional ({RP:pasar-tradisional})"),
         ];
         break;
       case "kemacetan-berat":
       case "akses-macet":
         out = [
-          B("jalan", "jalan", "jalan-aspal", "Bangun jalan alternatif dari Jalan Aspal — Rp2.000 + batu 1/petak · kapasitas 40 (jalan lama TIDAK bisa ditimpa/diganti jenisnya — bangun jalur baru di sampingnya; atau Jalan Utama Rp4.000 + batu 2, kapasitas 100, level 2)", "Bangun jalan alternatif (Jalan Aspal)"),
-          B("jalan", "bangun", "bundaran", "Bangun Bundaran — Rp150.000 · efek lalu lintas 0,5 di persimpangan macet", "Bangun Bundaran (Rp150.000)", ALT_TRAFFIC),
-          B("transportasi", "bangun", "terminal-bus", "Bangun Terminal Bus — Rp250.000 · 200 penumpang, level 2, lalu bangun Halte Rp15.000 di permukiman", "Bangun Terminal Bus (Rp250.000)"),
+          B("jalan", "jalan", "jalan-aspal", "Bangun jalan alternatif dari Jalan Aspal — {RP:jalan-aspal} + batu 1/petak · kapasitas 40 (jalan lama TIDAK bisa ditimpa/diganti jenisnya — bangun jalur baru di sampingnya; atau Jalan Utama {RP:jalan-utama} + batu 2, kapasitas 100, level 2)", "Bangun jalan alternatif (Jalan Aspal)"),
+          B("jalan", "bangun", "bundaran", "Bangun Bundaran — {RP:bundaran} · efek lalu lintas 0,5 di persimpangan macet", "Bangun Bundaran ({RP:bundaran})", ALT_TRAFFIC),
+          B("transportasi", "bangun", "terminal-bus", "Bangun Terminal Bus — {RP:terminal-bus} · 200 penumpang, level 2, lalu bangun Halte {RP:halte} di permukiman", "Bangun Terminal Bus ({RP:terminal-bus})"),
         ];
         break;
       case "akses-padat":
         out = [
-          B("jalan", "jalan", "jalan-aspal", "Bangun jalan alternatif dari Jalan Aspal — Rp2.000 + batu 1/petak · kapasitas 40 (jalan lama TIDAK bisa ditimpa/diganti jenisnya)", "Bangun jalan alternatif (Jalan Aspal)"),
+          B("jalan", "jalan", "jalan-aspal", "Bangun jalan alternatif dari Jalan Aspal — {RP:jalan-aspal} + batu 1/petak · kapasitas 40 (jalan lama TIDAK bisa ditimpa/diganti jenisnya)", "Bangun jalan alternatif (Jalan Aspal)"),
           L("Lihat ruas jalan yang padat"),
         ];
         break;
       case "gudang-penuh":
         out = [
-          B("industri", "bangun", "gudang", "Bangun Gudang — Rp80.000 · +500 unit (satu-satunya jenis gudang)", "Bangun Gudang (Rp80.000)"),
-          B("transportasi", "bangun", "pelabuhan", "Jual lewat Pelabuhan — Rp400.000 · level 3, harus di pantai, ekspor +20%", "Bangun Pelabuhan (Rp400.000)", ALT_PASAR),
-          B("industri", "bangun", "kilang-sagu", "Olah stok jadi barang — Bangun Kilang Sagu (Rp200.000) / Pabrik Mie Sagu (Rp350.000, level 2 + penelitian Olah Sagu)", "Bangun Kilang Sagu (Rp200.000)"),
+          B("industri", "bangun", "gudang", "Bangun Gudang — {RP:gudang} · +500 unit (satu-satunya jenis gudang)", "Bangun Gudang ({RP:gudang})"),
+          B("transportasi", "bangun", "pelabuhan", "Jual lewat Pelabuhan — {RP:pelabuhan} · level 3, harus di pantai, ekspor +20%", "Bangun Pelabuhan ({RP:pelabuhan})", ALT_PASAR),
+          B("industri", "bangun", "kilang-sagu", "Olah stok jadi barang — Bangun Kilang Sagu ({RP:kilang-sagu}) / Pabrik Mie Sagu ({RP:pabrik-tepung}, level 2 + penelitian Olah Sagu)", "Bangun Kilang Sagu ({RP:kilang-sagu})"),
         ];
         break;
       case "logistik-terputus":
       case "kendaraan-macet":
         out = [
           L("Lihat lokasi job logistik yang gagal / kendaraan yang tidak bergerak"),
-          B("jalan", "jalan", "jalan-tanah", "Sambungkan jalan yang terputus — Jalan Tanah Rp500/petak, di celah antara kebun/kilang/gudang/pelabuhan", "Bangun Jalan Tanah (Rp500/petak)"),
-          B("jembatan", "jembatan", "jembatan-kecil", "Bangun Jembatan bila terputus oleh air — Jembatan Kecil Rp15.000 + kayu 5 (atau Jembatan Gantung Rp50.000/petak, level 3 + penelitian Transportasi)", "Bangun Jembatan Kecil (Rp15.000)"),
+          B("jalan", "jalan", "jalan-tanah", "Sambungkan jalan yang terputus — Jalan Tanah {RP:jalan-tanah}/petak, di celah antara kebun/kilang/gudang/pelabuhan", "Bangun Jalan Tanah ({RP:jalan-tanah}/petak)"),
+          B("jembatan", "jembatan", "jembatan-kecil", "Bangun Jembatan bila terputus oleh air — Jembatan Kecil {RP:jembatan-kecil} + kayu 5 (atau Jembatan Gantung {RP:jembatan-gantung}/petak, level 3 + penelitian Transportasi)", "Bangun Jembatan Kecil ({RP:jembatan-kecil})"),
         ];
         break;
       case "banjir":
         out = [
-          B("drainase", "bangun", "kolam-retensi", "Bangun Kolam Retensi — Rp100.000 · menampung banjir di zona rawan", "Bangun Kolam Retensi (Rp100.000)"),
-          B("drainase", "bangun", "ipal", "Bangun IPAL — Rp350.000 · memperbaiki drainase, level 3", "Bangun IPAL (Rp350.000)"),
+          B("drainase", "bangun", "kolam-retensi", "Bangun Kolam Retensi — {RP:kolam-retensi} · menampung banjir di zona rawan", "Bangun Kolam Retensi ({RP:kolam-retensi})"),
+          B("drainase", "bangun", "ipal", "Bangun IPAL — {RP:ipal} · memperbaiki drainase, level 3", "Bangun IPAL ({RP:ipal})"),
           L("Lihat lokasi bangunan yang kebanjiran"),
         ];
         break;
       case "sanitasi-buruk":
-        out = [B("drainase", "bangun", "ipal", "Bangun IPAL di dekat permukiman — Rp350.000 · level 3", "Bangun IPAL (Rp350.000)")];
+        out = [B("drainase", "bangun", "ipal", "Bangun IPAL di dekat permukiman — {RP:ipal} · level 3", "Bangun IPAL ({RP:ipal})")];
         break;
       case "polusi":
         out = [
-          B("lingkungan", "bangun", "taman", "Bangun Taman Kota — Rp15.000 · ruang hijau penyerap polusi", "Bangun Taman Kota (Rp15.000)"),
-          B("drainase", "bangun", "ipal", "Bangun IPAL — Rp350.000 · menetralkan pencemaran industri, level 3", "Bangun IPAL (Rp350.000)"),
+          B("lingkungan", "bangun", "taman", "Bangun Taman Kota — {RP:taman} · ruang hijau penyerap polusi", "Bangun Taman Kota ({RP:taman})"),
+          B("drainase", "bangun", "ipal", "Bangun IPAL — {RP:ipal} · menetralkan pencemaran industri, level 3", "Bangun IPAL ({RP:ipal})"),
         ];
         break;
       case "rekreasi-jauh":
         out = [
-          B("lingkungan", "bangun", "taman", "Bangun Taman Kota di dekat permukiman — Rp15.000", "Bangun Taman Kota (Rp15.000)"),
-          B("rekreasi", "bangun", "lapangan", "Bangun Lapangan Olahraga — Rp40.000", "Bangun Lapangan Olahraga (Rp40.000)"),
+          B("lingkungan", "bangun", "taman", "Bangun Taman Kota di dekat permukiman — {RP:taman}", "Bangun Taman Kota ({RP:taman})"),
+          B("rekreasi", "bangun", "lapangan", "Bangun Lapangan Olahraga — {RP:lapangan}", "Bangun Lapangan Olahraga ({RP:lapangan})"),
         ];
         break;
       case "pasokan-kosong":
         out = [
-          B("pertanian", "bangun", "kebun-sagu", "Bangun Kebun Sagu untuk memasok pasar — Rp50.000 · 3 tual/hari", "Bangun Kebun Sagu (Rp50.000)"),
-          B("industri", "bangun", "kilang-sagu", "Bangun Kilang Sagu — Rp200.000 · olah tual jadi tepung", "Bangun Kilang Sagu (Rp200.000)"),
+          B("pertanian", "bangun", "kebun-sagu", "Bangun Kebun Sagu untuk memasok pasar — {RP:kebun-sagu} · 3 tual/hari", "Bangun Kebun Sagu ({RP:kebun-sagu})"),
+          B("industri", "bangun", "kilang-sagu", "Bangun Kilang Sagu — {RP:kilang-sagu} · olah tual jadi tepung", "Bangun Kilang Sagu ({RP:kilang-sagu})"),
         ];
         break;
       case "defisit-apbd":
@@ -930,27 +950,27 @@
             if (cekMikro && cekMikro.layak) langkahPemulihan.push({ nomor: 0, teks: "Ajukan pinjaman Mikro dari panel Ekonomi (cicilan ±Rp" + Math.round(cekMikro.cicilanHarian || 0).toLocaleString("id-ID") + "/hari) — dana segar, tetap berbunga dan berbatas.", tombol: "Lihat Lokasi", ringkas: "Ajukan pinjaman Mikro", target: null, lokasi: lok, terkunci: false, alasanKunci: null });
           }
         } catch (e) {}
-        out = langkahPemulihan.concat([B("industri", "bangun", "industri-ekspor", "Bangun Industri Ekspor — Rp900.000 · level 4 + penelitian Industri Makanan, untuk menambah pemasukan ekspor", "Bangun Industri Ekspor (Rp900.000)")]);
+        out = langkahPemulihan.concat([B("industri", "bangun", "industri-ekspor", "Bangun Industri Ekspor — {RP:industri-ekspor} · level 4 + penelitian Industri Makanan, untuk menambah pemasukan ekspor", "Bangun Industri Ekspor ({RP:industri-ekspor})")]);
         break;
       }
       case "pekerja-kurang":
-        out = [B("permukiman", "bangun", "rumah-sederhana", "Bangun Rumah Sederhana — Rp25.000 · menambah penduduk (angkatan kerja)", "Bangun Rumah Sederhana (Rp25.000)")];
+        out = [B("permukiman", "bangun", "rumah-sederhana", "Bangun Rumah Sederhana — {RP:rumah-sederhana} · menambah penduduk (angkatan kerja)", "Bangun Rumah Sederhana ({RP:rumah-sederhana})")];
         break;
       case "bahagia-rendah":
-        out = [B("permukiman", "bangun", "rumah-sederhana", "Bangun rumah dengan listrik dan air yang memadai — Rumah Sederhana Rp25.000", "Bangun Rumah Sederhana (Rp25.000)")];
+        out = [B("permukiman", "bangun", "rumah-sederhana", "Bangun rumah dengan listrik dan air yang memadai — Rumah Sederhana {RP:rumah-sederhana}", "Bangun Rumah Sederhana ({RP:rumah-sederhana})")];
         break;
       case "penumpang-menumpuk":
       case "bus-penuh":
-        out = [B("transportasi", "bangun", "terminal-bus", "Tambah armada / buat rute bus baru dari Terminal Bus — Rp250.000 · level 2", "Bangun Terminal Bus (Rp250.000)")];
+        out = [B("transportasi", "bangun", "terminal-bus", "Tambah armada / buat rute bus baru dari Terminal Bus — {RP:terminal-bus} · level 2", "Bangun Terminal Bus ({RP:terminal-bus})")];
         break;
       case "rute-feri-kosong":
-        out = [B("transportasi", "bangun", "terminal-feri", "Bangun Terminal Feri — Rp200.000 · level 2 (bila belum ada)", "Bangun Terminal Feri (Rp200.000)")];
+        out = [B("transportasi", "bangun", "terminal-feri", "Bangun Terminal Feri — {RP:terminal-feri} · level 2 (bila belum ada)", "Bangun Terminal Feri ({RP:terminal-feri})")];
         break;
       case "rute-bus-kosong":
-        out = [B("transportasi", "bangun", "terminal-bus", "Bangun Terminal Bus — Rp250.000 · level 2 (bila belum ada)", "Bangun Terminal Bus (Rp250.000)")];
+        out = [B("transportasi", "bangun", "terminal-bus", "Bangun Terminal Bus — {RP:terminal-bus} · level 2 (bila belum ada)", "Bangun Terminal Bus ({RP:terminal-bus})")];
         break;
       case "transportasi-sekolah":
-        out = [B("transportasi", "bangun", "halte", "Bangun Halte di dekat sekolah — Rp15.000 · radius halte 4 petak", "Bangun Halte (Rp15.000)")];
+        out = [B("transportasi", "bangun", "halte", "Bangun Halte di dekat sekolah — {RP:halte} · radius halte 4 petak", "Bangun Halte ({RP:halte})")];
         break;
       default:
         out = [];
