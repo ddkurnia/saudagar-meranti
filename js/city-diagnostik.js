@@ -243,6 +243,72 @@
     return KAT_KE_KATEGORI[def.kat] || "other";
   }
 
+  // ---------------- Penyebab utilitas spesifik (v31) ----------------
+  // "Tidak terhubung" (bangun gardu/tiang/pompa di dekat bangunan) vs
+  // "kapasitas tidak mencukupi" (bangun PEMBANGKIT/IPA — tiang/pompa
+  // tidak membantu). Bila data live tidak tersedia, teks generik lama.
+  function _terhubungJaringan(b, jenis) {
+    try {
+      if (typeof terhubungJaringan === "function") return !!terhubungJaringan(b, jenis);
+    } catch (e) {}
+    return null; // tidak diketahui
+  }
+  function _penyebabListrik(b) {
+    var hub = _terhubungJaringan(b, "listrik");
+    if (hub === false) return "Tidak terhubung jaringan listrik — tidak ada gardu/tiang dalam jangkauan bangunan ini. Bangun gardu distribusi atau tiang listrik di dekatnya.";
+    try {
+      if (typeof statusListrik === "function") {
+        var sl = statusListrik();
+        if (sl && typeof sl.permintaanKW === "number" && sl.permintaanKW > 0 && (sl.kapasitasKW || 0) < sl.permintaanKW) {
+          return "Terhubung jaringan, tapi kapasitas pembangkit (" + (sl.kapasitasKW || 0) + " kW) tidak mencukupi permintaan (" + sl.permintaanKW + " kW) — bangun pembangkit (PLT Biomassa/PLTD/PLT Surya), bukan tiang listrik.";
+        }
+      }
+    } catch (e) {}
+    if (hub === true) return "Terhubung jaringan, tapi bangunan ini sedang padam (pemadaman bergilir karena kapasitas terbatas) — bangun pembangkit bila pemadaman sering berulang.";
+    return "Tidak terhubung jaringan listrik, atau kapasitas pembangkit tidak mencukupi (pemadaman bergilir).";
+  }
+  function _penyebabAir(b) {
+    var hub = _terhubungJaringan(b, "air");
+    if (hub === false) return "Tidak terhubung jaringan air — tidak ada pompa/menara air dalam jangkauan bangunan ini. Bangun pompa air atau menara air di dekatnya.";
+    try {
+      if (typeof statusAir === "function") {
+        var sa = statusAir();
+        if (sa && typeof sa.permintaanL === "number" && sa.permintaanL > 0 && (sa.kapasitasL || 0) < sa.permintaanL) {
+          return "Terhubung jaringan, tapi kapasitas air (" + (sa.kapasitasL || 0) + " L/jam) di bawah permintaan (" + sa.permintaanL + " L/jam) — bangun IPA/intake, bukan pompa air.";
+        }
+      }
+    } catch (e) {}
+    if (hub === true) return "Terhubung jaringan, tapi bangunan ini sedang kering (alokasi bergilir karena kapasitas terbatas) — bangun IPA/intake bila sering berulang.";
+    return "Tidak terhubung jaringan air PDAM, atau kapasitas IPA/intake tidak mencukupi.";
+  }
+
+  // ---------------- Status 8 kondisi nyata (v31) ----------------
+  // "beroperasi" HANYA bila tidak ada satu pun penghambat — status lama
+  // (operational/normal/warning/critical/offline) dipertahankan apa adanya
+  // untuk kompatibilitas; status8 adalah pelengkap yang jujur.
+  var STATUS8_LABEL = {
+    "dalam-pembangunan": "Dalam pembangunan",
+    "menunggu-pekerja": "Menunggu pekerja",
+    "menunggu-akses-jalan": "Menunggu akses jalan",
+    "tidak-ada-listrik": "Tidak ada listrik",
+    "tidak-ada-air": "Tidak ada air",
+    "beroperasi": "Beroperasi",
+    "tidak-beroperasi": "Tidak beroperasi",
+    "perlu-perbaikan": "Perlu perbaikan",
+  };
+  function status8(b) {
+    if (!b || typeof b !== "object") return "tidak-beroperasi";
+    var def = _def(b);
+    if (!b.selesai) return "dalam-pembangunan";
+    try { if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) return "tidak-beroperasi"; } catch (e) {}
+    if (b.kebanjiran) return "perlu-perbaikan";
+    if (def && (def.pekerja || 0) > 0 && typeof b.staf === "number" && b.staf < def.pekerja) return "menunggu-pekerja";
+    if (!_punyaAksesJalan(b, def)) return "menunggu-akses-jalan";
+    if (def && (def.listrik || 0) > 0 && b.berlistrik === false) return "tidak-ada-listrik";
+    if (def && (def.air || 0) > 0 && b.berair === false) return "tidak-ada-air";
+    return "beroperasi";
+  }
+
   // ---------------- Masalah umum (semua kategori) ----------------
   // Mengisi `out` (masalah terdeteksi) dan `tak` (kode tak terdeteksi).
   function _masalahUmum(b, def, kat, out, tak) {
@@ -252,15 +318,19 @@
     }
     // Listrik: flag berlistrik===false = nyata padam/tak terhubung.
     // undefined = utilitas belum pernah dihitung -> JANGAN tuduh padam.
+    // v31: penyebab MEMBEDAKAN "tidak terhubung jaringan" vs "kapasitas
+    // pembangkit tidak mencukupi" (data live) — sebelumnya satu teks
+    // generik membuat pemain membangun tiang saat akar masalahnya
+    // kapasitas (gejala v31-2: tiang dibangun, peringatan tetap).
     if ((def.listrik || 0) > 0) {
       if (b.berlistrik === false) {
-        out.push({ kode: "tanpa-listrik", teks: "Tidak ada listrik — bangunan tidak beroperasi.", dampak: 1, penyebab: "Tidak terhubung jaringan listrik, atau kapasitas pembangkit tidak mencukupi (pemadaman bergilir).", kategori: kat });
+        out.push({ kode: "tanpa-listrik", teks: "Tidak ada listrik — bangunan tidak beroperasi.", dampak: 1, penyebab: _penyebabListrik(b), kategori: kat });
       }
     }
     // Air: sama seperti listrik.
     if ((def.air || 0) > 0) {
       if (b.berair === false) {
-        out.push({ kode: "tanpa-air", teks: "Tidak ada air bersih — bangunan tidak beroperasi.", dampak: 1, penyebab: "Tidak terhubung jaringan air PDAM, atau kapasitas IPA/intake tidak mencukupi.", kategori: kat });
+        out.push({ kode: "tanpa-air", teks: "Tidak ada air bersih — bangunan tidak beroperasi.", dampak: 1, penyebab: _penyebabAir(b), kategori: kat });
       }
     }
     // Pekerja: b.staf dari hitungTenagaKerja (per jam game).
@@ -299,6 +369,12 @@
       out.push({ kode: "sanitasi-buruk", teks: "Sanitasi hanya septik tradisional — belum ada IPAL di dekat rumah.", dampak: 0.3, penyebab: "Tidak ada IPAL yang beroperasi dalam radius 8 petak dari rumah ini.", kategori: "residential" });
     }
     // Sampah kota (data nyata S.utilitas.sampah).
+    // v31: kekurangan layanan KOTA (sampah, kesehatan, sekolah, pekerjaan,
+    // rekreasi) adalah catatan kota, bukan kerusakan rumah — dampaknya
+    // dibatasi < 0,4 agar rumah yang berfungsi tidak berstatus "warning"
+    // permanen hanya karena kota belum punya fasilitasnya (gejala v31-4).
+    // Yang tetap berdampak besar: tanpa listrik/air (1,0), tanpa jalan
+    // (0,8), kebanjiran (1,0), kekurangan pekerja (≤0,9).
     if (st && st.utilitas && st.utilitas.sampah) {
       var sm = st.utilitas.sampah;
       if (typeof sm.kebersihan === "number" && sm.kebersihan < 100) {
@@ -315,27 +391,27 @@
         var teksSampah = (tumpukanKg > 50)
           ? "Sampah kota menumpuk — kebersihan " + sm.kebersihan + "% (tumpukan " + Math.round(tumpukanKg) + " kg)."
           : "Kapasitas olah sampah " + Math.round(sm.kapasitasKgHari || 0) + " kg/hari tidak menutup produksi " + produksi1des + " kg/hari (tumpukan " + Math.round(tumpukanKg) + " kg — belum menumpuk).";
-        out.push({ kode: "sampah-menumpuk", teks: teksSampah, dampak: Math.min(0.5, (100 - sm.kebersihan) / 100 * 0.5 + 0.1), penyebab: "Produksi sampah penduduk (" + Math.round(sm.produksiKgHari || 0) + " kg/hari) melebihi kapasitas olah sampah (" + Math.round(sm.kapasitasKgHari || 0) + " kg/hari).", kategori: "residential" });
+        out.push({ kode: "sampah-menumpuk", teks: teksSampah, dampak: Math.min(0.35, (100 - sm.kebersihan) / 100 * 0.35 + 0.05), penyebab: "Produksi sampah penduduk (" + Math.round(sm.produksiKgHari || 0) + " kg/hari) melebihi kapasitas olah sampah (" + Math.round(sm.kapasitasKgHari || 0) + " kg/hari).", kategori: "residential" });
       }
     }
     // Pekerjaan kota (data nyata hitungTenagaKerja).
     var tk = _tenagaKerja();
     if (tk && tk.angkatan > 0 && tk.menganggur > 0) {
-      out.push({ kode: "pekerjaan-kurang", teks: tk.menganggur + " warga menganggur dari " + tk.angkatan + " angkatan kerja.", dampak: Math.min(0.5, tk.menganggur / tk.angkatan), penyebab: "Lapangan kerja (bangunan yang butuh pekerja) lebih sedikit daripada angkatan kerja.", kategori: "residential" });
+      out.push({ kode: "pekerjaan-kurang", teks: tk.menganggur + " warga menganggur dari " + tk.angkatan + " angkatan kerja.", dampak: Math.min(0.3, tk.menganggur / tk.angkatan * 0.3), penyebab: "Lapangan kerja (bangunan yang butuh pekerja) lebih sedikit daripada angkatan kerja.", kategori: "residential" });
     }
     // Kesehatan jauh: fasilitas kesehatan beroperasi terdekat di luar radius layanannya.
     var kes = _jarakLayananTerdekat(b, "kesehatan");
     if (!kes) {
-      out.push({ kode: "kesehatan-jauh", teks: "Tidak ada fasilitas kesehatan yang beroperasi di pulau ini.", dampak: 0.5, penyebab: "Belum ada posyandu/puskesmas/klinik/RS yang selesai dan beroperasi.", kategori: "residential" });
+      out.push({ kode: "kesehatan-jauh", teks: "Tidak ada fasilitas kesehatan yang beroperasi di pulau ini.", dampak: 0.35, penyebab: "Belum ada posyandu/puskesmas/klinik/RS yang selesai dan beroperasi.", kategori: "residential" });
     } else if (kes.jarak > kes.radius) {
-      out.push({ kode: "kesehatan-jauh", teks: "Fasilitas kesehatan terdekat " + Math.round(kes.jarak) + " petak jauhnya (jangkauan " + kes.radius + " petak).", dampak: 0.4, penyebab: "Rumah ini di luar radius layanan " + (_def(kes.bangunan) ? _def(kes.bangunan).nama : "fasilitas kesehatan") + ".", kategori: "residential" });
+      out.push({ kode: "kesehatan-jauh", teks: "Fasilitas kesehatan terdekat " + Math.round(kes.jarak) + " petak jauhnya (jangkauan " + kes.radius + " petak).", dampak: 0.3, penyebab: "Rumah ini di luar radius layanan " + (_def(kes.bangunan) ? _def(kes.bangunan).nama : "fasilitas kesehatan") + ".", kategori: "residential" });
     }
     // Sekolah jauh: sama, untuk pendidikan.
     var edu = _jarakLayananTerdekat(b, "pendidikan");
     if (!edu) {
-      out.push({ kode: "sekolah-jauh", teks: "Tidak ada sekolah yang beroperasi di pulau ini.", dampak: 0.5, penyebab: "Belum ada PAUD/SD/SMP/SMA yang selesai dan beroperasi.", kategori: "residential" });
+      out.push({ kode: "sekolah-jauh", teks: "Tidak ada sekolah yang beroperasi di pulau ini.", dampak: 0.35, penyebab: "Belum ada PAUD/SD/SMP/SMA yang selesai dan beroperasi.", kategori: "residential" });
     } else if (edu.jarak > edu.radius) {
-      out.push({ kode: "sekolah-jauh", teks: "Sekolah terdekat " + Math.round(edu.jarak) + " petak jauhnya (jangkauan " + edu.radius + " petak).", dampak: 0.4, penyebab: "Rumah ini di luar radius layanan " + (_def(edu.bangunan) ? _def(edu.bangunan).nama : "sekolah") + ".", kategori: "residential" });
+      out.push({ kode: "sekolah-jauh", teks: "Sekolah terdekat " + Math.round(edu.jarak) + " petak jauhnya (jangkauan " + edu.radius + " petak).", dampak: 0.3, penyebab: "Rumah ini di luar radius layanan " + (_def(edu.bangunan) ? _def(edu.bangunan).nama : "sekolah") + ".", kategori: "residential" });
     }
     // Rekreasi: bangunan rekreasi/hiburan beroperasi dalam radius 6
     // (radius yang sama dengan hitungRincian city-bahagia.js).
@@ -595,7 +671,7 @@
       var persen = Math.round(((typeof b.progres === "number" ? b.progres : 0)) * 100);
       var hasilKonstruksi = {
         id: b.id, nama: def.nama, x: b.x, y: b.y, kategori: kat,
-        status: "under-construction",
+        status: "under-construction", status8: "dalam-pembangunan", status8Label: "Dalam pembangunan",
         masalah: [{ kode: "dalam-konstruksi", teks: "Bangunan masih dibangun (" + persen + "%).", dampak: 0, penyebab: "Konstruksi belum selesai.", kategori: kat }],
         penyebabUtama: null, skor: 0, tidakTerdeteksi: [],
       };
@@ -630,7 +706,8 @@
     for (var i = 0; i < masalah.length; i++) sisa *= (1 - Math.min(1, Math.max(0, masalah[i].dampak || 0)));
     var hasil = {
       id: b.id, nama: def.nama, x: b.x, y: b.y, kategori: kat,
-      status: status, masalah: masalah, penyebabUtama: utama,
+      status: status, status8: status8(b), status8Label: STATUS8_LABEL[status8(b)],
+      masalah: masalah, penyebabUtama: utama,
       skor: Math.round(100 * sisa), tidakTerdeteksi: tak,
     };
     _cacheSet(b, { sig: sig, hasil: hasil });
@@ -688,23 +765,35 @@
       else skor.bahan = 100;
     }
     // Rekomendasi: dari Advisor (bila ada) untuk kode penyebab utama.
+    // v31: bangunan operational/normal TIDAK mendapat rekomendasi aksi —
+    // kekurangannya bersifat catatan kota (bukan gangguan operasional),
+    // jadi panel tidak lagi berkata "Beroperasi" sambil menyuruh
+    // "Bangun X" (gejala v31-4).
     var rekomendasi = [];
-    try {
-      var utama = d.penyebabUtama;
-      if (utama && typeof Advisor !== "undefined" && Advisor && typeof Advisor.rekomendasiUntuk === "function") {
-        var rec = Advisor.rekomendasiUntuk({ kode: utama.kode, id: "m-" + utama.kode, lokasi: { x: d.x, y: d.y }, penyebab: utama.penyebab || utama.teks || "" });
-        if (Array.isArray(rec)) {
-          for (var j = 0; j < rec.length; j++) {
-            if (rec[j] && rec[j].teks) rekomendasi.push(rec[j].teks);
+    var catatan = null;
+    if (d.status === "operational" || d.status === "normal") {
+      catatan = d.status === "operational"
+        ? "Bangunan berfungsi normal — tidak ada tindakan yang diperlukan."
+        : "Bangunan berfungsi — catatan di bawah hanya informasi layanan kota, bukan gangguan operasional; tidak ada tindakan yang diperlukan untuk bangunan ini.";
+    } else {
+      try {
+        var utama = d.penyebabUtama;
+        if (utama && typeof Advisor !== "undefined" && Advisor && typeof Advisor.rekomendasiUntuk === "function") {
+          var rec = Advisor.rekomendasiUntuk({ kode: utama.kode, id: "m-" + utama.kode, lokasi: { x: d.x, y: d.y }, penyebab: utama.penyebab || utama.teks || "" });
+          if (Array.isArray(rec)) {
+            for (var j = 0; j < rec.length; j++) {
+              if (rec[j] && rec[j].teks) rekomendasi.push(rec[j].teks);
+            }
           }
         }
-      }
-    } catch (e) { rekomendasi = []; }
-    if (!rekomendasi.length) rekomendasi = penyebab.slice();
+      } catch (e) { rekomendasi = []; }
+      if (!rekomendasi.length) rekomendasi = penyebab.slice();
+    }
     return {
       status: LABEL_STATUS_UI[d.status] || d.status,
       statusMentah: d.status, skor: skor,
-      penyebab: penyebab, rekomendasi: rekomendasi,
+      status8: d.status8, status8Label: d.status8Label,
+      penyebab: penyebab, rekomendasi: rekomendasi, catatan: catatan,
       penyebabUtama: d.penyebabUtama, skorTotal: d.skor, kategori: d.kategori,
     };
   }
@@ -750,6 +839,9 @@
     // v24-finalizer: bentuk UI {status, skor{listrik,air,pekerja,bahan},
     // penyebab[], rekomendasi[]} untuk panel kanan (lihat statusBangunan).
     statusBangunan: statusBangunan,
+    // v31: status 8 kondisi nyata + label Indonesianya.
+    status8: status8,
+    STATUS8_LABEL: STATUS8_LABEL,
     penyebabUtama: penyebabUtama,
     invalidate: invalidate,
     invalidateSemua: invalidateSemua,

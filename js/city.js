@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v30"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v31"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -635,7 +635,7 @@ function stateBaru(petaBaru) {
     akumulasiJual: 0, akumulasiEkspor: 0,
     misiSelesai: {}, statistik: { dibangun: {}, dibangunKat: {}, jalan: 0, jembatan: 0, produksi: {}, produksiMaterial: {}, konsumsiMaterial: {}, ekspor: 0, pendudukMax: 4, pendapatanHari: 0, pengeluaranHari: 0 }, // v30: +produksiMaterial & konsumsiMaterial (kumulatif, dipakai panel Gudang Material)
     bersih: [], // tile hutan yang sudah ditebang (agar peta sama setelah reload)
-    penduduk: { total: 4, bahagia: 60, bekerja: 0, menganggur: 0, cakupanPendidikan: 0, cakupanKesehatan: 0 },
+    penduduk: { total: 4, bahagia: 60, bekerja: 0, menganggur: 0, cakupanPendidikan: 0, cakupanKesehatan: 0, menungguRumah: 0 }, // v31: menungguRumah = jiwa tanpa rumah (tetap dihitung, bukan dihapus)
     log: [],
     petaVersi: 5, // v19: dunia v17 + mesin waktu v18 + utilitas (SAVE_KEY tetap merantiRisingWorldV1)
     pulau: pulauStateBaru(),
@@ -711,7 +711,8 @@ function stateBaru(petaBaru) {
   }
   if (rumahTerbaik) {
     bersihHutan(rumahTerbaik.x, rumahTerbaik.y);
-    st.bangunan.push({ id: "rumah-sederhana", x: rumahTerbaik.x, y: rumahTerbaik.y, rot: 0, selesai: true, progres: 1, kecamatan: kecDi(rumahTerbaik.x, rumahTerbaik.y) });
+    // v31: 4 penduduk awal tinggal di rumah pertama ini (kapasitas 4).
+    st.bangunan.push({ id: "rumah-sederhana", x: rumahTerbaik.x, y: rumahTerbaik.y, rot: 0, selesai: true, progres: 1, kecamatan: kecDi(rumahTerbaik.x, rumahTerbaik.y), penghuni: 4 });
   }
   st.log.unshift("Selamat datang di Kepulauan Meranti! Bangun rumah, kebun, dan jalan untuk mengembangkan pulau.");
   return st;
@@ -1329,6 +1330,7 @@ function bangunDi(def, x, y, rot) {
   }
   if (kayuTebang > 0) { S.kayu += kayuTebang; log("Menebang hutan: +" + kayuTebang + " kayu."); invalidasiMinimapCache(); }
   const b = { id: def.id, x: x, y: y, rot: rot, selesai: false, progres: 0, kecamatan: kecamatanDiPeta(peta, x, y) };
+  if (def.rumah) b.penghuni = 0; // v31: rumah baru kosong — penghuni datang bertahap lewat migrasi harian, bukan langsung penuh
   S.bangunan.push(b);
   catatDibangun(def);
   bunyiSukses();
@@ -1359,7 +1361,7 @@ function bangunJalanDi(tipe, x, y) {
   // v22-W1: jalan baru -> graph jalan berubah (rute/cache ikut invalid).
   if (typeof perbaruiGraphJalan === "function") { try { perbaruiGraphJalan([{ x: x, y: y }]); } catch (e) {} }
   S.statistik.jalan++;
-  bunyiKlik(); cekMisi(); simpan(); renderHUD();
+  bunyiKlik(); cekMisi(); segarkanUtilitasDanDiagnosa(); simpan(); renderHUD(); // v31: jalan baru bisa menyambungkan akses rumah
   if (panelKiri === "misi") renderPanelKiri(); // penghitung misi langsung diperbarui
   cekTutorial();
   return true;
@@ -1374,7 +1376,7 @@ function bangunJembatanDi(tipe, x, y) {
   if (typeof perbaruiGraphJalan === "function") { try { perbaruiGraphJalan([{ x: x, y: y }]); } catch (e) {} }
   S.statistik.jembatan++;
   bunyiSukses(); toast(JEMBATAN[tipe].nama + " dibangun.", "ok");
-  cekMisi(); simpan(); renderHUD();
+  cekMisi(); segarkanUtilitasDanDiagnosa(); simpan(); renderHUD(); // v31: jembatan baru bisa menyambungkan akses rumah
   if (panelKiri === "misi") renderPanelKiri(); // penghitung misi langsung diperbarui
   cekTutorial();
   return true;
@@ -1467,10 +1469,15 @@ function toggleNonaktif(idx) {
   if (!b) return;
   const def = BANGUNAN_MAP[b.id];
   b.nonaktif = !b.nonaktif;
-  if (b.nonaktif) { b.staf = 0; b.efisiensi = 0; }
+  if (b.nonaktif) {
+    b.staf = 0; b.efisiensi = 0;
+    // v31: rumah nonaktif kehilangan kapasitas hunian — penghuninya
+    // dipindahkan ke rumah lain yang masih kosong, sisanya menunggu rumah.
+    if (def.rumah) pindahkanPenghuniKeluar(b);
+  }
   toast(def.nama + (b.nonaktif ? " dinonaktifkan — produksi/penjualan berhenti, upkeep tinggal 10%, pekerja dilepas, tidak kena pajak properti." : " diaktifkan kembali."), b.nonaktif ? "info" : "ok");
   log((b.nonaktif ? "Menonaktifkan " : "Mengaktifkan ") + def.nama + ".");
-  bunyiKlik(); simpan(); renderHUD(); renderPanelKanan();
+  bunyiKlik(); segarkanUtilitasDanDiagnosa(); simpan(); renderHUD(); renderPanelKanan();
 }
 function hapusBangunan(idx) {
   const b = S.bangunan[idx];
@@ -1478,11 +1485,14 @@ function hapusBangunan(idx) {
   const def = BANGUNAN_MAP[b.id];
   const faktorRefund = cfgEco("bangunan.refundHapus", 0.5);
   kembalikanBiaya(def.harga, faktorRefund);
+  // v31: penghuni rumah yang dihapus dipindahkan ke rumah lain yang
+  // masih kosong; sisanya menjadi menungguRumah (tetap dihitung).
+  if (def.rumah) pindahkanPenghuniKeluar(b);
   S.bangunan.splice(idx, 1);
   terpilih = null;
   toast(def.nama + " dihapus (pengembalian " + Math.round(faktorRefund * 100) + "%).", "ok");
   log("Menghapus " + def.nama + ".");
-  bunyiKlik(); simpan(); renderHUD(); renderPanelKanan();
+  bunyiKlik(); segarkanUtilitasDanDiagnosa(); simpan(); renderHUD(); renderPanelKanan();
 }
 function putarBangunan(idx) {
   const b = S.bangunan[idx];
@@ -1525,12 +1535,20 @@ function pindahBangunanSelesai(x, y) {
   b.x = x; b.y = y;
   b.kecamatan = kecamatanDiPeta(peta, x, y);
   toast(def.nama + " dipindahkan.", "ok");
-  bunyiSukses(); simpan(); renderPanelKanan();
+  bunyiSukses(); segarkanUtilitasDanDiagnosa(); simpan(); renderPanelKanan(); // v31: pindah bisa mengubah akses jalan/utilitas
 }
 
 // ---------------- Log & toast ----------------
+// v31: satu kejadian = satu entri berita. Pesan yang persis sama
+// (teks identik) tidak ditulis dua kali selama masih ada di log (maks 40
+// entri; entri lama yang sudah terpotong boleh muncul lagi sebagai
+// kejadian baru). Mencegah ticker "Berita Pulau" dibanjiri pesan
+// pembangunan yang sama berkali-kali (gejala v31-5).
 function log(pesan) {
-  S.log.unshift("Hari " + S.hari + ": " + pesan);
+  if (typeof pesan !== "string" || !pesan) return;
+  const baris = "Hari " + S.hari + ": " + pesan;
+  if (Array.isArray(S.log) && S.log.indexOf(baris) !== -1) return;
+  S.log.unshift(baris);
   S.log = S.log.slice(0, 40);
   const el = $("log");
   if (el) el.innerHTML = S.log.map(l => "<div>" + l + "</div>").join("");
@@ -1558,11 +1576,241 @@ function toast(pesan, jenis) {
 // =====================================================================
 
 function bangunanSelesai() { return S.bangunan.filter(b => b.selesai); }
+
+// =====================================================================
+// v31 — HUNIAN PER-RUMAH (akuntansi penduduk, satu sumber data)
+// Aturan (brief v31, gate kebahagiaan LAMA dipertahankan):
+//   - Tiap rumah selesai menyimpan b.penghuni (jiwa yang tinggal di situ).
+//   - total penduduk = Σ penghuni semua rumah + S.penduduk.menungguRumah
+//     (jiwa yang belum mendapat rumah — mis. rumahnya dihapus/dinonaktifkan
+//     saat kota penuh; mereka TETAP dihitung, bukan dihapus diam-diam).
+//   - Rumah LAYAK menerima pendatang baru: selesai, tidak nonaktif, tidak
+//     kebanjiran, dan punya akses jalan (4-arah, aturan yang sama dengan
+//     cekBangun/Diagnostik). Listrik/air TIDAK jadi syarat layak huni —
+//     rumah tanpa listrik tetap bisa dihuni, penghuninya yang mengeluh.
+//   - Migrasi BERTAHAP: pendatang baru per rumah maks +ceil(kap/2) per
+//     hari game — rumah tidak langsung penuh.
+//   - S.penduduk.total adalah otoritas jumlah; rekonsiliasi TIDAK PERNAH
+//     memangkas total (tes/keadaan lama boleh menaruh total > kapasitas:
+//     selisihnya menjadi menungguRumah). Yang dipangkas hanya penghuni
+//     berlebih bila Σ penghuni > total (tidak mungkin dalam permainan
+//     normal — hanya pengaman).
+// =====================================================================
+function punyaAksesJalanBangunan(b) {
+  if (!b) return false;
+  const def = BANGUNAN_MAP[b.id];
+  if (!def) return false;
+  if (def.pantai) return true;
+  for (const t of petakBangunan(b)) {
+    if (adaJalanDi(S, t.x + 1, t.y) || adaJalanDi(S, t.x - 1, t.y) || adaJalanDi(S, t.x, t.y + 1) || adaJalanDi(S, t.x, t.y - 1)) return true;
+  }
+  return false;
+}
+function rumahLayak(b) {
+  if (!b || !b.selesai) return false;
+  const d = BANGUNAN_MAP[b.id];
+  if (!d || !(d.rumah > 0)) return false;
+  if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) return false;
+  if (b.kebanjiran) return false;
+  return punyaAksesJalanBangunan(b);
+}
+// Satu sumber data hunian: kapasitas, terisi, kosong, rumah kosong/terisi,
+// dan jiwa yang menunggu rumah. Dipakai hitungRumah(), panel Penduduk,
+// Advisor, dan pertumbuhan harian — jangan hitung kapasitas di tempat lain.
+function infoHunian() {
+  let kapasitas = 0, terisi = 0;
+  const rumah = [];
+  for (const b of bangunanSelesai()) {
+    const d = BANGUNAN_MAP[b.id];
+    if (!d || !(d.rumah > 0)) continue;
+    if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) continue;
+    const kap = d.rumah;
+    const isi = Math.max(0, Math.min(kap, (typeof b.penghuni === "number" ? Math.floor(b.penghuni) : 0)));
+    kapasitas += kap; terisi += isi;
+    rumah.push({ b: b, kap: kap, isi: isi, layak: rumahLayak(b), kosong: kap - isi });
+  }
+  const menunggu = (S && S.penduduk && typeof S.penduduk.menungguRumah === "number") ? Math.max(0, Math.floor(S.penduduk.menungguRumah)) : 0;
+  return {
+    kapasitas: kapasitas, terisi: terisi, kosong: Math.max(0, kapasitas - terisi),
+    menungguRumah: menunggu,
+    rumah: rumah,
+    rumahLayak: rumah.filter(r => r.layak),
+    rumahKosong: rumah.filter(r => r.kosong > 0),
+    rumahTerisi: rumah.filter(r => r.isi > 0),
+  };
+}
 function hitungRumah() {
-  let kap = 0;
-  // v29: rumah nonaktif tidak dihitung kapasitasnya (penghuni pergi).
-  for (const b of bangunanSelesai()) { if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) continue; const d = BANGUNAN_MAP[b.id]; if (d.rumah) kap += d.rumah; }
-  return kap;
+  return infoHunian().kapasitas;
+}
+// Samakan total dengan distribusi per-rumah (tanpa pernah memangkas
+// total): Σ penghuni berlebih dipangkas dari rumah paling tidak layak;
+// kekurangan menjadi menungguRumah. Dipanggil setelah migrasi, hapus /
+// nonaktifkan rumah, dan tiap pergantian hari.
+function rekonsiliasiPenduduk() {
+  if (!S || !S.penduduk) return;
+  const rumah = bangunanSelesai().filter(b => { const d = BANGUNAN_MAP[b.id]; return d && d.rumah > 0 && !(typeof bangunanNonaktif === "function" && bangunanNonaktif(b)); });
+  for (const b of rumah) if (typeof b.penghuni !== "number" || !(b.penghuni >= 0)) b.penghuni = 0;
+  let total = Math.max(0, Math.floor(S.penduduk.total || 0));
+  let jumlah = rumah.reduce((a, b) => a + Math.floor(b.penghuni || 0), 0);
+  if (jumlah > total) {
+    let lebih = jumlah - total;
+    const urut = rumah.slice().sort((a, b) => (rumahLayak(a) ? 1 : 0) - (rumahLayak(b) ? 1 : 0));
+    for (const b of urut) {
+      if (lebih <= 0) break;
+      const ambil = Math.min(Math.floor(b.penghuni || 0), lebih);
+      b.penghuni -= ambil; lebih -= ambil;
+    }
+    jumlah = total;
+  }
+  S.penduduk.total = total;
+  S.penduduk.menungguRumah = Math.max(0, total - jumlah);
+}
+// Migrasi save lama (default-if-missing, tanpa flag save baru):
+// rumah tanpa b.penghuni -> 0, lalu total lama didistribusikan ke rumah
+// layak (diutamakan yang berlistrik+berair+akses jalan), masing-masing
+// sampai kapasitasnya; sisa yang tidak muat menjadi menungguRumah —
+// jumlah penduduk TIDAK berubah, tidak digandakan, tidak dihilangkan.
+// Idempotent: bila distribusi sudah konsisten, tidak mengubah apa pun.
+function migrasiPenghuni() {
+  if (!S || !S.penduduk) return;
+  const rumah = bangunanSelesai().filter(b => { const d = BANGUNAN_MAP[b.id]; return d && d.rumah > 0 && !(typeof bangunanNonaktif === "function" && bangunanNonaktif(b)); });
+  for (const b of rumah) if (typeof b.penghuni !== "number" || !(b.penghuni >= 0)) b.penghuni = 0;
+  const total = Math.max(0, Math.floor(S.penduduk.total || 0));
+  let jumlah = rumah.reduce((a, b) => a + Math.floor(b.penghuni || 0), 0);
+  if (jumlah === total && (S.penduduk.menungguRumah || 0) === Math.max(0, total - jumlah)) return;
+  // Distribusi ulang hanya bila belum konsisten: kosongkan dulu, isi
+  // berurutan (layak + berutilitas dulu) sampai total / kapasitas habis.
+  if (jumlah !== total) {
+    for (const b of rumah) b.penghuni = 0;
+    let sisa = total;
+    const skor = (b) => (rumahLayak(b) ? 0 : 2) + (b.berlistrik === false || b.berair === false ? 1 : 0);
+    const urut = rumah.slice().sort((a, b) => skor(a) - skor(b));
+    for (const b of urut) {
+      if (sisa <= 0) break;
+      const kap = BANGUNAN_MAP[b.id].rumah;
+      const isi = Math.min(kap, sisa);
+      b.penghuni = isi; sisa -= isi;
+    }
+    S.penduduk.menungguRumah = Math.max(0, sisa);
+  }
+  rekonsiliasiPenduduk();
+}
+// Pindahkan penghuni keluar dari satu rumah (hapus / nonaktifkan):
+// isi rumah lain yang layak & masih kosong dulu; sisa menjadi
+// menungguRumah (tetap dihitung sebagai penduduk). Mengembalikan jumlah
+// jiwa yang berhasil dipindahkan ke rumah lain.
+function pindahkanPenghuniKeluar(b) {
+  if (!b || !S || !S.penduduk) return 0;
+  const d = BANGUNAN_MAP[b.id];
+  if (!d || !(d.rumah > 0)) return 0;
+  let sisa = Math.max(0, Math.floor(b.penghuni || 0));
+  if (sisa <= 0) { b.penghuni = 0; return 0; }
+  b.penghuni = 0;
+  let pindah = 0;
+  for (const r of infoHunian().rumahLayak) {
+    if (sisa <= 0) break;
+    if (r.b === b) continue;
+    const ruang = r.kosong;
+    if (ruang <= 0) continue;
+    const isi = Math.min(ruang, sisa);
+    r.b.penghuni = (r.b.penghuni || 0) + isi;
+    sisa -= isi; pindah += isi;
+  }
+  if (sisa > 0) S.penduduk.menungguRumah = (S.penduduk.menungguRumah || 0) + sisa;
+  rekonsiliasiPenduduk();
+  return pindah;
+}
+// Pertumbuhan penduduk HARIAN per-rumah (pengganti rumus skalar lama).
+// Gate kebahagiaan LAMA dipertahankan persis (naik ≥50, beku 35–49,
+// berkurang <35) — yang berubah hanya AKUNTANSINYA: pendatang mengisi
+// rumah layak secara bertahap (maks +ceil(kap/2) per rumah per hari),
+// yang menunggu rumah diisi dulu sebelum pendatang baru datang, dan
+// yang pergi diambil dari menungguRumah dulu lalu rumah paling tidak
+// layak. TIDAK ADA lagi pemangkasan diam-diam saat pop > kapasitas.
+// Mengembalikan {masuk, keluar} jiwa hari ini (untuk log/panel).
+function tumbuhPendudukHarian(bahagia) {
+  if (!S || !S.penduduk) return { masuk: 0, keluar: 0 };
+  const hunian = infoHunian();
+  const pop = Math.max(0, Math.floor(S.penduduk.total || 0));
+  let masuk = 0, keluar = 0;
+  // 1) Jiwa yang menunggu rumah mengisi rumah layak yang kosong dulu.
+  // (Pindahan internal — total TIDAK berubah, mereka sudah dihitung.)
+  let menunggu = hunian.menungguRumah;
+  if (menunggu > 0) {
+    for (const r of hunian.rumahLayak) {
+      if (menunggu <= 0) break;
+      const isi = Math.min(r.kosong, menunggu);
+      if (isi <= 0) continue;
+      r.b.penghuni = (r.b.penghuni || 0) + isi;
+      menunggu -= isi;
+    }
+    S.penduduk.menungguRumah = menunggu;
+  }
+  const ambangNaik = cfgEco("pertumbuhan.ambangBahagiaNaik", 50);
+  const ambangTurun = cfgEco("pertumbuhan.ambangBahagiaTurun", 35);
+  if (pop < hunian.kapasitas && bahagia >= ambangNaik) {
+    // 2) Pendatang baru — rumus lama (maks 1, ~3% pop, +2), dibagikan
+    // bertahap ke rumah layak (maks +ceil(kap/2) per rumah per hari).
+    // Mereka MENAMBAH total penduduk (bukan pindahan internal).
+    let pendatang = Math.max(1, Math.round(pop * 0.03)) + 2;
+    for (const r of infoHunian().rumahLayak) {
+      if (pendatang <= 0) break;
+      const batasHari = Math.max(1, Math.ceil(r.kap / 2));
+      const isi = Math.min(r.kosong, batasHari, pendatang);
+      if (isi <= 0) continue;
+      r.b.penghuni = (r.b.penghuni || 0) + isi;
+      pendatang -= isi; masuk += isi;
+    }
+    S.penduduk.total = pop + masuk;
+  } else if (bahagia < ambangTurun) {
+    // 3) Penduduk pergi — rumus lama (maks 1, ~2% pop): dari
+    // menungguRumah dulu, lalu rumah paling tidak layak. Mereka
+    // MENGURANGI total penduduk.
+    let pergi = Math.max(1, Math.round(pop * 0.02));
+    const dariMenunggu = Math.min(S.penduduk.menungguRumah || 0, pergi);
+    S.penduduk.menungguRumah = (S.penduduk.menungguRumah || 0) - dariMenunggu;
+    pergi -= dariMenunggu; keluar += dariMenunggu;
+    if (pergi > 0) {
+      const urut = infoHunian().rumah.slice().sort((a, b) => (a.layak ? 1 : 0) - (b.layak ? 1 : 0) || b.isi - a.isi);
+      for (const r of urut) {
+        if (pergi <= 0) break;
+        const ambil = Math.min(r.isi, pergi);
+        if (ambil <= 0) continue;
+        r.b.penghuni -= ambil; pergi -= ambil; keluar += ambil;
+      }
+    }
+    S.penduduk.total = Math.max(0, pop - keluar);
+  }
+  rekonsiliasiPenduduk();
+  return { masuk: masuk, keluar: keluar };
+}
+// v31: segarkan utilitas + diagnosa SEGERA setelah kondisi berubah
+// (bangunan selesai, jalan dibangun, bangunan dihapus/dipindah/
+// dinonaktifkan) — peringatan hilang/muncul dari kondisi aktual TANPA
+// menunggu jam game berikutnya (gejala v31-2/4). hitungUtilitas(false)
+// = hitung ulang koneksi+alokasi tanpa akrual sampah.
+function segarkanUtilitasDanDiagnosa() {
+  if (!S) return;
+  try { if (typeof hitungUtilitas === "function") hitungUtilitas(false); } catch (e) {}
+  try { if (typeof Diagnostik !== "undefined" && Diagnostik && typeof Diagnostik.invalidateSemua === "function") Diagnostik.invalidateSemua(); } catch (e) {}
+}
+// v31: status 8 kondisi nyata (delegasi ke Diagnostik.status8 bila ada —
+// satu sumber definisi di city-diagnostik.js; fallback lokal bila modul
+// belum dimuat, mis. tes yang hanya memuat city.js).
+function statusBangunan8(b) {
+  try {
+    if (typeof Diagnostik !== "undefined" && Diagnostik && typeof Diagnostik.status8 === "function") return Diagnostik.status8(b);
+  } catch (e) {}
+  if (!b) return "tidak-beroperasi";
+  if (!b.selesai) return "dalam-pembangunan";
+  if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) return "tidak-beroperasi";
+  if (b.kebanjiran) return "perlu-perbaikan";
+  const d = (typeof BANGUNAN_MAP !== "undefined" && BANGUNAN_MAP) ? BANGUNAN_MAP[b.id] : null;
+  if (d && (d.pekerja || 0) > 0 && typeof b.staf === "number" && b.staf < d.pekerja) return "menunggu-pekerja";
+  if (typeof punyaAksesJalanBangunan === "function" && !punyaAksesJalanBangunan(b)) return "menunggu-akses-jalan";
+  if (d && (d.listrik || 0) > 0 && b.berlistrik === false) return "tidak-ada-listrik";
+  if (d && (d.air || 0) > 0 && b.berair === false) return "tidak-ada-air";
+  return "beroperasi";
 }
 function hitungLayanan() {
   // v19 Worker 4: cakupan = min(1, SUM kapasitas fasilitas / penduduk)
@@ -2471,10 +2719,16 @@ function durasiKonstruksiEfektif(def, b) {
 // pergantian hari.
 function selesaikanKonstruksi(b, d) {
   b.progres = 1; b.selesai = true;
+  // v31: normalisasi akuntansi per-rumah — rumah yang selesai dibangun
+  // SELALU punya field penghuni (0 bila kosong), walau objeknya dibuat
+  // tanpa field itu (mis. sim/push langsung). infoHunian() memakai
+  // || 0, tapi field eksplisit menjaga invarian total = Σ penghuni.
+  if (d.rumah) b.penghuni = b.penghuni || 0;
   S.xp += 10;
   toast(d.nama + " selesai dibangun!", "ok");
   log(d.nama + " selesai dibangun.");
   bunyiSukses();
+  segarkanUtilitasDanDiagnosa(); // v31: bangunan baru langsung terhubung/didiagnosa dari kondisi aktual
   renderHUD();
 }
 // Majukan konstruksi sebanyak `menit` menit game (hook majukanWaktu,
@@ -2971,14 +3225,19 @@ function prosesPergantianHari() {
   terapkanEfekPajakKebahagiaan(); // v19 Worker 5: efek tarif pajak properti
   terapkanEfekKualitasAPBD(); // v29 Fase B: efek kualitas layanan APBD ke kebahagiaan
   const layanan = hitungLayanan();
-  const rumahKap = hitungRumah();
   const pop = S.penduduk.total;
   const bahagia = (S.bahagia && typeof S.bahagia.nilai === "number") ? S.bahagia.nilai : 60;
-  let popBaru = pop;
-  if (pop < rumahKap && bahagia >= cfgEco("pertumbuhan.ambangBahagiaNaik", 50)) popBaru = Math.min(rumahKap, pop + Math.max(1, Math.round(pop * 0.03)) + 2);
-  else if (bahagia < cfgEco("pertumbuhan.ambangBahagiaTurun", 35)) popBaru = Math.max(0, pop - Math.max(1, Math.round(pop * 0.02)));
-  if (popBaru > rumahKap) popBaru = Math.max(rumahKap, popBaru - Math.max(1, Math.round((popBaru - rumahKap) * 0.5)));
-  S.penduduk = { total: popBaru, bahagia: bahagia, bekerja: tk.bekerja, menganggur: tk.menganggur, cakupanPendidikan: Math.round(layanan.edu * 100), cakupanKesehatan: Math.round(layanan.kes * 100) };
+  // v31: pertumbuhan per-rumah (tumbuhPendudukHarian) — gate kebahagiaan
+  // LAMA dipertahankan (naik ≥50, beku 35–49, berkurang <35); rumus
+  // skalar lama + pemangkasan diam-diam saat pop > kapasitas DIHAPUS
+  // (jiwa tanpa rumah menjadi menungguRumah, bukan hilang).
+  S.penduduk.kemarin = pop;
+  const gerak = tumbuhPendudukHarian(bahagia);
+  const popBaru = S.penduduk.total;
+  if (gerak.masuk > 0) log(gerak.masuk + " pendatang baru pindah ke pulau (kebahagiaan " + bahagia + "%).");
+  else if (gerak.keluar > 0) log(gerak.keluar + " warga meninggalkan pulau (kebahagiaan " + bahagia + "% di bawah 35%).");
+  S.penduduk.bahagia = bahagia; S.penduduk.bekerja = tk.bekerja; S.penduduk.menganggur = tk.menganggur;
+  S.penduduk.cakupanPendidikan = Math.round(layanan.edu * 100); S.penduduk.cakupanKesehatan = Math.round(layanan.kes * 100);
   S.statistik.pendudukMax = Math.max(S.statistik.pendudukMax, popBaru);
   // 5. Cuaca hari berikutnya (musiman, v18-A)
   S.cuaca = cuacaBaru();
@@ -4492,9 +4751,37 @@ function aturModeZonaUI(id) {
 function alokasiPendudukKecamatan() {
   const hasil = {};
   if (typeof KECAMATAN_DEFS === "undefined" || !Array.isArray(KECAMATAN_DEFS)) return hasil;
+  // v31: alokasi dari PENGHUNI AKTUAL per rumah (bukan kapasitas) — bila
+  // belum ada penghuni tercatat, fallback ke metode kapasitas lama.
+  const isiKec = {};
+  let totalIsi = 0;
+  for (const d of KECAMATAN_DEFS) { isiKec[d.id] = 0; hasil[d.id] = 0; }
+  for (const b of bangunanSelesai()) {
+    const def = BANGUNAN_MAP[b.id];
+    if (!def || !def.rumah) continue;
+    if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) continue;
+    const kec = kecamatanBangunan(b);
+    if (kec == null || isiKec[kec] === undefined) continue;
+    const isi = (typeof b.penghuni === "number") ? Math.max(0, Math.floor(b.penghuni)) : 0;
+    isiKec[kec] += isi; totalIsi += isi;
+  }
+  const total = S.penduduk.total;
+  if (totalIsi > 0 && total > 0) {
+    let sisa = total;
+    const pecahan = [];
+    for (const d of KECAMATAN_DEFS) {
+      const exact = total * isiKec[d.id] / totalIsi;
+      const dasar = Math.floor(exact);
+      hasil[d.id] = dasar; sisa -= dasar;
+      pecahan.push({ id: d.id, sisa: exact - dasar });
+    }
+    pecahan.sort((a, b) => b.sisa - a.sisa);
+    for (let i = 0; i < sisa && i < pecahan.length; i++) hasil[pecahan[i].id]++;
+    return hasil;
+  }
   const kap = {};
   let totalKap = 0;
-  for (const d of KECAMATAN_DEFS) { kap[d.id] = 0; hasil[d.id] = 0; }
+  for (const d of KECAMATAN_DEFS) { kap[d.id] = 0; }
   for (const b of bangunanSelesai()) {
     const def = BANGUNAN_MAP[b.id];
     if (!def || !def.rumah) continue;
@@ -4502,7 +4789,6 @@ function alokasiPendudukKecamatan() {
     if (kec == null || kap[kec] === undefined) continue;
     kap[kec] += def.rumah; totalKap += def.rumah;
   }
-  const total = S.penduduk.total;
   if (!totalKap || !total) return hasil;
   let sisa = total;
   const pecahan = [];
@@ -4755,10 +5041,32 @@ function renderHUD() {
 }
 
 // ---------------- Berita Pulau (ticker bawah) ----------------
+// v31: ticker menampilkan tiap kejadian SEKALI — entri persis sama
+// dibuang, dan "Membangun <Nama> di (x,y)." yang berulang digabung
+// menjadi satu baris "Membangun <Nama> (×N)". Animasi CSS tetap
+// mengulang teks (itu sifat ticker), tapi isinya tidak lagi spam
+// pesan pembangunan yang sama (gejala v31-5).
 function renderBerita() {
   const el = $("beritaTeks");
   if (!el || !S) return;
-  const items = (S.log || []).slice(0, 5);
+  const mentah = (S.log || []).slice(0, 12);
+  const unik = [];
+  const gabung = {};
+  for (const l of mentah) {
+    const m = /^Hari \d+: Membangun (.+) di \(\d+,\d+\)\.$/.exec(l);
+    if (m) {
+      const kunci = "Membangun " + m[1];
+      if (gabung[kunci] === undefined) { gabung[kunci] = unik.length; unik.push(kunci); }
+      else {
+        const i = gabung[kunci];
+        const cocok = /^(.+) \(×(\d+)\)$/.exec(unik[i]);
+        unik[i] = cocok ? cocok[1] + " (×" + (parseInt(cocok[2], 10) + 1) + ")" : unik[i] + " (×2)";
+      }
+      continue;
+    }
+    if (unik.indexOf(l) === -1) unik.push(l);
+  }
+  const items = unik.slice(0, 5);
   el.textContent = items.length ? items.join("  •  ") : "Selamat datang di Pulau Meranti — bangun permukiman pertamamu!";
 }
 
@@ -5349,16 +5657,37 @@ function renderPanelKiri() {
   } else if (panelKiri === "penduduk") {
     const kap = hitungRumah();
     const tk = hitungTenagaKerja();
+    const hun = (typeof infoHunian === "function") ? infoHunian() : null;
+    const bahagiaKota = (S.bahagia && typeof S.bahagia.nilai === "number") ? S.bahagia.nilai : S.penduduk.bahagia;
     let html = "<div class='judulPanel'>Penduduk</div>";
     html += "<div class='angkaBesar'>" + S.penduduk.total + " <span>jiwa</span></div>";
     html += "<div class='barisStat'><span>Kebahagiaan</span><b>" + S.penduduk.bahagia + "%</b></div>" + bar(S.penduduk.bahagia, S.penduduk.bahagia >= 60 ? "#00b894" : S.penduduk.bahagia >= 40 ? "#fdcb6e" : "#e74c3c");
     html += "<div class='barisStat'><span>Rumah</span><span>" + S.penduduk.total + " / " + kap + " kapasitas</span></div>" + bar(kap > 0 ? (S.penduduk.total / kap) * 100 : 0, "#0984e3");
+    // v31: hunian per-rumah — rumah kosong/terisi + jiwa menunggu rumah.
+    if (hun) {
+      html += "<div class='barisStat'><span>Rumah terisi</span><span>" + hun.rumahTerisi.length + " dari " + hun.rumah.length + " rumah</span></div>";
+      html += "<div class='barisStat'><span>Rumah kosong</span><span>" + hun.rumahKosong.length + " rumah · " + hun.kosong + " tempat kosong</span></div>";
+      if (hun.menungguRumah > 0) html += "<div class='barisStat'><span>Menunggu rumah</span><span class='merah'>" + hun.menungguRumah + " jiwa belum mendapat rumah</span></div>";
+      if (hun.rumah.length) {
+        const rincianRumah = hun.rumah.map(r => {
+          const d = BANGUNAN_MAP[r.b.id];
+          return (d ? d.nama : r.b.id) + " (" + (r.b.x + 1) + "," + (r.b.y + 1) + "): " + r.isi + "/" + r.kap + (r.layak ? "" : " — tidak layak huni");
+        }).slice(0, 8).join("<br>");
+        html += "<div class='misiDes'>🏠 " + rincianRumah + (hun.rumah.length > 8 ? "<br>…dan " + (hun.rumah.length - 8) + " rumah lain." : "") + "</div>";
+      }
+    }
     html += "<div class='barisStat'><span>Bekerja</span><span>" + tk.bekerja + " orang</span></div>";
     html += "<div class='barisStat'><span>Menganggur</span><span>" + tk.menganggur + " orang</span></div>";
     html += "<div class='barisStat'><span>Angkatan kerja</span><span>" + tk.angkatan + " orang</span></div>";
     html += "<div class='barisStat'><span>Pendidikan terjangkau</span><span>" + S.penduduk.cakupanPendidikan + "%</span></div>" + bar(S.penduduk.cakupanPendidikan, "#6c5ce7");
     html += "<div class='barisStat'><span>Kesehatan terjangkau</span><span>" + S.penduduk.cakupanKesehatan + "%</span></div>" + bar(S.penduduk.cakupanKesehatan, "#00b894");
-    html += "<div class='catatan'>Penduduk tumbuh bila ada rumah kosong & kebahagiaan ≥ 50%. Bangunan tanpa pekerja cukup beroperasi lebih lambat.</div>";
+    // v31: alasan pertumbuhan yang jujur — bukan sekadar "tumbuh bila...".
+    let catatanTumbuh = "";
+    if (hun && hun.kosong <= 0 && hun.menungguRumah <= 0) catatanTumbuh = "Semua rumah penuh — bangun rumah baru agar penduduk bisa bertambah.";
+    else if (bahagiaKota < 35) catatanTumbuh = "Penduduk BERKURANG — kebahagiaan " + bahagiaKota + "% di bawah 35%. Naikkan kebahagiaan (listrik, air, sekolah, puskesmas, kebersihan) agar warga bertahan.";
+    else if (bahagiaKota < 50) catatanTumbuh = "Penduduk tidak bertambah — kebahagiaan " + bahagiaKota + "% di bawah ambang 50%. Rumah saja tidak menaikkan kebahagiaan: bangun sekolah, puskesmas, TPS/IPAL, dan pastikan rumah berlistrik + berair. Lihat Penasihat Kota untuk langkahnya.";
+    else catatanTumbuh = "Penduduk bertambah tiap hari (maks +2 jiwa + ~3% populasi) — pendatang mengisi rumah layak secara bertahap, tidak langsung penuh.";
+    html += "<div class='catatan'>" + catatanTumbuh + "</div>";
     isi.innerHTML = html;
   } else if (panelKiri === "riset") {
     let html = "<div class='judulPanel'>Penelitian & Teknologi</div>";
@@ -5941,11 +6270,11 @@ function aksiHapus() {
 }
 function hapusJalan(x, y) {
   const i = S.jalan.findIndex(j => j.x === x && j.y === y);
-  if (i >= 0) { S.jalan.splice(i, 1); S.statistik.jalan = Math.max(0, S.statistik.jalan - 1); toast("Jalan dihapus.", "ok"); simpan(); renderPanelKanan(); renderHUD(); if (typeof perbaruiGraphJalan === "function") { try { perbaruiGraphJalan([{ x: x, y: y }]); } catch (e) {} } }
+  if (i >= 0) { S.jalan.splice(i, 1); S.statistik.jalan = Math.max(0, S.statistik.jalan - 1); toast("Jalan dihapus.", "ok"); segarkanUtilitasDanDiagnosa(); simpan(); renderPanelKanan(); renderHUD(); if (typeof perbaruiGraphJalan === "function") { try { perbaruiGraphJalan([{ x: x, y: y }]); } catch (e) {} } }
 }
 function hapusJembatan(x, y) {
   const i = S.jembatan.findIndex(j => j.x === x && j.y === y);
-  if (i >= 0) { S.jembatan.splice(i, 1); S.statistik.jembatan = Math.max(0, S.statistik.jembatan - 1); toast("Jembatan dihapus.", "ok"); simpan(); renderPanelKanan(); renderHUD(); if (typeof perbaruiGraphJalan === "function") { try { perbaruiGraphJalan([{ x: x, y: y }]); } catch (e) {} } }
+  if (i >= 0) { S.jembatan.splice(i, 1); S.statistik.jembatan = Math.max(0, S.statistik.jembatan - 1); toast("Jembatan dihapus.", "ok"); segarkanUtilitasDanDiagnosa(); simpan(); renderPanelKanan(); renderHUD(); if (typeof perbaruiGraphJalan === "function") { try { perbaruiGraphJalan([{ x: x, y: y }]); } catch (e) {} } }
 }
 
 // ---------------- Modal level up ----------------
@@ -6751,6 +7080,10 @@ function mulaiGame(baru) {
   }
   invalidasiMinimapCache(); // peta baru -> cache minimap dibangun ulang
   kameraPusatkan(peta);
+  // v31: migrasi hunian per-rumah — save lama tanpa b.penghuni mendapat
+  // distribusi dari total lama (tidak menggandakan/menghilangkan penduduk);
+  // permainan baru sudah konsisten dari stateBaru (4 jiwa di rumah pertama).
+  try { if (typeof migrasiPenghuni === "function") migrasiPenghuni(); } catch (e) {}
   // v18-A: jam dalam hari sudah dipulihkan via waktuGame di atas
   // (migrasiWaktuV17 untuk simpanan lama / S.waktuGame untuk simpanan
   // baru); jangan reset ke 06:00. Cermin lama disinkronkan dari waktuGame.

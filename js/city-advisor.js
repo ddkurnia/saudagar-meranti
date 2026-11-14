@@ -123,6 +123,7 @@
     "sanitasi-buruk": "MEDIUM", "polusi": "MEDIUM",
     "tanpa-jalan": "HIGH", "anggaran-defisit": "HIGH",
     "bahagia-rendah": "HIGH", "penduduk-tidak-bertambah": "HIGH",
+    "menunggu-rumah": "HIGH", // v31: jiwa tanpa rumah (butuh rumah baru)
     "cakupan-pendidikan-rendah": "HIGH",
     "cakupan-kesehatan-rendah": "HIGH", "kemacetan-berat": "HIGH",
     "akses-padat": "MEDIUM", "transportasi-sekolah": "MEDIUM",
@@ -174,6 +175,7 @@
       case "transportasi-sekolah": return "Sekolah sulit dijangkau transportasi umum";
       case "bahagia-rendah": return "Kepuasan warga rendah";
       case "penduduk-tidak-bertambah": return "Penduduk tidak bertambah — kebahagiaan di bawah 50%";
+      case "menunggu-rumah": return jumlah + " jiwa belum mendapat rumah";
       case "cakupan-pendidikan-rendah": return "Cakupan pendidikan rendah";
       case "cakupan-kesehatan-rendah": return "Cakupan kesehatan rendah";
       case "kemacetan-berat": return "Kemacetan berat di kota";
@@ -398,12 +400,22 @@
       // bila bahagia >= 50 DAN pop < rumahKap; 35–49 beku, <35 menurun).
       // Rumah saja tidak menaikkan kebahagiaan (Rumah Sederhana
       // bahagia: 1), jadi kota baru tanpa fasilitas jatuh ke ~40%.
+      // v31: penyebab memakai infoHunian() per-rumah (rumah kosong/
+      // terisi) bila tersedia; plus masalah "menunggu-rumah" bila ada
+      // jiwa tanpa rumah.
       try {
         if (typeof hitungRumah === "function" && st.penduduk && typeof st.penduduk.total === "number") {
           var kapRumah = hitungRumah();
           var bahKota = (st.bahagia && typeof st.bahagia.nilai === "number") ? st.bahagia.nilai : 60;
+          var infoHun = null;
+          try { if (typeof infoHunian === "function") infoHun = infoHunian(); } catch (e2) {}
+          var kosongTxt = (kapRumah - st.penduduk.total) + " jiwa (" + st.penduduk.total + "/" + kapRumah + " terisi)";
+          if (infoHun) kosongTxt = infoHun.kosong + " tempat kosong di " + infoHun.rumahKosong.length + " dari " + infoHun.rumah.length + " rumah (" + infoHun.terisi + "/" + infoHun.kapasitas + " terisi)";
           if (kapRumah > 0 && st.penduduk.total < kapRumah && bahKota < 50) {
-            _tambah({ kode: "penduduk-tidak-bertambah", dampak: bahKota < 35 ? 0.8 : 0.6, jumlah: kapRumah - st.penduduk.total, lokasi: null, penyebab: "Kebahagiaan kota " + bahKota + "% — di bawah ambang 50% yang dibutuhkan agar penduduk bertambah. Kapasitas rumah kosong " + (kapRumah - st.penduduk.total) + " jiwa (" + st.penduduk.total + "/" + kapRumah + " terisi).", contohNama: "Penduduk", bangunan: [] });
+            _tambah({ kode: "penduduk-tidak-bertambah", dampak: bahKota < 35 ? 0.8 : 0.6, jumlah: kapRumah - st.penduduk.total, lokasi: null, penyebab: "Kebahagiaan kota " + bahKota + "% — di bawah ambang 50% yang dibutuhkan agar penduduk bertambah. Kapasitas rumah kosong " + kosongTxt + ".", contohNama: "Penduduk", bangunan: [] });
+          }
+          if (infoHun && (infoHun.menungguRumah || 0) > 0) {
+            _tambah({ kode: "menunggu-rumah", dampak: 0.7, jumlah: infoHun.menungguRumah, lokasi: null, penyebab: infoHun.menungguRumah + " jiwa belum mendapat rumah (rumah penuh / rumahnya dihapus atau dinonaktifkan) — mereka tetap dihitung sebagai penduduk, tapi butuh rumah baru yang layak (akses jalan) agar bisa tinggal.", contohNama: "Penduduk", bangunan: [] });
           }
         }
       } catch (e) {}
@@ -820,7 +832,17 @@
           if (PETA_INDIKATOR[pi].indikator === terburuk.indikator) { peta = PETA_INDIKATOR[pi]; break; }
         }
         var skorTxt = (typeof terburuk.skor === "number") ? (" (indikator kebahagiaan terburuk: " + terburuk.indikator + ", skor " + terburuk.skor + "/100 — rata-rata rumah)") : "";
-        var l1 = B(peta.tab, peta.jenisMode, peta.idMode, peta.teks + skorTxt, peta.ringkas);
+        // v31: indikator listrik/air BERCABANG kapasitas-vs-jaringan
+        // (gejala v31-2): bila akar masalahnya kapasitas, langkah 1 =
+        // pembangkit/IPA — tiang/pompa tidak menyelesaikan apa pun.
+        var l1;
+        if (terburuk.indikator === "listrik" && _cabangUtilitas("tanpa-listrik", null) === "kapasitas") {
+          l1 = B("listrik", "bangun", "plt-biomassa", "Bangun PLT Biomassa — {RP:plt-biomassa} · 2.000 kW, level 3 (atau PLTD {RP:pltd} · 5.000 kW, level 4) — kapasitas pembangkit tidak mencukupi, tiang listrik tidak membantu" + skorTxt, "Bangun PLT Biomassa ({RP:plt-biomassa})");
+        } else if (terburuk.indikator === "air" && _cabangUtilitas("tanpa-air", null) === "kapasitas") {
+          l1 = B("air", "bangun", "ipa", "Bangun Instalasi Pengolahan Air (IPA) — {RP:ipa} · produksi 5.000 L/jam — kapasitas air tidak mencukupi, pompa air tidak membantu" + skorTxt, "Bangun IPA ({RP:ipa})");
+        } else {
+          l1 = B(peta.tab, peta.jenisMode, peta.idMode, peta.teks + skorTxt, peta.ringkas);
+        }
         var rumahUtil = null;
         try {
           var stU = _S();
@@ -849,6 +871,13 @@
         try { var stB = _S(); if (stB && stB.bahagia && typeof stB.bahagia.nilai === "number") bahTxt = " (saat ini " + stB.bahagia.nilai + "%)"; } catch (e) {}
         var l3 = { nomor: 0, teks: "Setelah kebahagiaan mencapai ≥ 50%" + bahTxt + ", penduduk bertambah tiap hari (+2 jiwa + ~3% populasi — sekitar 3 jiwa/hari di kota kecil, makin cepat seiring populasi tumbuh) sampai kapasitas rumah penuh.", tombol: "Lihat Lokasi", ringkas: "Pantau kebahagiaan kota", target: null, lokasi: rumahUtil ? { x: rumahUtil.x, y: rumahUtil.y } : lok, terkunci: false, alasanKunci: null };
         out = [l1, l2, l3];
+        break;
+      }
+      case "menunggu-rumah": {
+        out = [
+          B("permukiman", "bangun", "rumah-sederhana", "Bangun Rumah Sederhana — {RP:rumah-sederhana} · kapasitas 4 jiwa, di samping jalan (akses jalan 4-arah)", "Bangun Rumah Sederhana ({RP:rumah-sederhana})"),
+          L("Lihat lokasi rumah yang penuh — bangun rumah baru di dekat jalan agar jiwa yang menunggu bisa pindah"),
+        ];
         break;
       }
       case "tanpa-jalan":

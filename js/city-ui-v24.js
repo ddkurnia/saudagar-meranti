@@ -707,6 +707,10 @@
     var html = "<div id='diagnostikV24' class='diagnostikV24'>";
     html += "<div class='judulPanel' style='margin-top:10px'>🩺 Diagnostik</div>";
     html += "<div class='barisStat'><span>Status</span><b>" + esc(d.status || (b.selesai ? "Beroperasi" : "Konstruksi")) + "</b></div>";
+    // v31: kondisi nyata 8 status (Diagnostik.status8) — "Beroperasi"
+    // di sini hanya bila bangunan benar-benar tanpa penghambat.
+    if (d.status8Label) html += "<div class='barisStat'><span>Kondisi</span><b>" + esc(d.status8Label) + "</b></div>";
+    if (d.catatan) html += "<div class='misiDes'>" + esc(d.catatan) + "</div>";
     if (d.skor) {
       var skor = d.skor;
       var baris = function (label, nilai) {

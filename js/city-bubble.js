@@ -71,6 +71,17 @@ const JENIS_BUBBLE = {
   traffic:    { ikon: "🚗", warna: "#e67e22", label: "Lalu lintas" },
 };
 
+// v31: ikon keluhan menurut prioritas — 😡 hanya untuk keluhan kritis
+// (prioritas 1: banjir/listrik/air/jalan); kekurangan layanan kota
+// (prioritas 2: sekolah/puskesmas/sampah/IPAL) memakai 😟 agar rumah
+// tidak tampak "marah" permanen hanya karena kota belum punya
+// fasilitasnya (gejala v31-3).
+const JENIS_BUBBLE_KEKURANGAN = { ikon: "😟", warna: "#e67e22", label: "Kekurangan" };
+function _cfgUntuk(jenis, prioritas) {
+  if (jenis === "complaint" && (prioritas || 2) >= 2) return JENIS_BUBBLE_KEKURANGAN;
+  return JENIS_BUBBLE[jenis] || JENIS_BUBBLE.warning;
+}
+
 // ---------------- Utilitas lokal ----------------
 function _clampB(v, a, b) { return Math.max(a, Math.min(b, v)); }
 function _menitGameB() {
@@ -456,7 +467,7 @@ const Bubble = {
       const sy = (wy - cy) * zoom + tinggi / 2;
       // Culling: lewati bubble di luar layar (+margin).
       if (sx < -120 || sx > lebar + 120 || sy < -100 || sy > tinggi + 100) return;
-      const cfg = JENIS_BUBBLE[bub.jenis] || JENIS_BUBBLE.warning;
+      const cfg = _cfgUntuk(bub.jenis, bub.prioritas);
       let alpha = 1, skalaAnim = 1;
       if (memudar) {
         const q = (kini - (bub.memudarSejak || kini)) / BUBBLE_KONFIG.durasiHilangMs;
@@ -531,7 +542,7 @@ const Bubble = {
       for (const bub of _aktif.values()) {
         if (bub.bangunan === bangunan ||
             (bub.bangunan && bub.bangunan.x === bangunan.x && bub.bangunan.y === bangunan.y && bub.bangunan.id === bangunan.id)) {
-          const cfg = JENIS_BUBBLE[bub.jenis] || JENIS_BUBBLE.warning;
+          const cfg = _cfgUntuk(bub.jenis, bub.prioritas);
           return { teks: bub.teks, jenis: bub.jenis, prioritas: bub.prioritas, emoji: cfg.ikon, warna: cfg.warna, aktif: true };
         }
       }
@@ -543,7 +554,7 @@ const Bubble = {
         const p = Warga.pesanRumah(bangunan);
         if (p && p.teks) {
           const jenis = (p.jenis === "keluhan") ? "complaint" : (p.jenis === "syukur" ? "happiness" : "warning");
-          const cfg = JENIS_BUBBLE[jenis];
+          const cfg = _cfgUntuk(jenis, p.prioritas || 2);
           return { teks: p.teks, jenis: jenis, prioritas: p.prioritas || 2, emoji: cfg.ikon, warna: cfg.warna, aktif: false };
         }
       } else if (typeof Diagnostik !== "undefined" && Diagnostik && typeof Diagnostik.diagnosa === "function") {
@@ -553,7 +564,7 @@ const Bubble = {
           // v24-finalizer: adapter bentuk W3 (lihat _daftarDariDiagnosa).
           const daftar = _daftarDariDiagnosa(d, bangunan);
           for (const n of daftar) {
-            const cfg = JENIS_BUBBLE[n.jenis];
+            const cfg = _cfgUntuk(n.jenis, n.prioritas);
             return { teks: n.teks, jenis: n.jenis, prioritas: n.prioritas, emoji: cfg.ikon, warna: cfg.warna, aktif: false };
           }
         }

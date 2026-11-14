@@ -168,6 +168,24 @@ function _statusJalan(b) {
 // Mengembalikan jarak (petak, Euclid antar pusat) + nama fasilitas
 // terdekat per kategori. Satu pass -> kebutuhanRumah tidak memindai
 // S.bangunan 6x per rumah (penting untuk Android).
+// v31: fasilitas yang TIDAK beroperasi tetap dicatat terpisah
+// (<kategori>Mati: {nama, jarak, alasan}) — sebelumnya mereka dilewati
+// begitu saja sehingga rumah melaporkan "Belum ada puskesmas/sekolah"
+// padahal bangunannya SUDAH ADA tapi padam/kering/kebanjiran, dan bubble
+// pun berkata "Kami membutuhkan puskesmas." tepat setelah pemain
+// membangunnya (gejala v31-3). Nilai layanan TETAP 0 bila fasilitas
+// tidak beroperasi (tidak melayani warga — konsisten dengan
+// hitungLayanan()); yang berubah hanya pesannya yang jujur.
+function _alasanMati(f, d) {
+  try {
+    if (typeof bangunanNonaktif === "function" && bangunanNonaktif(f)) return "dinonaktifkan";
+  } catch (e) {}
+  if (f.kebanjiran) return "kebanjiran";
+  if ((d.listrik || 0) > 0 && f.berlistrik === false) return "tanpa listrik";
+  if ((d.air || 0) > 0 && f.berair === false) return "tanpa air";
+  if ((d.pekerja || 0) > 0 && typeof f.staf === "number" && f.staf < d.pekerja) return "kekurangan pekerja (" + f.staf + "/" + d.pekerja + ")";
+  return "belum beroperasi";
+}
 function _pindaiLingkungan(b) {
   const hasil = {
     kesehatan: { jarak: Infinity, radius: 0, nama: null },
@@ -175,6 +193,8 @@ function _pindaiLingkungan(b) {
     rekreasi: { jarak: Infinity, radius: 0, nama: null },
     keamanan: { jarak: Infinity, radius: 0, nama: null },
     sanitasi: { jarak: Infinity, radius: 0, nama: null },
+    kesehatanMati: null, sekolahMati: null, rekreasiMati: null,
+    keamananMati: null, sanitasiMati: null,
   };
   let selesai = [];
   try {
@@ -182,19 +202,32 @@ function _pindaiLingkungan(b) {
     else if (typeof S !== "undefined" && S && Array.isArray(S.bangunan)) selesai = S.bangunan.filter(x => x.selesai);
   } catch (e) { selesai = []; }
   const pb = _pusatW(b);
+  const catatMati = (kunci, jarak, radius, nama, alasan) => {
+    const lama = hasil[kunci];
+    if (!lama || jarak < lama.jarak) hasil[kunci] = { jarak: jarak, radius: radius, nama: nama, alasan: alasan };
+  };
   for (const f of selesai) {
     if (f === b) continue;
     const d = _defW(f);
     if (!d) continue;
     // Fasilitas yang tidak beroperasi (kebanjiran / tanpa listrik-air)
-    // TIDAK melayani warga — konsisten dengan hitungLayanan().
+    // TIDAK melayani warga — konsisten dengan hitungLayanan() — tapi
+    // TETAP dicatat sebagai "mati" agar pesannya jujur (v31).
     let beroperasi = true;
     try {
       if (typeof bangunanBeroperasi === "function") beroperasi = bangunanBeroperasi(f);
     } catch (e) { beroperasi = true; }
-    if (!beroperasi) continue;
     const pf = _pusatW(f);
     const jarak = Math.hypot(pb.x - pf.x, pb.y - pf.y);
+    if (!beroperasi) {
+      const alasan = _alasanMati(f, d);
+      if (d.layanan && d.layanan.jenis === "kesehatan") catatMati("kesehatanMati", jarak, d.layanan.radius || 0, d.nama || f.id, alasan);
+      else if (d.layanan && d.layanan.jenis === "pendidikan") catatMati("sekolahMati", jarak, d.layanan.radius || 0, d.nama || f.id, alasan);
+      if (d.kapasitasPengunjung && (d.kat === "rekreasi" || d.kat === "hiburan")) catatMati("rekreasiMati", jarak, d.radiusLayanan || WARGA_KONFIG.radiusRekreasi, d.nama || f.id, alasan);
+      if (d.efekKeamanan) catatMati("keamananMati", jarak, d.radiusLayanan || WARGA_KONFIG.radiusPolisi, d.nama || f.id, alasan);
+      if (d.olahLimbah) catatMati("sanitasiMati", jarak, d.radiusDrainase || WARGA_KONFIG.radiusIpal, d.nama || f.id, alasan);
+      continue;
+    }
     if (d.layanan && d.layanan.jenis === "kesehatan") {
       if (jarak < hasil.kesehatan.jarak) hasil.kesehatan = { jarak: jarak, radius: d.layanan.radius || 0, nama: d.nama || f.id };
     } else if (d.layanan && d.layanan.jenis === "pendidikan") {
@@ -299,10 +332,12 @@ const Warga = {
       nilai: sanNilai, ok: sanNilai >= 1,
       jarak: isFinite(p.sanitasi.jarak) ? Math.round(p.sanitasi.jarak) : null,
       fasilitas: p.sanitasi.nama,
+      fasilitasMati: p.sanitasiMati || null,
       alasan: p.sanitasi.nama
         ? (sanNilai >= 1 ? "Limbah terolah di " + p.sanitasi.nama + "."
                          : "IPAL terdekat (" + p.sanitasi.nama + ") " + Math.round(p.sanitasi.jarak) + " petak — di luar jangkauan.")
-        : "Belum ada IPAL — limbah diolah septik tradisional.",
+        : (p.sanitasiMati ? p.sanitasiMati.nama + " sudah dibangun tapi belum beroperasi (" + p.sanitasiMati.alasan + ")."
+                         : "Belum ada IPAL — limbah diolah septik tradisional."),
     };
     const jalanNilai = !jalan.terhubung ? 0 : (jalan.beraspal ? 1 : 0.5);
     out.jalan = {
@@ -316,30 +351,36 @@ const Warga = {
       nilai: _bulat2(kesNilai), ok: kesNilai >= 1,
       jarak: isFinite(p.kesehatan.jarak) ? Math.round(p.kesehatan.jarak) : null,
       fasilitas: p.kesehatan.nama,
+      fasilitasMati: p.kesehatanMati || null,
       alasan: p.kesehatan.nama
         ? (kesNilai >= 1 ? p.kesehatan.nama + " dalam jangkauan."
                          : p.kesehatan.nama + " terdekat " + Math.round(p.kesehatan.jarak) + " petak dari rumah.")
-        : "Belum ada fasilitas kesehatan.",
+        : (p.kesehatanMati ? p.kesehatanMati.nama + " sudah dibangun tapi belum beroperasi (" + p.kesehatanMati.alasan + ")."
+                         : "Belum ada fasilitas kesehatan."),
     };
     const sekNilai = _nilaiJarak(p.sekolah.jarak, p.sekolah.radius);
     out.sekolah = {
       nilai: _bulat2(sekNilai), ok: sekNilai >= 1,
       jarak: isFinite(p.sekolah.jarak) ? Math.round(p.sekolah.jarak) : null,
       fasilitas: p.sekolah.nama,
+      fasilitasMati: p.sekolahMati || null,
       alasan: p.sekolah.nama
         ? (sekNilai >= 1 ? p.sekolah.nama + " dalam jangkauan."
                          : p.sekolah.nama + " terdekat " + Math.round(p.sekolah.jarak) + " petak dari rumah.")
-        : "Belum ada sekolah.",
+        : (p.sekolahMati ? p.sekolahMati.nama + " sudah dibangun tapi belum beroperasi (" + p.sekolahMati.alasan + ")."
+                         : "Belum ada sekolah."),
     };
     const rekNilai = _nilaiJarak(p.rekreasi.jarak, p.rekreasi.radius);
     out.rekreasi = {
       nilai: _bulat2(rekNilai), ok: rekNilai >= 1,
       jarak: isFinite(p.rekreasi.jarak) ? Math.round(p.rekreasi.jarak) : null,
       fasilitas: p.rekreasi.nama,
+      fasilitasMati: p.rekreasiMati || null,
       alasan: p.rekreasi.nama
         ? (rekNilai >= 1 ? p.rekreasi.nama + " dalam jangkauan."
                          : p.rekreasi.nama + " terdekat " + Math.round(p.rekreasi.jarak) + " petak dari rumah.")
-        : "Belum ada tempat rekreasi.",
+        : (p.rekreasiMati ? p.rekreasiMati.nama + " sudah dibangun tapi belum beroperasi (" + p.rekreasiMati.alasan + ")."
+                         : "Belum ada tempat rekreasi."),
     };
     // Pekerjaan: angka kota (bukan per rumah) — hitungTenagaKerja().
     let kerjaNilai = 1, angkatan = 0, bekerja = 0;
@@ -364,10 +405,12 @@ const Warga = {
       nilai: kamNilai, ok: kamNilai >= 1,
       jarak: isFinite(p.keamanan.jarak) ? Math.round(p.keamanan.jarak) : null,
       fasilitas: p.keamanan.nama,
+      fasilitasMati: p.keamananMati || null,
       alasan: p.keamanan.nama
         ? (kamNilai >= 1 ? p.keamanan.nama + " menjaga kawasan ini."
                          : p.keamanan.nama + " terdekat " + Math.round(p.keamanan.jarak) + " petak — di luar jangkauan.")
-        : "Belum ada kantor polisi di pulau ini.",
+        : (p.keamananMati ? p.keamananMati.nama + " sudah dibangun tapi belum beroperasi (" + p.keamananMati.alasan + ")."
+                         : "Belum ada kantor polisi di pulau ini."),
     };
     // Sampah: kebersihan kota dari Worker 2 (0-100 -> 0..1).
     let bersihNilai = 1, tumpukan = 0;
@@ -457,7 +500,9 @@ const Warga = {
       kandidat.push({
         teks: keb.sekolah.fasilitas
           ? "Kami membutuhkan sekolah. Yang terdekat " + keb.sekolah.jarak + " petak dari rumah."
-          : "Kami membutuhkan sekolah.",
+          : (keb.sekolah.fasilitasMati
+            ? keb.sekolah.fasilitasMati.nama + " sudah dibangun tapi belum beroperasi (" + keb.sekolah.fasilitasMati.alasan + ")."
+            : "Kami membutuhkan sekolah."),
         jenis: "keluhan", prioritas: 2, kunci: "jauh-sekolah",
       });
     }
@@ -465,7 +510,9 @@ const Warga = {
       kandidat.push({
         teks: keb.kesehatan.fasilitas
           ? "Puskesmas terlalu jauh dari rumah kami (" + keb.kesehatan.jarak + " petak)."
-          : "Kami membutuhkan puskesmas.",
+          : (keb.kesehatan.fasilitasMati
+            ? keb.kesehatan.fasilitasMati.nama + " sudah dibangun tapi belum beroperasi (" + keb.kesehatan.fasilitasMati.alasan + ")."
+            : "Kami membutuhkan puskesmas."),
         jenis: "keluhan", prioritas: 2, kunci: "jauh-puskesmas",
       });
     }
@@ -476,7 +523,12 @@ const Warga = {
       kandidat.push({ teks: "Sulit mencari pekerjaan di sini.", jenis: "keluhan", prioritas: 2, kunci: "sulit-kerja" });
     }
     if (keb.sanitasi.nilai < 1) {
-      kandidat.push({ teks: "Limbah rumah kami belum terolah.", jenis: "keluhan", prioritas: 2, kunci: "tanpa-ipal" });
+      kandidat.push({
+        teks: keb.sanitasi.fasilitasMati
+          ? keb.sanitasi.fasilitasMati.nama + " sudah dibangun tapi belum beroperasi (" + keb.sanitasi.fasilitasMati.alasan + ") — limbah kami belum terolah."
+          : "Limbah rumah kami belum terolah.",
+        jenis: "keluhan", prioritas: 2, kunci: "tanpa-ipal",
+      });
     }
     // Syukur (prioritas 3) — hanya bila tidak ada keluhan di atas.
     if (keb.kesehatan.ok && keb.kesehatan.fasilitas) {
