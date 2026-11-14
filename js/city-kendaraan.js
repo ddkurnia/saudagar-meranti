@@ -980,22 +980,44 @@ function _titikMundur(k) {
 // ---------------- State machine: satu kendaraan per frame ----------------
 // dt = detik nyata per frame. `gerakAgen` mengalikan `kecepatan` game
 // sendiri, jadi percepatan di sini memakai dt nyata (bukan dt game).
-function perbaruiSatuKendaraan(k, dt) {
-  if (!k || k._dikelolaManager !== true) return;
-  if (k.tipe === "kapal" || k.tipe === "perahu") return;
-  // v27.2: lacak gerak NYATA (bukan state) — dipakai infoKendaraan().
-  // bergerakNyata: posisi acuan hanya diperbarui bila kendaraan sudah
-  // bergeser >= 0,02 petak DARI ACUAN itu (bukan dari frame sebelumnya —
-  // merangkak 0,1 petak/detik pun terhitung bergerak, karena gesernya
-  // terakumulasi sampai melewati ambang). _waktuSejakGerak = detik
-  // nyata sejak terakhir bergeser — kendaraan beku (state apa pun,
-  // termasuk "accelerating"/"cruising" dengan cepat 0) nilainya terus
-  // membesar, jadi panel/advisor tidak lagi mengklaimnya bergerak.
+// v29.2 (Temuan 2): lacak gerak NYATA untuk SEMUA kendaraan terdaftar —
+// termasuk yang TIDAK dikelola manager (mis. bus city-lalin.js, yang
+// geraknya dipegang pemiliknya) dan kapal/perahu. Sebelum v29.2 blok ini
+// ada di perbaruiSatuKendaraan SETELAH `return` untuk kendaraan
+// tak-dikelola, sehingga _waktuSejakGerak mereka tetap 0 selamanya dan
+// infoKendaraan() terus menghitungnya "bergerak" (0 < jendela 10 dtk)
+// padahal parkir — panel "3 bergerak · 3 total" dengan 0 aktif / 3
+// parkir di cek live ?v=52. Pelacakan hanya MEMBACA posisi (tidak
+// menggerakkan apa pun): state machine, spawn, dan pemilik gerak
+// kendaraan tak-dikelola TIDAK disentuh. Kendaraan tanpa posisi numerik
+// tidak bisa dibuktikan bergerak — _waktuSejakGerak disetel melewati
+// jendela agar panel tidak mengklaimnya bergerak.
+// v27.2: posisi acuan hanya diperbarui bila kendaraan sudah bergeser
+// >= 0,02 petak DARI ACUAN itu (bukan dari frame sebelumnya — merangkak
+// 0,1 petak/detik pun terhitung bergerak, karena gesernya terakumulasi
+// sampai melewati ambang). _waktuSejakGerak = detik nyata sejak terakhir
+// bergeser — kendaraan beku (state apa pun, termasuk
+// "accelerating"/"cruising" dengan cepat 0) nilainya terus membesar,
+// jadi panel/advisor tidak lagi mengklaimnya bergerak.
+function lacakGerakNyata(k, dt) {
+  if (!k || !dt || dt <= 0) return;
+  if (typeof k.x !== "number" || typeof k.y !== "number") {
+    k._waktuSejakGerak = KENDARAAN_KONFIG.jendelaGerakNyataDetik + 1;
+    return;
+  }
   if (typeof k._posTerakhirX === "number" && typeof k._posTerakhirY === "number") {
     const geser = Math.hypot(k.x - k._posTerakhirX, k.y - k._posTerakhirY);
     if (geser >= 0.02) { k._waktuSejakGerak = 0; k._posTerakhirX = k.x; k._posTerakhirY = k.y; }
     else k._waktuSejakGerak = (k._waktuSejakGerak || 0) + dt;
   } else { k._waktuSejakGerak = 0; k._posTerakhirX = k.x; k._posTerakhirY = k.y; }
+}
+function perbaruiSatuKendaraan(k, dt) {
+  // v29.2: pelacakan gerak jalan DULU, sebelum return apa pun — kendaraan
+  // tak-dikelola / kapal tetap dilacak; state machine di bawah tetap
+  // hanya untuk kendaraan yang dikelola manager.
+  lacakGerakNyata(k, dt);
+  if (!k || k._dikelolaManager !== true) return;
+  if (k.tipe === "kapal" || k.tipe === "perahu") return;
   const T = TIPE_KENDARAAN[k.tipe] || TIPE_KENDARAAN.truk;
   if (typeof k.cepat !== "number") k.cepat = 0;
   if (typeof k.stateTimer !== "number") k.stateTimer = 0;

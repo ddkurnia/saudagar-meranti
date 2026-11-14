@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v29.1"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v29.2"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -4805,6 +4805,21 @@ function barisMisiHtml(m) {
 }
 // v21 Worker 5 (cacat 11): saklar "Lihat semua misi" di drawer misi.
 function tampilSemuaMisi(ya) { tampilkanSemuaMisi = !!ya; renderPanelKiri(); }
+// v29.2: apbdDari() di-hoist ke level modul (dulu const lokal di cabang
+// "ekonomi") agar panel "Ringkasan Kota" (cabang "peta") memakai sumber
+// data APBD yang SAMA dengan dashboard Ekonomi v29 — tanpa duplikasi
+// rumus dan tanpa risiko kedua panel berbeda angka.
+function apbdDari(o) {
+  // v29 Q6: "Pendapatan fasilitas" kini hanya wisata — bunga pasif saldo dihapus (j.bunga selalu 0).
+  // v29 Fase B: tiga pajak baru + cicilan pinjaman; "Pajak perdagangan"
+  // lama (pendapatan rute feri) diganti namanya jadi "Perdagangan feri"
+  // agar tidak tertukar dengan pajak perdagangan yang baru.
+  const masuk = { "Pajak penduduk": o.pajak || 0, "Pajak properti": o.pajakProperti || 0, "Pajak usaha": o.pajakUsaha || 0, "Pajak perdagangan": o.pajakPerdagangan || 0, "Pajak ekspor": o.pajakEkspor || 0, "Perdagangan feri": o.perdagangan || 0, "Pendapatan fasilitas (wisata)": (o.wisata || 0), "Pendapatan pelabuhan": o.ekspor || 0, "Pendapatan industri": (o.penjualan || 0) + (o.daurUlang || 0), "Tiket (bus/taksi/rekreasi)": (o.tiketBus || 0) + (o.tiketRekreasi || 0) };
+  const keluar = { "Gaji pegawai": o.gaji || 0, "Cicilan pinjaman": o.cicilanPinjaman || 0, "Kesehatan": o.upkeepKesehatan || 0, "Pendidikan": o.upkeepPendidikan || 0, "Lingkungan": o.upkeepLingkungan || 0, "Infrastruktur": o.upkeepInfra || 0, "Pemeliharaan": o.upkeepLain || 0 };
+  const totMasuk = Object.values(masuk).reduce((a, b) => a + b, 0);
+  const totKeluar = Object.values(keluar).reduce((a, b) => a + b, 0);
+  return { masuk: masuk, keluar: keluar, totMasuk: totMasuk, totKeluar: totKeluar, saldo: totMasuk - totKeluar };
+}
 function renderPanelKiri() {
   if (!S) return;
   const isi = $("panelKiriIsi");
@@ -4818,7 +4833,28 @@ function renderPanelKiri() {
   tabs.forEach(b => b.classList.toggle("aktif", b.dataset.tab === panelKiri && panelTerbuka));
   if (panelEl) panelEl.classList.toggle("tab-statistik", panelKiri === "statistik");
   if (panelKiri === "peta") {
-    let html = "<div class='judulPanel'>Peta — Legenda Terrain</div>";
+    // v29.2 (Temuan 1): tombol sidebar "Ringkasan Kota" membuka panel
+    // ini — panel HARUS menampilkan ringkasan kota sungguhan dari data
+    // nyata S (bukan hanya legenda terrain seperti sebelum v29.2).
+    // Semua angka di bawah dibaca langsung dari state simulasi; APBD
+    // hari ini memakai apbdDari(S.rincianBerjalan) yang sama dengan
+    // dashboard Ekonomi v29. Legenda terrain tetap ada di bawah.
+    let html = "<div class='judulPanel'>Ringkasan Kota</div>";
+    const apbdRingkas = apbdDari(S.rincianBerjalan || {});
+    const bahagiaNilai = (S.bahagia && typeof S.bahagia.nilai === "number") ? S.bahagia.nilai : S.penduduk.bahagia;
+    html += "<div class='barisStat'><span>Kas</span><b>" + rp(S.uang) + "</b></div>";
+    html += "<div class='barisStat'><span>Hari</span><span>Hari " + S.hari + "</span></div>";
+    html += "<div class='barisStat'><span>Penduduk</span><span>" + S.penduduk.total + " jiwa</span></div>";
+    html += "<div class='barisStat'><span>Kebahagiaan</span><span>" + bahagiaNilai + "%</span></div>";
+    html += "<div class='barisStat'><span>Bangunan</span><span>" + bangunanSelesai().length + " selesai / " + S.bangunan.length + " total</span></div>";
+    html += "<div class='barisStat'><span>APBD hari ini — pemasukan</span><b class='hijau'>" + rp(apbdRingkas.totMasuk) + "</b></div>";
+    html += "<div class='barisStat'><span>APBD hari ini — pengeluaran</span><b class='merah'>" + rp(apbdRingkas.totKeluar) + "</b></div>";
+    html += "<div class='barisStat'><span>APBD hari ini — saldo</span><b class='" + (apbdRingkas.saldo >= 0 ? "hijau" : "merah") + "'>" + rp(apbdRingkas.saldo) + "</b></div>";
+    const belumMisiRingkas = MISI.filter(m => !S.misiSelesai[m.id]);
+    const misiAktifRingkas = belumMisiRingkas[0] || MISI[0];
+    if (misiAktifRingkas) html += barisMisiHtml(misiAktifRingkas);
+    html += "<div class='misiProg'>" + MISI.filter(m => S.misiSelesai[m.id]).length + "/" + MISI.length + " misi selesai</div>";
+    html += "<div class='judulPanel' style='margin-top:10px'>Peta — Legenda Terrain</div>";
     html += "<div class='misiDes'>Warna petak di peta dan minimap. Ketuk petak di peta untuk melihat nama terrain-nya.</div>";
     for (const kode of Object.keys(TERRAIN)) {
       const t = TERRAIN[kode];
@@ -4877,17 +4913,6 @@ function renderPanelKiri() {
     // (S.statistik.rincianHari), plus dashboard APBD.
     const rb = S.rincianBerjalan || {};
     const r = S.statistik.rincianHari || {};
-    const apbdDari = (o) => {
-      // v29 Q6: "Pendapatan fasilitas" kini hanya wisata — bunga pasif saldo dihapus (j.bunga selalu 0).
-      // v29 Fase B: tiga pajak baru + cicilan pinjaman; "Pajak perdagangan"
-      // lama (pendapatan rute feri) diganti namanya jadi "Perdagangan feri"
-      // agar tidak tertukar dengan pajak perdagangan yang baru.
-      const masuk = { "Pajak penduduk": o.pajak || 0, "Pajak properti": o.pajakProperti || 0, "Pajak usaha": o.pajakUsaha || 0, "Pajak perdagangan": o.pajakPerdagangan || 0, "Pajak ekspor": o.pajakEkspor || 0, "Perdagangan feri": o.perdagangan || 0, "Pendapatan fasilitas (wisata)": (o.wisata || 0), "Pendapatan pelabuhan": o.ekspor || 0, "Pendapatan industri": (o.penjualan || 0) + (o.daurUlang || 0), "Tiket (bus/taksi/rekreasi)": (o.tiketBus || 0) + (o.tiketRekreasi || 0) };
-      const keluar = { "Gaji pegawai": o.gaji || 0, "Cicilan pinjaman": o.cicilanPinjaman || 0, "Kesehatan": o.upkeepKesehatan || 0, "Pendidikan": o.upkeepPendidikan || 0, "Lingkungan": o.upkeepLingkungan || 0, "Infrastruktur": o.upkeepInfra || 0, "Pemeliharaan": o.upkeepLain || 0 };
-      const totMasuk = Object.values(masuk).reduce((a, b) => a + b, 0);
-      const totKeluar = Object.values(keluar).reduce((a, b) => a + b, 0);
-      return { masuk: masuk, keluar: keluar, totMasuk: totMasuk, totKeluar: totKeluar, saldo: totMasuk - totKeluar };
-    };
     const apbdHariIni = apbdDari(rb);
     const apbdKemarin = apbdDari(r);
     const barisAPBD = (a, judul) => {
