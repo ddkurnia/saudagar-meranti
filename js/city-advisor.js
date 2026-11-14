@@ -314,6 +314,21 @@
           }
         }
       } catch (e) {}
+      // v30: MATERIAL menipis — stok di bawah ambang config (default 20).
+      // Satu masalah agregat per material (kode unik per material agar
+      // rencana aksinya bisa menunjuk fasilitas produksi yang tepat).
+      try {
+        if (typeof daftarMaterial === "function") {
+          var dm = daftarMaterial();
+          for (var im = 0; im < dm.length; im++) {
+            var mm = dm[im];
+            if (!mm || !mm.menipis) continue;
+            _tambah({ kode: "material-menipis-" + mm.id, dampak: 1, jumlah: 1, lokasi: null,
+              penyebab: "Stok " + mm.nama + " tinggal " + mm.stok + " unit (ambang " + ((typeof cfgEco === "function") ? cfgEco("material.ambangMenipis", 20) : 20) + ") — produksi " + (mm.produksiHari > 0 ? mm.produksiHari + "/hari" : "0/hari") + "; pembangunan yang butuh " + mm.nama + " akan tertahan.",
+              contohNama: mm.nama, bangunan: [] });
+          }
+        }
+      } catch (e) {}
       // APBD defisit.
       if (st.apbd && (st.apbd.hariDefisit || 0) >= 3) {
         // v29 Fase B: penyebab dari DATA NYATA (rincianHari) — belanja
@@ -738,7 +753,25 @@
       return hasil.length ? hasil : standar;
     }
     var out = [];
-    switch (kode) {
+    // v30: material menipis (kode per material: "material-menipis-kayu" dst).
+    // Langkah 1 = fasilitas produksi material itu; langkah 2 = Toko Material
+    // (syarat beli/jual/impor); teks langkah 1 menyebut harga katalog lewat
+    // placeholder {RP:<id>} seperti langkah lain (diisi _isiHarga).
+    var rencanaV30 = (kode.indexOf("material-menipis-") === 0);
+    if (rencanaV30) {
+      var matV30 = kode.slice("material-menipis-".length);
+      var fasV30 = {
+        kayu: ["pertanian", "kehutanan-produksi", "Bangun Area Kehutanan Produksi Legal — {RP:kehutanan-produksi} · hasil 8 kayu/hari (hanya di hutan produksi)", "Bangun Kehutanan Produksi ({RP:kehutanan-produksi})"],
+        batu: ["industri", "tambang-batu", "Bangun Tambang Batu — {RP:tambang-batu} · hasil 6 batu/hari (hanya di Zona Industri)", "Bangun Tambang Batu ({RP:tambang-batu})"],
+        pasir: ["industri", "tambang-pasir", "Bangun Tambang Pasir — {RP:tambang-pasir} · hasil 6 pasir/hari (hanya di pantai/pesisir)", "Bangun Tambang Pasir ({RP:tambang-pasir})"],
+        semen: ["industri", "pabrik-bahan-bangunan", "Bangun Pabrik Bahan Bangunan — {RP:pabrik-bahan-bangunan} · 4 batu + 4 pasir menjadi 5 semen/hari", "Bangun Pabrik Bahan Bangunan ({RP:pabrik-bahan-bangunan})"],
+        besi: ["industri", "tambang-batu", "Bangun Tambang Batu — {RP:tambang-batu} · besi tidak ditambang di pulau ini; bila butuh besi segera, beli di Toko Material atau impor via kapal", "Bangun Tambang Batu ({RP:tambang-batu})"],
+      };
+      var fV30 = fasV30[matV30];
+      if (fV30) out.push(B(fV30[0], "bangun", fV30[1], fV30[2], fV30[3]));
+      out.push(B("komersial", "bangun", "toko-material", "Bangun Toko Material — {RP:toko-material} · syarat beli/jual material & impor via kapal (+500 kapasitas gudang material)", "Bangun Toko Material ({RP:toko-material})"));
+    }
+    if (!rencanaV30) switch (kode) {
       case "tanpa-air": {
         var cabA = _cabangUtilitas("tanpa-air", masalah);
         var ipa = B("air", "bangun", "ipa", "Bangun Instalasi Pengolahan Air (IPA) — {RP:ipa} · produksi 5.000 L/jam", "Bangun IPA ({RP:ipa})", ALT_INTAKE);

@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v29.2"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v30"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -592,7 +592,7 @@ function rincianKosong() {
 function stateBaru(petaBaru) {
   const st = {
     versi: CITY.VERSI_SAVE, seed: CITY.SEED, hari: 1, cuaca: "Cerah",
-    uang: cfgEco("modalAwal.uang", 10000000), kayu: 60, batu: 40, besi: 10, xp: 0, level: 1, akumulasi: 0,
+    uang: cfgEco("modalAwal.uang", 10000000), kayu: cfgEco("modalAwal.kayu", 300), batu: cfgEco("modalAwal.batu", 200), pasir: cfgEco("modalAwal.pasir", 150), semen: cfgEco("modalAwal.semen", 50), besi: cfgEco("modalAwal.besi", 30), xp: 0, level: 1, akumulasi: 0, // v30: SEMUA modal awal dibaca dari economyConfig.modalAwal (sebelumnya kayu/batu/besi hardcode 60/40/10)
     waktuGame: 360, kecepatan: 1, // v18-A: waktu mulai 06:00 hari ke-0; akumulasi = cermin lama
     komoditas: {}, bangunan: [], jalan: [], jembatan: [],
     teknologi: {}, riset: null,
@@ -601,6 +601,13 @@ function stateBaru(petaBaru) {
     // tiap pergantian hari menjadi rincianHari); akumulasiJual/Ekspor =
     // kuota jual/ekspor fraksional (maks harian / 24 per jam).
     akumulasiProduksi: {},
+    // v30: MATERIAL — akumulator fraksional produksi material (pola sama
+    // dgn akumulasiProduksi komoditas); imporMaterial = pesanan impor yang
+    // masih di kapal (info saja — stok masuk saat kapal tiba, _tibaKapal);
+    // peringatanMaterial = {material: hari} anti-spam toast stok menipis.
+    akumulasiMaterial: {},
+    imporMaterial: [],
+    peringatanMaterial: {},
     rincianBerjalan: rincianKosong(),
     tarifPajakProperti: cfgEco("pajak.properti.tarifDefault", 10), // v19 Worker 5: APBD — tarif pajak properti % (0-20, diubah di dashboard Ekonomi)
     // v29 Fase B: tarif pajak dinamis (%, 0-20, diubah di dashboard
@@ -626,7 +633,7 @@ function stateBaru(petaBaru) {
     apbd: { hariDefisit: 0, alokasi: {} }, // v19 Worker 5: hitung hari defisit berturut-turut (peringatan bila >= 3); v29 Fase B: alokasi % per kategori dari kebutuhan (default 100%)
     migrasiEkonomiV29: false, // v29: flag satu-kali migrasi perilaku ekonomi (pembulatan kas saat load)
     akumulasiJual: 0, akumulasiEkspor: 0,
-    misiSelesai: {}, statistik: { dibangun: {}, dibangunKat: {}, jalan: 0, jembatan: 0, produksi: {}, ekspor: 0, pendudukMax: 4, pendapatanHari: 0, pengeluaranHari: 0 },
+    misiSelesai: {}, statistik: { dibangun: {}, dibangunKat: {}, jalan: 0, jembatan: 0, produksi: {}, produksiMaterial: {}, konsumsiMaterial: {}, ekspor: 0, pendudukMax: 4, pendapatanHari: 0, pengeluaranHari: 0 }, // v30: +produksiMaterial & konsumsiMaterial (kumulatif, dipakai panel Gudang Material)
     bersih: [], // tile hutan yang sudah ditebang (agar peta sama setelah reload)
     penduduk: { total: 4, bahagia: 60, bekerja: 0, menganggur: 0, cakupanPendidikan: 0, cakupanKesehatan: 0 },
     log: [],
@@ -1095,6 +1102,8 @@ function hargaTeks(harga) {
   if (harga.uang) bag.push(rp(harga.uang));
   if (harga.kayu) bag.push(harga.kayu + " kayu");
   if (harga.batu) bag.push(harga.batu + " batu");
+  if (harga.pasir) bag.push(harga.pasir + " pasir");
+  if (harga.semen) bag.push(harga.semen + " semen");
   if (harga.besi) bag.push(harga.besi + " besi");
   return bag.join(" + ") || "Gratis";
 }
@@ -1102,6 +1111,8 @@ function cukupBiaya(harga) {
   if (harga.uang && S.uang < harga.uang) return false;
   if (harga.kayu && S.kayu < harga.kayu) return false;
   if (harga.batu && S.batu < harga.batu) return false;
+  if (harga.pasir && (S.pasir || 0) < harga.pasir) return false;
+  if (harga.semen && (S.semen || 0) < harga.semen) return false;
   if (harga.besi && S.besi < harga.besi) return false;
   return true;
 }
@@ -1109,12 +1120,16 @@ function bayarBiaya(harga) {
   if (harga.uang) S.uang -= harga.uang;
   if (harga.kayu) S.kayu -= harga.kayu;
   if (harga.batu) S.batu -= harga.batu;
+  if (harga.pasir) S.pasir = (S.pasir || 0) - harga.pasir;
+  if (harga.semen) S.semen = (S.semen || 0) - harga.semen;
   if (harga.besi) S.besi -= harga.besi;
 }
 function kembalikanBiaya(harga, faktor) {
   if (harga.uang) S.uang += Math.floor(harga.uang * faktor);
   if (harga.kayu) S.kayu += Math.floor((harga.kayu || 0) * faktor);
   if (harga.batu) S.batu += Math.floor((harga.batu || 0) * faktor);
+  if (harga.pasir) S.pasir = (S.pasir || 0) + Math.floor((harga.pasir || 0) * faktor);
+  if (harga.semen) S.semen = (S.semen || 0) + Math.floor((harga.semen || 0) * faktor);
   if (harga.besi) S.besi += Math.floor((harga.besi || 0) * faktor);
 }
 
@@ -1147,7 +1162,22 @@ function cekBangun(def, x, y, rot) {
   if (def.tech && !S.teknologi[def.tech]) return { ok: false, alasan: "Butuh penelitian: " + TEKNOLOGI_MAP[def.tech].nama + "." };
   if (!cukupBiaya(def.harga)) return { ok: false, alasan: "Biaya tidak cukup: " + hargaTeks(def.harga) + "." };
   const k = kakiBangunan(def, rot);
-  for (let j = 0; j < k.h; j++) for (let i = 0; i < k.w; i++) {
+  // v30: terrainIzin — bangunan hanya di zona/terrain yang diizinkan
+  // (tambang batu: Zona Industri; tambang pasir: pantai/pesisir; kehutanan
+  // produksi: hutan). Dicek SEBELUM aturan generik agar pantai untuk
+  // tambang-pasir tidak ditolak aturan "pantai hanya bangunan pesisir".
+  // Mangrove (bisaBangun false) & zona protected/conservation tetap
+  // menolak lewat aturan di bawah (tidak ada di daftar izin mana pun).
+  if (def.terrainIzin) {
+    for (let j = 0; j < k.h; j++) for (let i = 0; i < k.w; i++) {
+      const tx = x + i, ty = y + j;
+      if (tx < 0 || ty < 0 || tx >= peta.W || ty >= peta.H) return { ok: false, alasan: "Di luar pulau." };
+      const t = terrainDi(peta, tx, ty);
+      if (!def.terrainIzin.includes(t)) return { ok: false, alasan: def.nama + " hanya boleh dibangun di " + def.terrainIzin.map(namaTerrain).join(" / ") + " (di sini: " + namaTerrain(t) + ")." };
+      if (adaBangunanDi(S, tx, ty)) return { ok: false, alasan: "Sudah ada bangunan di sini." };
+      if (adaJalanDi(S, tx, ty)) return { ok: false, alasan: "Sudah ada jalan di sini." };
+    }
+  } else for (let j = 0; j < k.h; j++) for (let i = 0; i < k.w; i++) {
     const tx = x + i, ty = y + j;
     if (tx < 0 || ty < 0 || tx >= peta.W || ty >= peta.H) return { ok: false, alasan: "Di luar pulau." };
     const t = terrainDi(peta, tx, ty);
@@ -1284,15 +1314,18 @@ function bangunDi(def, x, y, rot) {
   // (tebang hutan, bangun dekat mangrove, bangun di gambut).
   if (typeof catatDampakLingkungan === "function") { try { catatDampakLingkungan(def, x, y, rot); } catch (e) {} }
   bayarBiaya(def.harga);
+  if (typeof catatKonsumsiMaterial === "function") catatKonsumsiMaterial(def.harga); // v30: konsumsi pembangunan (panel Gudang Material)
   if (cek.biayaTambahan) {
     S.uang -= cek.biayaTambahan;
     log("Biaya tambahan " + (cek.biayaTambahanDes || "lahan") + ": " + rp(cek.biayaTambahan) + ".");
   }
-  // Tebang hutan: tambah kayu (lahan bekas hutan jadi permukiman)
+  // Tebang hutan: tambah kayu (lahan bekas hutan jadi permukiman).
+  // v30: bangunan tidakTebang (kehutanan produksi legal) BEKERJA di hutan
+  // tanpa menebangnya — petak tetap hutan, tanpa +2 kayu, tanpa S.bersih.
   const k = kakiBangunan(def, rot);
   let kayuTebang = 0;
   for (let j = 0; j < k.h; j++) for (let i = 0; i < k.w; i++) {
-    if (terrainDi(peta, x + i, y + j) === "hutan") { kayuTebang += 2; peta.terrain[y + j][x + i] = "permukiman"; S.bersih.push({ x: x + i, y: y + j }); }
+    if (terrainDi(peta, x + i, y + j) === "hutan" && !def.tidakTebang) { kayuTebang += 2; peta.terrain[y + j][x + i] = "permukiman"; S.bersih.push({ x: x + i, y: y + j }); }
   }
   if (kayuTebang > 0) { S.kayu += kayuTebang; log("Menebang hutan: +" + kayuTebang + " kayu."); invalidasiMinimapCache(); }
   const b = { id: def.id, x: x, y: y, rot: rot, selesai: false, progres: 0, kecamatan: kecamatanDiPeta(peta, x, y) };
@@ -1320,6 +1353,7 @@ function bangunJalanDi(tipe, x, y) {
   const cek = cekJalan(tipe, x, y);
   if (!cek.ok) { toast(cek.alasan, "gagal"); bunyiGagal(); return false; }
   bayarBiaya(JALAN[tipe].harga);
+  if (typeof catatKonsumsiMaterial === "function") catatKonsumsiMaterial(JALAN[tipe].harga); // v30
   if (terrainDi(peta, x, y) === "hutan") { peta.terrain[y][x] = "permukiman"; S.kayu += 2; S.bersih.push({ x: x, y: y }); invalidasiMinimapCache(); }
   S.jalan.push({ x: x, y: y, tipe: tipe, kecamatan: kecamatanDiPeta(peta, x, y) });
   // v22-W1: jalan baru -> graph jalan berubah (rute/cache ikut invalid).
@@ -1334,6 +1368,7 @@ function bangunJembatanDi(tipe, x, y) {
   const cek = cekJembatan(tipe, x, y);
   if (!cek.ok) { toast(cek.alasan, "gagal"); bunyiGagal(); return false; }
   bayarBiaya(JEMBATAN[tipe].harga);
+  if (typeof catatKonsumsiMaterial === "function") catatKonsumsiMaterial(JEMBATAN[tipe].harga); // v30
   S.jembatan.push({ x: x, y: y, tipe: tipe, kecamatan: kecamatanDiPeta(peta, x, y) });
   // v22-W1: jembatan baru -> graph jalan berubah.
   if (typeof perbaruiGraphJalan === "function") { try { perbaruiGraphJalan([{ x: x, y: y }]); } catch (e) {} }
@@ -1380,7 +1415,9 @@ function cekJembatanGantung(x0, y0, x1, y1) {
     tiles.push({ x: tx, y: ty });
   }
   const n = tiles.length;
-  const biaya = { uang: def.harga.uang * n, besi: (def.harga.besi || 0) * n, kayu: (def.harga.kayu || 0) * n };
+  // v30: biaya generik — SEMUA kunci harga (uang/kayu/batu/pasir/semen/besi) x n, agar harga baru ikut tervalidasi & terpotong.
+  const biaya = {};
+  for (const kk of Object.keys(def.harga)) biaya[kk] = (def.harga[kk] || 0) * n;
   if (!cukupBiaya(biaya)) return { ok: false, alasan: "Biaya tidak cukup: " + hargaTeks(biaya) + " (" + n + " petak)." };
   return { ok: true, tiles: tiles, biaya: biaya, n: n };
 }
@@ -1388,6 +1425,7 @@ function bangunJembatanGantung(x0, y0, x1, y1) {
   const cek = cekJembatanGantung(x0, y0, x1, y1);
   if (!cek.ok) { toast(cek.alasan, "gagal"); bunyiGagal(); return false; }
   bayarBiaya(cek.biaya);
+  if (typeof catatKonsumsiMaterial === "function") catatKonsumsiMaterial(cek.biaya); // v30
   for (const t of cek.tiles) S.jembatan.push({ x: t.x, y: t.y, tipe: "jembatan-gantung", kecamatan: kecamatanDiPeta(peta, t.x, t.y) });
   S.statistik.jembatan += cek.n;
   bunyiSukses();
@@ -1600,6 +1638,207 @@ function kapasitasSimpan() {
   let kap = cfgEco("gudang.kapasitasDasar", KAPASITAS_GUDANG);
   for (const b of bangunanSelesai()) { if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) continue; const d = BANGUNAN_MAP[b.id]; if (d.gudang) kap += d.gudang; }
   return kap;
+}
+// ---------------- v30: MATERIAL (sumber daya level-S) ----------------
+// Material (kayu/batu/pasir/semen/besi) BUKAN komoditas: tidak masuk
+// S.komoditas/S.hargaPasar, tidak dijual pasar/ekspor akrual. Kapasitas
+// gudang material = kapasitasMaterialDasar (1000) + 500 per bangunan
+// berfield gudang (Gudang & Toko Material) yang selesai & aktif —
+// pola SAMA dgn kapasitasSimpan() komoditas, bukan sistem gudang kedua.
+function kapasitasGudangMaterial() {
+  let kap = cfgEco("gudang.kapasitasMaterialDasar", 1000);
+  for (const b of bangunanSelesai()) { if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) continue; const d = BANGUNAN_MAP[b.id]; if (d.gudang) kap += d.gudang; }
+  return kap;
+}
+function stokMaterial(id) { return (S && typeof S[id] === "number") ? S[id] : 0; }
+function pastikanMaterial() {
+  if (!S) return;
+  for (const m of cfgEco("material.daftar", ["kayu", "batu", "pasir", "semen", "besi"])) if (typeof S[m] !== "number") S[m] = 0;
+  if (!S.akumulasiMaterial || typeof S.akumulasiMaterial !== "object") S.akumulasiMaterial = {};
+  if (!Array.isArray(S.imporMaterial)) S.imporMaterial = [];
+  if (!S.peringatanMaterial || typeof S.peringatanMaterial !== "object") S.peringatanMaterial = {};
+  if (!S.statistik) S.statistik = {};
+  if (!S.statistik.produksiMaterial || typeof S.statistik.produksiMaterial !== "object") S.statistik.produksiMaterial = {};
+  if (!S.statistik.konsumsiMaterial || typeof S.statistik.konsumsiMaterial !== "object") S.statistik.konsumsiMaterial = {};
+}
+function catatKonsumsiMaterial(harga) {
+  if (!S || !harga) return;
+  pastikanMaterial();
+  for (const m of cfgEco("material.daftar", ["kayu", "batu", "pasir", "semen", "besi"])) {
+    if (harga[m]) S.statistik.konsumsiMaterial[m] = (S.statistik.konsumsiMaterial[m] || 0) + harga[m];
+  }
+}
+// Laju produksi material per hari (live, dari fasilitas selesai + beroperasi
+// + efisiensi staf) — dipakai panel Gudang Material (bukan angka tersimpan).
+function produksiMaterialHarian(id) {
+  if (!S) return 0;
+  let total = 0;
+  for (const b of bangunanSelesai()) {
+    const d = BANGUNAN_MAP[b.id];
+    if (!d || !d.produksiMaterial || !d.produksiMaterial.keluar || !d.produksiMaterial.keluar[id]) continue;
+    if (typeof bangunanBeroperasi === "function" && !bangunanBeroperasi(b)) continue;
+    const eff = b.efisiensi == null ? 1 : b.efisiensi;
+    total += d.produksiMaterial.keluar[id] * eff;
+  }
+  return total;
+}
+// Toko Material yang selesai + beroperasi + aktif (syarat jual/beli/impor).
+function adaTokoMaterialAktif() {
+  if (!S) return false;
+  for (const b of bangunanSelesai()) {
+    if (b.id !== "toko-material") continue;
+    if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) continue;
+    if (typeof bangunanBeroperasi === "function" && !bangunanBeroperasi(b)) continue;
+    return true;
+  }
+  return false;
+}
+// Pelabuhan/Terminal Feri yang selesai + beroperasi + aktif (syarat impor via kapal).
+function adaPelabuhanAktif() {
+  if (!S) return false;
+  for (const b of bangunanSelesai()) {
+    if (b.id !== "pelabuhan" && b.id !== "terminal-feri") continue;
+    if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) continue;
+    if (typeof bangunanBeroperasi === "function" && !bangunanBeroperasi(b)) continue;
+    return b;
+  }
+  return null;
+}
+function hargaBeliMaterial(id) { return (cfgEco("material.hargaBeli", {}) || {})[id] || 0; }
+function hargaJualMaterial(id) { return (cfgEco("material.hargaJual", {}) || {})[id] || 0; }
+function namaMaterial(id) { return ((cfgEco("material.nama", {}) || {})[id]) || id; }
+// Data panel Gudang Material: nama, stok, produksi/hari, konsumsi pembangunan, harga beli/jual.
+function daftarMaterial() {
+  pastikanMaterial();
+  const kap = kapasitasGudangMaterial();
+  return cfgEco("material.daftar", ["kayu", "batu", "pasir", "semen", "besi"]).map(id => ({
+    id: id, nama: namaMaterial(id), stok: stokMaterial(id), kapasitas: kap,
+    produksiHari: produksiMaterialHarian(id),
+    konsumsi: (S.statistik.konsumsiMaterial || {})[id] || 0,
+    hargaBeli: hargaBeliMaterial(id), hargaJual: hargaJualMaterial(id),
+    menipis: stokMaterial(id) < cfgEco("material.ambangMenipis", 20),
+  }));
+}
+// Beli material di pasar lokal (instan, tunai). Syarat: Toko Material aktif.
+function beliMaterial(id, jumlah) {
+  if (!S) return { ok: false, alasan: "tanpa-state" };
+  pastikanMaterial();
+  if (!cfgEco("material.daftar", []).includes(id)) return { ok: false, alasan: "material-tidak-dikenal" };
+  const jml = Math.floor(Number(jumlah) || 0);
+  if (jml < 1) return { ok: false, alasan: "jumlah-minimal-1" };
+  if (!adaTokoMaterialAktif()) { toast("Bangun Toko Material dulu untuk jual/beli material.", "gagal"); bunyiGagal(); return { ok: false, alasan: "tanpa-toko-material" }; }
+  const biaya = hargaBeliMaterial(id) * jml;
+  if (S.uang < biaya) { toast("Kas tidak cukup: butuh " + rp(biaya) + " untuk " + jml + " " + namaMaterial(id) + ".", "gagal"); bunyiGagal(); return { ok: false, alasan: "kas-kurang" }; }
+  if (stokMaterial(id) + jml > kapasitasGudangMaterial()) { toast("Gudang material penuh (kapasitas " + kapasitasGudangMaterial() + " per material) — bangun Gudang/Toko Material dulu.", "gagal"); bunyiGagal(); return { ok: false, alasan: "gudang-penuh" }; }
+  S.uang -= biaya;
+  S[id] = stokMaterial(id) + jml;
+  log("Membeli " + jml + " " + namaMaterial(id) + " — " + rp(biaya) + ".");
+  toast("Membeli " + jml + " " + namaMaterial(id) + " (" + rp(biaya) + ").", "ok");
+  bunyiKoin(); simpan(); renderHUD(); renderPanelKiri();
+  return { ok: true, jumlah: jml, biaya: biaya };
+}
+// Jual material (instan, tunai). Hasil masuk rincianBerjalan.penjualan (APBD melihatnya).
+function jualMaterial(id, jumlah) {
+  if (!S) return { ok: false, alasan: "tanpa-state" };
+  pastikanMaterial();
+  if (!cfgEco("material.daftar", []).includes(id)) return { ok: false, alasan: "material-tidak-dikenal" };
+  const jml = Math.floor(Number(jumlah) || 0);
+  if (jml < 1) return { ok: false, alasan: "jumlah-minimal-1" };
+  if (!adaTokoMaterialAktif()) { toast("Bangun Toko Material dulu untuk jual/beli material.", "gagal"); bunyiGagal(); return { ok: false, alasan: "tanpa-toko-material" }; }
+  if (stokMaterial(id) < jml) { toast("Stok " + namaMaterial(id) + " kurang (punya " + stokMaterial(id) + ", mau jual " + jml + ").", "gagal"); bunyiGagal(); return { ok: false, alasan: "stok-kurang" }; }
+  const nilai = hargaJualMaterial(id) * jml;
+  S[id] = stokMaterial(id) - jml;
+  S.uang += nilai;
+  if (S.rincianBerjalan) S.rincianBerjalan.penjualan = (S.rincianBerjalan.penjualan || 0) + nilai;
+  log("Menjual " + jml + " " + namaMaterial(id) + " (+" + rp(nilai) + ").");
+  toast("Menjual " + jml + " " + namaMaterial(id) + " (+" + rp(nilai) + ").", "ok");
+  bunyiKoin(); simpan(); renderHUD(); renderPanelKiri();
+  return { ok: true, jumlah: jml, nilai: nilai };
+}
+// Impor material via kapal kargo dari pulau terhubung (pola kirimKargoKePulau,
+// arah sebaliknya): biaya = (harga beli + transport) x jumlah, dibayar di
+// muka; kapal berlayar dari dermaga pulau asal ke pelabuhan/terminal kota;
+// stok masuk saat kapal TIBA (_tibaKapal, city-maritim.js). Kapasitas
+// dihitung termasuk muatan yang masih di kapal agar tidak over-order.
+function imporMaterial(id, jumlah) {
+  if (!S || !peta) return { ok: false, alasan: "tanpa-state" };
+  pastikanMaterial();
+  if (!cfgEco("material.daftar", []).includes(id)) return { ok: false, alasan: "material-tidak-dikenal" };
+  const jml = Math.floor(Number(jumlah) || 0);
+  if (jml < 1) return { ok: false, alasan: "jumlah-minimal-1" };
+  const kapKapal = cfgEco("material.impor.kapasitasPerKapal", 100);
+  if (jml > kapKapal) { toast("Satu kapal impor maks " + kapKapal + " unit — pesan dalam beberapa kapal.", "gagal"); bunyiGagal(); return { ok: false, alasan: "melebihi-kapasitas-kapal" }; }
+  if (!adaTokoMaterialAktif()) { toast("Bangun Toko Material dulu untuk impor antarpulau.", "gagal"); bunyiGagal(); return { ok: false, alasan: "tanpa-toko-material" }; }
+  const asal = adaPelabuhanAktif();
+  if (!asal) { toast("Impor butuh Pelabuhan/Terminal Feri yang beroperasi.", "gagal"); bunyiGagal(); return { ok: false, alasan: "tanpa-pelabuhan" }; }
+  if (typeof pulauTerhubung !== "function" || typeof cariDermagaPulau !== "function" || typeof buatKapal !== "function") return { ok: false, alasan: "tanpa-maritim" };
+  // v30: asal impor = pulau LAIN yang terhubung (bukan pulau kota sendiri
+  // — dermaga awal di Tebing Tinggi tidak boleh jadi "asal impor").
+  const idxAsal = (peta.pulauDi && peta.pulauDi[asal.y] && typeof peta.pulauDi[asal.y][asal.x] === "number") ? peta.pulauDi[asal.y][asal.x] : -1;
+  let dermagaAsal = null, pulauAsal = null;
+  for (const p of (peta.pulau || [])) {
+    if (!pulauTerhubung(p.id)) continue;
+    const idx = peta.pulau.findIndex(pp => pp.id === p.id);
+    if (idx === idxAsal) continue; // pulau yang sama dengan pelabuhan kota
+    const d = cariDermagaPulau(idx);
+    if (d) { dermagaAsal = d; pulauAsal = p; break; }
+  }
+  if (!dermagaAsal) { toast("Impor butuh pulau terhubung yang punya Dermaga — buka rute feri dulu.", "gagal"); bunyiGagal(); return { ok: false, alasan: "tanpa-pulau-terhubung" }; }
+  const biayaBeli = hargaBeliMaterial(id) * jml;
+  const biayaTransport = cfgEco("material.impor.biayaTransportPerUnit", 500) * jml;
+  const biaya = biayaBeli + biayaTransport;
+  if (S.uang < biaya) { toast("Kas tidak cukup: impor " + jml + " " + namaMaterial(id) + " butuh " + rp(biaya) + " (beli " + rp(biayaBeli) + " + transport " + rp(biayaTransport) + ").", "gagal"); bunyiGagal(); return { ok: false, alasan: "kas-kurang" }; }
+  const diKapal = (S.imporMaterial || []).reduce((a, o) => a + ((o && o.material === id) ? (o.jumlah || 0) : 0), 0);
+  if (stokMaterial(id) + diKapal + jml > kapasitasGudangMaterial()) { toast("Gudang material tidak muat (kapasitas " + kapasitasGudangMaterial() + ") — bangun Gudang/Toko Material dulu.", "gagal"); bunyiGagal(); return { ok: false, alasan: "gudang-penuh" }; }
+  const hasil = buatKapal("kapal-kargo", dermagaAsal, asal, { material: id, jumlah: jml, impor: true, dariPulau: pulauAsal.id });
+  if (!hasil.ok) { toast("Kapal impor gagal berlayar (" + hasil.alasan + ") — uang tidak dipotong.", "gagal"); bunyiGagal(); return { ok: false, alasan: hasil.alasan || "kapal-gagal" }; }
+  S.uang -= biaya;
+  const pesanan = { id: "IMP-" + (S.imporMaterial.length + 1) + "-" + S.hari, material: id, jumlah: jml, biaya: biaya, kapalId: hasil.kapal.id, dariPulau: pulauAsal.id, hariPesan: S.hari };
+  S.imporMaterial.push(pesanan);
+  log("Impor " + jml + " " + namaMaterial(id) + " dari " + pulauAsal.nama + " via kapal " + hasil.kapal.id + " (" + rp(biaya) + " — beli " + rp(biayaBeli) + " + transport " + rp(biayaTransport) + ").");
+  toast("Kapal impor berlayar: " + jml + " " + namaMaterial(id) + " dari " + pulauAsal.nama + " (" + rp(biaya) + ").", "ok");
+  bunyiKoin(); simpan(); renderHUD(); renderPanelKiri();
+  return { ok: true, pesanan: pesanan, biaya: biaya };
+}
+// Tanam kembali hutan yang ditebang (S.bersih = petak hutan yang sudah
+// ditebang, persist setelah reload): petak terbaru kembali jadi hutan,
+// polusi kota turun sedikit (serapan). Biaya dari config.
+function tanamKembali() {
+  if (!S || !peta) return { ok: false, alasan: "tanpa-state" };
+  pastikanMaterial();
+  const biaya = cfgEco("material.tanamKembali.biaya", 2000);
+  if (!S.bersih || !S.bersih.length) { toast("Tidak ada petak hutan ditebang yang bisa ditanam kembali.", "gagal"); bunyiGagal(); return { ok: false, alasan: "tanpa-lahan-tebang" }; }
+  if (S.uang < biaya) { toast("Kas tidak cukup untuk menanam kembali (" + rp(biaya) + ").", "gagal"); bunyiGagal(); return { ok: false, alasan: "kas-kurang" }; }
+  const petak = S.bersih[S.bersih.length - 1];
+  if (!petak || terrainDi(peta, petak.x, petak.y) !== "permukiman" || adaBangunanDi(S, petak.x, petak.y) || adaJalanDi(S, petak.x, petak.y)) {
+    S.bersih.pop(); // petak sudah dipakai/dibangun — buang dari antrean, coba lagi
+    return tanamKembali();
+  }
+  S.uang -= biaya;
+  peta.terrain[petak.y][petak.x] = "hutan";
+  S.bersih.pop();
+  if (S.lingkungan && typeof S.lingkungan.polusi === "number") S.lingkungan.polusi = Math.max(0, S.lingkungan.polusi - 2);
+  log("Menanam kembali hutan di (" + (petak.x + 1) + ", " + (petak.y + 1) + ") — " + rp(biaya) + ".");
+  toast("Hutan ditanam kembali 🌳 (" + rp(biaya) + ").", "ok");
+  if (typeof invalidasiMinimapCache === "function") invalidasiMinimapCache();
+  bunyiSukses(); simpan(); renderHUD(); renderPanelKiri();
+  return { ok: true, x: petak.x, y: petak.y };
+}
+// Peringatan stok menipis (sekali per material per hari; toast + log).
+// Dipanggil prosesPergantianHari — memakai sistem notifikasi yang sudah
+// ada (toast), bukan sistem baru. Advisor juga menampilkan masalah ini.
+function periksaStokMaterial() {
+  if (!S) return;
+  pastikanMaterial();
+  const ambang = cfgEco("material.ambangMenipis", 20);
+  for (const m of cfgEco("material.daftar", ["kayu", "batu", "pasir", "semen", "besi"])) {
+    if (stokMaterial(m) >= ambang) continue;
+    if ((S.peringatanMaterial[m] || 0) === S.hari) continue;
+    S.peringatanMaterial[m] = S.hari;
+    const prod = produksiMaterialHarian(m);
+    toast("⚠️ Stok " + namaMaterial(m) + " hampir habis (" + stokMaterial(m) + " unit" + (prod > 0 ? ", produksi " + prod + "/hari" : ", tanpa produksi") + ") — beli di Gudang Material atau bangun fasilitas produksinya.", "gagal");
+    log("⚠️ Stok " + namaMaterial(m) + " hampir habis: " + stokMaterial(m) + " unit.");
+  }
 }
 function bonusEkspor() {
   let bonus = 0;
@@ -2301,7 +2540,7 @@ function akrualJamGame() {
   if (typeof S.akumulasiJual !== "number") S.akumulasiJual = 0;
   if (typeof S.akumulasiEkspor !== "number") S.akumulasiEkspor = 0;
   // v29 Fase B: field ekonomi baru (default-if-missing, pola audit §6.3).
-  pastikanHargaPasar(); pastikanBank(); pastikanAlokasiAPBD(); pastikanRiwayatKeuangan();
+  pastikanHargaPasar(); pastikanBank(); pastikanAlokasiAPBD(); pastikanRiwayatKeuangan(); pastikanMaterial(); // v30
   if (typeof S.tarifPajakUsaha !== "number") S.tarifPajakUsaha = cfgEco("pajak.usaha.tarifDefault", 5);
   if (typeof S.tarifPajakPerdagangan !== "number") S.tarifPajakPerdagangan = cfgEco("pajak.perdagangan.tarifDefault", 5);
   if (typeof S.tarifPajakEkspor !== "number") S.tarifPajakEkspor = cfgEco("pajak.ekspor.tarifDefault", 5);
@@ -2417,6 +2656,57 @@ function akrualJamGame() {
       }
     }
     if (skala < 1) b.kurangBahan = true;
+  }
+  // 1b. v30: Produksi MATERIAL — pola SAMA dgn produksi komoditas di atas
+  // (fraksional per jam = tarif harian / 24; digate bangunanBeroperasi +
+  // efisiensi staf; bahan masuk dikonsumsi fraksional dari S.<material>
+  // lewat b.akumMasukMaterial, utang dibatasi 1 unit, output diskala bila
+  // bahan hanya cukup sebagian; cap kapasitasGudangMaterial). Pengali
+  // kawasan industri (kat industri) & cuaca hujan (kat lahan) dipakai
+  // sama seperti komoditas. Tambang/kehutanan/pabrik TIDAK menyentuh
+  // S.komoditas — material adalah sumber daya level-S.
+  for (const b of bangunanSelesai()) {
+    const d = BANGUNAN_MAP[b.id];
+    if (!d.produksiMaterial) continue;
+    b.kurangBahanMaterial = false;
+    const eff = b.efisiensi == null ? 1 : b.efisiensi;
+    if (eff <= 0) continue;
+    if (typeof bangunanBeroperasi === "function" && !bangunanBeroperasi(b)) continue;
+    const prod = d.produksiMaterial;
+    let skala = 1;
+    if (prod.masuk) {
+      if (!b.akumMasukMaterial) b.akumMasukMaterial = {};
+      for (const k of Object.keys(prod.masuk)) {
+        b.akumMasukMaterial[k] = (b.akumMasukMaterial[k] || 0) + (prod.masuk[k] * eff) / 24;
+        if (b.akumMasukMaterial[k] > 1) b.akumMasukMaterial[k] = 1;
+        const utuh = Math.floor(b.akumMasukMaterial[k] + 1e-9);
+        if (utuh > 0) {
+          const stok = stokMaterial(k);
+          const ambil = Math.min(utuh, stok);
+          if (ambil < utuh) skala = Math.min(skala, ambil / utuh);
+          S[k] = stok - ambil;
+          b.akumMasukMaterial[k] -= ambil;
+        }
+      }
+      if (skala <= 0) { b.kurangBahanMaterial = true; continue; }
+    }
+    for (const k of Object.keys(prod.keluar)) {
+      let jmlJam = (prod.keluar[k] * eff * skala) / 24;
+      jmlJam *= pengaliKawasanIndustri(b);
+      if (d.kat === "lahan") jmlJam *= pengaliCuaca;
+      S.akumulasiMaterial[k] = (S.akumulasiMaterial[k] || 0) + jmlJam;
+      const utuh = Math.floor(S.akumulasiMaterial[k] + 1e-9);
+      if (utuh >= 1) {
+        const ruang = kapasitasGudangMaterial() - stokMaterial(k);
+        const pindah = Math.min(utuh, Math.max(0, ruang));
+        if (pindah > 0) {
+          S[k] = stokMaterial(k) + pindah;
+          S.statistik.produksiMaterial[k] = (S.statistik.produksiMaterial[k] || 0) + pindah;
+        }
+        S.akumulasiMaterial[k] -= pindah;
+      }
+    }
+    if (skala < 1) b.kurangBahanMaterial = true;
   }
   // 2. Penjualan pasar lokal & ekspor pelabuhan (kuota harian / 24 per jam,
   // diakumulasi fraksional agar total 24 jam = kuota harian penuh).
@@ -2638,6 +2928,7 @@ function prosesPergantianHari() {
   if (S.riwayatKeuangan.length > 90) S.riwayatKeuangan = S.riwayatKeuangan.slice(-90);
   prosesPinjamanHarian();
   perbaruiHargaPasar();
+  if (typeof periksaStokMaterial === "function") { try { periksaStokMaterial(); } catch (e) {} } // v30: notifikasi stok material hampir habis (sekali/material/hari)
   // 1. Riset — TETAP HARIAN (v18-C butir 5): S.riset.sisa-- per hari,
   // `waktu` TEKNOLOGI tetap dalam hari, tidak diubah.
   if (S.riset) {
@@ -4337,6 +4628,8 @@ function renderHUD() {
   $("uangTeks").className = S.uang < 0 ? "angka minus" : "angka";
   $("kayuTeks").textContent = S.kayu;
   $("batuTeks").textContent = S.batu;
+  if ($("pasirTeks")) $("pasirTeks").textContent = S.pasir || 0; // v30
+  if ($("semenTeks")) $("semenTeks").textContent = S.semen || 0; // v30
   $("besiTeks").textContent = S.besi;
   const tualEl = $("tualTeks");
   if (tualEl) tualEl.textContent = S.komoditas.tual || 0;
@@ -5028,6 +5321,23 @@ function renderPanelKiri() {
     else if (S.apbd && S.apbd.hariDefisit > 0) html += "<div class='catatan'>Defisit APBD " + S.apbd.hariDefisit + " hari berturut-turut (peringatan bila mencapai 3 hari).</div>";
     html += barisAPBD(apbdHariIni, "APBD — Hari ini (berjalan)");
     html += barisAPBD(apbdKemarin, "APBD — Kemarin");
+    // ---- v30: Gudang Material (nama, stok, produksi/hari, konsumsi pembangunan, harga beli/jual) ----
+    html += "<div class='judulPanel' style='margin-top:10px'>Gudang Material — kapasitas " + kapasitasGudangMaterial() + " / material</div>";
+    html += "<div class='misiDes'>Material adalah sumber daya bangunan (bukan komoditas): dipakai semua bangunan/jalan, diproduksi fasilitas v30 (Tambang Batu/Pasir, Kehutanan Produksi, Pabrik Bahan Bangunan), dibeli/dijual lewat Toko Material, diimpor via kapal kargo dari pulau terhubung. Kapasitas +500 per Gudang/Toko Material yang beroperasi.</div>";
+    if (!adaTokoMaterialAktif()) html += "<div class='catatan'>Belum ada Toko Material yang beroperasi — jual/beli & impor material terkunci. Bangun Toko Material (tab Komersial).</div>";
+    for (const m of daftarMaterial()) {
+      const prodTxt = m.produksiHari > 0 ? ("+" + (Math.round(m.produksiHari * 10) / 10) + "/hari") : "tanpa produksi";
+      html += "<div class='barisStat" + (m.menipis ? " kecil" : "") + "'><span>" + (m.menipis ? "⚠️ " : "") + m.nama + " × " + m.stok + " / " + m.kapasitas + " · " + prodTxt + " · konsumsi bangun " + m.konsumsi + "</span><span>beli " + rp(m.hargaBeli) + " · jual " + rp(m.hargaJual) + "</span></div>";
+      html += "<div class='barisAksi'><button class='btnKecil' onclick='beliMaterial(\"" + m.id + "\", 10)'>Beli 10 — " + rp(m.hargaBeli * 10) + "</button><button class='btnKecil' onclick='beliMaterial(\"" + m.id + "\", 50)'>Beli 50 — " + rp(m.hargaBeli * 50) + "</button><button class='btnKecil' onclick='jualMaterial(\"" + m.id + "\", 10)'>Jual 10 — +" + rp(m.hargaJual * 10) + "</button><button class='btnKecil' onclick='imporMaterial(\"" + m.id + "\", 50)'>Impor 50 via kapal — " + rp((m.hargaBeli + cfgEco("material.impor.biayaTransportPerUnit", 500)) * 50) + "</button></div>";
+    }
+    if (S.imporMaterial && S.imporMaterial.length) {
+      const aktif = S.imporMaterial.filter(o => o && !o.tiba);
+      if (aktif.length) {
+        html += "<div class='judulPanel' style='margin-top:10px'>Impor dalam Perjalanan</div>";
+        for (const o of aktif) html += "<div class='barisStat kecil'><span>🚢 " + o.jumlah + " " + namaMaterial(o.material) + " dari " + (o.dariPulau || "?") + " · kapal " + (o.kapalId || "?") + "</span><span>" + rp(o.biaya || 0) + "</span></div>";
+      }
+    }
+    if (S.bersih && S.bersih.length) html += "<div class='barisAksi'><button class='btnKecil' onclick='tanamKembali()'>🌳 Tanam kembali hutan ditebang — " + rp(cfgEco("material.tanamKembali.biaya", 2000)) + " (" + S.bersih.length + " petak)</button></div>";
     html += "<div class='judulPanel' style='margin-top:10px'>Komoditas (kapasitas " + kapasitasSimpan() + ")</div>";
     for (const k of Object.keys(KOMODITAS)) {
       const stok = S.komoditas[k] || 0;
@@ -6398,6 +6708,9 @@ function mulaiGame(baru) {
     if (typeof S.tarifPajakPerdagangan !== "number") S.tarifPajakPerdagangan = cfgEco("pajak.perdagangan.tarifDefault", 5);
     if (typeof S.tarifPajakEkspor !== "number") S.tarifPajakEkspor = cfgEco("pajak.ekspor.tarifDefault", 5);
     pastikanHargaPasar(); pastikanBank(); pastikanAlokasiAPBD(); pastikanRiwayatKeuangan();
+    // v30: migrasi save lama — pasir/semen + field material default 0/kosong
+    // (save lama TIDAK mendapat modal awal v30; stok lamanya dipertahankan).
+    pastikanMaterial();
     if (typeof S.akumulasiEkspor !== "number") S.akumulasiEkspor = 0;
     // v29 Q11: bulatkan kas ke integer SEKALI saat load (akrual /24 lama
     // menyimpan float). Jangan dibulatkan tiap jam. Flag satu-kali +

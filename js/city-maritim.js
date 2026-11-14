@@ -297,7 +297,25 @@ function perbaruiKapalMenit(menit) {
 // Kedatangan kapal di ujung `ujung` ("ke" = tujuan, "dari" = asal).
 function _tibaKapal(k, ujung) {
   if (!S || !k) return;
-  if (k.tipe === "kapal-kargo" && ujung === "ke" && k.muatan && k.muatan.komoditas) {
+  // v30: kapal impor material tiba di pelabuhan/terminal kota — muatan
+  // masuk stok S.<material> (cap kapasitasGudangMaterial; kelebihan
+  // tidak muat dicatat, tidak hilang diam-diam). Pesanan di S.imporMaterial
+  // ditandai tiba agar panel Gudang Material tidak lagi menampilkannya.
+  if (k.tipe === "kapal-kargo" && ujung === "ke" && k.muatan && k.muatan.impor && k.muatan.material) {
+    const mid = k.muatan.material;
+    const kap = (typeof kapasitasGudangMaterial === "function") ? kapasitasGudangMaterial() : Infinity;
+    const stok = (S[mid] || 0);
+    const masuk = Math.min(k.muatan.jumlah || 0, Math.max(0, kap - stok));
+    if (masuk > 0) {
+      S[mid] = stok + masuk;
+      if (typeof log === "function") { try { log("Kapal impor tiba: +" + masuk + " " + ((typeof namaMaterial === "function") ? namaMaterial(mid) : mid) + " di pelabuhan."); } catch (e) {} }
+    }
+    if ((k.muatan.jumlah || 0) > masuk && typeof log === "function") { try { log("Kapal impor: " + ((k.muatan.jumlah || 0) - masuk) + " " + mid + " tidak muat di gudang material (kapasitas " + kap + ")."); } catch (e) {} }
+    if (Array.isArray(S.imporMaterial)) {
+      for (const o of S.imporMaterial) if (o && o.kapalId === k.id) { o.tiba = true; o.diterima = masuk; }
+    }
+    k.muatan = null; // kembali kosong
+  } else if (k.tipe === "kapal-kargo" && ujung === "ke" && k.muatan && k.muatan.komoditas) {
     const def = (typeof KOMODITAS !== "undefined") ? KOMODITAS[k.muatan.komoditas] : null;
     // v29 Q4: SATU rumus harga ekspor (sama seperti akrual pelabuhan) DAN
     // masuk APBD (j.ekspor) agar panel Ekonomi/HUD/penghitung defisit
