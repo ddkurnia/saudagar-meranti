@@ -603,9 +603,14 @@
     if (b.berair === false) { skor.air = 0; penyebab.push("Tidak berair — di luar jangkauan jaringan air."); }
     else if (b.berair === true) skor.air = 100;
     if (def && def.pekerja) {
-      var eff = (b.efisiensi == null) ? 1 : b.efisiensi;
-      skor.pekerja = Math.round(eff * 100);
-      if (eff < 1) penyebab.push("Kekurangan pekerja — hanya " + (b.staf || 0) + "/" + def.pekerja + " pekerja (efisiensi " + Math.round(eff * 100) + "%).");
+      // v32.3: skor pekerja = rasio STAF, bukan efisiensi operasional
+      // (default 1 saat konstruksi — menulis "Pekerja 100%" untuk
+      // bangunan 0/1 staf; temuan ?v=58). Konsisten dengan baris
+      // "Pekerja" panel utama (city.js, pctStaf).
+      var stafLok = (typeof b.staf === "number") ? b.staf : 0;
+      var pctLok = Math.round(100 * Math.max(0, Math.min(1, stafLok / def.pekerja)));
+      skor.pekerja = pctLok;
+      if (stafLok < def.pekerja) penyebab.push("Kekurangan pekerja — hanya " + stafLok + "/" + def.pekerja + " pekerja (" + pctLok + "%).");
     }
     if (b.kurangBahan) { skor.bahan = 0; penyebab.push("Kekurangan bahan baku — produksi berhenti."); }
     else if (def && def.produksi && def.produksi.masuk) skor.bahan = 100;
@@ -638,8 +643,12 @@
     if (def && (def.listrik || 0) > 0) skor.listrik = adaKode("tanpa-listrik") ? 0 : 100;
     if (def && (def.air || 0) > 0) skor.air = adaKode("tanpa-air") ? 0 : 100;
     if (def && (def.pekerja || 0) > 0) {
-      if (b && typeof b.staf === "number") skor.pekerja = Math.round(100 * Math.max(0, Math.min(1, b.staf / def.pekerja)));
-      else skor.pekerja = adaKode("pekerja-kurang") ? 0 : 100;
+      // v32.3: rasio staf; staf belum dihitung (mis. bangunan dalam
+      // konstruksi) = 0, bukan 100 — fallback lama memberi 100 bila
+      // tidak ada kode pekerja-kurang, padahal bangunan konstruksi
+      // tidak pernah punya kode itu (temuan ?v=58).
+      var stafNr = (b && typeof b.staf === "number") ? b.staf : 0;
+      skor.pekerja = Math.round(100 * Math.max(0, Math.min(1, stafNr / def.pekerja)));
     }
     if (def && def.produksi && def.produksi.masuk) {
       var mb = null;

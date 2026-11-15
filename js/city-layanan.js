@@ -552,6 +552,15 @@ function aturTampilRadius(v) {
 
 function aturModeCakupan(m) {
   if (m !== "semua" && m !== "terpilih") return modeCakupanLayanan;
+  // v32.3: "Fokus terpilih" tanpa bangunan terpilih sebelumnya diam-diam
+  // menampilkan semua cakupan (temuan ?v=58) — beri toast seperti tombol
+  // "📍 Fokus…" (fokusLayananTerpilih), supaya pemain tahu kenapa
+  // overlay tidak berubah. Mode tetap diubah (overlay menampilkan semua).
+  if (m === "terpilih") {
+    var adaTerpilih = false;
+    try { adaTerpilih = (typeof terpilih !== "undefined" && terpilih && terpilih.jenis === "bangunan"); } catch (e) { adaTerpilih = false; }
+    if (!adaTerpilih) { try { if (typeof toast === "function") toast("Pilih dulu bangunan layanan di peta — overlay menampilkan semua cakupan.", "info"); } catch (e2) {} }
+  }
   modeCakupanLayanan = m;
   try {
     if (typeof aturOverlay === "function" && typeof overlayAktif !== "undefined" && overlayAktif === "layanan") aturOverlay("layanan");

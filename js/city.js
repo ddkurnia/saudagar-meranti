@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v32.2"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v32.3"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -1168,14 +1168,46 @@ function cekBangun(def, x, y, rot) {
   // (tambang batu: Zona Industri; tambang pasir: pantai/pesisir; kehutanan
   // produksi: hutan). Dicek SEBELUM aturan generik agar pantai untuk
   // tambang-pasir tidak ditolak aturan "pantai hanya bangunan pesisir".
-  // Mangrove (bisaBangun false) & zona protected/conservation tetap
-  // menolak lewat aturan di bawah (tidak ada di daftar izin mana pun).
+  // v32.3-regresi (temuan finalizer): zona yang DICAT tidak boleh
+  // mengesampingkan perlindungan terrain — petak yang tidak bisa dibangun
+  // (mangrove lindung, laut/sungai/kanal) dan pantai untuk bangunan
+  // non-pesisir tetap ditolak di loop ini, walau dicat Industrial.
+  // Komentar lama yang mengklaim mangrove "tetap menolak lewat aturan di
+  // bawah" adalah SALAH: cabang terrainIzin ini mengembalikan lebih dulu
+  // (return) sebelum aturan generik/zonaCocokUntuk sempat berjalan.
+  // v32.3 (temuan ?v=58): zona yang DICAT juga memenuhi terrainIzin —
+  // ZONA_DEFS id "industrial" = TERRAIN id "industri". Sebelumnya cek
+  // ini hanya membaca terrain DASAR, jadi Tambang Batu di petak Rawa
+  // Sagu yang sudah dicat Zona Industrial tetap ditolak. Pesan
+  // penolakan menyebut opsi mengecat zona (hanya bila ada zona yang
+  // sepadan dengan terrain izin — pantai/pesisir/hutan tidak punya).
+  var ZONA_KE_TERRAIN = { industrial: "industri" };
+  var zonaIzin = null;
+  if (def.terrainIzin) {
+    for (var ii = 0; ii < def.terrainIzin.length && !zonaIzin; ii++) {
+      for (var zk in ZONA_KE_TERRAIN) if (ZONA_KE_TERRAIN[zk] === def.terrainIzin[ii]) zonaIzin = zk;
+    }
+  }
   if (def.terrainIzin) {
     for (let j = 0; j < k.h; j++) for (let i = 0; i < k.w; i++) {
       const tx = x + i, ty = y + j;
       if (tx < 0 || ty < 0 || tx >= peta.W || ty >= peta.H) return { ok: false, alasan: "Di luar pulau." };
       const t = terrainDi(peta, tx, ty);
-      if (!def.terrainIzin.includes(t)) return { ok: false, alasan: def.nama + " hanya boleh dibangun di " + def.terrainIzin.map(namaTerrain).join(" / ") + " (di sini: " + namaTerrain(t) + ")." };
+      const zid = (typeof zonaDi === "function") ? zonaDi(tx, ty) : null;
+      const tZona = (zid && ZONA_KE_TERRAIN[zid]) || null;
+      // v32.3-regresi: zona yang dicat TIDAK mengesampingkan perlindungan
+      // terrain — petak yang tidak bisa dibangun (mangrove lindung,
+      // laut/sungai/kanal) tetap ditolak walau dicat Industrial.
+      if (!terrainBisaBangun(t)) return { ok: false, alasan: def.nama + " tidak bisa dibangun di " + namaTerrain(t) + " (lahan lindung — zona yang dicat tidak mengesampingkan perlindungan terrain)." };
+      // Pantai tetap hanya untuk bangunan pesisir (aturan yang sama dengan
+      // cabang generik di bawah) — kecuali bangunan yang memang mengizinkan
+      // pantai di terrainIzin-nya (tambang-pasir: pantai/pesisir).
+      if (t === "pantai" && !def.terrainIzin.includes("pantai")) return { ok: false, alasan: "Pantai hanya untuk bangunan pesisir (dermaga, pelabuhan, terminal feri) — " + def.nama + " tidak bisa dibangun di pantai walau sudah dicat zona." };
+      if (!def.terrainIzin.includes(t) && !(tZona && def.terrainIzin.includes(tZona))) {
+        var alasanIzin = def.nama + " hanya boleh dibangun di " + def.terrainIzin.map(namaTerrain).join(" / ") + " (di sini: " + namaTerrain(t) + ").";
+        if (zonaIzin && typeof zonaDef === "function" && zonaDef(zonaIzin)) alasanIzin += " Cat Zona " + zonaDef(zonaIzin).nama + " di seluruh petak bangunan, atau pindah ke " + def.terrainIzin.map(namaTerrain).join(" / ") + ".";
+        return { ok: false, alasan: alasanIzin };
+      }
       if (adaBangunanDi(S, tx, ty)) return { ok: false, alasan: "Sudah ada bangunan di sini." };
       if (adaJalanDi(S, tx, ty)) return { ok: false, alasan: "Sudah ada jalan di sini." };
     }
@@ -6092,8 +6124,11 @@ function renderPanelKiri() {
     html += barisAPBD(apbdKemarin, "APBD — Kemarin");
     // ---- v30: Gudang Material (nama, stok, produksi/hari, konsumsi pembangunan, harga beli/jual) ----
     html += "<div class='judulPanel' style='margin-top:10px'>Gudang Material — kapasitas " + kapasitasGudangMaterial() + " / material</div>";
-    html += "<div class='misiDes'>Material adalah sumber daya bangunan (bukan komoditas): dipakai semua bangunan/jalan, diproduksi fasilitas v30 (Tambang Batu/Pasir, Kehutanan Produksi, Pabrik Bahan Bangunan), dibeli/dijual lewat Toko Material, diimpor via kapal kargo dari pulau terhubung. Kapasitas +500 per Gudang/Toko Material yang beroperasi.</div>";
+    html += "<div class='misiDes'>Material adalah sumber daya bangunan (bukan komoditas): dipakai semua bangunan/jalan, diproduksi fasilitas v30 (Tambang Batu/Pasir, Kehutanan Produksi, Pabrik Bahan Bangunan), dibeli/dijual lewat Toko Material, diimpor via kapal kargo dari pulau terhubung (butuh Pelabuhan/Terminal Feri yang beroperasi). Kapasitas +500 per Gudang/Toko Material yang beroperasi.</div>";
     if (!adaTokoMaterialAktif()) html += "<div class='catatan'>Belum ada Toko Material yang beroperasi — jual/beli & impor material terkunci. Bangun Toko Material (tab Komersial).</div>";
+    // v32.3: Toko ada tapi impor masih terkunci bila belum ada pelabuhan
+    // — teks lama diam soal syarat pelabuhan (temuan ?v=58).
+    else if (typeof adaPelabuhanAktif === "function" && !adaPelabuhanAktif()) html += "<div class='catatan'>Impor material masih terkunci — impor via kapal butuh Pelabuhan/Terminal Feri yang beroperasi. Beli/jual lewat Toko Material sudah bisa.</div>";
     for (const m of daftarMaterial()) {
       const prodTxt = m.produksiHari > 0 ? ("+" + (Math.round(m.produksiHari * 10) / 10) + "/hari") : "tanpa produksi";
       html += "<div class='barisStat" + (m.menipis ? " kecil" : "") + "'><span>" + (m.menipis ? "⚠️ " : "") + m.nama + " × " + m.stok + " / " + m.kapasitas + " · " + prodTxt + " · konsumsi bangun " + m.konsumsi + "</span><span>beli " + rp(m.hargaBeli) + " · jual " + rp(m.hargaJual) + "</span></div>";
@@ -6282,18 +6317,33 @@ function renderPanelKiri() {
       html += "<div class='barisStat'><span>Dipakai / kapasitas</span><b>" + ls.dipakaiKW + " / " + ls.kapasitasKW + " kW</b></div>";
       html += "<div class='barisStat'><span>Permintaan</span><span>" + ls.permintaanKW + " kW</span></div>";
       html += bar(ls.persen || 0, (ls.persen || 0) >= 100 ? "#e74c3c" : "#f1c40f");
-      html += "<div class='barisStat'><span>Status jaringan</span><span>" + (ls.padam > 0 ? "⚠️ " + ls.padam + " bangunan padam (bergilir)" : "✅ Normal") + "</span></div>";
+      // v32.3: SATU sumber kebenaran hitungan padam = daftarBangunanPadam()
+      // (SEMUA bangunan gelap: kebanjiran + di luar jaringan + bergilir).
+      // ls.padam (S.utilitas.listrik.padam) hanya menghitung pemadaman
+      // bergilir — 2 bangunan kebanjiran di ?v=58 terdaftar di bawah
+      // tapi baris status menulis "✅ Normal". Rincian per alasan supaya
+      // angka bisa dilacak (pill listrik memakai hitungan yang sama).
+      const pdm = (typeof daftarBangunanPadam === "function") ? daftarBangunanPadam() : [];
+      if (pdm.length > 0) {
+        const nBanjir = pdm.filter(p => p.alasan === "kebanjiran").length;
+        const nJaringan = pdm.filter(p => p.alasan === "di luar jaringan listrik").length;
+        const nBergilir = pdm.length - nBanjir - nJaringan;
+        const rincianPadam = [];
+        if (nBanjir > 0) rincianPadam.push("kebanjiran: " + nBanjir);
+        if (nBergilir > 0) rincianPadam.push("bergilir: " + nBergilir);
+        if (nJaringan > 0) rincianPadam.push("di luar jaringan: " + nJaringan);
+        html += "<div class='barisStat'><span>Status jaringan</span><span>⚠️ " + pdm.length + " bangunan padam (" + rincianPadam.join(" · ") + ")</span></div>";
+      } else {
+        html += "<div class='barisStat'><span>Status jaringan</span><span>✅ Normal</span></div>";
+      }
       // v32.2: daftar bangunan padam + alasannya (temuan ?v=57: "2 padam"
       // malam Hari 7 tidak teridentifikasi — pill & panel hanya memberi
       // angka). Pill listrik di bilah atas bisa diklik untuk membuka
       // panel ini.
-      if (typeof daftarBangunanPadam === "function") {
-        const pdm = daftarBangunanPadam();
-        if (pdm.length) {
-          html += "<div class='misiDes'>🔌 Bangunan padam (" + pdm.length + "):</div>";
-          for (const p of pdm) html += "<div class='barisStat kecil'><span>" + p.nama + " (" + (p.x + 1) + "," + (p.y + 1) + ")</span><span>" + p.alasan + "</span></div>";
-          html += "<div class='catatan'>Pemadaman bergilir berganti tiap jam (malam: PLT Surya tidak berproduksi, kapasitas turun). Bangun pembangkit bila kapasitas kurang; tiang/gardu bila bangunan di luar jaringan.</div>";
-        }
+      if (pdm.length) {
+        html += "<div class='misiDes'>🔌 Bangunan padam (" + pdm.length + "):</div>";
+        for (const p of pdm) html += "<div class='barisStat kecil'><span>" + p.nama + " (" + (p.x + 1) + "," + (p.y + 1) + ")</span><span>" + p.alasan + "</span></div>";
+        html += "<div class='catatan'>Pemadaman bergilir berganti tiap jam (malam: PLT Surya tidak berproduksi, kapasitas turun). Bangun pembangkit bila kapasitas kurang; tiang/gardu bila bangunan di luar jaringan.</div>";
       }
       if (ls.rumahTanpaListrik > 0) html += "<div class='barisStat'><span>Rumah tanpa listrik</span><span>" + ls.rumahTanpaListrik + "</span></div>";
     } else html += "<div class='misiDes'>Status listrik belum tersedia.</div>";
@@ -6876,7 +6926,14 @@ function tanganiKetuk(t, tombol, sentuh, layar) {
   } else if (mode.jenis === "bangun") {
     if (sentuh && !(tilePratinjau && tilePratinjau.x === t.x && tilePratinjau.y === t.y)) {
       tilePratinjau = { x: t.x, y: t.y }; hover = { x: t.x, y: t.y };
-      bunyiKlik(); renderHUD();
+      // v32.3: ketukan pratinjau di layar sentuh TIDAK memanggil
+      // bangunDi — ghost merah tampil tanpa alasan (temuan ?v=58:
+      // Tambang Batu gagal diam-diam). Tampilkan alasan cekBangun
+      // sebagai toast supaya pemain tahu kenapa petak itu merah.
+      const cekPrev = (typeof cekBangun === "function") ? cekBangun(BANGUNAN_MAP[mode.id], t.x, t.y, 0) : null;
+      if (cekPrev && !cekPrev.ok && cekPrev.alasan) { toast(cekPrev.alasan, "gagal"); bunyiGagal(); }
+      else bunyiKlik();
+      renderHUD();
     } else {
       tilePratinjau = null;
       bangunDi(BANGUNAN_MAP[mode.id], t.x, t.y, 0);
@@ -6884,7 +6941,12 @@ function tanganiKetuk(t, tombol, sentuh, layar) {
   } else if (mode.jenis === "jembatan") {
     if (sentuh && !(tilePratinjau && tilePratinjau.x === t.x && tilePratinjau.y === t.y)) {
       tilePratinjau = { x: t.x, y: t.y }; hover = { x: t.x, y: t.y };
-      bunyiKlik(); renderHUD();
+      // v32.3: sama seperti mode bangun — pratinjau jembatan yang
+      // tidak valid harus memberi alasan, bukan hanya ghost merah.
+      const cekJemPrev = (typeof cekJembatan === "function") ? cekJembatan(mode.id, t.x, t.y) : null;
+      if (cekJemPrev && !cekJemPrev.ok && cekJemPrev.alasan) { toast(cekJemPrev.alasan, "gagal"); bunyiGagal(); }
+      else bunyiKlik();
+      renderHUD();
     } else {
       tilePratinjau = null;
       bangunJembatanDi(mode.id, t.x, t.y);

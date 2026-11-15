@@ -774,8 +774,14 @@
     if (def && (def.listrik || 0) > 0) skor.listrik = _cariMasalah(d, "tanpa-listrik") ? 0 : 100;
     if (def && (def.air || 0) > 0) skor.air = _cariMasalah(d, "tanpa-air") ? 0 : 100;
     if (def && (def.pekerja || 0) > 0) {
-      if (typeof b.staf === "number") skor.pekerja = Math.round(100 * Math.max(0, Math.min(1, b.staf / def.pekerja)));
-      else skor.pekerja = _cariMasalah(d, "pekerja-kurang") ? 0 : 100;
+      // v32.3: skor pekerja = rasio STAF (staf/kebutuhan), konsisten
+      // dengan baris "Pekerja" panel utama (city.js, pctStaf). Bangunan
+      // dalam konstruksi belum punya b.staf (hitungTenagaKerja hanya
+      // menyentuh bangunan selesai), jadi fallback lama ("tanpa kode
+      // pekerja-kurang -> 100%") menulis "Pekerja 100%" padahal staf
+      // 0/1 (temuan ?v=58: Posyandu dalam konstruksi).
+      var stafSB = (typeof b.staf === "number") ? b.staf : 0;
+      skor.pekerja = Math.round(100 * Math.max(0, Math.min(1, stafSB / def.pekerja)));
     }
     if (def && def.produksi && def.produksi.masuk) {
       var mBahan = _cariMasalah(d, "bahan-baku-habis") || _cariMasalah(d, "bahan-baku-menipis");

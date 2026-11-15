@@ -630,6 +630,9 @@
   // Alternatif tidak terkunci (dipakai _langkahBangun bila primer terkunci).
   var ALT_INTAKE = { tab: "air", jenisMode: "bangun", idMode: "intake", teks: "Bangun Intake Air Baku — {RP:intake} · produksi 3.000 L/jam (kualitas 60, harus di tepi pantai)", ringkas: "Bangun Intake Air Baku ({RP:intake})" };
   var ALT_PASAR = { tab: "komersial", jenisMode: "bangun", idMode: "pasar-tradisional", teks: "Bangun Pasar Tradisional — {RP:pasar-tradisional} · jual hasil lokal (maks 10/hari) untuk mengosongkan gudang", ringkas: "Bangun Pasar Tradisional ({RP:pasar-tradisional})" };
+  // v32.3: alternatif Pelabuhan untuk impor material — Terminal Feri
+  // (level 2) juga memenuhi syarat impor (adaPelabuhanAktif).
+  var ALT_TERMINAL_FERI = { tab: "transportasi", jenisMode: "bangun", idMode: "terminal-feri", teks: "Bangun Terminal Feri — {RP:terminal-feri} · level 2 (bila belum ada)", ringkas: "Bangun Terminal Feri ({RP:terminal-feri})" };
   var ALT_TRAFFIC = { tab: "jalan", jenisMode: "bangun", idMode: "traffic-light", teks: "Bangun Traffic Light — {RP:traffic-light} · efek lalu lintas 0,3 di persimpangan macet", ringkas: "Bangun Traffic Light ({RP:traffic-light})" };
   // v24.1 (kasus penduduk-tidak-bertambah): indikator kebahagiaan ->
   // fasilitas yang memperbaikinya. Urutan = prioritas bila skor seri
@@ -827,7 +830,23 @@
       };
       var fV30 = fasV30[matV30];
       if (fV30) out.push(B(fV30[0], "bangun", fV30[1], fV30[2], fV30[3]));
-      out.push(B("komersial", "bangun", "toko-material", "Bangun Toko Material — {RP:toko-material} · syarat beli/jual material & impor via kapal (+500 kapasitas gudang material)", "Bangun Toko Material ({RP:toko-material})"));
+      // v32.3: Toko Material HANYA syarat beli/jual — impor butuh JUGA
+      // Pelabuhan/Terminal Feri yang beroperasi (lihat imporMaterial di
+      // city.js). Teks lama ("syarat beli/jual material & impor via
+      // kapal") menyiratkan Toko saja sudah cukup untuk impor, dan
+      // langkah ini didorong TANPA SYARAT — pemain yang sudah punya
+      // Toko tapi belum punya pelabuhan tetap disuruh bangun Toko
+      // (temuan ?v=58: impor ditolak "butuh Pelabuhan/Terminal Feri
+      // yang beroperasi"). Kini: Toko hanya bila belum ada yang aktif;
+      // bila Toko sudah ada tapi belum ada pelabuhan, arahkan ke
+      // Pelabuhan (alternatif Terminal Feri bila Pelabuhan terkunci).
+      var adaTokoV30 = (typeof adaTokoMaterialAktif === "function") ? adaTokoMaterialAktif() : false;
+      var adaPelabuhanV30 = (typeof adaPelabuhanAktif === "function") ? !!adaPelabuhanAktif() : false;
+      if (!adaTokoV30) {
+        out.push(B("komersial", "bangun", "toko-material", "Bangun Toko Material — {RP:toko-material} · syarat beli/jual material (+500 kapasitas gudang material)", "Bangun Toko Material ({RP:toko-material})"));
+      } else if (!adaPelabuhanV30) {
+        out.push(B("transportasi", "bangun", "pelabuhan", "Bangun Pelabuhan — {RP:pelabuhan} · impor material via kapal butuh Pelabuhan/Terminal Feri yang beroperasi (level 3, di pantai)", "Bangun Pelabuhan ({RP:pelabuhan})", ALT_TERMINAL_FERI));
+      }
     }
     if (!rencanaV30) switch (kode) {
       case "tanpa-air": {

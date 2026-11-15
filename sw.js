@@ -21,7 +21,7 @@
 //    lama — cache aplikasi lain di origin yang sama (mis. repo lain di
 //    GitHub Pages) TIDAK dihapus.
 // =====================================================================
-const NAMA_CACHE = "meranti-rising-v32.2";
+const NAMA_CACHE = "meranti-rising-v32.3";
 // Versi game yang dibawa SW ini (dipakai postMessage ke halaman).
 const VERSI_SW = NAMA_CACHE.replace(/^meranti-rising-/, "");
 // Shell game yang di-precache. Nilai ?v= mengikuti index.html saat
@@ -53,15 +53,15 @@ const DAFTAR_CACHE = [
   "./js/city-kendaraan.js?v=7",
   "./js/city-persimpangan.js?v=1",
   "./js/city-maritim.js?v=4",
-  "./js/city.js?v=51",
+  "./js/city.js?v=52",
   "./js/city-suara.js?v=1",
   "./js/city-warga.js?v=2",
   "./js/city-bubble.js?v=4",
-  "./js/city-diagnostik.js?v=4",
-  "./js/city-advisor.js?v=10",
-  "./js/city-layanan.js?v=1",
+  "./js/city-diagnostik.js?v=5",
+  "./js/city-advisor.js?v=11",
+  "./js/city-layanan.js?v=2",
   "./js/city-tutorial.js?v=1",
-  "./js/city-ui-v24.js?v=5",
+  "./js/city-ui-v24.js?v=6",
   "./manifest.json",
   "./assets/images/logo-meranti-rising.png",
   // v26: aset menu utama yang DIPAKAI game (lihat README v26 — lembar
