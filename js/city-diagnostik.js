@@ -631,6 +631,7 @@
     var bagian = [
       b.id, b.x, b.y, b.selesai ? 1 : 0, Math.round((b.progres || 0) * 100),
       b.berlistrik, b.berair, b.kebanjiran, b.staf, b.kurangBahan,
+      b.nonaktif ? 1 : 0, // v32 (v31.1a): toggle nonaktif mengubah diagnosa
       _jamTotal(),
       (u.listrik && u.listrik.rumahTanpaListrik) || 0,
       (u.air && u.air.rumahTanpaAir) || 0,
@@ -677,6 +678,24 @@
       };
       _cacheSet(b, { sig: sig, hasil: hasilKonstruksi });
       return hasilKonstruksi;
+    }
+    // v32 (perbaikan v31.1a): bangunan NONAKTIF tidak pernah "Beroperasi" /
+    // "berfungsi normal" — statusnya offline / tidak-beroperasi, konsisten
+    // dengan status8() (yang sudah memeriksa bangunanNonaktif). Sebelumnya
+    // bangunan nonaktif tanpa masalah lain jatuh ke status "operational" /
+    // "normal" (atau "critical" palsu via pekerja-kurang karena staf 0).
+    var nonaktif = false;
+    try { nonaktif = (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)); } catch (e) {}
+    if (nonaktif) {
+      var masalahNonaktif = [{ kode: "nonaktif", teks: "Bangunan dinonaktifkan — tidak beroperasi (upkeep 10%, pekerja dilepas).", dampak: 1, penyebab: "Pemain menonaktifkan bangunan ini (tombol Nonaktifkan). Aktifkan kembali untuk beroperasi.", kategori: kat }];
+      var hasilNonaktif = {
+        id: b.id, nama: def.nama, x: b.x, y: b.y, kategori: kat,
+        status: "offline", status8: "tidak-beroperasi", status8Label: "Tidak beroperasi",
+        masalah: masalahNonaktif, penyebabUtama: masalahNonaktif[0],
+        skor: 0, tidakTerdeteksi: tak,
+      };
+      _cacheSet(b, { sig: sig, hasil: hasilNonaktif });
+      return hasilNonaktif;
     }
     _masalahUmum(b, def, kat, masalah, tak);
     if (kat === "residential") _masalahResidential(b, def, masalah, tak);

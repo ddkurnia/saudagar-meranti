@@ -179,6 +179,10 @@
       case "cakupan-pendidikan-rendah": return "Cakupan pendidikan rendah";
       case "cakupan-kesehatan-rendah": return "Cakupan kesehatan rendah";
       case "kemacetan-berat": return "Kemacetan berat di kota";
+      case "layanan-keamanan-jauh": return jumlah + " rumah jauh dari layanan keamanan";
+      case "layanan-perdagangan-jauh": return jumlah + " rumah jauh dari layanan perdagangan";
+      case "layanan-over-kapasitas": return "Fasilitas layanan kelebihan kapasitas (" + jumlah + " jiwa tidak terlayani)";
+      case "layanan-permukiman-tumbuh-cepat": return "Permukiman tumbuh lebih cepat dari layanan";
       default: return (contohNama ? contohNama + ": " : "") + kode;
     }
   }
@@ -382,6 +386,20 @@
           _tambah({ kode: "cakupan-kesehatan-rendah", dampak: st.penduduk.cakupanKesehatan < 50 ? 0.7 : 0.45, jumlah: st.penduduk.total, lokasi: null, penyebab: "Kapasitas fasilitas kesehatan hanya menjangkau " + st.penduduk.cakupanKesehatan + "% penduduk.", contohNama: "Puskesmas", bangunan: [] });
         }
       }
+      // v32 (Bagian H): rekomendasi cakupan layanan — HANYA kode baru
+      // (keamanan/perdagangan jauh, over-kapasitas, permukiman tumbuh
+      // cepat); sekolah/kesehatan/rekreasi jauh sudah punya kodenya
+      // sendiri (sekolah-jauh, kesehatan-jauh, rekreasi-jauh) dan
+      // pekerja-kurang/pekerjaan-kurang sudah ada — tidak diduplikasi.
+      try {
+        if (typeof rekomendasiLayanan === "function") {
+          var rekLay = rekomendasiLayanan();
+          for (var ir = 0; ir < rekLay.length; ir++) {
+            var rl = rekLay[ir];
+            _tambah({ kode: rl.kode, dampak: rl.dampak, jumlah: rl.jumlah, lokasi: rl.lokasi || null, penyebab: rl.penyebab, contohNama: rl.contohNama, bangunan: rl.bangunan || [] });
+          }
+        }
+      } catch (e) {}
       // Kemacetan berat (skor lalin nyata).
       try {
         if (typeof statusLalin === "function") {
@@ -697,6 +715,15 @@
     var lok = masalah.lokasi || null;
     if (!lok && Array.isArray(masalah.bangunan) && masalah.bangunan[0] && typeof masalah.bangunan[0].x === "number") lok = { x: masalah.bangunan[0].x, y: masalah.bangunan[0].y };
     function B(tab, jm, id, teks, ringkas, alt) { return _langkahBangun(tab, jm, id, teks, ringkas, alt); }
+    // v32 (Bagian H): langkah utama rekomendasi layanan memakai tombol
+    // "Lihat Solusi" (membuka katalog bangunan solusinya); labelTombol
+    // tetap "Bangun <Nama>" supaya baris "Disarankan:" tetap informatif.
+    function S2(tab, jm, id, teks, ringkas, alt) {
+      var s = _langkahBangun(tab, jm, id, teks, ringkas, alt);
+      s.labelTombol = s.tombol;
+      s.tombol = "Lihat Solusi";
+      return s;
+    }
     function L(teks) { return { nomor: 0, teks: teks, tombol: "Lihat Lokasi", ringkas: "Lihat lokasi masalah", target: null, lokasi: lok, terkunci: false, alasanKunci: null }; }
     // Langkah perbaikan untuk SATU penyebab kilang tidak beroperasi.
     // Listrik/air memakai langkah 1 rencana utilitasnya sendiri
@@ -1034,6 +1061,70 @@
       case "transportasi-sekolah":
         out = [B("transportasi", "bangun", "halte", "Bangun Halte di dekat sekolah — {RP:halte} · radius halte 4 petak", "Bangun Halte ({RP:halte})")];
         break;
+      // v32 (Bagian H): rekomendasi cakupan layanan — tiap masalah punya
+      // tombol "Lihat Solusi" (langkah 1, membuka katalog solusinya) dan
+      // "Lihat Lokasi" (langkah lokasi + tombol bawah drawer).
+      case "layanan-keamanan-jauh":
+        out = [
+          S2("keamanan", "bangun", "kantor-polisi", "Bangun Kantor Polisi di dekat permukiman — {RP:kantor-polisi} · radius keamanan 10 petak, level 2", "Bangun Kantor Polisi ({RP:kantor-polisi})"),
+          B("keamanan", "bangun", "pos-pemadam", "Bangun Pos Pemadam — {RP:pos-pemadam} · radius 10 petak, level 2 (atau Pemadam Kebakaran {RP:pemadam-kebakaran} · radius 12, level 3)", "Bangun Pos Pemadam ({RP:pos-pemadam})"),
+          L("Lihat permukiman yang tidak terjangkau layanan keamanan"),
+        ];
+        break;
+      case "layanan-perdagangan-jauh":
+        out = [
+          S2("komersial", "bangun", "pasar-tradisional", "Bangun Pasar Tradisional di dekat permukiman — {RP:pasar-tradisional} · radius perdagangan 5 petak, kerja 6", "Bangun Pasar Tradisional ({RP:pasar-tradisional})"),
+          B("komersial", "bangun", "toko", "Bangun Toko — {RP:toko} · radius 3 petak (atau Supermarket {RP:supermarket} · radius 6, level 3)", "Bangun Toko ({RP:toko})"),
+          L("Lihat permukiman yang tidak terjangkau layanan perdagangan"),
+        ];
+        break;
+      case "layanan-over-kapasitas": {
+        // Solusi sejenis dengan fasilitas yang kelebihan kapasitas
+        // (dinamis dari bangunan masalah; default pendidikan).
+        var bOver = _bangunanMasalah(masalah);
+        var defOver = null;
+        try { if (bOver && typeof BANGUNAN_MAP !== "undefined" && BANGUNAN_MAP) defOver = BANGUNAN_MAP[bOver.id]; } catch (e2) {}
+        var katOver = defOver ? defOver.kat : "pendidikan";
+        if (katOver === "kesehatan") {
+          out = [
+            S2("kesehatan", "bangun", "puskesmas", "Bangun Puskesmas tambahan — {RP:puskesmas} · radius 6 petak, kapasitas 80, level 2", "Bangun Puskesmas ({RP:puskesmas})"),
+            B("kesehatan", "bangun", "posyandu", "Bangun Posyandu — {RP:posyandu} · radius 4 petak, kapasitas 30", "Bangun Posyandu ({RP:posyandu})"),
+            L("Lihat fasilitas kesehatan yang kelebihan kapasitas"),
+          ];
+        } else if (katOver === "rekreasi" || katOver === "hiburan") {
+          out = [
+            S2("rekreasi", "bangun", "lapangan", "Bangun Lapangan Olahraga tambahan — {RP:lapangan} · radius 5 petak, kapasitas 80", "Bangun Lapangan Olahraga ({RP:lapangan})"),
+            B("lingkungan", "bangun", "taman", "Bangun Taman Kota — {RP:taman} · radius 4 petak, kapasitas 60", "Bangun Taman Kota ({RP:taman})"),
+            L("Lihat fasilitas rekreasi yang kelebihan kapasitas"),
+          ];
+        } else if (katOver === "keamanan") {
+          out = [
+            S2("keamanan", "bangun", "kantor-polisi", "Bangun Kantor Polisi tambahan — {RP:kantor-polisi} · radius 10 petak, level 2", "Bangun Kantor Polisi ({RP:kantor-polisi})"),
+            B("keamanan", "bangun", "pos-pemadam", "Bangun Pos Pemadam — {RP:pos-pemadam} · radius 10 petak, level 2", "Bangun Pos Pemadam ({RP:pos-pemadam})"),
+            L("Lihat fasilitas keamanan yang kelebihan kapasitas"),
+          ];
+        } else if (katOver === "perkantoran") {
+          out = [
+            S2("komersial", "bangun", "pasar-tradisional", "Bangun Pasar Tradisional tambahan — {RP:pasar-tradisional} · radius 5 petak, kerja 6", "Bangun Pasar Tradisional ({RP:pasar-tradisional})"),
+            B("komersial", "bangun", "toko", "Bangun Toko — {RP:toko} · radius 3 petak", "Bangun Toko ({RP:toko})"),
+            L("Lihat fasilitas perdagangan yang kelebihan kapasitas"),
+          ];
+        } else {
+          out = [
+            S2("pendidikan", "bangun", "sd", "Bangun Sekolah Dasar tambahan — {RP:sd} · radius 6 petak, kapasitas 60 siswa", "Bangun Sekolah Dasar ({RP:sd})"),
+            B("pendidikan", "bangun", "paud", "Bangun PAUD — {RP:paud} · radius 4 petak, kapasitas 20", "Bangun PAUD ({RP:paud})"),
+            L("Lihat fasilitas pendidikan yang kelebihan kapasitas"),
+          ];
+        }
+        break;
+      }
+      case "layanan-permukiman-tumbuh-cepat":
+        out = [
+          S2("pendidikan", "bangun", "sd", "Bangun Sekolah Dasar di permukiman yang tumbuh — {RP:sd} · radius 6 petak, kapasitas 60 siswa", "Bangun Sekolah Dasar ({RP:sd})"),
+          B("kesehatan", "bangun", "puskesmas", "Bangun Puskesmas — {RP:puskesmas} · radius 6 petak, kapasitas 80, level 2", "Bangun Puskesmas ({RP:puskesmas})"),
+          L("Lihat permukiman yang tumbuh lebih cepat dari layanan"),
+        ];
+        break;
       default:
         out = [];
         break;
@@ -1115,7 +1206,7 @@
           teks: s.teks, tombol: "Ambil Tindakan", lokasi: lokasi,
           target: { tab: s.target.tab, jenisMode: s.target.jenisMode, idMode: s.target.idMode, bangunanId: s.target.jenisMode === "bangun" ? s.target.idMode : null, kategori: kode },
           masalahId: masalah.id, penyebab: masalah.penyebab || "",
-          nomor: s.nomor, labelTombol: s.tombol, terkunci: s.terkunci, alasanKunci: s.alasanKunci,
+          nomor: s.nomor, labelTombol: s.labelTombol || s.tombol, terkunci: s.terkunci, alasanKunci: s.alasanKunci,
         });
       } else {
         out.push({ teks: s.teks, tombol: "Lihat Lokasi", lokasi: s.lokasi || lokasi, target: null, masalahId: masalah.id, nomor: s.nomor, labelTombol: s.tombol });
@@ -1184,7 +1275,7 @@
     // TIDAK PERNAH membangun otomatis. Langkah terkunci: beri tahu
     // alasannya, jangan buka katalog.
     var adalahBangun = (typeof rekomendasi.tombol === "string" && rekomendasi.tombol.indexOf("Bangun ") === 0) ||
-      rekomendasi.tombol === "Ambil Tindakan";
+      rekomendasi.tombol === "Ambil Tindakan" || rekomendasi.tombol === "Lihat Solusi"; // v32: langkah solusi layanan
     if (adalahBangun && rekomendasi.target && rekomendasi.target.tab) {
       if (rekomendasi.terkunci) {
         try {
