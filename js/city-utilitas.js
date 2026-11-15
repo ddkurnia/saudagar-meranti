@@ -426,6 +426,29 @@ function statusListrik() {
   const L = S.utilitas.listrik;
   return { kapasitasKW: L.kapasitasKW, dipakaiKW: L.dipakaiKW, permintaanKW: L.permintaanKW, persen: L.persen, padam: L.padam.length, rumahTanpaListrik: L.rumahTanpaListrik };
 }
+// v32.2: daftar bangunan yang padam + alasannya — dipakai pill listrik
+// (klik) & panel Infrastruktur supaya angka "N padam" bisa diidentifikasi
+// (temuan ?v=57: "2 padam" malam Hari 7). Alasan: kebanjiran / di luar
+// jaringan / kapasitas (pemadaman bergilir, berganti tiap jam; malam hari
+// PLT Surya tidak berproduksi sehingga kapasitas turun).
+function daftarBangunanPadam() {
+  if (!S || !Array.isArray(S.bangunan)) return [];
+  const out = [];
+  for (let idx = 0; idx < S.bangunan.length; idx++) {
+    const b = S.bangunan[idx];
+    if (!b || !b.selesai) continue;
+    const d = (typeof BANGUNAN_MAP !== "undefined" && BANGUNAN_MAP) ? BANGUNAN_MAP[b.id] : null;
+    if (!d || (d.listrik || 0) <= 0 || d.listrikProduksi) continue;
+    if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) continue; // nonaktif tidak butuh listrik
+    if (b.berlistrik === false) {
+      let alasan = "kapasitas (pemadaman bergilir)";
+      if (b.kebanjiran) alasan = "kebanjiran";
+      else if (typeof terhubungJaringan === "function" && !terhubungJaringan(b, "listrik")) alasan = "di luar jaringan listrik";
+      out.push({ idx: idx, id: b.id, nama: (d && d.nama) || b.id, x: b.x, y: b.y, alasan: alasan });
+    }
+  }
+  return out;
+}
 function statusAir() {
   if (!S || !S.utilitas || !S.utilitas.air) return { kapasitasL: 0, dipakaiL: 0, permintaanL: 0, persen: 0, kualitas: 0, kehilangan: 0.1 };
   const A = S.utilitas.air;

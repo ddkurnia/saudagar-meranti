@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v32.1"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v32.2"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -1641,6 +1641,22 @@ function statusHunianRumah(r) {
   if (r.isi >= r.kap) return "penuh";
   return "sebagian";
 }
+// v32.2: alasan kenapa rumah tidak layak huni / kurang nyaman — dipakai
+// panel Penduduk supaya "penuh, tidak layak" tidak membingungkan (temuan
+// ?v=57: rumah 4/4 terisi tapi tertulis "tidak layak huni"). Hanya
+// tampilan; logika kelayakan (rumahLayak) TIDAK berubah.
+function alasanHunian(r) {
+  if (!r) return "";
+  if (!r.layak) {
+    if (r.b && r.b.kebanjiran) return "kebanjiran";
+    if (!r.aksesJalan) return "tanpa jalan";
+    return "tidak layak huni";
+  }
+  const kurang = [];
+  if (!r.berlistrik) kurang.push("tanpa listrik");
+  if (!r.berair) kurang.push("tanpa air");
+  return kurang.join(" · ");
+}
 function infoHunian() {
   let kapasitas = 0, terisi = 0;
   const rumah = [];
@@ -1921,8 +1937,14 @@ function hitungLayanan() {
       }
       if (!menjangkau) continue;
       jmlLayanan++;
+      // v32.2: HANYA jenis yang cocok yang menambah cakupannya — jenis lain
+      // (perdagangan, rekreasi, keamanan, ...) bukan kesehatan. Teks lama
+      // "else kes += ..." menghitung SEMUA non-pendidikan sebagai kesehatan,
+      // sehingga Toko Material (perdagangan, kapasitas 100) membuat
+      // "Kesehatan terjangkau 100%" padahal tanpa fasilitas kesehatan
+      // (temuan ?v=57; Advisor 0% yang benar).
       if (d.layanan.jenis === "pendidikan") edu += d.layanan.kapasitas;
-      else kes += d.layanan.kapasitas;
+      else if (d.layanan.jenis === "kesehatan") kes += d.layanan.kapasitas;
     }
   }
   const pop = Math.max(1, S.penduduk.total);
@@ -6097,6 +6119,13 @@ function renderPanelKiri() {
     const kap = hitungRumah();
     const tk = hitungTenagaKerja();
     const hun = (typeof infoHunian === "function") ? infoHunian() : null;
+    // v32.2: cakupan layanan LIVE dari hitungLayanan() (satu sumber
+    // kebenaran dengan panel Ringkasan) — bukan nilai tersimpan
+    // S.penduduk.cakupan* yang hanya diperbarui saat pergantian hari
+    // (temuan ?v=57: bar 100% vs label 0%).
+    const layPend = (typeof hitungLayanan === "function") ? hitungLayanan() : { edu: 0, kes: 0 };
+    const pctPenduduk = Math.round((layPend.edu || 0) * 100);
+    const pctKesPenduduk = Math.round((layPend.kes || 0) * 100);
     const bahagiaKota = (S.bahagia && typeof S.bahagia.nilai === "number") ? S.bahagia.nilai : S.penduduk.bahagia;
     let html = "<div class='judulPanel'>Penduduk</div>";
     html += "<div class='angkaBesar'>" + S.penduduk.total + " <span>jiwa</span></div>";
@@ -6111,7 +6140,8 @@ function renderPanelKiri() {
       if (hun.rumah.length) {
         const rincianRumah = hun.rumah.map(r => {
           const d = BANGUNAN_MAP[r.b.id];
-          return (d ? d.nama : r.b.id) + " (" + (r.b.x + 1) + "," + (r.b.y + 1) + "): " + r.isi + "/" + r.kap + " — " + r.status + ", " + r.kenyamanan + (r.layak ? "" : " (tidak layak huni)");
+          const alasan = (typeof alasanHunian === "function") ? alasanHunian(r) : "";
+          return (d ? d.nama : r.b.id) + " (" + (r.b.x + 1) + "," + (r.b.y + 1) + "): " + r.isi + "/" + r.kap + " — " + r.status + ", " + r.kenyamanan + (alasan ? " (" + alasan + ")" : "");
         }).slice(0, 8).join("<br>");
         html += "<div class='misiDes'>🏠 " + rincianRumah + (hun.rumah.length > 8 ? "<br>…dan " + (hun.rumah.length - 8) + " rumah lain." : "") + "</div>";
       }
@@ -6129,8 +6159,20 @@ function renderPanelKiri() {
     html += "<div class='barisStat'><span>Upah</span><span>" + rp(upahPerPekerjaAktif()) + "/pekerja/hari</span></div>";
     html += "<div class='barisAksi'><button class='btnKecil' onclick='aturUpah(upahPerPekerjaAktif() - 50); renderPanelKiri();'>− Rp50 upah</button><button class='btnKecil' onclick='aturUpah(upahPerPekerjaAktif() + 50); renderPanelKiri();'>+ Rp50 upah</button></div>";
     html += "<div class='misiDes'>Upah " + rp(cfgEco("upah.min", 200)) + "–" + rp(cfgEco("upah.maks", 800)) + "/pekerja/hari — menaikkan upah menaikkan gaji di APBD.</div>";
-    html += "<div class='barisStat'><span>Pendidikan terjangkau</span><span>" + S.penduduk.cakupanPendidikan + "%</span></div>" + bar(S.penduduk.cakupanPendidikan, "#6c5ce7");
-    html += "<div class='barisStat'><span>Kesehatan terjangkau</span><span>" + S.penduduk.cakupanKesehatan + "%</span></div>" + bar(S.penduduk.cakupanKesehatan, "#00b894");
+    html += "<div class='barisStat'><span>Pendidikan terjangkau</span><span>" + pctPenduduk + "%</span></div>" + bar(pctPenduduk, "#6c5ce7");
+    html += "<div class='barisStat'><span>Kesehatan terjangkau</span><span>" + pctKesPenduduk + "%</span></div>" + bar(pctKesPenduduk, "#00b894");
+    // v32.2: perkiraan pendatang malam ini, sadar kapasitas — rumus dasar
+    // (2 + ~3% populasi, dikali daya tarik) dibatasi slot kosong rumah
+    // LAYAK (maks +½ kapasitas tiap rumah per hari, sama seperti
+    // tumbuhPendudukHarian). Teks lama "minimal +3 jiwa/malam" salah saat
+    // kapasitas membatasi (temuan ?v=57: +2 teramati, kapasitas 12/12).
+    let rumusTumbuh = 0, batasMalam = 0, perkiraanTumbuh = 0;
+    if (hun) {
+      const dayaT = (typeof faktorDayaTarik === "function") ? faktorDayaTarik(layPend) : 1;
+      rumusTumbuh = Math.round((Math.max(1, Math.round((S.penduduk.total || 0) * 0.03)) + 2) * dayaT);
+      for (const r of hun.rumahLayak) batasMalam += Math.min(r.kosong, Math.max(1, Math.ceil(r.kap / 2)));
+      perkiraanTumbuh = (S.penduduk.total || 0) < hun.kapasitas ? Math.min(rumusTumbuh, batasMalam) : 0;
+    }
     // v31: alasan pertumbuhan yang jujur — bukan sekadar "tumbuh bila...".
     let catatanTumbuh = "";
     if (hun && hun.kosong <= 0 && hun.menungguRumah <= 0) catatanTumbuh = "Semua rumah penuh — bangun rumah baru agar penduduk bisa bertambah.";
@@ -6140,7 +6182,10 @@ function renderPanelKiri() {
     // tumbuhPendudukHarian() adalah max(1, round(pop×0,03)) + 2 per malam
     // (minimal +3 jiwa/malam), dibagi bertahap maks +ceil(kap/2) per rumah
     // per hari. Rumus TIDAK diubah — hanya teksnya yang diluruskan.
-    else catatanTumbuh = "Penduduk bertambah tiap hari (minimal +3 jiwa/malam: 2 pendatang baru + ~3% populasi, dikali daya tarik kota) — pendatang mengisi rumah layak secara bertahap (maks +½ kapasitas tiap rumah per hari), tidak langsung penuh.";
+    // v32.2: angka perkiraan SADAR KAPASITAS (perkiraanTumbuh) — bila
+    // slot kosong rumah layak lebih kecil dari rumus, teks menyebut
+    // batasnya (temuan ?v=57: "minimal +3" vs +2 teramati).
+    else catatanTumbuh = "Penduduk bertambah tiap hari (perkiraan +" + perkiraanTumbuh + " jiwa/malam: 2 pendatang baru + ~3% populasi, dikali daya tarik kota" + (perkiraanTumbuh < rumusTumbuh ? " — dibatasi " + batasMalam + " tempat kosong di rumah layak" : "") + ") — pendatang mengisi rumah layak secara bertahap (maks +½ kapasitas tiap rumah per hari), tidak langsung penuh.";
     html += "<div class='catatan'>" + catatanTumbuh + "</div>";
     isi.innerHTML = html;
   } else if (panelKiri === "riset") {
@@ -6238,6 +6283,18 @@ function renderPanelKiri() {
       html += "<div class='barisStat'><span>Permintaan</span><span>" + ls.permintaanKW + " kW</span></div>";
       html += bar(ls.persen || 0, (ls.persen || 0) >= 100 ? "#e74c3c" : "#f1c40f");
       html += "<div class='barisStat'><span>Status jaringan</span><span>" + (ls.padam > 0 ? "⚠️ " + ls.padam + " bangunan padam (bergilir)" : "✅ Normal") + "</span></div>";
+      // v32.2: daftar bangunan padam + alasannya (temuan ?v=57: "2 padam"
+      // malam Hari 7 tidak teridentifikasi — pill & panel hanya memberi
+      // angka). Pill listrik di bilah atas bisa diklik untuk membuka
+      // panel ini.
+      if (typeof daftarBangunanPadam === "function") {
+        const pdm = daftarBangunanPadam();
+        if (pdm.length) {
+          html += "<div class='misiDes'>🔌 Bangunan padam (" + pdm.length + "):</div>";
+          for (const p of pdm) html += "<div class='barisStat kecil'><span>" + p.nama + " (" + (p.x + 1) + "," + (p.y + 1) + ")</span><span>" + p.alasan + "</span></div>";
+          html += "<div class='catatan'>Pemadaman bergilir berganti tiap jam (malam: PLT Surya tidak berproduksi, kapasitas turun). Bangun pembangkit bila kapasitas kurang; tiang/gardu bila bangunan di luar jaringan.</div>";
+        }
+      }
       if (ls.rumahTanpaListrik > 0) html += "<div class='barisStat'><span>Rumah tanpa listrik</span><span>" + ls.rumahTanpaListrik + "</span></div>";
     } else html += "<div class='misiDes'>Status listrik belum tersedia.</div>";
     const pembangkit = bangunanSelesai().filter(b => (BANGUNAN_MAP[b.id].listrikProduksi || 0) > 0);
@@ -6318,8 +6375,8 @@ function renderPanelKiri() {
     html += "<div class='judulPanel' style='margin-top:10px'>Layanan & Utilitas</div>";
     html += barIndikator("⚡ Listrik", pctListrik, (S.utilitas && S.utilitas.listrik) ? ("Dipakai " + (S.utilitas.listrik.dipakaiKW || 0) + " / " + (S.utilitas.listrik.kapasitasKW || 0) + " kW") : "");
     html += barIndikator("💧 Air", pctAir, (S.utilitas && S.utilitas.air) ? ("Dipakai " + (S.utilitas.air.dipakaiL || 0) + " / " + (S.utilitas.air.kapasitasL || 0) + " L") : "");
-    html += barIndikator("🎓 Pendidikan", pctPend, "Cakupan " + S.penduduk.cakupanPendidikan + "% penduduk");
-    html += barIndikator("🏥 Kesehatan", pctKes, "Cakupan " + S.penduduk.cakupanKesehatan + "% penduduk");
+    html += barIndikator("🎓 Pendidikan", pctPend, "Cakupan " + pctPend + "% penduduk");
+    html += barIndikator("🏥 Kesehatan", pctKes, "Cakupan " + pctKes + "% penduduk");
     html += barIndikator("🧹 Kebersihan", pctBersih, (S.utilitas && S.utilitas.sampah) ? ("Sampah " + Math.round(S.utilitas.sampah.produksiKgHari || 0) + " kg/hari") : "");
     html += barIndikator("🌿 Lingkungan", pctLingk, lingStat ? ("Polusi " + (lingStat.polusi || 0) + " · Mangrove sehat " + (lingStat.mangroveSehat || 0) + "%") : "");
     const berStat = (S.utilitas && S.utilitas.sampah) ? (S.utilitas.sampah.kebersihan || 100) : 100;
@@ -6640,9 +6697,14 @@ function renderPanelKanan() {
   if (def.rumah) html += "<div class='barisStat'><span>Kapasitas rumah</span><span>" + def.rumah + " jiwa</span></div>";
   if (def.pekerja) {
     const eff = b.efisiensi == null ? 1 : b.efisiensi;
+    // v32.2: persen di sini = rasio STAF (staf/kebutuhan), bukan efisiensi
+    // operasional — eff default 1 saat konstruksi membuat "0/1 (100%)"
+    // yang menyesatkan (temuan ?v=57: pompa dalam konstruksi). Efisiensi
+    // tetap dipakai di catatan kekurangan pekerja di bawah.
+    const pctStaf = def.pekerja ? Math.round(((b.staf || 0) / def.pekerja) * 100) : 100;
     const infoPkB = (typeof infoPekerjaBangunan === "function") ? infoPekerjaBangunan(b) : null;
     const minStafB = infoPkB ? infoPkB.minStaf : 0;
-    html += "<div class='barisStat'><span>Pekerja</span><span>" + (b.staf || 0) + " / " + def.pekerja + " (" + Math.round(eff * 100) + "%)</span></div>";
+    html += "<div class='barisStat'><span>Pekerja</span><span>" + (b.staf || 0) + " / " + def.pekerja + " (" + pctStaf + "%)</span></div>";
     if (infoPkB) html += "<div class='barisStat'><span>Peran</span><span>" + infoPkB.peran + (infoPkB.prioritas ? " · ⭐ Prioritas rekrutmen" : "") + "</span></div>";
     if (eff < 1) html += "<div class='catatan'>Kekurangan pekerja: " + (b.staf || 0) + "/" + def.pekerja + " staf — produksi & layanan berjalan " + Math.round(eff * 100) + "%." + ((b.staf || 0) === 0 ? " Bangun rumah untuk menambah penduduk (angkatan kerja) — lihat Penasihat Kota." : "") + "</div>";
     if (infoPkB && infoPkB.diBawahMinimum) html += "<div class='catatan merah'>Di bawah staf minimum (" + minStafB + " pekerja) — bangunan tidak beroperasi efektif.</div>";
