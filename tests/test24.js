@@ -103,21 +103,21 @@ function majuSatuHari() { for (let i = 0; i < 6; i++) C.majukanWaktu(240); }
 const idxHtml = fs.readFileSync(ROOT + "/index.html", "utf8");
 const swTxt = fs.readFileSync(ROOT + "/sw.js", "utf8");
 const srcCity = fs.readFileSync(ROOT + "/js/city.js", "utf8");
-cek("A1 VERSI_GAME v32", C.VERSI_GAME === "v32", C.VERSI_GAME);
-cek("A2 index.html memuat 6 modul v24 dalam urutan benar (advisor ?v=8, ui-v24 ?v=5, diagnostik ?v=4 + bubble ?v=4, warga ?v=2, lainnya ?v=1)",
+cek("A1 VERSI_GAME v32.1", C.VERSI_GAME === "v32.1", C.VERSI_GAME);
+cek("A2 index.html memuat 6 modul v24 dalam urutan benar (advisor ?v=10, ui-v24 ?v=5, diagnostik ?v=4 + bubble ?v=4, warga ?v=2, lainnya ?v=1)",
   idxHtml.indexOf("js/city-warga.js?v=2") !== -1 && idxHtml.indexOf("js/city-bubble.js?v=4") !== -1 &&
-  idxHtml.indexOf("js/city-diagnostik.js?v=4") !== -1 && idxHtml.indexOf("js/city-advisor.js?v=9") !== -1 &&
+  idxHtml.indexOf("js/city-diagnostik.js?v=4") !== -1 && idxHtml.indexOf("js/city-advisor.js?v=10") !== -1 &&
   idxHtml.indexOf("js/city-tutorial.js?v=1") !== -1 && idxHtml.indexOf("js/city-ui-v24.js?v=5") !== -1 &&
-  idxHtml.indexOf("js/city-advisor.js?v=9") < idxHtml.indexOf("js/city.js?v=49") &&
-  idxHtml.indexOf("js/city.js?v=49") < idxHtml.indexOf("js/city-tutorial.js?v=1"));
-cek("A3 index.html: #btnAdvisor + #drawerAdvisorV24 + #toastAksiV24 + css?v=19 + city.js?v=49",
+  idxHtml.indexOf("js/city-advisor.js?v=10") < idxHtml.indexOf("js/city.js?v=50") &&
+  idxHtml.indexOf("js/city.js?v=50") < idxHtml.indexOf("js/city-tutorial.js?v=1"));
+cek("A3 index.html: #btnAdvisor + #drawerAdvisorV24 + #toastAksiV24 + css?v=20 + city.js?v=50",
   idxHtml.indexOf('id="btnAdvisor"') !== -1 && idxHtml.indexOf('id="drawerAdvisorV24"') !== -1 &&
-  idxHtml.indexOf('id="toastAksiV24"') !== -1 && idxHtml.includes("css/city.css?v=19") &&
-  idxHtml.includes("js/city.js?v=49"));
-cek("A4 sw.js cache meranti-rising-v32 + precache 6 modul baru",
-  swTxt.indexOf("meranti-rising-v32") !== -1 && swTxt.indexOf("js/city-warga.js?v=2") !== -1 &&
+  idxHtml.indexOf('id="toastAksiV24"') !== -1 && idxHtml.includes("css/city.css?v=20") &&
+  idxHtml.includes("js/city.js?v=50"));
+cek("A4 sw.js cache meranti-rising-v32.1 + precache 6 modul baru",
+  swTxt.indexOf("meranti-rising-v32.1") !== -1 && swTxt.indexOf("js/city-warga.js?v=2") !== -1 &&
   swTxt.indexOf("js/city-bubble.js?v=4") !== -1 && swTxt.indexOf("js/city-diagnostik.js?v=4") !== -1 &&
-  swTxt.indexOf("js/city-advisor.js?v=9") !== -1 && swTxt.indexOf("js/city-tutorial.js?v=1") !== -1 &&
+  swTxt.indexOf("js/city-advisor.js?v=10") !== -1 && swTxt.indexOf("js/city-tutorial.js?v=1") !== -1 &&
   swTxt.indexOf("js/city-ui-v24.js?v=5") !== -1);
 cek("A5 tidak ada sisa pin v24.1/v24.2 aktif (city.js?v=35/36 / meranti-rising-v24.1/v24.2 / advisor|ui-v24 ?v=2 / diagnostik|bubble ?v=1 / kendaraan ?v=4 / lalin ?v=2 / css?v=17) + v26 (city.js?v=38 / cache v26) + v27.1 (city.js?v=40 / cache v27.1 / kendaraan ?v=5 / advisor ?v=3)",
   !idxHtml.includes("city.js?v=35") && !idxHtml.includes("city-advisor.js?v=2") &&
@@ -184,9 +184,15 @@ cek("A5f tidak ada sisa pin v32 tahap-1 aktif (city.js?v=48 / city-data ?v=12 / 
   !idxHtml.includes("js/city-advisor.js?v=8") && !swTxt.includes("js/city.js?v=48") &&
   !swTxt.includes("js/city-data.js?v=12") && !swTxt.includes("js/city-advisor.js?v=8") &&
   idxHtml.includes("js/city-layanan.js?v=1") &&
-  idxHtml.indexOf("js/city-advisor.js?v=9") < idxHtml.indexOf("js/city-layanan.js?v=1") &&
-  idxHtml.indexOf("js/city-layanan.js?v=1") < idxHtml.indexOf("js/city.js?v=49") &&
+  idxHtml.indexOf("js/city-advisor.js?v=10") < idxHtml.indexOf("js/city-layanan.js?v=1") &&
+  idxHtml.indexOf("js/city-layanan.js?v=1") < idxHtml.indexOf("js/city.js?v=50") &&
   swTxt.includes("js/city-layanan.js?v=1"));
+cek("A5g tidak ada sisa pin v32 aktif (city.js?v=49 / advisor ?v=9 / css?v=19 / cache v32 / pill v32)",
+  !idxHtml.includes("js/city.js?v=49") && !idxHtml.includes("js/city-advisor.js?v=9") &&
+  !idxHtml.includes("css/city.css?v=19") && !idxHtml.includes('"meranti-rising-v32"') &&
+  !idxHtml.includes('menu-pill-versi">v32<') && !swTxt.includes("js/city.js?v=49") &&
+  !swTxt.includes("js/city-advisor.js?v=9") && !swTxt.includes("css/city.css?v=19") &&
+  !swTxt.includes('"meranti-rising-v32"'));
 cek("A6 modul global termuat (Warga/Bubble/Diagnostik/Advisor/Tutorial/UIV24/Notifikasi)",
   !!W && !!Bbl && !!Dg && !!Adv && !!Tut && !!UI && !!Notif);
 cek("A7 adapter kontrak: Diagnostik.diagnosis = diagnosa + statusBangunan; Advisor.pesan + ringkasan",
@@ -850,13 +856,13 @@ Bbl.bersihkan();
 Dg.invalidateSemua();
 
 // ---- X4d: banner "Versi baru tersedia" hanya bila SW lebih baru ----
-cek("X4d bandingVersi: v24.2>v24.1, v24.1<v24.2, sama=0, v24.10>v24.2, v27.1>v27, v27.2>v27.1, v27.3>v27.2, v28>v27.3, v29>v28, v29.1>v29, v29.2>v29.1, v30>v29.2, v31>v30, v32>v31", ctxEval("bandingVersi('v24.2','v24.1')") === 1 && ctxEval("bandingVersi('v24.1','v24.2')") === -1 && ctxEval("bandingVersi('v24.2','v24.2')") === 0 && ctxEval("bandingVersi('v24.10','v24.2')") === 1 && ctxEval("bandingVersi('v27.1','v27')") === 1 && ctxEval("bandingVersi('v27.2','v27.1')") === 1 && ctxEval("bandingVersi('v27.3','v27.2')") === 1 && ctxEval("bandingVersi('v28','v27.3')") === 1 && ctxEval("bandingVersi('v29','v28')") === 1 && ctxEval("bandingVersi('v29.1','v29')") === 1 && ctxEval("bandingVersi('v29.2','v29.1')") === 1 && ctxEval("bandingVersi('v30','v29.2')") === 1 && ctxEval("bandingVersi('v31','v30')") === 1 && ctxEval("bandingVersi('v32','v31')") === 1);
+cek("X4d bandingVersi: v24.2>v24.1, v24.1<v24.2, sama=0, v24.10>v24.2, v27.1>v27, v27.2>v27.1, v27.3>v27.2, v28>v27.3, v29>v28, v29.1>v29, v29.2>v29.1, v30>v29.2, v31>v30, v32>v31, v32.1>v32", ctxEval("bandingVersi('v24.2','v24.1')") === 1 && ctxEval("bandingVersi('v24.1','v24.2')") === -1 && ctxEval("bandingVersi('v24.2','v24.2')") === 0 && ctxEval("bandingVersi('v24.10','v24.2')") === 1 && ctxEval("bandingVersi('v27.1','v27')") === 1 && ctxEval("bandingVersi('v27.2','v27.1')") === 1 && ctxEval("bandingVersi('v27.3','v27.2')") === 1 && ctxEval("bandingVersi('v28','v27.3')") === 1 && ctxEval("bandingVersi('v29','v28')") === 1 && ctxEval("bandingVersi('v29.1','v29')") === 1 && ctxEval("bandingVersi('v29.2','v29.1')") === 1 && ctxEval("bandingVersi('v30','v29.2')") === 1 && ctxEval("bandingVersi('v31','v30')") === 1 && ctxEval("bandingVersi('v32','v31')") === 1 && ctxEval("bandingVersi('v32.1','v32')") === 1);
 ctxEval("pwaTerimaVersiSW('v24.1')");
-cek("X4d SW v24.1 (lebih lama dari halaman v32) -> banner TIDAK tampil", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
+cek("X4d SW v24.1 (lebih lama dari halaman v32.1) -> banner TIDAK tampil", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
+ctxEval("pwaTerimaVersiSW('v32.2')");
+cek("X4d SW v32.2 (lebih baru) -> banner tampil", ctxEval("pwaUpdateTersedia") === true && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "");
 ctxEval("pwaTerimaVersiSW('v32.1')");
-cek("X4d SW v32.1 (lebih baru) -> banner tampil", ctxEval("pwaUpdateTersedia") === true && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "");
-ctxEval("pwaTerimaVersiSW('v32')");
-cek("X4d SW v32 (sama dengan halaman) -> banner basi disembunyikan lagi", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
+cek("X4d SW v32.1 (sama dengan halaman) -> banner basi disembunyikan lagi", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
 cek("X4d sw.js: postMessage versi + handler minta-versi", swTxt.indexOf("meranti-rising-minta-versi") !== -1 && swTxt.indexOf("meranti-rising-versi") !== -1 && swTxt.indexOf("VERSI_SW") !== -1);
 cek("X4d updatefound menanyakan versi SW dulu (bukan langsung menandai update)", srcCity.indexOf('baru.postMessage({ tipe: "meranti-rising-minta-versi" })') !== -1);
 
@@ -1187,11 +1193,11 @@ cek("Y-e2 spawn ke-41 mengembalikan null + sinkron tidak memaksa (sampah & warga
 bersihSemuaKendaraanV25();
 
 // ---- (g) refs v25 ----
-cek("Y-g1 VERSI_GAME v32 + index.html refs v32 (city.js v=48, kendaraan v=7, lalin v=4, css v=19 tetap)",
-  C.VERSI_GAME === "v32" && idxHtml.includes("js/city.js?v=49") && idxHtml.includes("js/city-kendaraan.js?v=7") &&
-  idxHtml.includes("js/city-lalin.js?v=4") && idxHtml.includes("css/city.css?v=19"));
-cek("Y-g2 sw.js cache meranti-rising-v32 + precache ?v= baru (city.js v=48, kendaraan v=7, lalin v=4)",
-  swTxt.indexOf("meranti-rising-v32") !== -1 && swTxt.indexOf("js/city.js?v=49") !== -1 &&
+cek("Y-g1 VERSI_GAME v32.1 + index.html refs v32.1 (city.js v=50, kendaraan v=7, lalin v=4, css v=20 tetap)",
+  C.VERSI_GAME === "v32.1" && idxHtml.includes("js/city.js?v=50") && idxHtml.includes("js/city-kendaraan.js?v=7") &&
+  idxHtml.includes("js/city-lalin.js?v=4") && idxHtml.includes("css/city.css?v=20"));
+cek("Y-g2 sw.js cache meranti-rising-v32.1 + precache ?v= baru (city.js v=50, kendaraan v=7, lalin v=4)",
+  swTxt.indexOf("meranti-rising-v32.1") !== -1 && swTxt.indexOf("js/city.js?v=50") !== -1 &&
   swTxt.indexOf("js/city-kendaraan.js?v=7") !== -1 && swTxt.indexOf("js/city-lalin.js?v=4") !== -1);
 
 // ---- pulihkan keadaan seksi Y ----
@@ -1205,9 +1211,9 @@ vm.runInContext("waktuGame = 12 * 60;", sandbox);
 
 // ---------------- Z: v26 Main Menu RISE OF MERANTI ----------------
 const menuCss = fs.readFileSync(ROOT + "/css/menu.css", "utf8");
-cek("Z1 VERSI_GAME v32 + index.html memuat css/menu.css?v=2 SETELAH city.css + city.js?v=49",
-  C.VERSI_GAME === "v32" && idxHtml.includes("css/menu.css?v=2") && idxHtml.includes("js/city.js?v=49") &&
-  idxHtml.indexOf("css/city.css?v=19") < idxHtml.indexOf("css/menu.css?v=2"));
+cek("Z1 VERSI_GAME v32.1 + index.html memuat css/menu.css?v=2 SETELAH city.css + city.js?v=50",
+  C.VERSI_GAME === "v32.1" && idxHtml.includes("css/menu.css?v=2") && idxHtml.includes("js/city.js?v=50") &&
+  idxHtml.indexOf("css/city.css?v=20") < idxHtml.indexOf("css/menu.css?v=2"));
 cek("Z2 struktur DOM menu lengkap (header/logo/5 tombol/panel muat/promo/7 kategori/detail)",
   ["menuPillVersi", "btnMenuBantuan", "btnMenuProfil", "btnMenuPengaturan",
    "btnMulai", "btnLanjut", "btnBaru", "btnMuat", "btnProfil", "btnPengaturanMulai", "btnInstalMulai",
@@ -1264,8 +1270,8 @@ const logoInfo = infoPng(fs.readFileSync(ROOT + "/assets/menu/logo-rise-of-meran
 cek("Z4b logo RISE OF MERANTI RGBA 2172x724 (transparan, bukan JPEG latar putih)",
   !!logoInfo && logoInfo.lebar === 2172 && logoInfo.tinggi === 724 && logoInfo.tipeWarna === 6,
   JSON.stringify(logoInfo));
-cek("Z5 sw.js cache v32 + precache menu.css + 26 aset menu; arsip & pil palsu TIDAK di-precache",
-  swTxt.indexOf("meranti-rising-v32") !== -1 && swTxt.indexOf("css/menu.css?v=2") !== -1 &&
+cek("Z5 sw.js cache v32.1 + precache menu.css + 26 aset menu; arsip & pil palsu TIDAK di-precache",
+  swTxt.indexOf("meranti-rising-v32.1") !== -1 && swTxt.indexOf("css/menu.css?v=2") !== -1 &&
   ASET_MENU_DIPAKAI.every(f => swTxt.indexOf("./" + f) !== -1) &&
   ["menu-background.png", "menu-buttons.png", "category-icons.png", "category-cards.png",
    "header-icons.png", "google-save", "sinkron-cloud"].every(s => swTxt.indexOf(s) === -1));
@@ -1281,7 +1287,7 @@ cek("Z7 menu: profil+save -> LANJUTKAN/MUAT/ikon tampil, MULAI sembunyi, pill ve
   C.document.getElementById("btnMenuProfil").style.display === "inline-block" &&
   C.document.getElementById("btnMenuPengaturan").style.display === "inline-block" &&
   C.document.getElementById("btnMulai").style.display === "none" &&
-  C.document.getElementById("menuPillVersi").textContent === "v32" &&
+  C.document.getElementById("menuPillVersi").textContent === "v32.1" &&
   C.document.getElementById("sambutanKembali").textContent.indexOf("Sukma") !== -1);
 cek("Z8 MUAT (ada save): panel tampil + detail simpanan nyata + tombol Muat aktif",
   (() => { C.document.getElementById("btnMuat").onclick(); return C.document.getElementById("menuPanelMuat").style.display === "block"; })() &&
@@ -1513,9 +1519,9 @@ cek("AA-g1 histeresis: varian SE dipertahankan saat sudutLayar 94° (<5° dari b
 cek("AA-g2 histeresis: ganti ke SW saat sudutLayar ~96° (>5° dari batas) + bungkus 0°: NE dipertahankan di 317°",
   (() => { const k = { _varianArah: "se" }; const a = C.pilihVarianArah(48 * Math.PI / 180, k); const k2 = { _varianArah: "ne" }; const b = C.pilihVarianArah(317 * Math.PI / 180, k2); return a === "sw" && k._varianArah === "sw" && b === "ne" && k2._varianArah === "ne"; })());
 // ---- (h) refs v28 ----
-cek("AA-h1 VERSI_GAME v32 + index.html city.js?v=49 + pill v32 + sw.js cache meranti-rising-v32",
-  C.VERSI_GAME === "v32" && idxHtml.includes("js/city.js?v=49") && idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v32<') &&
-  swTxt.indexOf("meranti-rising-v32") !== -1 && swTxt.indexOf("js/city.js?v=49") !== -1);
+cek("AA-h1 VERSI_GAME v32.1 + index.html city.js?v=50 + pill v32.1 + sw.js cache meranti-rising-v32.1",
+  C.VERSI_GAME === "v32.1" && idxHtml.includes("js/city.js?v=50") && idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v32.1<') &&
+  swTxt.indexOf("meranti-rising-v32.1") !== -1 && swTxt.indexOf("js/city.js?v=50") !== -1);
 cek("AA-h2 sw.js TIDAK mem-precache 36 varian (runtime-cache seperti audio) + TIDAK ada sisa pin v26",
   !swTxt.includes("mobil-sedan-sw.png") && !swTxt.includes("bus-nw.png") &&
   !swTxt.includes("meranti-rising-v26") && !idxHtml.includes("city.js?v=38") && !swTxt.includes("city.js?v=38"));
@@ -1850,10 +1856,10 @@ const srcDiagV28 = fs.readFileSync(ROOT + "/js/city-diagnostik.js", "utf8");
 const menuCssV28 = fs.readFileSync(ROOT + "/css/menu.css", "utf8");
 
 // ---- AD-a: versi + data katalog tidak berubah ----
-cek("AD-a1 VERSI_GAME v32 + refs v32 (css v=19, city.js v=48, bubble v=4, ui-v24 v=5, pill v32, cache v32)",
-  C.VERSI_GAME === "v32" && idxHtml.includes("css/city.css?v=19") && idxHtml.includes("js/city.js?v=49") &&
+cek("AD-a1 VERSI_GAME v32.1 + refs v32.1 (css v=20, city.js v=50, bubble v=4, ui-v24 v=5, pill v32.1, cache v32.1)",
+  C.VERSI_GAME === "v32.1" && idxHtml.includes("css/city.css?v=20") && idxHtml.includes("js/city.js?v=50") &&
   idxHtml.includes("js/city-bubble.js?v=4") && idxHtml.includes("js/city-ui-v24.js?v=5") &&
-  idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v32<') && swTxt.indexOf("meranti-rising-v32") !== -1);
+  idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v32.1<') && swTxt.indexOf("meranti-rising-v32.1") !== -1);
 const tabIdsAD = ctxEval("TAB_BANGUN.map(function(t){ return t.id; })");
 const dockUrutanAD = ctxEval("DOCK_URUTAN_V28");
 cek("AD-a2 TAB_BANGUN tetap 19 (data tidak diubah v28) + DOCK_URUTAN_V28 memuat ke-19 id tepat sekali",
@@ -2228,9 +2234,9 @@ for (const kode of Object.keys(ANTRE_AB)) {
 // dashboard keuangan, pemulihan kebangkrutan + sim 30 hari 5 gaya
 // dengan sistem Fase B. (Sim penuh 90 hari ada di
 // ~/workspace/v29-ekonomi/sim-90-hari-fase-b.json.)
-cek("AC0 refs Fase B: bahagia ?v=2, advisor ?v=8 (index.html + sw.js), tanpa sisa ?v= lama",
-  idxHtml.includes("js/city-bahagia.js?v=2") && idxHtml.includes("js/city-advisor.js?v=9") &&
-  swTxt.includes("js/city-bahagia.js?v=2") && swTxt.includes("js/city-advisor.js?v=9") &&
+cek("AC0 refs Fase B: bahagia ?v=2, advisor ?v=10 (index.html + sw.js), tanpa sisa ?v= lama",
+  idxHtml.includes("js/city-bahagia.js?v=2") && idxHtml.includes("js/city-advisor.js?v=10") &&
+  swTxt.includes("js/city-bahagia.js?v=2") && swTxt.includes("js/city-advisor.js?v=10") &&
   !idxHtml.includes("js/city-bahagia.js?v=1") && !idxHtml.includes("js/city-advisor.js?v=4") &&
   !swTxt.includes("js/city-bahagia.js?v=1") && !swTxt.includes("js/city-advisor.js?v=4"));
 cek("AC1 config Fase B: pinjaman tersedia (4 jenis, pokok/tenor/levelMin), pajak dinamis default 5%, harga dinamis ±5%/50-150%, APBD 7 kategori, biaya logistik 0",
@@ -3296,6 +3302,132 @@ if (rumahHapusAH) {
 } else {
   cek("AH-H3 hapus rumah berpenghuni: ada rumah berpenghuni untuk diuji", false, "tidak ada");
 }
+
+// ---------------- AJ: v32.1 — level tertahan padahal XP penuh ----------------
+// Diagnosis: BUKAN bug XP (cekLevel mensyaratkan SEMUA kondisi dengan &&);
+// cacatnya HUD tidak memberi tahu pemblokir. Helper syaratLevel() adalah
+// satu sumber kebenaran (dipakai cekLevel/HUD/toast/Advisor/panel).
+// (a) Kontrol negatif: XP 750 + pop 10 + bangunan >= 5 -> TETAP Lv.1 DAN
+// helper menunjuk pemblokir = penduduk. Tes ini HARUS GAGAL bila logika
+// syarat diubah jadi XP saja (750 >= 150 akan menaikkan level).
+// (Game baru sudah punya 2 bangunan awal — dermaga + 1 rumah — jadi
+// 8 rumah tambahan = 10 bangunan selesai; yang penting >= 5.)
+C.mulaiGame(true);
+C.hitungUtilitas(false);
+for (let iAJ = 0; iAJ < 8; iAJ++) tambahBangunan("rumah-sederhana", 10 + iAJ * 3, 10, { penghuni: 1 });
+C.S.penduduk.total = 10;
+C.S.xp = 750;
+const kurangAJa = C.syaratLevelBelumTerpenuhi();
+cek("AJ-a XP 750 + pop 10 + bangunan >= 5 -> tetap Lv.1 (kontrol negatif: XP saja TIDAK cukup)",
+  C.S.xp >= C.xpUntukLevel(1) && (C.cekLevel(), C.S.level === 1),
+  "level=" + C.S.level + " xp=" + C.S.xp);
+cek("AJ-a2 helper menunjuk pemblokir pertama = penduduk 10/20 (urutan panel Pemerintahan)",
+  kurangAJa.length > 0 && kurangAJa[0].kode === "penduduk" && kurangAJa[0].nilai === 10 && kurangAJa[0].target === 20,
+  JSON.stringify(kurangAJa));
+cek("AJ-a3 helper lengkap Lv.1->2: penduduk, bangunan, XP (bangunan sudah ok 10/5, XP ok 750/150)",
+  (() => { const d = C.syaratLevel(); return d.length === 3 && d[0].kode === "penduduk" && !d[0].ok && d[1].kode === "bangunan" && d[1].ok && d[2].kode === "xp" && d[2].ok; })(),
+  JSON.stringify(C.syaratLevel()));
+// (c) HUD menampilkan syarat yang kurang (hanya saat XP penuh).
+C.renderHUD();
+cek("AJ-c HUD: blokirLevelTeks '↑ Penduduk 10/20' saat XP penuh + pemblokir ada",
+  String(ctxEval('$("blokirLevelTeks").textContent')) === "↑ Penduduk 10/20" && ctxEval('$("blokirLevelTeks").style.display') !== "none",
+  JSON.stringify(ctxEval('$("blokirLevelTeks").textContent')));
+// (d) Toast + Advisor pemblokir muncul TEPAT SEKALI saat XP mencapai ambang.
+C.mulaiGame(true);
+C.hitungUtilitas(false);
+for (let iAJ = 0; iAJ < 8; iAJ++) tambahBangunan("rumah-sederhana", 10 + iAJ * 3, 10, { penghuni: 1 });
+C.S.penduduk.total = 10;
+C.S.xp = 140;
+const rumahAJd1 = { id: "rumah-sederhana", x: 50, y: 10, rot: 0, selesai: false, progres: 0.99 };
+C.S.bangunan.push(rumahAJd1);
+C.selesaikanKonstruksi(rumahAJd1, C.BANGUNAN_MAP["rumah-sederhana"]);
+cek("AJ-d1 XP 140 -> +10 konstruksi = 150 (ambang) -> toast pemblokir SEKALI + flag tersimpan",
+  C.S.xp === 150 && String(ctxEval('$("toast").textContent')).indexOf("Penduduk 10/20") !== -1 &&
+  String(ctxEval('$("toast").textContent')).indexOf("XP sudah cukup") !== -1 && C.S.peringatanLevel === "L1:penduduk:10/20",
+  JSON.stringify({ xp: C.S.xp, toast: ctxEval('$("toast").textContent'), flag: C.S.peringatanLevel }));
+const rumahAJd2 = { id: "rumah-sederhana", x: 53, y: 10, rot: 0, selesai: false, progres: 0.99 };
+C.S.bangunan.push(rumahAJd2);
+C.selesaikanKonstruksi(rumahAJd2, C.BANGUNAN_MAP["rumah-sederhana"]);
+cek("AJ-d2 konstruksi ke-2 (XP 160, pemblokir sama) -> TIDAK ada toast pemblokir lagi + flag tidak berubah",
+  C.S.xp === 160 && String(ctxEval('$("toast").textContent')).indexOf("Penduduk 10/20") === -1 &&
+  C.S.peringatanLevel === "L1:penduduk:10/20",
+  JSON.stringify({ xp: C.S.xp, toast: ctxEval('$("toast").textContent'), flag: C.S.peringatanLevel }));
+// AJ-d3: panggil peringatkan berulang tanpa perubahan syarat (jalur yang
+// SAMA dipakai prosesPergantianHari: peringatkanLevelTertahan(null)) ->
+// tidak spam. Hari game nyata tidak dipakai di sini: hitungKebahagiaan()
+// di pergantian hari menghitung ulang bahagia sehingga pop bisa tumbuh
+// dan kunci pemblokir berubah — itu justru kasus AJ-d3b di bawah.
+const toastD2 = String(ctxEval('$("toast").textContent'));
+C.peringatkanLevelTertahan(null);
+C.peringatkanLevelTertahan(null);
+cek("AJ-d3 panggil peringatkan berulang tanpa perubahan syarat -> TIDAK ada toast baru + flag tetap",
+  String(ctxEval('$("toast").textContent')) === toastD2 && C.S.peringatanLevel === "L1:penduduk:10/20",
+  JSON.stringify({ toast: ctxEval('$("toast").textContent'), flag: C.S.peringatanLevel }));
+cek("AJ-d3c prosesPergantianHari memanggil peringatkanLevelTertahan(null) (wiring hari berikutnya)",
+  srcCity.indexOf("peringatkanLevelTertahan(null)") !== -1, "tidak ada pemanggilan di prosesPergantianHari");
+// AJ-d3b: keadaan pemblokir BERUBAH (pop 10->12) -> boleh memperingatkan
+// sekali lagi dengan angka baru (throttle per-keadaan, bukan bisu permanen).
+C.S.penduduk.total = 12;
+C.peringatkanLevelTertahan(null);
+cek("AJ-d3b pemblokir berubah 10->12 -> toast SEKALI dengan angka baru + flag ikut berubah",
+  String(ctxEval('$("toast").textContent')).indexOf("Penduduk 12/20") !== -1 && C.S.peringatanLevel === "L1:penduduk:12/20",
+  JSON.stringify({ toast: ctxEval('$("toast").textContent'), flag: C.S.peringatanLevel }));
+cek("AJ-d4 flag pemblokir bertahan di save (S.peringatanLevel ikut tersimpan)",
+  (() => { C.simpan(); const sv = JSON.parse(store.get(C.CITY.SAVE_KEY) || "{}"); return sv.peringatanLevel === "L1:penduduk:12/20"; })(),
+  String(C.S.peringatanLevel));
+const mslhAJd = Adv.daftarMasalah().find(m => m.kode === "level-tertahan");
+cek("AJ-d5 Advisor: entri 'level-tertahan' dari data nyata (XP 160/150, kurang Penduduk 12/20)",
+  !!mslhAJd && mslhAJd.penyebab.indexOf("Penduduk 12/20") !== -1 && mslhAJd.penyebab.indexOf("160/150") !== -1,
+  JSON.stringify(mslhAJd && { judul: mslhAJd.judul, penyebab: mslhAJd.penyebab }));
+cek("AJ-d6 Advisor: rencana aksi 'level-tertahan' = Bangun Rumah Sederhana + 'Lihat Syarat Level' ke panel Pemerintahan",
+  !!mslhAJd && mslhAJd.langkah.length === 2 && mslhAJd.langkah[0].tombol === "Bangun Rumah Sederhana" &&
+  mslhAJd.langkah[1].tombol === "Lihat Syarat Level" && mslhAJd.langkah[1].target && mslhAJd.langkah[1].target.panelKiri === "peradaban",
+  JSON.stringify(mslhAJd && mslhAJd.langkah.map(l => l.tombol)));
+cek("AJ-d7 Advisor: ambilTindakan('Lihat Syarat Level') membuka panel Pemerintahan (panelKiri = peradaban)",
+  !!mslhAJd && (() => { const sol = mslhAJd.solusi.find(r => r.labelTombol === "Lihat Syarat Level"); return !!sol && Adv.ambilTindakan(sol) === true && ctxEval("panelKiri") === "peradaban"; })(),
+  String(ctxEval("panelKiri")));
+cek("AJ-d8 Advisor: entri 'level-tertahan' HILANG bila XP di bawah ambang (bukan dummy permanen)",
+  (() => { C.S.xp = 100; const ada = Adv.daftarMasalah().some(m => m.kode === "level-tertahan"); C.S.xp = 160; return !ada; })(),
+  "masih ada saat xp=100");
+// (b) XP 150 + pop 20 + bangunan >= 5 -> naik Lv.2 + hadiah + invalidasiCoverage.
+C.mulaiGame(true);
+C.hitungUtilitas(false);
+for (let iAJ = 0; iAJ < 5; iAJ++) tambahBangunan("rumah-sederhana", 10 + iAJ * 3, 10, { penghuni: 4 });
+C.S.penduduk.total = 20;
+C.S.xp = 150;
+const uangAJb = C.S.uang;
+ctxEval("window.__invAsli321 = invalidasiCoverage; window.__invHitung321 = 0; invalidasiCoverage = function(){ window.__invHitung321++; return window.__invAsli321(); };");
+C.cekLevel();
+cek("AJ-b naik Lv.2 bila SEMUA syarat terpenuhi (XP 150 + pop 20 + bangunan >= 5) + hadiah Rp100.000 + invalidasiCoverage 1x + flag peringatan direset",
+  C.S.level === 2 && C.S.uang === uangAJb + 100000 && ctxEval("window.__invHitung321") === 1 && C.S.peringatanLevel === null,
+  JSON.stringify({ level: C.S.level, uang: C.S.uang, inv: ctxEval("window.__invHitung321"), flag: C.S.peringatanLevel }));
+ctxEval("invalidasiCoverage = window.__invAsli321;");
+// (c2) HUD sembunyi bila XP belum penuh + helper kosong di level maks.
+C.mulaiGame(true);
+C.hitungUtilitas(false);
+C.S.xp = 0;
+C.renderHUD();
+cek("AJ-c2 HUD: blokirLevelTeks sembunyi bila XP belum penuh",
+  ctxEval('$("blokirLevelTeks").style.display') === "none" && ctxEval('$("blokirLevelTeks").textContent') === "",
+  JSON.stringify(ctxEval('$("blokirLevelTeks").textContent')));
+cek("AJ-c3 helper: level 6 (puncak) -> daftar syarat kosong",
+  (() => { C.S.level = 6; const d = C.syaratLevel(); C.S.level = 1; return d.length === 0; })(),
+  JSON.stringify(C.syaratLevel()));
+// Panel Pemerintahan memakai helper yang sama (baris syarat nyata).
+C.mulaiGame(true);
+C.hitungUtilitas(false);
+for (let iAJ = 0; iAJ < 8; iAJ++) tambahBangunan("rumah-sederhana", 10 + iAJ * 3, 10, { penghuni: 1 });
+C.S.penduduk.total = 10;
+C.S.xp = 750;
+ctxEval('panelKiri = "peradaban";');
+C.renderPanelKiri();
+cek("AJ-e panel Pemerintahan: baris syarat dari helper (Penduduk 10 / 20, Bangunan N / 5, XP 750 / 150)",
+  String(ctxEval('$("panelKiriIsi").innerHTML')).indexOf("Penduduk") !== -1 &&
+  String(ctxEval('$("panelKiriIsi").innerHTML')).indexOf("10 / 20") !== -1 &&
+  String(ctxEval('$("panelKiriIsi").innerHTML')).indexOf(C.bangunanSelesai().length + " / 5") !== -1 &&
+  String(ctxEval('$("panelKiriIsi").innerHTML')).indexOf("750 / 150") !== -1,
+  String(ctxEval('$("panelKiriIsi").innerHTML')).slice(0, 400));
+
 
 // Pulihkan keadaan akhir bersih (profil + simpanan + menu sinematik).
 C.mulaiGame(true);

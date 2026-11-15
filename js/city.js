@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v32"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v32.1"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -632,6 +632,7 @@ function stateBaru(petaBaru) {
     bank: { pinjamanAktif: [], riwayat: [], nomor: 0 },
     apbd: { hariDefisit: 0, alokasi: {} }, // v19 Worker 5: hitung hari defisit berturut-turut (peringatan bila >= 3); v29 Fase B: alokasi % per kategori dari kebutuhan (default 100%)
     migrasiEkonomiV29: false, // v29: flag satu-kali migrasi perilaku ekonomi (pembulatan kas saat load)
+    peringatanLevel: null, // v32.1: kunci keadaan pemblokir level yang sudah diperingatkan ("L1:penduduk:10/20") — anti-spam toast XP-penuh; save lama default-if-missing (undefined = belum pernah)
     akumulasiJual: 0, akumulasiEkspor: 0,
     misiSelesai: {}, statistik: { dibangun: {}, dibangunKat: {}, jalan: 0, jembatan: 0, produksi: {}, produksiMaterial: {}, konsumsiMaterial: {}, ekspor: 0, pendudukMax: 4, pendapatanHari: 0, pengeluaranHari: 0 }, // v30: +produksiMaterial & konsumsiMaterial (kumulatif, dipakai panel Gudang Material)
     bersih: [], // tile hutan yang sudah ditebang (agar peta sama setelah reload)
@@ -2917,6 +2918,7 @@ function selesaikanKonstruksi(b, d) {
   // tanpa field itu (mis. sim/push langsung). infoHunian() memakai
   // || 0, tapi field eksplisit menjaga invarian total = Σ penghuni.
   if (d.rumah) b.penghuni = b.penghuni || 0;
+  const xpSblm = S.xp; // v32.1: untuk throttle peringatan level-tertahan
   S.xp += 10;
   toast(d.nama + " selesai dibangun!", "ok");
   log(d.nama + " selesai dibangun.");
@@ -2925,6 +2927,13 @@ function selesaikanKonstruksi(b, d) {
   hitungTenagaKerja(); // v32: rekrutmen otomatis saat konstruksi selesai — lowongan baru langsung diisi dari pekerja tersedia
   if (typeof invalidasiCoverage === "function") invalidasiCoverage(); // v32: bangunan selesai mengubah cakupan layanan
   renderHUD();
+  // v32.1: naik level tidak menunggu pergantian hari — +10 XP ini bisa
+  // jadi XP yang menggenapi ambang. cekLevel() TIDAK memanggil cekMisi,
+  // jadi tidak ada rekursi. Peringatan hanya bila level TIDAK baru naik
+  // (jangan menimpa modal naik level dengan toast pemblokir level berikut).
+  const lvlSblm = S.level;
+  cekLevel();
+  if (S.level === lvlSblm) peringatkanLevelTertahan(xpSblm);
 }
 // Majukan konstruksi sebanyak `menit` menit game (hook majukanWaktu,
 // tiap menit). Satu-satunya jalur yang memajukan b.progres — progres
@@ -3444,6 +3453,10 @@ function prosesPergantianHari() {
   // 6. Misi & level
   cekMisi();
   cekLevel();
+  // v32.1: peringatan level-tertahan tiap pergantian hari (xpSebelum tidak
+  // diketahui -> null): menjangkau save lama yang sudah XP-penuh saat
+  // dimuat, dan tetap sekali per keadaan pemblokir (flag di S).
+  peringatkanLevelTertahan(null);
   sinkronWarga();
   log("Hari " + S.hari + " — pemasukan " + rp(masukTotal) + ", pengeluaran " + rp(keluarTotal) + ", penduduk " + popBaru + ".");
   if (S.uang < 0) { toast("Kas minus! Jual komoditas atau kurangi biaya operasional — rencana pemulihan ada di panel Ekonomi (nonaktifkan bangunan / turunkan alokasi / pinjaman).", "gagal"); }
@@ -3482,6 +3495,7 @@ function jumlahBangunanSelesaiKatUntukMisi(kat) {
   return n;
 }
 function cekMisi() {
+  const xpSblm = S.xp; // v32.1: untuk throttle peringatan level-tertahan
   for (const m of MISI) {
     if (S.misiSelesai[m.id]) continue;
     let prog = 0;
@@ -3501,22 +3515,79 @@ function cekMisi() {
       if (typeof Suara !== "undefined") { Suara.misiSelesai(); Suara.koin(); } else bunyiKoin();
     }
   }
+  // v32.1: hadiah XP misi bisa menggenapi ambang level — naik level tidak
+  // menunggu pergantian hari. cekLevel() TIDAK memanggil cekMisi, jadi
+  // tidak ada rekursi (cekMisi dipanggil dari 6 tempat; semuanya aman).
+  const lvlSblm = S.level;
+  cekLevel();
+  if (S.level === lvlSblm) peringatkanLevelTertahan(xpSblm);
+}
+// v32.1: SATU sumber kebenaran syarat naik level — dipakai cekLevel(),
+// HUD (blokirLevelTeks), toast proaktif (peringatkanLevelTertahan),
+// Advisor (daftarMasalah kode "level-tertahan"), panel Pemerintahan, dan
+// tes. Urutan = urutan panel Pemerintahan: penduduk, bangunan, layanan,
+// industri, ekspor, XP. Angka syarat TIDAK diubah di sini (LEVEL_PERADABAN
+// di city-data.js); entri hanya disertakan bila syaratnya ada di level
+// berikutnya (target > 0) — XP selalu ada (xpUntukLevel(level) > 0).
+// Level 6 (puncak) tidak punya level berikutnya -> daftar kosong.
+function syaratLevel() {
+  if (!S || S.level >= 6) return [];
+  const next = LEVEL_PERADABAN[S.level]; // indeks = level saat ini -> level berikutnya
+  const sy = next.syarat || {};
+  const jmlBangunan = bangunanSelesai().length;
+  const jmlIndustri = bangunanSelesai().filter(b => BANGUNAN_MAP[b.id].kat === "industri").length;
+  const jmlLayanan = hitungLayanan().jumlah;
+  const semua = [
+    { kode: "penduduk", label: "Penduduk", nilai: S.penduduk.total, target: sy.penduduk || 0 },
+    { kode: "bangunan", label: "Bangunan selesai", nilai: jmlBangunan, target: sy.bangunan || 0 },
+    { kode: "layanan", label: "Fasilitas layanan", nilai: jmlLayanan, target: sy.layanan || 0 },
+    { kode: "industri", label: "Bangunan industri", nilai: jmlIndustri, target: sy.industri || 0 },
+    { kode: "ekspor", label: "Total ekspor", nilai: S.statistik.ekspor, target: sy.ekspor || 0 },
+    { kode: "xp", label: "XP", nilai: S.xp, target: xpUntukLevel(S.level) },
+  ];
+  const keluar = [];
+  for (const e of semua) {
+    if (e.target <= 0) continue;
+    e.ok = e.nilai >= e.target;
+    keluar.push(e);
+  }
+  return keluar;
+}
+// Syarat naik level yang BELUM terpenuhi (urutan panel Pemerintahan).
+function syaratLevelBelumTerpenuhi() {
+  return syaratLevel().filter(e => !e.ok);
+}
+// v32.1: peringatan proaktif "XP sudah cukup, tapi naik level tertahan".
+// Dipanggil SETELAH cekLevel() di tiap perolehan XP (selesaikanKonstruksi,
+// cekMisi) dan tiap pergantian hari — supaya save lama yang sudah XP-penuh
+// pun diperingatkan sekali. Throttle: SATU toast per keadaan pemblokir
+// (kunci = level + pemblokir pertama + nilainya, disimpan di
+// S.peringatanLevel agar bertahan di save/load) — tidak spam walau
+// dipanggil berulang atau hari berikutnya tanpa perubahan syarat.
+// xpSebelum = XP sebelum penambahan terakhir (null = tidak diketahui,
+// mis. pergantian hari: beri tahu bila belum pernah untuk keadaan ini).
+// Pemanggil WAJIB melewatkan pemanggilan ini bila cekLevel() baru saja
+// menaikkan level (level baru punya pemblokir baru — peringatan itu
+// datang di perolehan XP / hari berikutnya, bukan menimpa modal naik level).
+function peringatkanLevelTertahan(xpSebelum) {
+  if (!S || S.level >= 6) return;
+  const butuhXp = xpUntukLevel(S.level);
+  if (S.xp < butuhXp) return; // XP belum cukup — belum ada yang perlu diperingatkan
+  const kurang = syaratLevelBelumTerpenuhi();
+  if (!kurang.length) return; // semua syarat terpenuhi — cekLevel() yang menangani
+  const pertama = kurang[0];
+  const kunci = "L" + S.level + ":" + pertama.kode + ":" + pertama.nilai + "/" + pertama.target;
+  if (S.peringatanLevel === kunci) return; // sudah diperingatkan untuk keadaan ini
+  S.peringatanLevel = kunci;
+  const daftarKurang = kurang.map(e => e.label + " " + e.nilai + "/" + e.target).join(", ");
+  toast("XP sudah cukup untuk naik ke Lv. " + (S.level + 1) + " — yang kurang: " + daftarKurang + ". Lihat panel Pemerintahan untuk syarat lengkap.", "info");
 }
 function cekLevel() {
   if (S.level >= 6) return;
   const next = LEVEL_PERADABAN[S.level]; // indeks = level saat ini -> level berikutnya
-  const sy = next.syarat;
-  const jmlBangunan = bangunanSelesai().length;
-  const jmlIndustri = bangunanSelesai().filter(b => BANGUNAN_MAP[b.id].kat === "industri").length;
-  const jmlLayanan = hitungLayanan().jumlah;
-  const okPenduduk = (sy.penduduk || 0) <= S.penduduk.total;
-  const okBangunan = (sy.bangunan || 0) <= jmlBangunan;
-  const okLayanan = (sy.layanan || 0) <= jmlLayanan;
-  const okIndustri = (sy.industri || 0) <= jmlIndustri;
-  const okEkspor = (sy.ekspor || 0) <= S.statistik.ekspor;
-  const okXp = S.xp >= xpUntukLevel(S.level);
-  if (okPenduduk && okBangunan && okLayanan && okIndustri && okEkspor && okXp) {
+  if (syaratLevel().every(e => e.ok)) {
     S.level++;
+    S.peringatanLevel = null; // v32.1: peringatan level lama kedaluwarsa — level baru boleh diperingatkan lagi
     if (typeof invalidasiCoverage === "function") invalidasiCoverage(); // v32: naik level menaikkan radius layanan
     S.uang += next.hadiah.uang || 0;
     tampilLevelUp(next);
@@ -5250,6 +5321,19 @@ function renderHUD() {
   const persenXp = S.level >= 6 ? 100 : Math.min(100, (S.xp / butuhXp) * 100);
   $("xpBar").style.width = persenXp + "%";
   $("xpTeks").textContent = S.level >= 6 ? "Maks" : S.xp + "/" + butuhXp + " XP";
+  // v32.1: pemblokir naik level di HUD — HANYA saat XP sudah penuh tapi
+  // syarat lain belum terpenuhi (saat itulah bar XP mentok 100% tanpa
+  // penjelasan). Teks singkat (pemblokir pertama dari helper) supaya
+  // HUD tipis (≤64px) tetap muat di tablet landscape; ketuk -> panel
+  // Pemerintahan (semua syarat). Sembunyi bila level maks / XP belum
+  // penuh / semua syarat terpenuhi.
+  const elBlokir = $("blokirLevelTeks");
+  if (elBlokir) {
+    const blokir = (S.level < 6 && S.xp >= butuhXp) ? syaratLevelBelumTerpenuhi()[0] : null;
+    elBlokir.textContent = blokir ? ("↑ " + blokir.label + " " + blokir.nilai + "/" + blokir.target) : "";
+    elBlokir.style.display = blokir ? "" : "none";
+    if (blokir) elBlokir.title = "XP sudah cukup untuk naik ke Lv. " + (S.level + 1) + " — yang kurang: " + blokir.label + " " + blokir.nilai + "/" + blokir.target + ". Ketuk untuk melihat semua syarat di panel Pemerintahan.";
+  }
   $("uangTeks").textContent = rp(S.uang);
   $("uangTeks").className = S.uang < 0 ? "angka minus" : "angka";
   $("kayuTeks").textContent = S.kayu;
@@ -6078,18 +6162,12 @@ function renderPanelKiri() {
     html += "<div class='angkaBesar'>Lv. " + S.level + " <span>" + lvl.nama + "</span></div><div class='misiDes'>" + lvl.des + "</div>";
     if (S.level < 6) {
       const next = LEVEL_PERADABAN[S.level];
-      const sy = next.syarat;
-      const jmlBangunan = bangunanSelesai().length;
-      const jmlIndustri = bangunanSelesai().filter(b => BANGUNAN_MAP[b.id].kat === "industri").length;
-      const jmlLayanan = hitungLayanan().jumlah;
       const cek = (label, ok, nilai, target) => "<div class='barisStat kecil'><span>" + (ok ? "✓ " : "· ") + label + "</span><span>" + nilai + " / " + target + "</span></div>";
       html += "<div class='judulPanel' style='margin-top:10px'>Menuju Lv. " + next.level + " — " + next.nama + "</div>";
-      if (sy.penduduk) html += cek("Penduduk", S.penduduk.total >= sy.penduduk, S.penduduk.total, sy.penduduk);
-      if (sy.bangunan) html += cek("Bangunan selesai", jmlBangunan >= sy.bangunan, jmlBangunan, sy.bangunan);
-      if (sy.layanan) html += cek("Fasilitas layanan", jmlLayanan >= sy.layanan, jmlLayanan, sy.layanan);
-      if (sy.industri) html += cek("Bangunan industri", jmlIndustri >= sy.industri, jmlIndustri, sy.industri);
-      if (sy.ekspor) html += cek("Total ekspor", S.statistik.ekspor >= sy.ekspor, S.statistik.ekspor, sy.ekspor);
-      html += cek("XP", S.xp >= xpUntukLevel(S.level), S.xp, xpUntukLevel(S.level));
+      // v32.1: baris syarat dari helper syaratLevel() (satu sumber
+      // kebenaran yang sama dengan cekLevel/HUD/Advisor) — urutan &
+      // format tampilan tidak berubah.
+      for (const e of syaratLevel()) html += cek(e.label, e.ok, e.nilai, e.target);
       html += "<div class='misiDes'>Hadiah naik level: " + rp(next.hadiah.uang) + "</div>";
     } else {
       html += "<div class='misiDes'>Puncak peradaban tercapai — Pusat Perdagangan Nusantara!</div>";

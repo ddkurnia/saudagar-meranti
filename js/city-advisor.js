@@ -129,6 +129,7 @@
     "akses-padat": "MEDIUM", "transportasi-sekolah": "MEDIUM",
     "rekreasi-jauh": "MEDIUM", "pasokan-kosong": "MEDIUM",
     "bahan-baku-menipis": "MEDIUM", "dalam-konstruksi": "LOW",
+    "level-tertahan": "MEDIUM", // v32.1: XP penuh tapi syarat level lain belum terpenuhi
   };
   function _prioritasUntuk(kode, dampak) {
     if (PRIORITAS_KODE[kode]) return PRIORITAS_KODE[kode];
@@ -175,6 +176,7 @@
       case "transportasi-sekolah": return "Sekolah sulit dijangkau transportasi umum";
       case "bahagia-rendah": return "Kepuasan warga rendah";
       case "penduduk-tidak-bertambah": return "Penduduk tidak bertambah — kebahagiaan di bawah 50%";
+      case "level-tertahan": return "Naik level tertahan — XP sudah cukup";
       case "menunggu-rumah": return jumlah + " jiwa belum mendapat rumah";
       case "cakupan-pendidikan-rendah": return "Cakupan pendidikan rendah";
       case "cakupan-kesehatan-rendah": return "Cakupan kesehatan rendah";
@@ -434,6 +436,23 @@
           }
           if (infoHun && (infoHun.menungguRumah || 0) > 0) {
             _tambah({ kode: "menunggu-rumah", dampak: 0.7, jumlah: infoHun.menungguRumah, lokasi: null, penyebab: infoHun.menungguRumah + " jiwa belum mendapat rumah (rumah penuh / rumahnya dihapus atau dinonaktifkan) — mereka tetap dihitung sebagai penduduk, tapi butuh rumah baru yang layak (akses jalan) agar bisa tinggal.", contohNama: "Penduduk", bangunan: [] });
+          }
+        }
+      } catch (e) {}
+      // v32.1: naik level TERTAHAN — XP sudah mencapai ambang tapi syarat
+      // lain belum terpenuhi (satu-satunya yang terlihat pemain adalah
+      // bar XP yang mentok 100%). Semua angka dari helper
+      // syaratLevelBelumTerpenuhi() (satu sumber kebenaran dengan
+      // cekLevel/HUD/panel Pemerintahan) — bukan teks generik.
+      try {
+        if (typeof syaratLevelBelumTerpenuhi === "function" && typeof xpUntukLevel === "function" && st.level < 6) {
+          var kurangLv = syaratLevelBelumTerpenuhi();
+          var butuhXpLv = xpUntukLevel(st.level);
+          if (st.xp >= butuhXpLv && kurangLv.length > 0) {
+            var teksKurangLv = kurangLv.map(function (e) { return e.label + " " + e.nilai + "/" + e.target; }).join(", ");
+            _tambah({ kode: "level-tertahan", dampak: 0.5, jumlah: kurangLv.length, lokasi: null,
+              penyebab: "XP sudah cukup (" + st.xp + "/" + butuhXpLv + ") untuk naik ke Lv. " + (st.level + 1) + " — yang kurang: " + teksKurangLv + ".",
+              contohNama: "Peradaban", bangunan: [] });
           }
         }
       } catch (e) {}
@@ -1125,6 +1144,27 @@
           L("Lihat permukiman yang tumbuh lebih cepat dari layanan"),
         ];
         break;
+      // v32.1: naik level tertahan — langkah 1 = bangun yang menutup
+      // pemblokir PERTAMA (dari data nyata syaratLevelBelumTerpenuhi(),
+      // bukan tebakan); langkah 2 = "Lihat Syarat Level" yang membuka
+      // panel Pemerintahan (target panelKiri — bukan katalog bangun).
+      case "level-tertahan": {
+        var kurangLvR = [];
+        try { if (typeof syaratLevelBelumTerpenuhi === "function") kurangLvR = syaratLevelBelumTerpenuhi(); } catch (e) {}
+        var pertamaLv = kurangLvR.length ? kurangLvR[0] : null;
+        var l1Lv = null;
+        if (pertamaLv) {
+          if (pertamaLv.kode === "penduduk") l1Lv = B("permukiman", "bangun", "rumah-sederhana", "Bangun Rumah Sederhana — {RP:rumah-sederhana} · menambah kapasitas penduduk (penduduk baru datang bila kebahagiaan ≥ 50%)", "Bangun Rumah Sederhana ({RP:rumah-sederhana})");
+          else if (pertamaLv.kode === "bangunan") l1Lv = B("permukiman", "bangun", "rumah-sederhana", "Bangun bangunan apa saja — Rumah Sederhana termurah ({RP:rumah-sederhana}) · menambah hitungan bangunan selesai", "Bangun Rumah Sederhana ({RP:rumah-sederhana})");
+          else if (pertamaLv.kode === "layanan") l1Lv = B("kesehatan", "bangun", "posyandu", "Bangun Posyandu — {RP:posyandu} · fasilitas layanan kesehatan (radius 4, kapasitas 30) — harus menjangkau rumah", "Bangun Posyandu ({RP:posyandu})");
+          else if (pertamaLv.kode === "industri") l1Lv = B("industri", "bangun", "kilang-sagu", "Bangun Kilang Sagu — {RP:kilang-sagu} · bangunan industri (butuh 4 tual/hari dari Kebun Sagu)", "Bangun Kilang Sagu ({RP:kilang-sagu})");
+          else if (pertamaLv.kode === "ekspor") l1Lv = B("transportasi", "bangun", "pelabuhan", "Bangun Pelabuhan — {RP:pelabuhan} · membuka ekspor (level 3, di pantai)", "Bangun Pelabuhan ({RP:pelabuhan})");
+          else if (pertamaLv.kode === "xp") l1Lv = B("permukiman", "bangun", "rumah-sederhana", "Selesaikan konstruksi (+10 XP tiap bangunan) atau misi untuk menambah XP — Rumah Sederhana termurah ({RP:rumah-sederhana})", "Bangun Rumah Sederhana ({RP:rumah-sederhana})");
+        }
+        var l2Lv = { nomor: 0, teks: "Lihat semua syarat naik level di panel Pemerintahan — termasuk hadiah naik level.", tombol: "Lihat Syarat Level", labelTombol: "Lihat Syarat Level", ringkas: "Buka panel Pemerintahan", target: { panelKiri: "peradaban" }, lokasi: null, terkunci: false, alasanKunci: null };
+        out = l1Lv ? [l1Lv, l2Lv] : [l2Lv];
+        break;
+      }
       default:
         out = [];
         break;
@@ -1204,7 +1244,7 @@
       if (s.target) {
         out.push({
           teks: s.teks, tombol: "Ambil Tindakan", lokasi: lokasi,
-          target: { tab: s.target.tab, jenisMode: s.target.jenisMode, idMode: s.target.idMode, bangunanId: s.target.jenisMode === "bangun" ? s.target.idMode : null, kategori: kode },
+          target: { tab: s.target.tab, jenisMode: s.target.jenisMode, idMode: s.target.idMode, bangunanId: s.target.jenisMode === "bangun" ? s.target.idMode : null, kategori: kode, panelKiri: s.target.panelKiri || null }, // v32.1: panelKiri diteruskan (langkah "Lihat Syarat Level")
           masalahId: masalah.id, penyebab: masalah.penyebab || "",
           nomor: s.nomor, labelTombol: s.labelTombol || s.tombol, terkunci: s.terkunci, alasanKunci: s.alasanKunci,
         });
@@ -1267,6 +1307,14 @@
         if (typeof toast === "function") toast(rekomendasi.penyebab || rekomendasi.teks || "Tidak ada detail penyebab.", "info");
       } catch (e) {}
       return true;
+    }
+    // v32.1: langkah panel kiri ("Lihat Syarat Level") — buka tab panel
+    // kiri Pemerintahan (bukan katalog bangun): target.panelKiri.
+    if (rekomendasi.target && rekomendasi.target.panelKiri) {
+      try {
+        if (typeof bukaTabKiri === "function") { bukaTabKiri(rekomendasi.target.panelKiri); return true; }
+      } catch (e) { return false; }
+      return false;
     }
     // v24.1: langkah terpandu — tombol "Bangun <Nama>" (langkah bernomor)
     // atau legacy "Ambil Tindakan". HANYA membuka katalog/menu terkait

@@ -166,6 +166,12 @@ h1, h2, h3 { line-height: 1.2; font-weight: 800; }
 .xpBarLuar { width: 88px; height: 6px; background: rgba(255, 255, 255, .2); border-radius: 5px; overflow: hidden; }
 .xpBarDalam { height: 100%; width: 0%; background: linear-gradient(90deg, var(--emas), #f59e0b); transition: width .4s ease; }
 .xpTeks { font-size: 10.5px; color: var(--teks-redup); white-space: nowrap; line-height: 1.1; }
+/* v32.1: pemblokir naik level di HUD — hanya tampil saat XP sudah penuh
+   tapi syarat lain belum terpenuhi. Sengaja TIDAK disembunyikan di
+   media query ≤1366px/≤1100px (berbeda dengan .xpTeks): justru di tablet
+   pemain butuh tahu kenapa level tidak naik. Teks singkat (pemblokir
+   pertama saja, mis. "↑ Penduduk 10/20") supaya HUD tipis tetap muat. */
+.blokirLevelTeks { font-size: 10.5px; color: #fbbf24; white-space: nowrap; line-height: 1.1; cursor: pointer; font-weight: 700; }
 /* Zona tengah: sumber daya — uang menonjol, listrik/air sekunder kecil.
    v20 Worker 3: zona ini menyusut (min-width 0) & bisa digeser
    horizontal — HUD tetap satu baris di tablet/laptop.
