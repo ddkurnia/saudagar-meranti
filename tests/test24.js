@@ -103,19 +103,19 @@ function majuSatuHari() { for (let i = 0; i < 6; i++) C.majukanWaktu(240); }
 const idxHtml = fs.readFileSync(ROOT + "/index.html", "utf8");
 const swTxt = fs.readFileSync(ROOT + "/sw.js", "utf8");
 const srcCity = fs.readFileSync(ROOT + "/js/city.js", "utf8");
-cek("A1 VERSI_GAME v32.3", C.VERSI_GAME === "v32.3", C.VERSI_GAME);
+cek("A1 VERSI_GAME v32.5", C.VERSI_GAME === "v32.5", C.VERSI_GAME);
 cek("A2 index.html memuat 6 modul v24 dalam urutan benar (advisor ?v=11, ui-v24 ?v=6, diagnostik ?v=5 + bubble ?v=4, warga ?v=2, lainnya ?v=1)",
   idxHtml.indexOf("js/city-warga.js?v=2") !== -1 && idxHtml.indexOf("js/city-bubble.js?v=4") !== -1 &&
   idxHtml.indexOf("js/city-diagnostik.js?v=5") !== -1 && idxHtml.indexOf("js/city-advisor.js?v=11") !== -1 &&
   idxHtml.indexOf("js/city-tutorial.js?v=1") !== -1 && idxHtml.indexOf("js/city-ui-v24.js?v=6") !== -1 &&
-  idxHtml.indexOf("js/city-advisor.js?v=11") < idxHtml.indexOf("js/city.js?v=52") &&
-  idxHtml.indexOf("js/city.js?v=52") < idxHtml.indexOf("js/city-tutorial.js?v=1"));
-cek("A3 index.html: #btnAdvisor + #drawerAdvisorV24 + #toastAksiV24 + css?v=20 + city.js?v=52",
+  idxHtml.indexOf("js/city-advisor.js?v=11") < idxHtml.indexOf("js/city.js?v=54") &&
+  idxHtml.indexOf("js/city.js?v=54") < idxHtml.indexOf("js/city-tutorial.js?v=1"));
+cek("A3 index.html: #btnAdvisor + #drawerAdvisorV24 + #toastAksiV24 + css?v=20 + city.js?v=54",
   idxHtml.indexOf('id="btnAdvisor"') !== -1 && idxHtml.indexOf('id="drawerAdvisorV24"') !== -1 &&
   idxHtml.indexOf('id="toastAksiV24"') !== -1 && idxHtml.includes("css/city.css?v=20") &&
-  idxHtml.includes("js/city.js?v=52"));
-cek("A4 sw.js cache meranti-rising-v32.3 + precache 6 modul baru",
-  swTxt.indexOf("meranti-rising-v32.3") !== -1 && swTxt.indexOf("js/city-warga.js?v=2") !== -1 &&
+  idxHtml.includes("js/city.js?v=54"));
+cek("A4 sw.js cache rise-of-meranti-v32.5 + precache 6 modul baru",
+  swTxt.indexOf("rise-of-meranti-v32.5") !== -1 && swTxt.indexOf("js/city-warga.js?v=2") !== -1 &&
   swTxt.indexOf("js/city-bubble.js?v=4") !== -1 && swTxt.indexOf("js/city-diagnostik.js?v=5") !== -1 &&
   swTxt.indexOf("js/city-advisor.js?v=11") !== -1 && swTxt.indexOf("js/city-tutorial.js?v=1") !== -1 &&
   swTxt.indexOf("js/city-ui-v24.js?v=6") !== -1);
@@ -185,7 +185,7 @@ cek("A5f tidak ada sisa pin v32 tahap-1 aktif (city.js?v=48 / city-data ?v=12 / 
   !swTxt.includes("js/city-data.js?v=12") && !swTxt.includes("js/city-advisor.js?v=8") &&
   idxHtml.includes("js/city-layanan.js?v=2") &&
   idxHtml.indexOf("js/city-advisor.js?v=11") < idxHtml.indexOf("js/city-layanan.js?v=2") &&
-  idxHtml.indexOf("js/city-layanan.js?v=2") < idxHtml.indexOf("js/city.js?v=52") &&
+  idxHtml.indexOf("js/city-layanan.js?v=2") < idxHtml.indexOf("js/city.js?v=54") &&
   swTxt.includes("js/city-layanan.js?v=2"));
 cek("A5g tidak ada sisa pin v32 aktif (city.js?v=49 / advisor ?v=9 / css?v=19 / cache v32 / pill v32)",
   !idxHtml.includes("js/city.js?v=49") && !idxHtml.includes("js/city-advisor.js?v=9") &&
@@ -206,6 +206,10 @@ cek("A5i tidak ada sisa pin v32.2 aktif (city.js?v=51 / diagnostik ?v=4 / adviso
   !swTxt.includes("js/city.js?v=51") && !swTxt.includes("js/city-diagnostik.js?v=4") &&
   !swTxt.includes("js/city-advisor.js?v=10") && !swTxt.includes("js/city-layanan.js?v=1") &&
   !swTxt.includes("js/city-ui-v24.js?v=5") && !swTxt.includes('"meranti-rising-v32.2"'));
+cek("A5j tidak ada sisa pin v32.4 aktif (city.js?v=53 / cache v32.4 / pill v32.4)",
+  !idxHtml.includes("js/city.js?v=53") && !idxHtml.includes('menu-pill-versi">v32.4<') &&
+  !idxHtml.includes("meranti-rising-v32.4") &&
+  !swTxt.includes("js/city.js?v=53") && !swTxt.includes('"meranti-rising-v32.4"'));
 cek("A6 modul global termuat (Warga/Bubble/Diagnostik/Advisor/Tutorial/UIV24/Notifikasi)",
   !!W && !!Bbl && !!Dg && !!Adv && !!Tut && !!UI && !!Notif);
 cek("A7 adapter kontrak: Diagnostik.diagnosis = diagnosa + statusBangunan; Advisor.pesan + ringkasan",
@@ -869,13 +873,13 @@ Bbl.bersihkan();
 Dg.invalidateSemua();
 
 // ---- X4d: banner "Versi baru tersedia" hanya bila SW lebih baru ----
-cek("X4d bandingVersi: v24.2>v24.1, v24.1<v24.2, sama=0, v24.10>v24.2, v27.1>v27, v27.2>v27.1, v27.3>v27.2, v28>v27.3, v29>v28, v29.1>v29, v29.2>v29.1, v30>v29.2, v31>v30, v32>v31, v32.1>v32, v32.2>v32.1, v32.3>v32.2", ctxEval("bandingVersi('v24.2','v24.1')") === 1 && ctxEval("bandingVersi('v24.1','v24.2')") === -1 && ctxEval("bandingVersi('v24.2','v24.2')") === 0 && ctxEval("bandingVersi('v24.10','v24.2')") === 1 && ctxEval("bandingVersi('v27.1','v27')") === 1 && ctxEval("bandingVersi('v27.2','v27.1')") === 1 && ctxEval("bandingVersi('v27.3','v27.2')") === 1 && ctxEval("bandingVersi('v28','v27.3')") === 1 && ctxEval("bandingVersi('v29','v28')") === 1 && ctxEval("bandingVersi('v29.1','v29')") === 1 && ctxEval("bandingVersi('v29.2','v29.1')") === 1 && ctxEval("bandingVersi('v30','v29.2')") === 1 && ctxEval("bandingVersi('v31','v30')") === 1 && ctxEval("bandingVersi('v32','v31')") === 1 && ctxEval("bandingVersi('v32.1','v32')") === 1 && ctxEval("bandingVersi('v32.2','v32.1')") === 1 && ctxEval("bandingVersi('v32.3','v32.2')") === 1);
+cek("X4d bandingVersi: v24.2>v24.1, v24.1<v24.2, sama=0, v24.10>v24.2, v27.1>v27, v27.2>v27.1, v27.3>v27.2, v28>v27.3, v29>v28, v29.1>v29, v29.2>v29.1, v30>v29.2, v31>v30, v32>v31, v32.1>v32, v32.2>v32.1, v32.3>v32.2, v32.4>v32.3, v32.5>v32.4", ctxEval("bandingVersi('v24.2','v24.1')") === 1 && ctxEval("bandingVersi('v24.1','v24.2')") === -1 && ctxEval("bandingVersi('v24.2','v24.2')") === 0 && ctxEval("bandingVersi('v24.10','v24.2')") === 1 && ctxEval("bandingVersi('v27.1','v27')") === 1 && ctxEval("bandingVersi('v27.2','v27.1')") === 1 && ctxEval("bandingVersi('v27.3','v27.2')") === 1 && ctxEval("bandingVersi('v28','v27.3')") === 1 && ctxEval("bandingVersi('v29','v28')") === 1 && ctxEval("bandingVersi('v29.1','v29')") === 1 && ctxEval("bandingVersi('v29.2','v29.1')") === 1 && ctxEval("bandingVersi('v30','v29.2')") === 1 && ctxEval("bandingVersi('v31','v30')") === 1 && ctxEval("bandingVersi('v32','v31')") === 1 && ctxEval("bandingVersi('v32.1','v32')") === 1 && ctxEval("bandingVersi('v32.2','v32.1')") === 1 && ctxEval("bandingVersi('v32.3','v32.2')") === 1 && ctxEval("bandingVersi('v32.4','v32.3')") === 1 && ctxEval("bandingVersi('v32.5','v32.4')") === 1);
 ctxEval("pwaTerimaVersiSW('v24.1')");
-cek("X4d SW v24.1 (lebih lama dari halaman v32.3) -> banner TIDAK tampil", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
-ctxEval("pwaTerimaVersiSW('v32.4')");
-cek("X4d SW v32.4 (lebih baru) -> banner tampil", ctxEval("pwaUpdateTersedia") === true && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "");
-ctxEval("pwaTerimaVersiSW('v32.3')");
-cek("X4d SW v32.3 (sama dengan halaman) -> banner basi disembunyikan lagi", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
+cek("X4d SW v24.1 (lebih lama dari halaman v32.5) -> banner TIDAK tampil", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
+ctxEval("pwaTerimaVersiSW('v32.6')");
+cek("X4d SW v32.6 (lebih baru) -> banner tampil", ctxEval("pwaUpdateTersedia") === true && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "");
+ctxEval("pwaTerimaVersiSW('v32.5')");
+cek("X4d SW v32.5 (sama dengan halaman) -> banner basi disembunyikan lagi", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
 cek("X4d sw.js: postMessage versi + handler minta-versi", swTxt.indexOf("meranti-rising-minta-versi") !== -1 && swTxt.indexOf("meranti-rising-versi") !== -1 && swTxt.indexOf("VERSI_SW") !== -1);
 cek("X4d updatefound menanyakan versi SW dulu (bukan langsung menandai update)", srcCity.indexOf('baru.postMessage({ tipe: "meranti-rising-minta-versi" })') !== -1);
 
@@ -1211,11 +1215,11 @@ cek("Y-e2 spawn ke-41 mengembalikan null + sinkron tidak memaksa (sampah & warga
 bersihSemuaKendaraanV25();
 
 // ---- (g) refs v25 ----
-cek("Y-g1 VERSI_GAME v32.3 + index.html refs v32.3 (city.js v=52, kendaraan v=7, lalin v=4, css v=20 tetap)",
-  C.VERSI_GAME === "v32.3" && idxHtml.includes("js/city.js?v=52") && idxHtml.includes("js/city-kendaraan.js?v=7") &&
+cek("Y-g1 VERSI_GAME v32.5 + index.html refs v32.5 (city.js v=54, kendaraan v=7, lalin v=4, css v=20 tetap)",
+  C.VERSI_GAME === "v32.5" && idxHtml.includes("js/city.js?v=54") && idxHtml.includes("js/city-kendaraan.js?v=7") &&
   idxHtml.includes("js/city-lalin.js?v=4") && idxHtml.includes("css/city.css?v=20"));
-cek("Y-g2 sw.js cache meranti-rising-v32.3 + precache ?v= baru (city.js v=52, kendaraan v=7, lalin v=4)",
-  swTxt.indexOf("meranti-rising-v32.3") !== -1 && swTxt.indexOf("js/city.js?v=52") !== -1 &&
+cek("Y-g2 sw.js cache rise-of-meranti-v32.5 + precache ?v= baru (city.js v=54, kendaraan v=7, lalin v=4)",
+  swTxt.indexOf("rise-of-meranti-v32.5") !== -1 && swTxt.indexOf("js/city.js?v=54") !== -1 &&
   swTxt.indexOf("js/city-kendaraan.js?v=7") !== -1 && swTxt.indexOf("js/city-lalin.js?v=4") !== -1);
 
 // ---- pulihkan keadaan seksi Y ----
@@ -1229,8 +1233,8 @@ vm.runInContext("waktuGame = 12 * 60;", sandbox);
 
 // ---------------- Z: v26 Main Menu RISE OF MERANTI ----------------
 const menuCss = fs.readFileSync(ROOT + "/css/menu.css", "utf8");
-cek("Z1 VERSI_GAME v32.3 + index.html memuat css/menu.css?v=2 SETELAH city.css + city.js?v=52",
-  C.VERSI_GAME === "v32.3" && idxHtml.includes("css/menu.css?v=2") && idxHtml.includes("js/city.js?v=52") &&
+cek("Z1 VERSI_GAME v32.5 + index.html memuat css/menu.css?v=2 SETELAH city.css + city.js?v=54",
+  C.VERSI_GAME === "v32.5" && idxHtml.includes("css/menu.css?v=2") && idxHtml.includes("js/city.js?v=54") &&
   idxHtml.indexOf("css/city.css?v=20") < idxHtml.indexOf("css/menu.css?v=2"));
 cek("Z2 struktur DOM menu lengkap (header/logo/5 tombol/panel muat/promo/7 kategori/detail)",
   ["menuPillVersi", "btnMenuBantuan", "btnMenuProfil", "btnMenuPengaturan",
@@ -1288,8 +1292,8 @@ const logoInfo = infoPng(fs.readFileSync(ROOT + "/assets/menu/logo-rise-of-meran
 cek("Z4b logo RISE OF MERANTI RGBA 2172x724 (transparan, bukan JPEG latar putih)",
   !!logoInfo && logoInfo.lebar === 2172 && logoInfo.tinggi === 724 && logoInfo.tipeWarna === 6,
   JSON.stringify(logoInfo));
-cek("Z5 sw.js cache v32.3 + precache menu.css + 26 aset menu; arsip & pil palsu TIDAK di-precache",
-  swTxt.indexOf("meranti-rising-v32.3") !== -1 && swTxt.indexOf("css/menu.css?v=2") !== -1 &&
+cek("Z5 sw.js cache v32.5 + precache menu.css + 26 aset menu; arsip & pil palsu TIDAK di-precache",
+  swTxt.indexOf("rise-of-meranti-v32.5") !== -1 && swTxt.indexOf("css/menu.css?v=2") !== -1 &&
   ASET_MENU_DIPAKAI.every(f => swTxt.indexOf("./" + f) !== -1) &&
   ["menu-background.png", "menu-buttons.png", "category-icons.png", "category-cards.png",
    "header-icons.png", "google-save", "sinkron-cloud"].every(s => swTxt.indexOf(s) === -1));
@@ -1305,7 +1309,7 @@ cek("Z7 menu: profil+save -> LANJUTKAN/MUAT/ikon tampil, MULAI sembunyi, pill ve
   C.document.getElementById("btnMenuProfil").style.display === "inline-block" &&
   C.document.getElementById("btnMenuPengaturan").style.display === "inline-block" &&
   C.document.getElementById("btnMulai").style.display === "none" &&
-  C.document.getElementById("menuPillVersi").textContent === "v32.3" &&
+  C.document.getElementById("menuPillVersi").textContent === "v32.5" &&
   C.document.getElementById("sambutanKembali").textContent.indexOf("Sukma") !== -1);
 cek("Z8 MUAT (ada save): panel tampil + detail simpanan nyata + tombol Muat aktif",
   (() => { C.document.getElementById("btnMuat").onclick(); return C.document.getElementById("menuPanelMuat").style.display === "block"; })() &&
@@ -1537,9 +1541,9 @@ cek("AA-g1 histeresis: varian SE dipertahankan saat sudutLayar 94° (<5° dari b
 cek("AA-g2 histeresis: ganti ke SW saat sudutLayar ~96° (>5° dari batas) + bungkus 0°: NE dipertahankan di 317°",
   (() => { const k = { _varianArah: "se" }; const a = C.pilihVarianArah(48 * Math.PI / 180, k); const k2 = { _varianArah: "ne" }; const b = C.pilihVarianArah(317 * Math.PI / 180, k2); return a === "sw" && k._varianArah === "sw" && b === "ne" && k2._varianArah === "ne"; })());
 // ---- (h) refs v28 ----
-cek("AA-h1 VERSI_GAME v32.3 + index.html city.js?v=52 + pill v32.3 + sw.js cache meranti-rising-v32.3",
-  C.VERSI_GAME === "v32.3" && idxHtml.includes("js/city.js?v=52") && idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v32.3<') &&
-  swTxt.indexOf("meranti-rising-v32.3") !== -1 && swTxt.indexOf("js/city.js?v=52") !== -1);
+cek("AA-h1 VERSI_GAME v32.5 + index.html city.js?v=54 + pill v32.5 + sw.js cache rise-of-meranti-v32.5",
+  C.VERSI_GAME === "v32.5" && idxHtml.includes("js/city.js?v=54") && idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v32.5<') &&
+  swTxt.indexOf("rise-of-meranti-v32.5") !== -1 && swTxt.indexOf("js/city.js?v=54") !== -1);
 cek("AA-h2 sw.js TIDAK mem-precache 36 varian (runtime-cache seperti audio) + TIDAK ada sisa pin v26",
   !swTxt.includes("mobil-sedan-sw.png") && !swTxt.includes("bus-nw.png") &&
   !swTxt.includes("meranti-rising-v26") && !idxHtml.includes("city.js?v=38") && !swTxt.includes("city.js?v=38"));
@@ -1874,10 +1878,10 @@ const srcDiagV28 = fs.readFileSync(ROOT + "/js/city-diagnostik.js", "utf8");
 const menuCssV28 = fs.readFileSync(ROOT + "/css/menu.css", "utf8");
 
 // ---- AD-a: versi + data katalog tidak berubah ----
-cek("AD-a1 VERSI_GAME v32.3 + refs v32.3 (css v=20, city.js v=52, bubble v=4, ui-v24 v=6, pill v32.3, cache v32.3)",
-  C.VERSI_GAME === "v32.3" && idxHtml.includes("css/city.css?v=20") && idxHtml.includes("js/city.js?v=52") &&
+cek("AD-a1 VERSI_GAME v32.5 + refs v32.5 (css v=20, city.js v=54, bubble v=4, ui-v24 v=6, pill v32.5, cache v32.5)",
+  C.VERSI_GAME === "v32.5" && idxHtml.includes("css/city.css?v=20") && idxHtml.includes("js/city.js?v=54") &&
   idxHtml.includes("js/city-bubble.js?v=4") && idxHtml.includes("js/city-ui-v24.js?v=6") &&
-  idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v32.3<') && swTxt.indexOf("meranti-rising-v32.3") !== -1);
+  idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v32.5<') && swTxt.indexOf("rise-of-meranti-v32.5") !== -1);
 const tabIdsAD = ctxEval("TAB_BANGUN.map(function(t){ return t.id; })");
 const dockUrutanAD = ctxEval("DOCK_URUTAN_V28");
 cek("AD-a2 TAB_BANGUN tetap 19 (data tidak diubah v28) + DOCK_URUTAN_V28 memuat ke-19 id tepat sekali",
@@ -4326,6 +4330,254 @@ const panelStatALf2 = String(ctxEval('$("panelKiriIsi").innerHTML'));
 cek("AL-f8 panel Gudang (tanpa Toko): catatan 'Belum ada Toko Material yang beroperasi — jual/beli & impor material terkunci'",
   panelStatALf2.indexOf("Belum ada Toko Material yang beroperasi") !== -1,
   panelStatALf2.slice(0, 600));
+
+// ---------------- AM: v32.4 — temuan cek live ?v=59 ----------------
+// (a) Guard beli/jual Toko Material vs teks panel/penasihat — guard ADA
+// dan bekerja (bukan teks yang salah): teks panel "sudah bisa" HANYA
+// muncul bila adaTokoMaterialAktif() true, jadi ?v=59 yang menampilkan
+// teks itu + beli berhasil PASTI punya Toko aktif (terlewat inventaris
+// klaster). (b) Diagnostik utilitas konstruksi. (c) Mangrove: koordinat
+// target live ?v=60 (tanpa ubah kode). (d) Label produksi material.
+function panelEkonomiAM() {
+  ctxEval('panelKiri = "ekonomi"');
+  C.renderPanelKiri();
+  return String(ctxEval('$("panelKiriIsi").innerHTML'));
+}
+function barisMaterialAM(html, nama) {
+  const i = html.indexOf(nama + " × ");
+  return i === -1 ? "" : html.slice(i, i + 160);
+}
+// ---- AM-a: guard beli/jual vs teks (temuan ?v=59) ----
+C.mulaiGame(true);
+C.hitungUtilitas(false);
+const beliTanpaAMa = C.beliMaterial("kayu", 10);
+const jualTanpaAMa = C.jualMaterial("kayu", 10);
+cek("AM-a1 tanpa Toko Material: beli/jual ditolak 'tanpa-toko-material' (guard bekerja; temuan ?v=59 bukan guard bocor)",
+  beliTanpaAMa.ok === false && beliTanpaAMa.alasan === "tanpa-toko-material" &&
+  jualTanpaAMa.ok === false && jualTanpaAMa.alasan === "tanpa-toko-material",
+  JSON.stringify({ beli: beliTanpaAMa, jual: jualTanpaAMa }));
+const panelTanpaAMa = panelEkonomiAM();
+cek("AM-a2 tanpa Toko: panel Gudang 'Belum ada Toko Material yang beroperasi' DAN tidak ada 'sudah bisa' (teks <-> guard konsisten)",
+  C.adaTokoMaterialAktif() === false && panelTanpaAMa.indexOf("Belum ada Toko Material yang beroperasi") !== -1 && panelTanpaAMa.indexOf("sudah bisa") === -1,
+  panelTanpaAMa.slice(0, 400));
+const tokoAMa = tambahBangunan("toko-material", 240, 213, { berlistrik: true, berair: true, staf: 2, efisiensi: 1 });
+const kayuAMa0 = C.S.kayu; const uangAMa0 = C.S.uang;
+const beliAdaAMa = C.beliMaterial("kayu", 10);
+const panelAdaAMa = panelEkonomiAM();
+cek("AM-a3 dengan Toko aktif: guard true + beli 10 kayu BERHASIL + panel 'Beli/jual lewat Toko Material sudah bisa' (kopling teks-guard: teks ini membuktikan Toko ada)",
+  !!tokoAMa && C.adaTokoMaterialAktif() === true && beliAdaAMa.ok === true && C.S.kayu === kayuAMa0 + 10 && C.S.uang === uangAMa0 - 10 * C.hargaBeliMaterial("kayu") &&
+  panelAdaAMa.indexOf("Beli/jual lewat Toko Material sudah bisa") !== -1,
+  JSON.stringify({ beli: beliAdaAMa, kayu: C.S.kayu, uang: C.S.uang }));
+tokoAMa.nonaktif = true;
+const beliNonAMa = C.beliMaterial("kayu", 10);
+const panelNonAMa = panelEkonomiAM();
+cek("AM-a4 Toko NONAKTIF: guard false + beli ditolak + panel kembali 'Belum ada Toko Material yang beroperasi'",
+  C.adaTokoMaterialAktif() === false && beliNonAMa.ok === false && beliNonAMa.alasan === "tanpa-toko-material" &&
+  panelNonAMa.indexOf("Belum ada Toko Material yang beroperasi") !== -1,
+  JSON.stringify({ beli: beliNonAMa }));
+tokoAMa.nonaktif = false; tokoAMa.berlistrik = false;
+const beliPadamAMa = C.beliMaterial("kayu", 10);
+cek("AM-a5 Toko PADAM (berlistrik=false): guard false + beli ditolak 'tanpa-toko-material'",
+  C.adaTokoMaterialAktif() === false && beliPadamAMa.ok === false && beliPadamAMa.alasan === "tanpa-toko-material",
+  JSON.stringify({ beli: beliPadamAMa }));
+C.mulaiGame(true);
+C.hitungUtilitas(false);
+C.S.kayu = 500; C.S.batu = 500; C.S.pasir = 500; C.S.semen = 500; C.S.besi = 500;
+const daftarAMa = Adv.daftarMasalah();
+cek("AM-a6 stok material AMAN: Penasihat TIDAK menampilkan butir material-menipis (by design — Penasihat mendaftar masalah, bukan katalog; panduan Gudang muncul saat menipis)",
+  Array.isArray(daftarAMa) && !daftarAMa.some(m => m.kode.indexOf("material-menipis-") === 0),
+  JSON.stringify(daftarAMa.map(m => m.kode)));
+C.S.kayu = 5;
+const daftarAMa2 = Adv.daftarMasalah();
+const rkAMa = Adv.rencanaAksi({ kode: "material-menipis-kayu", id: "m-material-menipis-kayu", lokasi: { x: 10, y: 10 }, penyebab: "Kayu menipis." });
+cek("AM-a7 kayu menipis (5 unit): butir 'material-menipis-kayu' ADA + rencana menyarankan Toko Material sebagai syarat beli/jual",
+  !!daftarAMa2.find(m => m.kode === "material-menipis-kayu") &&
+  Array.isArray(rkAMa) && rkAMa.some(l => l.teks && l.teks.indexOf("Bangun Toko Material") !== -1 && l.teks.indexOf("syarat beli/jual material") !== -1),
+  JSON.stringify(rkAMa && rkAMa.map(l => l.teks)));
+// ---- AM-b: Diagnostik utilitas bangunan dalam konstruksi (temuan ?v=59) ----
+C.mulaiGame(true);
+C.hitungUtilitas(false);
+const blokAMb = cariBlokTerrainALc("industri", 2, 2);
+const jalanAMb = tambahJalanSampingALc(blokAMb.x, blokAMb.y, 2, 2);
+C.S.uang = 10000000; C.S.batu = 500; C.S.besi = 500;
+const okAMb = C.bangunDi(C.BANGUNAN_MAP["tambang-batu"], blokAMb.x, blokAMb.y, 0);
+const tbAMb = C.S.bangunan.find(b => b.id === "tambang-batu");
+C.hitungUtilitas(false);
+const skorAMb = tbAMb ? Dg.statusBangunan(tbAMb) : null;
+cek("AM-b1 tambang DALAM KONSTRUKSI + padam (berlistrik=false, berair=false): Diagnostik skor Listrik 0 / Air 0 (bukan 100%) + status Konstruksi",
+  !!tbAMb && !tbAMb.selesai && tbAMb.berlistrik === false && tbAMb.berair === false &&
+  !!skorAMb && skorAMb.status === "Konstruksi" && skorAMb.skor.listrik === 0 && skorAMb.skor.air === 0,
+  JSON.stringify({ selesai: tbAMb && tbAMb.selesai, berlistrik: tbAMb && tbAMb.berlistrik, berair: tbAMb && tbAMb.berair, skor: skorAMb && skorAMb.skor }));
+const diagAMb = tbAMb ? UI.diagnosisBangunan(tbAMb) : null;
+cek("AM-b2 jalur UI (UIV24.diagnosisBangunan): skor Listrik 0 / Air 0 untuk bangunan konstruksi yang padam",
+  !!diagAMb && diagAMb.skor.listrik === 0 && diagAMb.skor.air === 0,
+  JSON.stringify(diagAMb && diagAMb.skor));
+const sbAsliAMb = Dg.statusBangunan;
+Dg.statusBangunan = function () { return null; }; // paksa jalur normalisasiDiagnosa
+let diagNormAMb = null;
+try { diagNormAMb = tbAMb ? UI.diagnosisBangunan(tbAMb) : null; } finally { Dg.statusBangunan = sbAsliAMb; }
+cek("AM-b3 jalur fallback normalisasiDiagnosa (statusBangunan dinonaktifkan sementara): skor Listrik 0 / Air 0",
+  !!diagNormAMb && diagNormAMb.skor.listrik === 0 && diagNormAMb.skor.air === 0 && Dg.statusBangunan === sbAsliAMb,
+  JSON.stringify(diagNormAMb && diagNormAMb.skor));
+const tbSelesaiAMb = tambahBangunan("posyandu", 240, 213, { berlistrik: false, berair: false, staf: 0, efisiensi: 0 });
+const skorSelesaiAMb = Dg.statusBangunan(tbSelesaiAMb);
+cek("AM-b4 bangunan SELESAI yang padam: skor Listrik 0 / Air 0 (perilaku lama dipertahankan — bukan hanya konstruksi)",
+  !!skorSelesaiAMb && skorSelesaiAMb.skor.listrik === 0 && skorSelesaiAMb.skor.air === 0,
+  JSON.stringify(skorSelesaiAMb && skorSelesaiAMb.skor));
+const tbNyalaAMb = tambahBangunan("posyandu", 242, 213, { berlistrik: true, berair: true, staf: 2, efisiensi: 1 });
+const skorNyalaAMb = Dg.statusBangunan(tbNyalaAMb);
+cek("AM-b5 bangunan beroperasi (berlistrik/berair true): skor Listrik 100 / Air 100",
+  !!skorNyalaAMb && skorNyalaAMb.skor.listrik === 100 && skorNyalaAMb.skor.air === 100,
+  JSON.stringify(skorNyalaAMb && skorNyalaAMb.skor));
+const tbBelumAMb = { id: "tambang-batu", x: 260, y: 203, rot: 0, selesai: false, progres: 0.2 };
+const skorBelumAMb = Dg.statusBangunan(tbBelumAMb);
+cek("AM-b6 flag utilitas UNDEFINED (belum pernah dihitung): fallback 100 — jangan tuduh padam (seperti _masalahUmum)",
+  !!skorBelumAMb && skorBelumAMb.skor.listrik === 100 && skorBelumAMb.skor.air === 100,
+  JSON.stringify(skorBelumAMb && skorBelumAMb.skor));
+// ---- AM-c: mangrove — koordinat target live ?v=60 (tanpa ubah kode) ----
+C.mulaiGame(true);
+C.hitungUtilitas(false);
+cek("AM-c1 petak mangrove terdekat pusat Selatpanjang (240,213) adalah (240,217) — strip mangrove y=217, x=238-244 (navigasi live)",
+  C.terrainDi(C.peta, 240, 217) === "mangrove" && C.terrainDi(C.peta, 238, 217) === "mangrove" && C.terrainDi(C.peta, 244, 217) === "mangrove",
+  JSON.stringify({ t240_217: C.terrainDi(C.peta, 240, 217) }));
+const mgAMc = { x: 226, y: 221 };
+const tilesAMc = [C.terrainDi(C.peta, 226, 221), C.terrainDi(C.peta, 227, 221), C.terrainDi(C.peta, 226, 222), C.terrainDi(C.peta, 227, 222)];
+cek("AM-c2 blok 2x2 (226,221) mengandung mangrove di (227,222), tanpa pantai/laut/sungai/kanal — target penolakan live ?v=60",
+  tilesAMc.indexOf("mangrove") !== -1 && tilesAMc.every(t => ["pantai", "laut", "sungai", "kanal"].indexOf(t) === -1),
+  JSON.stringify(tilesAMc));
+for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) C.tetapkanZona(mgAMc.x + i, mgAMc.y + j, "industrial");
+const jalanAMc = tambahJalanSampingALc(mgAMc.x, mgAMc.y, 2, 2);
+C.S.uang = 10000000; C.S.batu = 500; C.S.besi = 500;
+const cekAMc = C.cekBangun(C.BANGUNAN_MAP["tambang-batu"], mgAMc.x, mgAMc.y, 0);
+cek("AM-c3 mangrove (226,221) dicat Zona Industrial: cekBangun Tambang Batu DITOLAK + alasan menyebut Mangrove/lindung",
+  !!jalanAMc && !!cekAMc && !cekAMc.ok && (cekAMc.alasan.indexOf("Mangrove") !== -1 || cekAMc.alasan.indexOf("lindung") !== -1),
+  JSON.stringify({ jalan: jalanAMc, cek: cekAMc }));
+const jmlAMc0 = C.S.bangunan.length;
+ctxEval('$("toast").textContent = "SENTINEL";');
+const okAMc = C.bangunDi(C.BANGUNAN_MAP["tambang-batu"], mgAMc.x, mgAMc.y, 0);
+const toastAMc = String(ctxEval('$("toast").textContent'));
+cek("AM-c4 bangunDi Tambang Batu di mangrove (226,221): gagal + toast 'Mangrove/lindung' + tanpa bangunan baru",
+  okAMc === false && (toastAMc.indexOf("Mangrove") !== -1 || toastAMc.indexOf("lindung") !== -1) && C.S.bangunan.length === jmlAMc0,
+  toastAMc);
+// ---- AM-d: label laju produksi material (temuan ?v=59) ----
+C.mulaiGame(true);
+C.hitungUtilitas(false);
+const tbAMd = tambahBangunan("tambang-batu", 240, 213, { berlistrik: true, berair: true, staf: 4, efisiensi: 1 });
+cek("AM-d1 tambang beroperasi: produksiMaterialHarian(batu) = 6 + panel Gudang '+6/hari'",
+  C.produksiMaterialHarian("batu") === 6 && barisMaterialAM(panelEkonomiAM(), "Batu").indexOf("+6/hari") !== -1,
+  barisMaterialAM(panelEkonomiAM(), "Batu"));
+tbAMd.berlistrik = false;
+cek("AM-d2 tambang PADAM (berlistrik=false): laju 0 + panel 'tanpa produksi (padam)' — bukan 'tanpa produksi' telanjang",
+  C.produksiMaterialHarian("batu") === 0 && C.alasanProduksiMaterialNol("batu") === "padam" &&
+  barisMaterialAM(panelEkonomiAM(), "Batu").indexOf("tanpa produksi (padam)") !== -1,
+  barisMaterialAM(panelEkonomiAM(), "Batu"));
+tbAMd.berlistrik = true; tbAMd.staf = 0; tbAMd.efisiensi = 0;
+cek("AM-d3 tambang TANPA PEKERJA (staf 0, efisiensi 0): laju 0 + panel 'tanpa produksi (tanpa pekerja)'",
+  C.produksiMaterialHarian("batu") === 0 && C.alasanProduksiMaterialNol("batu") === "tanpa pekerja" &&
+  barisMaterialAM(panelEkonomiAM(), "Batu").indexOf("tanpa produksi (tanpa pekerja)") !== -1,
+  barisMaterialAM(panelEkonomiAM(), "Batu"));
+tbAMd.staf = 4; tbAMd.efisiensi = 1; tbAMd.nonaktif = true;
+cek("AM-d4 tambang NONAKTIF: laju 0 + panel 'tanpa produksi (nonaktif)'",
+  C.produksiMaterialHarian("batu") === 0 && C.alasanProduksiMaterialNol("batu") === "nonaktif" &&
+  barisMaterialAM(panelEkonomiAM(), "Batu").indexOf("tanpa produksi (nonaktif)") !== -1,
+  barisMaterialAM(panelEkonomiAM(), "Batu"));
+tbAMd.nonaktif = false;
+cek("AM-d5 besi TANPA fasilitas sama sekali: alasan null + panel 'tanpa produksi' telanjang (bukan ber-alasan)",
+  C.alasanProduksiMaterialNol("besi") === null && C.produksiMaterialHarian("besi") === 0 &&
+  barisMaterialAM(panelEkonomiAM(), "Besi").indexOf("tanpa produksi") !== -1 && barisMaterialAM(panelEkonomiAM(), "Besi").indexOf("tanpa produksi (") === -1,
+  barisMaterialAM(panelEkonomiAM(), "Besi"));
+C.S.batu = 5; C.S.peringatanMaterial = {};
+ctxEval('$("toast").textContent = "SENTINEL";');
+C.periksaStokMaterial();
+const toastAMd = String(ctxEval('$("toast").textContent'));
+cek("AM-d6 toast stok menipis (tambang beroperasi, batu=5): menyebut 'produksi 6/hari'",
+  toastAMd.indexOf("produksi 6/hari") !== -1, toastAMd);
+tbAMd.berlistrik = false;
+C.S.peringatanMaterial = {};
+ctxEval('$("toast").textContent = "SENTINEL";');
+C.periksaStokMaterial();
+const toastAMd2 = String(ctxEval('$("toast").textContent'));
+cek("AM-d7 toast stok menipis (tambang PADAM, batu=5): menyebut 'tanpa produksi (padam)'",
+  toastAMd2.indexOf("tanpa produksi (padam)") !== -1, toastAMd2);
+// AM-d8: laju label == akrual nyata — tambang beroperasi via jaringan
+// listrik+air sungguhan (PLTD+tiang+IPA+menara) menghasilkan +6 batu/24 jam.
+C.mulaiGame(true);
+C.hitungUtilitas(false);
+const blokAMd8 = cariBlokTerrainALc("industri", 2, 2);
+tambahJalanSampingALc(blokAMd8.x, blokAMd8.y, 2, 2);
+C.S.uang = 10000000; C.S.kayu = 500; C.S.batu = 11; C.S.besi = 500; C.S.pasir = 500; C.S.semen = 500;
+C.S.penduduk.total = 60;
+C.bangunDi(C.BANGUNAN_MAP["tambang-batu"], blokAMd8.x, blokAMd8.y, 0);
+const tbAMd8 = C.S.bangunan.find(b => b.id === "tambang-batu");
+for (let iAM = 0; iAM < 40 && !tbAMd8.selesai; iAM++) C.majukanWaktu(60);
+tambahBangunan("pltd", blokAMd8.x + 4, blokAMd8.y, { berlistrik: true, berair: true, staf: 4, efisiensi: 1 });
+for (let kAM = 1; kAM <= 3; kAM++) tambahBangunan("tiang-listrik", blokAMd8.x + kAM + 1, blokAMd8.y, { berlistrik: true, berair: true });
+tambahBangunan("ipa", blokAMd8.x, blokAMd8.y + 4, { berlistrik: true, berair: true, staf: 4, efisiensi: 1 });
+tambahBangunan("menara-air", blokAMd8.x + 1, blokAMd8.y + 3, { berlistrik: true, berair: true });
+C.hitungUtilitas(false);
+const batuAMd8_0 = C.S.batu;
+majuSatuHari();
+cek("AM-d8 tambang beroperasi via jaringan sungguhan: label +6/hari DAN akrual nyata +6 batu/24 jam (label == produksi)",
+  !!tbAMd8.selesai && tbAMd8.berlistrik === true && tbAMd8.berair === true &&
+  C.produksiMaterialHarian("batu") === 6 && (C.S.batu - batuAMd8_0) === 6 &&
+  barisMaterialAM(panelEkonomiAM(), "Batu").indexOf("+6/hari") !== -1,
+  JSON.stringify({ batu0: batuAMd8_0, batu1: C.S.batu, berlistrik: tbAMd8.berlistrik, berair: tbAMd8.berair, staf: tbAMd8.staf, eff: tbAMd8.efisiensi }));
+
+// ---------------- AN: v32.5 — rebrand RISE OF MERANTI + logo baru ----------------
+// Manifest + <title> + teks misi/toast memakai nama baru; 7 file ikon baru
+// (6 PNG + favicon.ico) dibuat dari logo sumber; SW memakai cache
+// "rise-of-meranti-v32.5" dan activate menghapus cache lama kedua prefix.
+const manifestAN = JSON.parse(fs.readFileSync(ROOT + "/manifest.json", "utf8"));
+cek("AN-a manifest name + short_name RISE OF MERANTI (theme/display/orientasi/scope/start_url tetap)",
+  manifestAN.name === "RISE OF MERANTI" && manifestAN.short_name === "RISE OF MERANTI" &&
+  manifestAN.theme_color === "#0a1a2f" && manifestAN.display === "fullscreen" &&
+  manifestAN.orientation === "landscape" && manifestAN.scope === "./" && manifestAN.start_url === "./index.html",
+  JSON.stringify({ name: manifestAN.name, short_name: manifestAN.short_name }));
+cek("AN-b index.html <title> + apple-mobile-web-app-title RISE OF MERANTI",
+  idxHtml.includes("<title>RISE OF MERANTI — Ayo Membangun Meranti!</title>") &&
+  idxHtml.includes('name="apple-mobile-web-app-title" content="RISE OF MERANTI"') &&
+  !idxHtml.includes("<title>MERANTI RISING"),
+  "");
+cek("AN-c teks misi + toast memakai RISE OF MERANTI (bukan MERANTI RISING)",
+  srcCity.includes("Pasang RISE OF MERANTI di layar utama") &&
+  srcCity.includes("RISE OF MERANTI terinstal") &&
+  !srcCity.includes("Pasang MERANTI RISING") && !srcCity.includes("MERANTI RISING terinstal"),
+  "");
+const ikonAN = [
+  ["assets/icons/icon-192.png", 192, 192],
+  ["assets/icons/icon-512.png", 512, 512],
+  ["assets/icons/icon-maskable-512.png", 512, 512],
+  ["assets/icons/apple-touch-icon.png", 180, 180],
+  ["assets/icons/favicon-32.png", 32, 32],
+  ["assets/icons/favicon-48.png", 48, 48],
+  ["assets/icons/logo-rise-of-meranti.png", 540, 558],
+];
+const ikonANBuruk = ikonAN.filter(([f, w, h]) => {
+  if (!fs.existsSync(ROOT + "/" + f)) return true;
+  const info = infoPng(fs.readFileSync(ROOT + "/" + f));
+  return !info || info.lebar !== w || info.tinggi !== h;
+});
+cek("AN-d 7 ikon PNG ada + signature PNG + dimensi tepat (192/512/maskable-512/apple-180/favicon-32/48/logo-540x558)",
+  ikonANBuruk.length === 0, JSON.stringify(ikonANBuruk));
+const icoAN = fs.existsSync(ROOT + "/assets/icons/favicon.ico") ? fs.readFileSync(ROOT + "/assets/icons/favicon.ico") : null;
+const icoANUkuran = icoAN && icoAN.length >= 6 + 3 * 16 && icoAN.readUInt16LE(4) === 3
+  ? [icoAN[6], icoAN[22], icoAN[38]].sort((a, b) => a - b) : [];
+cek("AN-e favicon.ico ada (header ICO, 3 entri 16/32/48) + ter-link di index.html",
+  !!icoAN && icoAN.length > 0 && icoAN[0] === 0 && icoAN[1] === 0 && icoAN[2] === 1 && icoAN[3] === 0 &&
+  JSON.stringify(icoANUkuran) === JSON.stringify([16, 32, 48]) &&
+  idxHtml.includes('href="assets/icons/favicon.ico"'),
+  icoAN ? "len=" + icoAN.length + " ukuran=" + JSON.stringify(icoANUkuran) : "hilang");
+cek("AN-f SW cache rise-of-meranti-v32.5 + VERSI_SW diturunkan dari prefix baru + activate hapus KEDUA prefix cache lama",
+  swTxt.includes('"rise-of-meranti-v32.5"') &&
+  swTxt.includes('NAMA_CACHE.replace(/^rise-of-meranti-/') &&
+  swTxt.includes('indexOf("meranti-rising-")') && swTxt.includes('indexOf("rise-of-meranti-")') &&
+  !swTxt.includes('"meranti-rising-v32.4"') && swTxt.includes("js/city.js?v=54"),
+  "");
+cek("AN-g path ikon di manifest tetap sama (icon-192/512/maskable-512)",
+  (manifestAN.icons || []).some(i => i.src === "assets/icons/icon-192.png" && i.sizes === "192x192" && i.purpose === "any") &&
+  (manifestAN.icons || []).some(i => i.src === "assets/icons/icon-512.png" && i.sizes === "512x512" && i.purpose === "any") &&
+  (manifestAN.icons || []).some(i => i.src === "assets/icons/icon-maskable-512.png" && i.sizes === "512x512" && i.purpose === "maskable"),
+  JSON.stringify((manifestAN.icons || []).map(i => i.src)));
 
 // Pulihkan keadaan akhir bersih (profil + simpanan + menu sinematik).
 C.mulaiGame(true);

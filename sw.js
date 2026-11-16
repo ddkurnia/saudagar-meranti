@@ -1,5 +1,5 @@
 // =====================================================================
-// Service worker MERANTI RISING — v22-W7 (PWA + Logo Resmi).
+// Service worker RISE OF MERANTI — v22-W7 (PWA + Logo Resmi).
 // Nama cache TERIKAT VERSI_GAME ("v30"): naikkan bersama VERSI_GAME di
 // js/city.js setiap rilis, supaya deploy baru tidak pernah menyajikan
 // build basi dari cache lama.
@@ -17,13 +17,15 @@
 //    runtime-cache saat miss (game bisa dibuka offline setelah instal
 //    pertama).
 //  - Fetch lintas origin TIDAK disentuh (bukan aset game).
-//  - activate hanya menghapus cache bernama "meranti-rising-*" yang
-//    lama — cache aplikasi lain di origin yang sama (mis. repo lain di
+//  - activate hanya menghapus cache bernama "meranti-rising-*" atau
+//    "rise-of-meranti-*" yang lama (v32.5: prefix cache berganti nama;
+//    cache v32.4 ber-prefix lama harus ikut terhapus) — cache
+//    aplikasi lain di origin yang sama (mis. repo lain di
 //    GitHub Pages) TIDAK dihapus.
 // =====================================================================
-const NAMA_CACHE = "meranti-rising-v32.3";
+const NAMA_CACHE = "rise-of-meranti-v32.5";
 // Versi game yang dibawa SW ini (dipakai postMessage ke halaman).
-const VERSI_SW = NAMA_CACHE.replace(/^meranti-rising-/, "");
+const VERSI_SW = NAMA_CACHE.replace(/^rise-of-meranti-/, "");
 // Shell game yang di-precache. Nilai ?v= mengikuti index.html saat
 // v22 ditulis; bila ?v= berubah di deploy berikut, fetch handler
 // v23: file audio .mp3 TIDAK di-precache (total ~14 MB; musik-melayu-1.mp3
@@ -53,7 +55,7 @@ const DAFTAR_CACHE = [
   "./js/city-kendaraan.js?v=7",
   "./js/city-persimpangan.js?v=1",
   "./js/city-maritim.js?v=4",
-  "./js/city.js?v=52",
+  "./js/city.js?v=54",
   "./js/city-suara.js?v=1",
   "./js/city-warga.js?v=2",
   "./js/city-bubble.js?v=4",
@@ -117,7 +119,7 @@ self.addEventListener("activate", (event) => {
     caches.keys()
       .then((nama) => Promise.all(
         nama
-          .filter((n) => n.indexOf("meranti-rising-") === 0 && n !== NAMA_CACHE)
+          .filter((n) => (n.indexOf("meranti-rising-") === 0 || n.indexOf("rise-of-meranti-") === 0) && n !== NAMA_CACHE)
           .map((n) => caches.delete(n))
       ))
       .then(() => self.clients.claim())

@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v32.3"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v32.5"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -2178,6 +2178,34 @@ function produksiMaterialHarian(id) {
   }
   return total;
 }
+// v32.4: alasan laju produksi 0 padahal fasilitas produksi material itu
+// ADA (dipakai label panel Gudang + toast stok menipis). Laju 0 sendiri
+// tidak membedakan "tidak ada fasilitas" vs "fasilitas ada tapi sedang
+// tidak beroperasi" — pemain melihat stok naik dari fasilitas yang
+// beroperasi di jam lain, lalu membaca "tanpa produksi" (temuan ?v=59:
+// batu 11 -> 40 dari Tambang Batu yang sudah ada, panel menulis "tanpa
+// produksi"). Prioritas alasan: kebanjiran -> nonaktif -> padam -> tidak
+// berair -> tanpa pekerja. null = sedang memproduksi (> 0) atau tidak
+// ada fasilitas produksi material itu sama sekali.
+function alasanProduksiMaterialNol(id) {
+  if (!S) return null;
+  if (produksiMaterialHarian(id) > 0) return null;
+  const prioritas = { "kebanjiran": 0, "nonaktif": 1, "padam": 2, "tidak berair": 3, "tanpa pekerja": 4 };
+  let alasan = null;
+  for (const b of bangunanSelesai()) {
+    const d = BANGUNAN_MAP[b.id];
+    if (!d || !d.produksiMaterial || !d.produksiMaterial.keluar || !d.produksiMaterial.keluar[id]) continue;
+    let a = null;
+    if (b.kebanjiran) a = "kebanjiran";
+    else if (typeof bangunanNonaktif === "function" && bangunanNonaktif(b)) a = "nonaktif";
+    else if (b.berlistrik === false) a = "padam";
+    else if (b.berair === false) a = "tidak berair";
+    else if ((b.efisiensi == null ? 1 : b.efisiensi) <= 0) a = "tanpa pekerja";
+    else continue; // fasilitas ini beroperasi (laju > 0) — bukan penyebab nol
+    if (alasan === null || prioritas[a] < prioritas[alasan]) alasan = a;
+  }
+  return alasan;
+}
 // Toko Material yang selesai + beroperasi + aktif (syarat jual/beli/impor).
 function adaTokoMaterialAktif() {
   if (!S) return false;
@@ -2332,7 +2360,8 @@ function periksaStokMaterial() {
     if ((S.peringatanMaterial[m] || 0) === S.hari) continue;
     S.peringatanMaterial[m] = S.hari;
     const prod = produksiMaterialHarian(m);
-    toast("⚠️ Stok " + namaMaterial(m) + " hampir habis (" + stokMaterial(m) + " unit" + (prod > 0 ? ", produksi " + prod + "/hari" : ", tanpa produksi") + ") — beli di Gudang Material atau bangun fasilitas produksinya.", "gagal");
+    const alasanProd = prod > 0 ? null : alasanProduksiMaterialNol(m); // v32.4: sebut alasan bila fasilitas ada tapi mati
+    toast("⚠️ Stok " + namaMaterial(m) + " hampir habis (" + stokMaterial(m) + " unit" + (prod > 0 ? ", produksi " + prod + "/hari" : ", tanpa produksi" + (alasanProd ? " (" + alasanProd + ")" : "")) + ") — beli di Gudang Material atau bangun fasilitas produksinya.", "gagal");
     log("⚠️ Stok " + namaMaterial(m) + " hampir habis: " + stokMaterial(m) + " unit.");
   }
 }
@@ -6130,7 +6159,13 @@ function renderPanelKiri() {
     // — teks lama diam soal syarat pelabuhan (temuan ?v=58).
     else if (typeof adaPelabuhanAktif === "function" && !adaPelabuhanAktif()) html += "<div class='catatan'>Impor material masih terkunci — impor via kapal butuh Pelabuhan/Terminal Feri yang beroperasi. Beli/jual lewat Toko Material sudah bisa.</div>";
     for (const m of daftarMaterial()) {
-      const prodTxt = m.produksiHari > 0 ? ("+" + (Math.round(m.produksiHari * 10) / 10) + "/hari") : "tanpa produksi";
+      // v32.4: laju 0 + fasilitas ADA -> sebut alasannya (padam/tidak
+      // berair/tanpa pekerja/nonaktif/kebanjiran), bukan "tanpa produksi"
+      // telanjang yang menyiratkan tidak ada produksi sama sekali
+      // (temuan ?v=59: batu naik dari Tambang Batu tapi label "tanpa
+      // produksi" — tambang sedang padam saat panel dibuka).
+      const alasanProdNol = m.produksiHari > 0 ? null : alasanProduksiMaterialNol(m.id);
+      const prodTxt = m.produksiHari > 0 ? ("+" + (Math.round(m.produksiHari * 10) / 10) + "/hari") : (alasanProdNol ? "tanpa produksi (" + alasanProdNol + ")" : "tanpa produksi");
       html += "<div class='barisStat" + (m.menipis ? " kecil" : "") + "'><span>" + (m.menipis ? "⚠️ " : "") + m.nama + " × " + m.stok + " / " + m.kapasitas + " · " + prodTxt + " · konsumsi bangun " + m.konsumsi + "</span><span>beli " + rp(m.hargaBeli) + " · jual " + rp(m.hargaJual) + "</span></div>";
       html += "<div class='barisAksi'><button class='btnKecil' onclick='beliMaterial(\"" + m.id + "\", 10)'>Beli 10 — " + rp(m.hargaBeli * 10) + "</button><button class='btnKecil' onclick='beliMaterial(\"" + m.id + "\", 50)'>Beli 50 — " + rp(m.hargaBeli * 50) + "</button><button class='btnKecil' onclick='jualMaterial(\"" + m.id + "\", 10)'>Jual 10 — +" + rp(m.hargaJual * 10) + "</button><button class='btnKecil' onclick='imporMaterial(\"" + m.id + "\", 50)'>Impor 50 via kapal — " + rp((m.hargaBeli + cfgEco("material.impor.biayaTransportPerUnit", 500)) * 50) + "</button></div>";
     }
@@ -6631,7 +6666,7 @@ function renderPanelKiri() {
     }
     if (pwaPromptTersedia()) {
       html += "<div class='barisStat'><span>Instal aplikasi</span><button class='btnKecil' onclick='pasangPWA()'>Instal Aplikasi</button></div>";
-      html += "<div class='misiDes'>Pasang MERANTI RISING di layar utama — bisa dibuka offline setelah instal pertama.</div>";
+      html += "<div class='misiDes'>Pasang RISE OF MERANTI di layar utama — bisa dibuka offline setelah instal pertama.</div>";
     }
     if (pwaUpdateTersedia) {
       html += "<div class='barisStat'><span>Versi baru tersedia</span><button class='btnKecil' onclick='location.reload()'>Muat Ulang</button></div>";
@@ -7912,7 +7947,7 @@ function initPWA() {
         pwaSudahTerinstal = true;
         pwaPromptInstal = null;
         perbaruiTombolInstal();
-        toast("MERANTI RISING terinstal — bisa dibuka dari layar utama & offline.", "ok");
+        toast("RISE OF MERANTI terinstal — bisa dibuka dari layar utama & offline.", "ok");
       });
     }
     if (typeof document !== "undefined" && document.addEventListener) {
