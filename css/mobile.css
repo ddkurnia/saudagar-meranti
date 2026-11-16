@@ -1,0 +1,367 @@
+/* =====================================================================
+   v33 — MOBILE FIRST (RISE OF MERANTI)
+   Layout khusus smartphone; desktop TIDAK disentuh: SEMUA aturan di
+   file ini berada dalam @media (max-width: 900px). File ini dimuat
+   SETELAH city.css, jadi aturannya menang atas aturan lama di lebar
+   yang sama (mis. media query <=820px di city.css).
+
+   Prinsip:
+   - Semua panel adalah OVERLAY di atas kanvas — kamera TIDAK pernah
+     digeser saat panel dibuka/ditutup (posisi kamera dipertahankan).
+   - Tidak ada kontrol dummy: bottom nav + sheet Lainnya + menu cepat
+     hanya memanggil fungsi yang sudah ada (bukaTabKiri,
+     bukaMenuBangunUntuk, tutupDrawerBangun, toggleMinimap, ...).
+   - Panel aksi bangunan memakai tombol yang sudah ada di DOM
+     (#aksiBangunan: Pindah/Putar/Hapus — ketiganya punya fungsi nyata
+     di city.js). TIDAK ada tombol Upgrade: game ini tidak punya sistem
+     upgrade bangunan (brief v32), jadi tombol itu tidak dibuat.
+   - Target sentuh >= 44px; 100dvh/100dvw + safe-area; tanpa overflow
+     horizontal; tanpa scroll vertikal di layar gameplay utama.
+   Token tinggi chrome mobile (dipakai semua sheet):
+     --m-nav    : tinggi bottom nav (56px portrait, 48px landscape)
+     --m-ticker : tinggi ticker berita (26px portrait, 0 landscape —
+                  ticker disembunyikan di landscape agar peta lega)
+     --m-bawah  : jarak bawah semua sheet = nav + ticker + safe-area
+   ===================================================================== */
+
+/* ---------- Token chrome mobile ---------- */
+@media (max-width: 900px) {
+  #aplikasi {
+    --m-nav: 56px;
+    --m-ticker: 26px;
+    --m-bawah: calc(var(--m-nav) + var(--m-ticker) + env(safe-area-inset-bottom, 0px));
+  }
+}
+/* Landscape HP (tinggi <= 500px): nav lebih ramping, ticker hilang. */
+@media (max-width: 900px) and (max-height: 500px) {
+  #aplikasi { --m-nav: 48px; --m-ticker: 0px; }
+}
+
+@media (max-width: 900px) {
+  /* ================= A. TOP STATUS BAR COMPACT ================= */
+  /* Satu baris di landscape (~36-40px = ~10% dari 390px); dua baris
+     di portrait (baris 2 = sumber daya selebar penuh, ~80px = ~9,5%
+     dari 844px). Logo + judul disembunyikan — avatar + nama sudah
+     membawa identitas. */
+  #barAtas {
+    top: calc(6px + env(safe-area-inset-top, 0px));
+    left: calc(6px + env(safe-area-inset-left, 0px));
+    right: calc(6px + env(safe-area-inset-right, 0px));
+    gap: 6px; padding: 3px 8px; min-height: 0;
+    flex-wrap: nowrap;
+  }
+  .logoHud, .judulGame { display: none; }
+  #avatarPemain { width: 28px; height: 28px; }
+  .namaPemimpin { font-size: 11px; }
+  #lvlTeks { font-size: 11px; }
+  .xpBarLuar { width: 52px; }
+  .xpTeks { display: none; }
+  .sd { font-size: 11px; padding: 3px 7px; }
+  .sd.sekunder { display: none; }
+  #jamAtas { padding: 3px 8px; gap: 4px; }
+  #jamAtas .ikonFase { font-size: 15px; }
+  #jamAtasJam { font-size: 13px; }
+  #jamAtasHari, #jamAtasCuaca, #jamAtasFase { display: none; }
+  /* Tombol atas pindah ke menu cepat (overflow) — dipindah JS, bukan
+     disembunyikan begitu saja (lihat city-mobile.js). */
+  .tombolAtas { display: none; }
+  /* Tombol overflow (dibuat JS, anak #barAtas): 32px di landscape,
+     44px di portrait — tetap mudah diketuk tanpa menggemukkan bar. */
+  #btnOverflowMobile {
+    flex: none; width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255, 255, 255, .1); color: #fff;
+    border: 1px solid rgba(255, 255, 255, .18); font-size: 17px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  /* Portrait: bar membungkus — sumber daya jadi baris kedua penuh. */
+  #barAtas { flex-wrap: wrap; }
+  .sumberDaya { flex: 1 1 100%; order: 5; margin: 0; }
+  #btnOverflowMobile { width: 44px; height: 44px; }
+
+  /* ================= B. REL DESKTOP DISEMBUNYIKAN ================= */
+  /* Rel nav kiri, pintasan wilayah & tombol Mode Bangun digantikan
+     bottom nav (JS). Kolom kiri/kanan jadi display:contents supaya
+     anak-anaknya (#panelKiri, #kartuPeta, #panelKanan, #aksiBangunan)
+     bisa diposisikan bebas sebagai sheet/floating di viewport. */
+  #relKiri, #pintasanWilayah, #btnModeBangun { display: none !important; }
+  #kolomKiri, #barisKiri, #kolomKanan { display: contents; }
+  /* Aturan lama yang menggeser kolom saat drawer terbuka tidak lagi
+     relevan — kolom sudah tidak punya kotak sendiri. */
+  #kolomKiri, #kolomKanan { width: auto; max-width: none; top: auto; bottom: auto; }
+
+  /* ================= C. BOTTOM NAVIGATION ================= */
+  #navBawahMobile {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 35;
+    height: calc(var(--m-nav) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    display: flex; align-items: stretch;
+    background: linear-gradient(180deg, rgba(15, 47, 64, .97), rgba(10, 46, 73, .97));
+    border-top: 1px solid rgba(255, 255, 255, .16);
+    box-shadow: 0 -6px 24px rgba(0, 0, 0, .35);
+  }
+  #navBawahMobile button {
+    flex: 1 1 0; min-width: 0; min-height: 44px; overflow: hidden;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 1px; background: transparent; border: none; color: #cbd5e1;
+    font-size: 10px; font-weight: 700; line-height: 1.1; padding: 2px 0;
+  }
+  #navBawahMobile button .navIkon { font-size: 19px; line-height: 1; }
+  /* Label tidak boleh meluber ke tombol tetangga di layar sempit
+     (390px: "Pemerintahan" tumpang tindih — terlihat di screenshot
+     after-mobile-portrait-bersih.png 2026-11-16). */
+  #navBawahMobile button .navLabel {
+    display: block; max-width: 100%; font-size: 10px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  #navBawahMobile button.aktif { color: #4ade80; }
+  #navBawahMobile button.aktif .navIkon { filter: drop-shadow(0 0 6px rgba(74, 222, 128, .6)); }
+
+  /* ================= D. TICKER BERITA ================= */
+  /* Portrait: ticker naik ke atas bottom nav. Landscape: hilang
+     (berita tetap bisa dibuka lewat menu cepat -> Berita Pulau). */
+  #beritaPulau { bottom: calc(var(--m-nav) + env(safe-area-inset-bottom, 0px)); }
+
+  /* ================= E. KONTROL WAKTU ================= */
+  /* Dock di atas bottom nav (kanan). Disembunyikan saat ada sheet
+     terbuka supaya tidak tertutup sheet / menutupi isi sheet. */
+  #kontrolWaktu {
+    right: 8px; left: auto;
+    bottom: calc(var(--m-bawah) + 8px);
+  }
+  #kontrolWaktu button { height: 44px; min-width: 44px; }
+  #aplikasi:has(#menuBangun:not(.tersembunyi)) #kontrolWaktu,
+  #aplikasi:has(#panelKiri:not(.tersembunyi)) #kontrolWaktu,
+  #aplikasi:has(#panelKanan[style*="block"]) #kontrolWaktu,
+  #aplikasi:has(#sheetLainnyaMobile:not(.tersembunyi)) #kontrolWaktu,
+  #aplikasi:has(#menuCepatMobile:not(.tersembunyi)) #kontrolWaktu { display: none; }
+
+  /* ================= F. PANEL KIRI = BOTTOM SHEET ================= */
+  #panelKiri {
+    position: fixed; left: 0; right: 0; z-index: 30;
+    bottom: var(--m-bawah); width: auto;
+    max-height: 62dvh; overflow-y: auto; overscroll-behavior: contain;
+    border-radius: 16px 16px 0 0; padding: 12px 14px;
+    background: var(--panel-kuat);
+    border: 1px solid rgba(255, 255, 255, .16); border-bottom: none;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, .45);
+    animation: sheetNaik .22s ease;
+  }
+  #panelKiri.tersembunyi { display: none; }
+  @keyframes sheetNaik { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ================= G. DRAWER BANGUN = BOTTOM SHEET 3-STATE ================= */
+  /* 3 kondisi (class di #menuBangun, dikelola city-mobile.js):
+     - collapsed : class "terlipat" (sudah ada) — hanya bar kategori
+     - half      : class "sheet-half" — katalog 46dvh
+     - full      : class "sheet-full" — katalog setinggi mungkin
+     Tutup penuh (X) = tutupDrawerBangun yang sudah ada. */
+  #menuBangun {
+    left: 0; right: 0; bottom: var(--m-bawah);
+    max-width: none; margin: 0; z-index: 30;
+    padding: 0 8px 8px;
+    border-radius: 16px 16px 0 0;
+    border-bottom: none;
+    max-height: calc(100dvh - var(--m-bawah) - 52px);
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, .45);
+  }
+  #menuBangun.sheet-half { max-height: 46dvh; }
+  #menuBangun.sheet-full { max-height: calc(100dvh - var(--m-bawah) - 52px); }
+  /* Aturan lama (<=1100px) menggeser drawer saat panel kiri terbuka —
+     di mobile kedua sheet tidak boleh tampil bersamaan (JS menutup
+     yang satu saat yang lain dibuka); paksa tepi tetap 0. */
+  #aplikasi:has(#panelKiri:not(.tersembunyi)) #menuBangun { left: 0; right: 0; }
+  #menuBangun.terlipat { padding-bottom: 8px; }
+  /* Pegangan seret (dibuat JS, anak pertama #menuBangun): area 28px,
+     garis 40x4px di tengah. Seret ke bawah = turun satu tingkat
+     (full -> half -> collapsed -> tutup); seret ke atas = naik. */
+  #peganganSheet {
+    flex: none; height: 28px; display: flex; align-items: center; justify-content: center;
+    touch-action: none; cursor: grab;
+  }
+  #peganganSheet::before {
+    content: ""; width: 40px; height: 4px; border-radius: 2px;
+    background: rgba(255, 255, 255, .35);
+  }
+  #peganganSheet:active { cursor: grabbing; }
+  /* Kategori: horizontal scroll, target >= 44px. */
+  #katBangun { margin-bottom: 6px; }
+  .katTab { min-height: 44px; padding: 8px 12px; font-size: 12.5px; }
+  /* Katalog: grid 2 kolom (3 kolom bila lebar >= 600px), gulir vertikal.
+     Tombol geser kiri/kanan tidak bermakna di grid — disembunyikan. */
+  #itemBangunWrap { overflow-y: auto; }
+  .geser { display: none; }
+  #itemBangun {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px; overflow: visible; padding-bottom: 2px;
+    scroll-snap-type: none;
+    /* REGRESI 2026-11-16 (putaran-2): baris grid HARUS setinggi isi
+       kartu (max-content). Tanpa ini, baris "auto" pada wadah grid
+       bertinggi definit (sheet half di-cap max-height: 46dvh) malah
+       dijepit mengisi wadah (align-content normal = stretch) —
+       kartu 73px padahal isinya 129px, .kartuInfo meluber ke bawah
+       kotak dan nama+harga menumpuk di atas sprite kartu baris
+       berikut (HP portrait & landscape, state half DAN full
+       landscape). Dengan max-content, grid meluber ke bawah wadah
+       dan digulir #itemBangunWrap (overflow-y: auto) seperti
+       seharusnya. */
+    grid-auto-rows: max-content;
+  }
+  .kartuBangun { width: auto; min-height: 44px; }
+  .kartuBangun canvas { height: 64px; }
+  #btnLipatKatalog, #btnTutupDrawer { width: 44px; height: 44px; }
+
+  /* ================= H. MINIMAP MENGAMBANG ================= */
+  /* Kartu peta jadi tombol kecil di kanan atas area permainan (di
+     bawah HUD). Keadaan ditutup (hanya bar judul) = tombolnya.
+     Perbesar (toggleMinimapBesar yang sudah ada) = overlay tengah. */
+  /* Kartu peta mengambang: saat ditutup = tombol kecil (bar judul);
+     saat terbuka = selebar kanvas game (220px + padding), JANGAN
+     dijepit 148px — kanvas yang terpotong membuat tombol zoom meluap
+     dan menutupi tombol perbesar (regresi 2026-11-16). */
+  #kartuPeta {
+    position: fixed; z-index: 16;
+    top: calc(96px + env(safe-area-inset-top, 0px)); right: 8px;
+    width: auto; max-width: calc(100vw - 16px); padding: 8px;
+  }
+  #kartuPeta.ditutup { width: auto; max-width: 200px; }
+  #kartuPeta.ditutup .kartuJudul { margin-bottom: 0; }
+  #kartuPeta.ditutup .kartuJudul > span:first-child { display: none; }
+  #kartuPeta.diperbesar {
+    position: fixed; left: 50%; top: 50%; right: auto;
+    transform: translate(-50%, -50%);
+    width: min(430px, calc(100vw - 16px)); z-index: 60;
+  }
+  #kartuPeta.diperbesar #minimap { width: 100%; }
+  /* Aturan lama memaksa lebar kartu/panel dari kolom kanan — di mobile
+     kolom sudah display:contents, jadi lebar itu harus dibatalkan. */
+  #kolomKanan.panel-terbuka #kartuPeta { width: auto; }
+  #kolomKanan.minimap-ditutup #panelKanan,
+  #kolomKanan.panel-terbuka #panelKanan { width: auto; }
+  .miniKontrol button { width: 44px; height: 44px; font-size: 17px; }
+  #btnPetaBesar, #btnPetaTutup { width: 44px; height: 44px; }
+
+  /* ================= I. PANEL KANAN + AKSI BANGUNAN ================= */
+  /* Panel kanan (detail bangunan/petak terpilih) = bottom sheet.
+     Bila bar aksi bangunan tampil, panel naik di atas bar aksi. */
+  #panelKanan {
+    position: fixed; left: 0; right: 0; z-index: 31;
+    bottom: var(--m-bawah); width: auto;
+    max-height: 52dvh; overflow-y: auto; overscroll-behavior: contain;
+    border-radius: 16px 16px 0 0; padding: 12px 14px;
+    border-bottom: none;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, .45);
+    animation: sheetNaik .22s ease;
+  }
+  #aplikasi:has(#aksiBangunan[style*="flex"]) #panelKanan {
+    bottom: calc(var(--m-bawah) + 52px);
+  }
+  /* Bar aksi bangunan (Pindah/Putar/Hapus — ketiganya nyata):
+     menempel di atas bottom nav, di bawah panel kanan. */
+  #aksiBangunan {
+    position: fixed; left: 0; right: 0; z-index: 32;
+    bottom: var(--m-bawah);
+    padding: 4px 8px;
+    background: linear-gradient(180deg, rgba(15, 47, 64, .97), rgba(10, 46, 73, .97));
+    border-top: 1px solid rgba(255, 255, 255, .16);
+    gap: 8px;
+  }
+  #aksiBangunan .btnAksi { min-height: 44px; padding: 10px 6px; font-size: 13px; }
+
+  /* ================= J. TUTORIAL / CHIP / TOAST / ADVISOR ================= */
+  /* Kartu tutorial: di bawah HUD, tidak menutupi tengah peta, bisa
+     digulir bila isinya panjang. */
+  #kartuTutorial {
+    top: calc(96px + env(safe-area-inset-top, 0px));
+    width: min(480px, calc(100vw - 16px));
+    max-height: 42dvh; overflow-y: auto;
+  }
+  #modeChip { top: calc(96px + env(safe-area-inset-top, 0px)); }
+  .toast { top: calc(140px + env(safe-area-inset-top, 0px)); }
+  .toastAksiV24 { top: calc(140px + env(safe-area-inset-top, 0px)); }
+  /* Drawer penasihat: bottom sheet, bukan kolom kanan. */
+  .drawerAdvisorV24 {
+    top: auto; right: 0; left: 0; bottom: var(--m-bawah);
+    width: auto; max-width: none; max-height: 55dvh;
+    border-radius: 16px 16px 0 0; border-bottom: none;
+  }
+  /* Panel debug (bila aktif): pindah ke bawah HUD, selebar layar. */
+  .panelDebug {
+    left: 8px; right: 8px; max-width: none;
+    top: calc(96px + env(safe-area-inset-top, 0px));
+  }
+
+  /* ================= K. SHEET "LAINNYA" + MENU CEPAT (dibuat JS) ================= */
+  #sheetLainnyaMobile, #menuCepatMobile {
+    position: fixed; left: 0; right: 0; z-index: 40;
+    bottom: var(--m-bawah);
+    max-height: 60dvh; overflow-y: auto; overscroll-behavior: contain;
+    border-radius: 16px 16px 0 0; padding: 10px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: var(--panel-kuat);
+    border: 1px solid rgba(255, 255, 255, .16); border-bottom: none;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, .45);
+    animation: sheetNaik .22s ease;
+  }
+  #sheetLainnyaMobile.tersembunyi, #menuCepatMobile.tersembunyi { display: none; }
+  #sheetLainnyaMobile h3, #menuCepatMobile h3 {
+    font-size: 13px; color: var(--aksen-muda); margin: 2px 4px 8px;
+  }
+  #sheetLainnyaMobile button, #menuCepatMobile button {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    min-height: 48px; padding: 8px 12px; margin-bottom: 6px;
+    background: rgba(255, 255, 255, .07); color: #fff;
+    border: 1px solid rgba(255, 255, 255, .12); border-radius: 12px;
+    font-size: 14px; font-weight: 700; text-align: left;
+  }
+  #sheetLainnyaMobile button:active, #menuCepatMobile button:active {
+    background: rgba(255, 255, 255, .16);
+  }
+  #sheetLainnyaMobile button .sheetIkon, #menuCepatMobile button .sheetIkon {
+    font-size: 18px; flex: none; width: 24px; text-align: center;
+  }
+  /* Backdrop penutup sheet (dibuat JS): ketuk area gelap menutup
+     sheet Lainnya / menu cepat. */
+  #backdropMobile {
+    position: fixed; inset: 0; z-index: 29;
+    background: rgba(0, 0, 0, .45);
+  }
+  #backdropMobile.tersembunyi { display: none; }
+
+  /* ================= L. SCREEN FIT ================= */
+  /* Tanpa overflow horizontal di mana pun; panel dalam viewport. */
+  #aplikasi { width: 100vw; width: 100dvw; }
+  #panelKiriIsi, #panelKanan, #itemBangunWrap { overflow-x: hidden; }
+}
+
+/* Landscape HP: HUD satu baris (<= ~40px), minimap/chip/toast naik,
+   ticker hilang, label bottom nav hilang (ikon saja, nav 48px). */
+@media (max-width: 900px) and (max-height: 500px) {
+  #barAtas { flex-wrap: nowrap; padding: 2px 8px; }
+  .sumberDaya { flex: 1 1 auto; order: 0; }
+  /* Tombol overflow 32px agar bar total 38px (32+border 2+padding 4)
+     = 9,7% dari 390px — di bawah batas brief 8-10%. Tombol nav
+     utama tetap >=44px; overflow adalah kontrol sekunder. */
+  #btnOverflowMobile { width: 32px; height: 32px; font-size: 15px; }
+  #beritaPulau { display: none; }
+  #kartuPeta { top: calc(56px + env(safe-area-inset-top, 0px)); }
+  #kartuTutorial { top: calc(56px + env(safe-area-inset-top, 0px)); max-height: 52dvh; }
+  #modeChip { top: calc(56px + env(safe-area-inset-top, 0px)); }
+  .toast { top: calc(100px + env(safe-area-inset-top, 0px)); }
+  .toastAksiV24 { top: calc(100px + env(safe-area-inset-top, 0px)); }
+  .panelDebug { top: calc(56px + env(safe-area-inset-top, 0px)); }
+  #navBawahMobile button .navLabel { display: none; }
+  #navBawahMobile button .navIkon { font-size: 22px; }
+  /* Grid katalog 3 kolom di landscape (lebar cukup). */
+  #itemBangun { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* Portrait lebar (>= 600px, mis. tablet portrait): grid 3 kolom. */
+@media (max-width: 900px) and (min-width: 600px) and (min-height: 501px) {
+  #itemBangun { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* Layar sangat sempit (<= 480px): label nav 9px supaya "Pemerintahan"
+   muat dalam tombol ~65px tanpa ellipsis. */
+@media (max-width: 480px) {
+  #navBawahMobile button { font-size: 9px; }
+  #navBawahMobile button .navLabel { font-size: 9px; }
+}
