@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v34"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v35"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -3846,7 +3846,11 @@ function gambarBangunanVektor(def, px, py, s, rot, b, gelap) {
   const k = kakiBangunan(def, b ? b.rot : 0);
   const halfW = (k.w + k.h) * 16 * s, halfH = (k.w + k.h) * 8 * s;
   const lantai = v.lantai || 1;
-  const H = (12 + lantai * 9) * s;
+  // v35: tinggi vektor dari standar dunia (tinggiDunia meter x 9 px/m),
+  // bukan lagi rumus lama (12 + lantai*9) yang membuat semua gedung
+  // 1 lantai sama tinggi apa pun jenisnya. Fallback bila tanpa tinggiDunia.
+  const H = ((typeof def.tinggiDunia === "number" && def.tinggiDunia > 0)
+    ? def.tinggiDunia * SKALA_DUNIA.PX_PER_METER : (12 + lantai * 9)) * s;
   if (v.jenisAtap === "taman") {
     ctx.fillStyle = "#27ae60"; poly([[px, py - halfH], [px + halfW, py], [px, py + halfH], [px - halfW, py]]); ctx.fill();
     for (const [ox, oy] of [[-0.4, -0.2], [0.3, -0.3], [0, 0.25]]) {
@@ -3874,8 +3878,8 @@ function gambarBangunanVektor(def, px, py, s, rot, b, gelap) {
     ctx.fillStyle = "#7ec850"; poly([[px, py - halfH * 0.8], [px + halfW * 0.8, py], [px, py + halfH * 0.8], [px - halfW * 0.8, py]]); ctx.fill();
     for (const [ox, oy] of [[-0.45, -0.25], [0.35, -0.35], [-0.1, 0.3], [0.45, 0.2]]) {
       ctx.strokeStyle = "#6d4c41"; ctx.lineWidth = 2 * s;
-      ctx.beginPath(); ctx.moveTo(px + ox * halfW, py + oy * halfH); ctx.lineTo(px + ox * halfW, py + oy * halfH - 10 * s); ctx.stroke();
-      ctx.fillStyle = v.dinding; ctx.beginPath(); ctx.arc(px + ox * halfW, py + oy * halfH - 13 * s, 7 * s, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(px + ox * halfW, py + oy * halfH); ctx.lineTo(px + ox * halfW, py + oy * halfH - 14 * s); ctx.stroke();
+      ctx.fillStyle = v.dinding; ctx.beginPath(); ctx.arc(px + ox * halfW, py + oy * halfH - 18 * s, 10 * s, 0, Math.PI * 2); ctx.fill();
     }
     return;
   }
@@ -3908,6 +3912,20 @@ function gambarBangunanVektor(def, px, py, s, rot, b, gelap) {
   }
   gambarPrisma(px, py, halfW, halfH, H, v.dinding, v.atap, v.jenisAtap, lantai, v.detail, gelap);
 }
+// v35: tinggi render bangunan dari standar dunia — tinggiGambarBangunan
+// mengembalikan tinggi gambar (px) pada zoom z, dipakai penanda "!"
+// dan label ghost agar duduk DI ATAS bangunan, bukan di tengah sprite.
+function tinggiSpriteBangunan(def, z) {
+  const zz = z || 1;
+  const img = (def.gambar && typeof gambarAset !== "undefined") ? gambarAset[def.gambar] : null;
+  if (img && img.complete && img.naturalWidth && typeof ukuranGambarBangunan === "function") {
+    return ukuranGambarBangunan(def, img.naturalWidth, img.naturalHeight, zz).h;
+  }
+  if (typeof def.tinggiDunia === "number" && def.tinggiDunia > 0 && typeof SKALA_DUNIA !== "undefined") {
+    return def.tinggiDunia * SKALA_DUNIA.PX_PER_METER * zz;
+  }
+  return 60 * zz;
+}
 function gambarSpriteBangunan(def, px, py, s, b) {
   const img = gambarAset[def.gambar];
   const k = kakiBangunan(def, b ? b.rot : 0);
@@ -3916,8 +3934,17 @@ function gambarSpriteBangunan(def, px, py, s, b) {
     gambarPrisma(px, py, halfW, halfH, 20 * s, "#b2bec3", "#636e72", "pelana", 1, null, 0);
     return;
   }
-  const w = (k.w + k.h) * 32 * s * 1.12;
-  const h = w * (img.naturalHeight / img.naturalWidth);
+  // v35: ukuran dari standar dunia (tinggiDunia meter), BUKAN dari
+  // aspek kanvas sumber — lihat js/city-skala.js. Fallback rumus lama
+  // hanya bila modul skala belum termuat (pengaman harness lama).
+  let w, h;
+  if (typeof ukuranGambarBangunan === "function") {
+    const u = ukuranGambarBangunan(def, img.naturalWidth, img.naturalHeight, s);
+    w = u.w; h = u.h;
+  } else {
+    w = (k.w + k.h) * 32 * s * 1.12;
+    h = w * (img.naturalHeight / img.naturalWidth);
+  }
   ctx.save();
   if (b && b.rot % 2 === 1) { ctx.translate(px, 0); ctx.scale(-1, 1); ctx.translate(-px, 0); }
   ctx.drawImage(img, px - w / 2, py + halfH - h, w, h);
@@ -3974,7 +4001,13 @@ function gambarSatuBangunan(b, lebar, tinggi, gelap) {
         const tx = b.x + (i % k.w), ty = b.y + Math.floor(i / k.w);
         const tc = tileTengahDunia(tx, ty);
         const sc = duniaKeLayar(tc.x, tc.y, lebar, tinggi);
-        const tw = 40 * z, th = tw * (img.naturalHeight / img.naturalWidth);
+        // v35: pohon lapangan dari standar dunia (kelapa 12 m x 0,65
+        // = 70 px, dulu 40 px — pohon setinggi manusia adalah bug skala).
+        let tw = 40 * z, th = tw * (img.naturalHeight / img.naturalWidth);
+        if (typeof ukuranGambarPohon === "function") {
+          const u = ukuranGambarPohon("kelapa", "lapangan", img.naturalWidth, img.naturalHeight, z);
+          tw = u.w; th = u.h;
+        }
         ctx.drawImage(img, sc.x - tw / 2, sc.y + 16 * z - th, tw, th);
       }
     }
@@ -3984,11 +4017,14 @@ function gambarSatuBangunan(b, lebar, tinggi, gelap) {
     gambarBangunanVektor(def, px, py, z, b.rot, b, gelap);
   }
   if (b.selesai && b.kurangBahan) {
+    // v35: penanda "!" duduk di atas ATAP (tinggi render sebenarnya),
+    // bukan pada offset footprint tetap yang tenggelam di sprite tinggi.
+    const atasB = py + (k.w + k.h) * 8 * z - tinggiSpriteBangunan(def, z) - 12 * z;
     ctx.fillStyle = "#e74c3c";
-    ctx.beginPath(); ctx.arc(px, py - (k.w + k.h) * 8 * z - 30 * z, 9 * z, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(px, atasB, 9 * z, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "#ffffff"; ctx.font = "bold " + Math.max(10, 12 * z) + "px sans-serif";
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText("!", px, py - (k.w + k.h) * 8 * z - 30 * z);
+    ctx.fillText("!", px, atasB);
   }
 }
 // Gambar satu warga (dipakai lapisan gabungan)
@@ -3999,7 +4035,9 @@ function gambarSatuWarga(w, lebar, tinggi) {
   const z = kamera.zoom;
   const bob = w.jalan ? Math.abs(Math.sin(w.fase)) * 2 * z : 0;
   if (img && img.complete && img.naturalWidth) {
-    const h = 30 * z, ww = h * (img.naturalWidth / img.naturalHeight);
+    // v35: tinggi warga dari standar dunia (28 px @ zoom 1 = 1,7 m x
+    // 9 px/m x faktor legibilitas 1,8; dulu 30 px tetap tanpa standar).
+    const h = (typeof SKALA_DUNIA !== "undefined" ? SKALA_DUNIA.TINGGI_WARGA_PX : 30) * z, ww = h * (img.naturalWidth / img.naturalHeight);
     // Hadap mengikuti arah jalan: bila bergerak ke kiri layar, balik gambar.
     const hadapKiri = (Math.cos(w.arah || 0) - Math.sin(w.arah || 0)) < 0;
     if (hadapKiri) {
@@ -4148,32 +4186,39 @@ function gambarSatuKendaraan(k, lebar, tinggi) {
     ctx.lineWidth = Math.max(1.5, 2 * z);
     ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
   };
-  // v25: SEMUA kendaraan jalan memakai SATU cabang sprite generik
-  // (TIPE_KENDARAAN[k.tipe].sprite) — cabang truk/bus/mobil/ambulans
-  // lama yang masing-masing berdiri sendiri kini satu jalur.
-  // v27: sprite DIPILIH dari sudut layar (pilihVarianArah di atas)
-  // TANPA rotate — belok = ganti varian SE/SW/NW/NE di tengah
-  // belokan; cermin hanya bila file varian hilang (pilihGambar-
-  // Kendaraan). Bayangan + sorotan tetap digambar DI LUAR (elips tak
-  // berotasi). Lebar render proporsional panjangPetak:
-  // w = 64*z * (panjangPetak/1,6) — bus tetap 64*z, sedan 44*z,
-  // motor 28*z, pemadam 60*z. Tinggi ikut aspek varian yang dipakai
-  // (tampak belakang lebih pendek) dan itu BENAR.
+  // v35: lebar MAKSIMUM proporsional panjangPetak (bus 64*z, sedan
+  // 44*z, motor 28*z, pemadam 60*z) dan TINGGI dijepit ke standar
+  // dunia per tipe (TINGGI_KENDARAAN_PX, js/city-skala.js) dengan
+  // skala seragam — tinggi TIDAK LAGI ikut aspek varian begitu saja
+  // (sedan dulu 37 px, lebih tinggi dari manusia 30 px).
   const T = (typeof TIPE_KENDARAAN !== "undefined" && TIPE_KENDARAAN[k.tipe]) || null;
   if (T && T.sprite) {
     const t = tileTengahDunia(k.x, k.y);
     const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
-    const w = 64 * z * ((T.panjangPetak || 1.6) / 1.6);
+    // v35: lebar maksimum dari panjangPetak (bus 64 px, sedan 44 px,
+    // motor 28 px), TINGGI dijepit ke standar dunia per tipe
+    // (sedan 26 px < manusia 28 px; bus 42 px) — dulu tinggi ikut
+    // aspek kanvas sehingga sedan 37 px LEBIH TINGGI dari manusia
+    // dan bus 39,5 px nyaris sama dengan sedan. Skala seragam.
+    const wMaks = 64 * z * ((T.panjangPetak || 1.6) / 1.6);
+    const varian = pilihVarianArah(k.arah || 0, k);
+    const hasil = pilihGambarKendaraan(T.sprite, varian, k.tipe === "bus");
+    const img = hasil.img, pakaiTruk = hasil.pakaiTruk;
+    let w = wMaks, h = wMaks * 0.6;
+    if (img) {
+      if (typeof ukuranGambarKendaraan === "function") {
+        const u = ukuranGambarKendaraan(k.tipe, wMaks, img.naturalWidth, img.naturalHeight, z);
+        w = u.w; h = u.h;
+      } else {
+        h = w * (img.naturalHeight / img.naturalWidth);
+      }
+    }
     bayangan(s.x, s.y + 8 * z, w * 0.55, w * 0.16);
     sorotan(s.x, s.y + 8 * z, w * 0.62, w * 0.22);
     // v27: varian arah + rantai fallback (varian -> cermin -> SE ->
     // bus: truk -> vektor). v19: bus yang spritenya belum termuat
     // memakai sprite truk + atap biru (placeholder lama).
-    const varian = pilihVarianArah(k.arah || 0, k);
-    const hasil = pilihGambarKendaraan(T.sprite, varian, k.tipe === "bus");
-    const img = hasil.img, pakaiTruk = hasil.pakaiTruk;
     if (img) {
-      const h = w * (img.naturalHeight / img.naturalWidth);
       ctx.save();
       ctx.translate(s.x, s.y + 8 * z);
       if (hasil.cermin) ctx.scale(-1, 1); // fallback terdegradasi saja; TANPA rotate
@@ -4341,12 +4386,18 @@ function gambarPeta() {
     if (t === "hutan") {
       const img = gambarAset["assets/environment/pohon-rumbia.png"];
       if (img && img.complete && img.naturalWidth) {
-        const tw = 34 * z;
-        const th = tw * (img.naturalHeight / img.naturalWidth);
+        // v35: rumbia terrain 14 m x 9 px/m x 0,45 = 57 px (dulu 34 px
+        // — pohon setinggi manusia). Variasi alami +-15% per petak.
+        let tw = 34 * z, th = tw * (img.naturalHeight / img.naturalWidth);
+        if (typeof ukuranGambarPohon === "function") {
+          const u = ukuranGambarPohon("rumbia", "terrain", img.naturalWidth, img.naturalHeight, z);
+          const variasi = 0.85 + varr * 0.3;
+          tw = u.w * variasi; th = u.h * variasi;
+        }
         ctx.drawImage(img, px - tw / 2 - 6 * z, py + 16 * z - th + 4 * z, tw, th);
         ctx.drawImage(img, px - tw / 2 + 8 * z, py + 16 * z - th + 8 * z, tw * 0.85, th * 0.85);
         if (varr > 0.45) {
-          const tw3 = 24 * z, th3 = tw3 * (img.naturalHeight / img.naturalWidth);
+          const tw3 = tw * 0.7, th3 = th * 0.7;
           ctx.drawImage(img, px - tw3 / 2 + 2 * z, py + 16 * z - th3 + 12 * z, tw3, th3);
         }
       } else {
@@ -4359,7 +4410,12 @@ function gambarPeta() {
       // Palem di pantai (ala referensi) — hiasan, tile tetap bisa dibangun
       const imgK = gambarAset["assets/environment/pohon-kelapa.png"];
       if (imgK && imgK.complete && imgK.naturalWidth) {
-        const tw = 30 * z, th = tw * (imgK.naturalHeight / imgK.naturalWidth);
+        // v35: kelapa pantai 12 m x 9 px/m x 0,45 = 49 px (dulu 30 px).
+        let tw = 30 * z, th = tw * (imgK.naturalHeight / imgK.naturalWidth);
+        if (typeof ukuranGambarPohon === "function") {
+          const u = ukuranGambarPohon("kelapa", "terrain", imgK.naturalWidth, imgK.naturalHeight, z);
+          tw = u.w; th = u.h;
+        }
         ctx.drawImage(imgK, px - tw / 2 - 4 * z, py + 16 * z - th + 2 * z, tw, th);
       }
     }
@@ -4669,7 +4725,9 @@ function gambarGhost(lebar, tinggi) {
       let label = "Bangun di Sini";
       if (cek.biayaTambahan) label += " · +" + rp(cek.biayaTambahan) + " " + (cek.biayaTambahanDes || "");
       const lw = ctx.measureText(label).width + 18;
-      const ly = s.y - (k.w + k.h) * 8 * z - 52 * z;
+      // v35: label di atas ATAP ghost (tinggi render sebenarnya), bukan
+      // offset footprint tetap yang tenggelam di sprite bangunan tinggi.
+      const ly = s.y + (k.w + k.h) * 8 * z - tinggiSpriteBangunan(def, z) - 26 * z;
       ctx.fillStyle = "rgba(8,28,48,0.88)";
       ctx.fillRect(s.x - lw / 2, ly - 11, lw, 22);
       ctx.strokeStyle = "#22c55e"; ctx.lineWidth = 1.5;
@@ -7015,8 +7073,18 @@ function kotakSpriteBangunan(b) {
   const img = gambarAset[def.gambar];
   let w, h;
   if (img && img.complete && img.naturalWidth) {
-    w = (k.w + k.h) * 32 * z * 1.12;
-    h = w * (img.naturalHeight / img.naturalWidth);
+    // v35.1: hit-box dari standar dunia yang SAMA dengan render
+    // (gambarSpriteBangunan, city.js:3942-3946) — rumus lama v34.1 di
+    // sini membuat hit-box masjid hanya 51% sprite (ketuk kubah tidak
+    // merespons) dan toko 177% (ketuk udara kosong malah memilih toko).
+    // Fallback rumus lama hanya bila modul skala belum termuat.
+    if (typeof ukuranGambarBangunan === "function") {
+      const u = ukuranGambarBangunan(def, img.naturalWidth, img.naturalHeight, z);
+      w = u.w; h = u.h;
+    } else {
+      w = (k.w + k.h) * 32 * z * 1.12;
+      h = w * (img.naturalHeight / img.naturalWidth);
+    }
   } else {
     w = (k.w + k.h) * 32 * z;
     h = (k.w + k.h) * 16 * z + 20 * z;

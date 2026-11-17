@@ -3,7 +3,15 @@
    v34 — UI FIX: COMPACT MOBILE BUILDING CATALOG (lihat §G + blok
    landscape di bawah): tab kategori 44px, thumbnail landscape 60px,
    kartu landscape horizontal compact, sheet half landscape 48dvh —
-   baris pertama kartu terlihat PENUH di half. Desktop TIDAK disentuh.
+   KEPUTUSAN USER 2026-11-17: pertahankan 48% (revert dari 62dvh
+   v34.1/v35), kriteria dilonggarkan — baris pertama kartu PENUH
+   wajib hanya di Permukiman (baseline live ?v=62 v34); kategori
+   lain BOLEH terpotong di tepi sheet, asalkan sheet bisa digulir
+   rapi dan semua konten kartu tercapai lewat scroll. Penjaga
+   deterministik v34.1 (clamp harga 2 / kunci 1 / pesan 1 baris)
+   DIPERTAHANKAN — kartu terburuk tetap <= 88,4px model (90,4px
+   live termasuk border kartu 1px) di semua font.
+   Desktop TIDAK disentuh.
    Layout khusus smartphone; desktop TIDAK disentuh: SEMUA aturan di
    file ini berada dalam @media (max-width: 900px). File ini dimuat
    SETELAH city.css, jadi aturannya menang atas aturan lama di lebar
@@ -371,14 +379,50 @@
   #navBawahMobile button .navIkon { font-size: 22px; }
   /* Grid katalog 3 kolom di landscape (lebar cukup). */
   #itemBangun { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  /* ============ v34 — KATALOG COMPACT LANDSCAPE ============
-     Baseline v33 (844x390, half): sheet 179px, chrome 149px
-     (pegangan 28 + tab 55 + baris katalog 44 + padding), wrap HANYA
-     30px — baris pertama kartu (153px) tidak terlihat sama sekali.
-     Anggaran baru (sheet half 48dvh = 187px): pegangan 18 + tab 44
-     (+margin 4) + baris katalog 32 (+margin 2) + padding bawah 4 =
-     106px chrome -> wrap 81px. Kartu horizontal 70px (canvas 60px
-     + padding 5px) -> baris pertama terlihat PENUH (sisa 11px). */
+  /* ============ v34.1 — KATALOG COMPACT LANDSCAPE (perbaikan v34) ============
+     Anggaran v34 SALAH: kartu diasumsikan 70-75px (nama/des/harga
+     masing-masing 1 baris), padahal .kartuHarga tanpa clamp membungkus
+     ke 2-3 baris dan .kartuKunci menambah 1-3 baris pada kartu
+     terkunci. Terukur (data katalog + PIL Liberation/DejaVu + live
+     ?v=62): kartu baris-pertama terburuk TANPA penjaga 104,2px
+     (Liberation/Roboto) s.d. 136,4px (DejaVu/headless) — Bandara,
+     Pabrik Mie Sagu, Jalan Raya (harga 2-3 baris + kunci
+     "level + Penelitian" 2-3 baris).
+     Perbaikan v34.1 (SEMUA di blok landscape ini):
+     (1) sheet half 48dvh -> 62dvh (= 241,8px pada 390px) — DIBATALKAN
+     2026-11-17: KEPUTUSAN USER "Pertahankan 48%, longgarkan
+     kriterianya" — sheet half KEMBALI 48dvh (= 187,2px pada 390px).
+     Anggaran 62dvh di bawah ini disimpan sebagai catatan (bukan
+     klaim): pada 62dvh wrap 135,8px (tab biasa) / 99,8px (tab chip)
+     / 103,8px (tab pesan) vs kartu terburuk 88,4px — sisa minimal
+     11,4px, jadi 62dvh memang cukup untuk baris pertama PENUH di
+     semua kategori. User memilih 48dvh dengan kriteria longgar
+     (lihat header file).
+     (2) PENJAGA DETERMINISTIK (DIPERTAHANKAN di 48dvh):
+     .kartuHarga clamp maks 2 baris, .kartuKunci clamp 1 baris +
+     ellipsis — kartu terburuk menjadi 88,4px model di SEMUA font
+     (nama 15 + des 13,65 + harga 2x16,5 + margin 1 + kunci
+     1x15,75 + padding 10; live 90,4px termasuk border kartu 1px
+     atas+bawah — model v34.1 tidak menghitung border, selisih 2px).
+     Harga tetap 2 baris (biaya+material terbaca); kunci tetap
+     tampil (alasan lengkap di toast saat kartu terkunci diketuk).
+     (3) .pesanKatalog landscape: 1 baris (nowrap + ellipsis),
+     padding/margin ringkas -> 32px deterministik (tanpa ini 40px
+     Liberation / 58px DejaVu — tinggi tergantung font).
+     Anggaran 48dvh (chrome dasar 106px, ukur live v34: pegangan 18
+     + tab 44 (+margin 4) + baris katalog 32 (+margin 2) + padding
+     bawah 4 + border 1 + ~1px pembulatan): sheet 187,2px -> wrap
+     81,2px (tab biasa), 45,2px (tab Air/Drainase, chip +36px),
+     49,2px (tab Keamanan/Hiburan level 1, pesan +32px). Kartu
+     terburuk model 88,4px MELEBIHI wrap di semua jenis tab — model
+     konservatif TIDAK menjamin baris pertama penuh di tab mana pun;
+     baris pertama PENUH di Permukiman adalah OBSERVASI LIVE (?v=62
+     v34, font nyata lebih sempit dari model konservatif) dan
+     dibuktikan ulang live di tests/v35-viewport.js; kategori lain
+     BOLEH terpotong di tepi sheet dan tercapai lewat scroll (wrap
+     overflow-y: auto + overscroll contain; penjaga menjamin tidak
+     ada kartu yang meluber tanpa batas). Portrait half (46dvh)
+     TIDAK diubah. */
   #menuBangun.sheet-half { max-height: 48dvh; }
   #menuBangun { padding-bottom: 4px; }
   #peganganSheet { height: 18px; }
@@ -391,8 +435,10 @@
   #btnLipatKatalog, #btnTutupDrawer { width: 32px; height: 32px; }
   /* Kartu HORIZONTAL compact: thumbnail kiri 96x60px (gambar tidak
      dipotong — object-fit: contain, rasio dipertahankan, thumbnail
-     TIDAK memenuhi kartu), info kanan 1 baris per field (nama,
-     pekerja/waktu, harga+material). Tinggi kartu 70px. */
+     TIDAK memenuhi kartu), info kanan (nama, pekerja/waktu,
+     harga+material, kunci). Tinggi kartu 70px (tak-terkunci, harga
+     1 baris) s.d. 88,4px deterministik (terkunci, harga 2 baris +
+     kunci 1 baris — penjaga v34.1, lihat anggaran di atas). */
   .kartuBangun {
     display: flex; align-items: center; gap: 6px;
     text-align: left; padding: 5px 6px;
@@ -404,9 +450,30 @@
      city.css menyembunyikannya di layar pendek (keputusan v28, saat
      kartu vertikal: des 2-baris membuat harga terpotong). Di kartu
      horizontal v34 ada ruang: info 3 baris 1-baris (~43px) < canvas
-     60px, kartu tetap 70px. */
+     60px, kartu tetap 70px — v34.1: info kini 4 baris (nama/des/
+     harga/kunci), maks 78,4px > canvas 60px, kartu maks 88,4px
+     (penjaga clamp harga 2 + kunci 1); tetap muat di wrap half
+     62dvh, lihat anggaran di atas; di 48dvh (keputusan user
+     2026-11-17) baris pertama penuh hanya dijamin Permukiman,
+     kategori lain tercapai lewat scroll. */
   .kartuDes { display: -webkit-box; min-height: 0; -webkit-line-clamp: 1; }
-  .kartuHarga { margin-top: 1px; }
+  /* v34.1 PENJAGA DETERMINISTIK (lihat anggaran di atas): harga maks
+     2 baris — tanpa clamp, harga terpanjang (Bandara, 54 karakter)
+     membungkus ke 3 baris di font lebar (DejaVu/headless). 2 baris
+     tetap menampilkan SEMUA biaya+material di font normal
+     (Segoe UI/Roboto/Liberation); ellipsis hanya muncul bila font
+     lebih lebar dari itu. Jangan jadikan 1 baris. */
+  .kartuHarga { margin-top: 1px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  /* v34.1 PENJAGA DETERMINISTIK: kunci maks 1 baris + ellipsis —
+     tanpa clamp, kunci "level + Penelitian" (57-60 karakter)
+     membungkus ke 2-3 baris. Alasan lengkap tetap tampil di toast
+     saat kartu terkunci diketuk. Jangan display:none. */
+  .kartuKunci { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+  /* v34.1: pesan "semua terkunci" di landscape half — 1 baris
+     (nowrap + ellipsis) + padding/margin ringkas -> 32px
+     deterministik (tanpa ini 40px Liberation / 58px DejaVu).
+     display TIDAK disentuh: JS mengatur block/none inline. */
+  .pesanKatalog { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 4px 10px; margin-bottom: 4px; }
 }
 
 /* Portrait lebar (>= 600px, mis. tablet portrait): grid 3 kolom. */

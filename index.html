@@ -18,10 +18,57 @@
 <link rel="icon" href="assets/icons/favicon.ico">
 <link rel="stylesheet" href="css/city.css?v=20">
 <link rel="stylesheet" href="css/menu.css?v=2">
-<link rel="stylesheet" href="css/mobile.css?v=2">
+<link rel="stylesheet" href="css/mobile.css?v=4">
+<!-- v35: splash screen — 3 layar (KEDAI MEDIA | MALAKA DIGITAL HUB →
+     BUDAK AWAK → RISE OF MERANTI), 5 detik/layar, latar HITAM, fade
+     600 ms. CSS inline di sini supaya splash tampil di paint pertama,
+     sebelum city.js selesai parse. Logika di js/city-splash.js.
+     BUDAK AWAK (RGB, latar hitam): cover HANYA bila viewport lebih
+     lebar dari 16:9 — crop-nya hanya hitam (tak terlihat di atas
+     hitam); di layar lebih sempit (mis. HP portrait) pakai contain
+     supaya logo tidak terpotong (cover portrait hanya menampilkan
+     ~31% lebar gambar). Dua logo RGBA tampil contain di tengah. -->
+<link rel="preload" as="image" href="assets/ui/splash-kedai-malaka.png">
+<link rel="preload" as="image" href="assets/ui/splash-budak-awak.png">
+<link rel="preload" as="image" href="assets/ui/splash-rise-of-meranti.png">
+<style>
+#layarSplash{position:fixed;inset:0;z-index:9999;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:manipulation;transition:opacity .6s ease}
+#layarSplash.splash-selesai{opacity:0;pointer-events:none}
+.splash-layar{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#000;opacity:0;transition:opacity .6s ease}
+.splash-layar.splash-aktif{opacity:1}
+.splash-gambar-contain{max-width:94vw;max-height:76vh;object-fit:contain}
+.splash-gambar-cover{width:100%;height:100%;object-fit:contain}
+@media (min-aspect-ratio:16/9){.splash-gambar-cover{object-fit:cover}}
+.splash-muat{position:absolute;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:center;gap:8px;z-index:2;padding:0 24px;pointer-events:none}
+.splash-bar-luar{width:min(320px,72vw);height:6px;background:rgba(255,255,255,.18);border-radius:3px;overflow:hidden}
+.splash-bar-dalam{height:100%;width:0%;background:#fbbf24;border-radius:3px;transition:width .2s linear}
+.splash-bar-dalam.splash-bar-takdikenal{width:40%!important;animation:splashDenyut 1.2s ease-in-out infinite alternate}
+@keyframes splashDenyut{from{margin-left:0}to{margin-left:60%}}
+.splash-teks{color:rgba(255,255,255,.85);font-size:13px;margin:0;text-align:center}
+.splash-petunjuk{color:rgba(255,255,255,.45);font-size:11px;margin:0;text-align:center}
+</style>
 </head>
 <body>
-<!-- Layar mulai: pembuka sinematik MERANTI RISING (v20: main menu ala game PC/console; v26: layout RISE OF MERANTI — panorama + header + logo + 5 tombol nav + promo + 7 kategori, lihat css/menu.css) -->
+<!-- v35: Splash screen — urutan 3 layar saat game pertama dibuka
+     (sebelum menu utama). Ketuk/klik = lewati ke layar berikutnya. -->
+<div id="layarSplash" role="dialog" aria-label="Layar pembuka RISE OF MERANTI">
+  <div class="splash-layar" data-splash="kedai-malaka">
+    <img class="splash-gambar-contain" src="assets/ui/splash-kedai-malaka.png" alt="KEDAI MEDIA — kedaimedia.com | MALAKA DIGITAL HUB">
+  </div>
+  <div class="splash-layar" data-splash="budak-awak">
+    <img class="splash-gambar-cover" src="assets/ui/splash-budak-awak.png" alt="BUDAK AWAK">
+  </div>
+  <div class="splash-layar" data-splash="rise-of-meranti">
+    <img class="splash-gambar-contain" src="assets/ui/splash-rise-of-meranti.png" alt="RISE OF MERANTI — City, People, Prosperity">
+  </div>
+  <div class="splash-muat">
+    <div class="splash-bar-luar"><div id="splashBar" class="splash-bar-dalam"></div></div>
+    <p id="splashTeks" class="splash-teks">Memuat…</p>
+    <p class="splash-petunjuk">Ketuk layar untuk lanjut</p>
+  </div>
+</div>
+<script src="js/city-splash.js?v=1"></script>
+<!-- Layar mulai: pembuka sinematik (v20: main menu ala game PC/console; v26: layout RISE OF MERANTI — panorama + header + logo + 5 tombol nav + promo + 7 kategori, lihat css/menu.css; v35: didahului splash 3 layar di atas) -->
 <div id="layarMulai">
   <div class="latarSinematik"><img src="assets/menu/menu-background.jpg" alt="Panorama Kepulauan Meranti — jembatan, laut, dan kota Selatpanjang">
     <div class="awanSinematik awan1"></div>
@@ -36,7 +83,7 @@
       <header class="menu-header">
         <div class="menu-partner"><img src="assets/menu/partner-logos.png" alt="KEDAI MEDIA — kedaimedia.com, dan MALAKA DIGITAL HUB"></div>
         <div class="menu-header-kanan">
-          <span id="menuPillVersi" class="menu-pill-versi">v34</span>
+          <span id="menuPillVersi" class="menu-pill-versi">v35</span>
           <button id="btnMenuBantuan" type="button" class="menu-ikon-btn" title="Cara bermain" aria-label="Cara bermain"><img src="assets/menu/crop/header-ikon-lingkaran-bantuan-kecil.png" alt=""></button>
           <button id="btnMenuProfil" type="button" class="menu-ikon-btn" title="Profil Pemain" aria-label="Profil Pemain"><img src="assets/menu/crop/header-ikon-lingkaran-profil-besar.png" alt=""></button>
           <button id="btnMenuPengaturan" type="button" class="menu-ikon-btn" title="Pengaturan" aria-label="Pengaturan"><img src="assets/menu/crop/header-ikon-lingkaran-pengaturan-kecil.png" alt=""></button>
@@ -44,7 +91,7 @@
       </header>
       <div class="menu-utama">
         <div class="menu-kiri">
-          <!-- v26: logo game baru (gambar sudah memuat judul "RISE OF MERANTI" + tagline) — JANGAN tambah teks judul via CSS. Logo lama assets/images/logo-meranti-rising.png tetap ada di repo + precache SW. -->
+          <!-- v26: logo game baru (gambar sudah memuat judul "RISE OF MERANTI" + tagline) — JANGAN tambah teks judul via CSS. v35: logo lama v26 TIDAK lagi dipakai di mana pun & TIDAK lagi di-precache SW (file-nya masih ada di repo, penghapusan diputuskan koordinator). -->
           <img class="menu-logo" src="assets/menu/logo-rise-of-meranti.png" alt="RISE OF MERANTI — City, People, Prosperity">
           <p class="subMulai">Island City Builder · Simulasi Ekonomi · Peradaban Kepulauan Meranti</p>
           <p id="sambutanKembali" class="sambutanKembali" style="display:none"></p>
@@ -482,7 +529,8 @@
   </div>
 </div>
 
-<script src="js/city-data.js?v=13"></script>
+<script src="js/city-data.js?v=14"></script>
+<script src="js/city-skala.js?v=1"></script>
 <script src="js/city-map.js?v=4"></script>
 <script src="js/city-utilitas.js?v=3"></script>
 <script src="js/city-bahagia.js?v=2"></script>
@@ -497,7 +545,7 @@
 <script src="js/city-diagnostik.js?v=5"></script>
 <script src="js/city-advisor.js?v=11"></script>
 <script src="js/city-layanan.js?v=2"></script>
-<script src="js/city.js?v=56"></script>
+<script src="js/city.js?v=58"></script>
 <script src="js/city-mobile.js?v=1"></script>
 <script src="js/city-tutorial.js?v=1"></script>
 <script src="js/city-ui-v24.js?v=6"></script>

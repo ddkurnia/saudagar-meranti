@@ -71,7 +71,7 @@ const sandbox = {
   Math: Math, JSON: JSON, Object: Object, Array: Array, parseInt: parseInt, parseFloat: parseFloat, isNaN: isNaN,
 };
 vm.createContext(sandbox);
-const URUT_MODUL = ["city-data.js", "city-map.js", "city-utilitas.js", "city-bahagia.js",
+const URUT_MODUL = ["city-data.js", "city-skala.js", "city-map.js", "city-utilitas.js", "city-bahagia.js",
   "city-lalin.js", "city-jalan.js", "city-kendaraan.js", "city-persimpangan.js", "city-maritim.js",
   "city-warga.js", "city-bubble.js", "city-diagnostik.js", "city-advisor.js",
   "city-layanan.js", "city.js", "city-mobile.js", "city-tutorial.js", "city-ui-v24.js"];
@@ -103,19 +103,19 @@ function majuSatuHari() { for (let i = 0; i < 6; i++) C.majukanWaktu(240); }
 const idxHtml = fs.readFileSync(ROOT + "/index.html", "utf8");
 const swTxt = fs.readFileSync(ROOT + "/sw.js", "utf8");
 const srcCity = fs.readFileSync(ROOT + "/js/city.js", "utf8");
-cek("A1 VERSI_GAME v34", C.VERSI_GAME === "v34", C.VERSI_GAME);
+cek("A1 VERSI_GAME v35", C.VERSI_GAME === "v35", C.VERSI_GAME);
 cek("A2 index.html memuat 6 modul v24 dalam urutan benar (advisor ?v=11, ui-v24 ?v=6, diagnostik ?v=5 + bubble ?v=4, warga ?v=2, lainnya ?v=1)",
   idxHtml.indexOf("js/city-warga.js?v=2") !== -1 && idxHtml.indexOf("js/city-bubble.js?v=4") !== -1 &&
   idxHtml.indexOf("js/city-diagnostik.js?v=5") !== -1 && idxHtml.indexOf("js/city-advisor.js?v=11") !== -1 &&
   idxHtml.indexOf("js/city-tutorial.js?v=1") !== -1 && idxHtml.indexOf("js/city-ui-v24.js?v=6") !== -1 &&
-  idxHtml.indexOf("js/city-advisor.js?v=11") < idxHtml.indexOf("js/city.js?v=56") &&
-  idxHtml.indexOf("js/city.js?v=56") < idxHtml.indexOf("js/city-tutorial.js?v=1"));
-cek("A3 index.html: #btnAdvisor + #drawerAdvisorV24 + #toastAksiV24 + css?v=20 + city.js?v=56",
+  idxHtml.indexOf("js/city-advisor.js?v=11") < idxHtml.indexOf("js/city.js?v=58") &&
+  idxHtml.indexOf("js/city.js?v=58") < idxHtml.indexOf("js/city-tutorial.js?v=1"));
+cek("A3 index.html: #btnAdvisor + #drawerAdvisorV24 + #toastAksiV24 + css?v=20 + city.js?v=58",
   idxHtml.indexOf('id="btnAdvisor"') !== -1 && idxHtml.indexOf('id="drawerAdvisorV24"') !== -1 &&
   idxHtml.indexOf('id="toastAksiV24"') !== -1 && idxHtml.includes("css/city.css?v=20") &&
-  idxHtml.includes("js/city.js?v=56"));
-cek("A4 sw.js cache rise-of-meranti-v34 + precache 6 modul baru",
-  swTxt.indexOf("rise-of-meranti-v34") !== -1 && swTxt.indexOf("js/city-warga.js?v=2") !== -1 &&
+  idxHtml.includes("js/city.js?v=58"));
+cek("A4 sw.js cache rise-of-meranti-v35 + precache 6 modul baru",
+  swTxt.indexOf("rise-of-meranti-v35") !== -1 && swTxt.indexOf("js/city-warga.js?v=2") !== -1 &&
   swTxt.indexOf("js/city-bubble.js?v=4") !== -1 && swTxt.indexOf("js/city-diagnostik.js?v=5") !== -1 &&
   swTxt.indexOf("js/city-advisor.js?v=11") !== -1 && swTxt.indexOf("js/city-tutorial.js?v=1") !== -1 &&
   swTxt.indexOf("js/city-ui-v24.js?v=6") !== -1);
@@ -185,7 +185,7 @@ cek("A5f tidak ada sisa pin v32 tahap-1 aktif (city.js?v=48 / city-data ?v=12 / 
   !swTxt.includes("js/city-data.js?v=12") && !swTxt.includes("js/city-advisor.js?v=8") &&
   idxHtml.includes("js/city-layanan.js?v=2") &&
   idxHtml.indexOf("js/city-advisor.js?v=11") < idxHtml.indexOf("js/city-layanan.js?v=2") &&
-  idxHtml.indexOf("js/city-layanan.js?v=2") < idxHtml.indexOf("js/city.js?v=56") &&
+  idxHtml.indexOf("js/city-layanan.js?v=2") < idxHtml.indexOf("js/city.js?v=58") &&
   swTxt.includes("js/city-layanan.js?v=2"));
 cek("A5g tidak ada sisa pin v32 aktif (city.js?v=49 / advisor ?v=9 / css?v=19 / cache v32 / pill v32)",
   !idxHtml.includes("js/city.js?v=49") && !idxHtml.includes("js/city-advisor.js?v=9") &&
@@ -206,10 +206,14 @@ cek("A5i tidak ada sisa pin v32.2 aktif (city.js?v=51 / diagnostik ?v=4 / adviso
   !swTxt.includes("js/city.js?v=51") && !swTxt.includes("js/city-diagnostik.js?v=4") &&
   !swTxt.includes("js/city-advisor.js?v=10") && !swTxt.includes("js/city-layanan.js?v=1") &&
   !swTxt.includes("js/city-ui-v24.js?v=5") && !swTxt.includes('"meranti-rising-v32.2"'));
-cek("A5j tidak ada sisa pin v32.5 aktif (city.js?v=54 / cache v32.5 / pill v32.5)",
+cek("A5j tidak ada sisa pin v32.5 aktif (city.js?v=54 / cache v32.5 / pill v32.5) + tidak ada sisa pin v34.1 aktif (city.js?v=57 / city-data ?v=13 / cache v34.1 / pill v34.1)",
   !idxHtml.includes("js/city.js?v=54") && !idxHtml.includes('menu-pill-versi">v32.5<') &&
   !idxHtml.includes("rise-of-meranti-v32.5") &&
-  !swTxt.includes("js/city.js?v=54") && !swTxt.includes('"rise-of-meranti-v32.5"'));
+  !swTxt.includes("js/city.js?v=54") && !swTxt.includes('"rise-of-meranti-v32.5"') &&
+  !idxHtml.includes("js/city.js?v=57") && !idxHtml.includes("js/city-data.js?v=13") &&
+  !idxHtml.includes('menu-pill-versi">v34.1<') && !idxHtml.includes("rise-of-meranti-v34.1") &&
+  !swTxt.includes("js/city.js?v=57") && !swTxt.includes("js/city-data.js?v=13") &&
+  !swTxt.includes('"rise-of-meranti-v34.1"'));
 cek("A6 modul global termuat (Warga/Bubble/Diagnostik/Advisor/Tutorial/UIV24/Notifikasi)",
   !!W && !!Bbl && !!Dg && !!Adv && !!Tut && !!UI && !!Notif);
 cek("A7 adapter kontrak: Diagnostik.diagnosis = diagnosa + statusBangunan; Advisor.pesan + ringkasan",
@@ -873,13 +877,13 @@ Bbl.bersihkan();
 Dg.invalidateSemua();
 
 // ---- X4d: banner "Versi baru tersedia" hanya bila SW lebih baru ----
-cek("X4d bandingVersi: v24.2>v24.1, v24.1<v24.2, sama=0, v24.10>v24.2, v27.1>v27, v27.2>v27.1, v27.3>v27.2, v28>v27.3, v29>v28, v29.1>v29, v29.2>v29.1, v30>v29.2, v31>v30, v32>v31, v32.1>v32, v32.2>v32.1, v32.3>v32.2, v32.4>v32.3, v32.5>v32.4, v33>v32.5, v34>v33", ctxEval("bandingVersi('v24.2','v24.1')") === 1 && ctxEval("bandingVersi('v24.1','v24.2')") === -1 && ctxEval("bandingVersi('v24.2','v24.2')") === 0 && ctxEval("bandingVersi('v24.10','v24.2')") === 1 && ctxEval("bandingVersi('v27.1','v27')") === 1 && ctxEval("bandingVersi('v27.2','v27.1')") === 1 && ctxEval("bandingVersi('v27.3','v27.2')") === 1 && ctxEval("bandingVersi('v28','v27.3')") === 1 && ctxEval("bandingVersi('v29','v28')") === 1 && ctxEval("bandingVersi('v29.1','v29')") === 1 && ctxEval("bandingVersi('v29.2','v29.1')") === 1 && ctxEval("bandingVersi('v30','v29.2')") === 1 && ctxEval("bandingVersi('v31','v30')") === 1 && ctxEval("bandingVersi('v32','v31')") === 1 && ctxEval("bandingVersi('v32.1','v32')") === 1 && ctxEval("bandingVersi('v32.2','v32.1')") === 1 && ctxEval("bandingVersi('v32.3','v32.2')") === 1 && ctxEval("bandingVersi('v32.4','v32.3')") === 1 && ctxEval("bandingVersi('v32.5','v32.4')") === 1 && ctxEval("bandingVersi('v33','v32.5')") === 1 && ctxEval("bandingVersi('v34','v33')") === 1);
+cek("X4d bandingVersi: v24.2>v24.1, v24.1<v24.2, sama=0, v24.10>v24.2, v27.1>v27, v27.2>v27.1, v27.3>v27.2, v28>v27.3, v29>v28, v29.1>v29, v29.2>v29.1, v30>v29.2, v31>v30, v32>v31, v32.1>v32, v32.2>v32.1, v32.3>v32.2, v32.4>v32.3, v32.5>v32.4, v33>v32.5, v34>v33, v34.1>v34, v35>v34.1", ctxEval("bandingVersi('v24.2','v24.1')") === 1 && ctxEval("bandingVersi('v24.1','v24.2')") === -1 && ctxEval("bandingVersi('v24.2','v24.2')") === 0 && ctxEval("bandingVersi('v24.10','v24.2')") === 1 && ctxEval("bandingVersi('v27.1','v27')") === 1 && ctxEval("bandingVersi('v27.2','v27.1')") === 1 && ctxEval("bandingVersi('v27.3','v27.2')") === 1 && ctxEval("bandingVersi('v28','v27.3')") === 1 && ctxEval("bandingVersi('v29','v28')") === 1 && ctxEval("bandingVersi('v29.1','v29')") === 1 && ctxEval("bandingVersi('v29.2','v29.1')") === 1 && ctxEval("bandingVersi('v30','v29.2')") === 1 && ctxEval("bandingVersi('v31','v30')") === 1 && ctxEval("bandingVersi('v32','v31')") === 1 && ctxEval("bandingVersi('v32.1','v32')") === 1 && ctxEval("bandingVersi('v32.2','v32.1')") === 1 && ctxEval("bandingVersi('v32.3','v32.2')") === 1 && ctxEval("bandingVersi('v32.4','v32.3')") === 1 && ctxEval("bandingVersi('v32.5','v32.4')") === 1 && ctxEval("bandingVersi('v33','v32.5')") === 1 && ctxEval("bandingVersi('v34','v33')") === 1 && ctxEval("bandingVersi('v34.1','v34')") === 1 && ctxEval("bandingVersi('v35','v34.1')") === 1);
 ctxEval("pwaTerimaVersiSW('v24.1')");
-cek("X4d SW v24.1 (lebih lama dari halaman v34) -> banner TIDAK tampil", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
-ctxEval("pwaTerimaVersiSW('v34.1')");
-cek("X4d SW v34.1 (lebih baru) -> banner tampil", ctxEval("pwaUpdateTersedia") === true && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "");
-ctxEval("pwaTerimaVersiSW('v34')");
-cek("X4d SW v34 (sama dengan halaman) -> banner basi disembunyikan lagi", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
+cek("X4d SW v24.1 (lebih lama dari halaman v35) -> banner TIDAK tampil", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
+ctxEval("pwaTerimaVersiSW('v35.1')");
+cek("X4d SW v35.1 (lebih baru) -> banner tampil", ctxEval("pwaUpdateTersedia") === true && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "");
+ctxEval("pwaTerimaVersiSW('v35')");
+cek("X4d SW v35 (sama dengan halaman) -> banner basi disembunyikan lagi", ctxEval("pwaUpdateTersedia") === false && ctxEval('$("btnMuatUlangBaruMulai").style.display') === "none");
 cek("X4d sw.js: postMessage versi + handler minta-versi", swTxt.indexOf("meranti-rising-minta-versi") !== -1 && swTxt.indexOf("meranti-rising-versi") !== -1 && swTxt.indexOf("VERSI_SW") !== -1);
 cek("X4d updatefound menanyakan versi SW dulu (bukan langsung menandai update)", srcCity.indexOf('baru.postMessage({ tipe: "meranti-rising-minta-versi" })') !== -1);
 
@@ -1215,11 +1219,11 @@ cek("Y-e2 spawn ke-41 mengembalikan null + sinkron tidak memaksa (sampah & warga
 bersihSemuaKendaraanV25();
 
 // ---- (g) refs v25 ----
-cek("Y-g1 VERSI_GAME v34 + index.html refs v34 (city.js v=56, kendaraan v=7, lalin v=4, css v=20 tetap)",
-  C.VERSI_GAME === "v34" && idxHtml.includes("js/city.js?v=56") && idxHtml.includes("js/city-kendaraan.js?v=7") &&
+cek("Y-g1 VERSI_GAME v35 + index.html refs v35 (city.js v=58, kendaraan v=7, lalin v=4, css v=20 tetap)",
+  C.VERSI_GAME === "v35" && idxHtml.includes("js/city.js?v=58") && idxHtml.includes("js/city-kendaraan.js?v=7") &&
   idxHtml.includes("js/city-lalin.js?v=4") && idxHtml.includes("css/city.css?v=20"));
-cek("Y-g2 sw.js cache rise-of-meranti-v34 + precache ?v= baru (city.js v=56, kendaraan v=7, lalin v=4)",
-  swTxt.indexOf("rise-of-meranti-v34") !== -1 && swTxt.indexOf("js/city.js?v=56") !== -1 &&
+cek("Y-g2 sw.js cache rise-of-meranti-v35 + precache ?v= baru (city.js v=58, kendaraan v=7, lalin v=4)",
+  swTxt.indexOf("rise-of-meranti-v35") !== -1 && swTxt.indexOf("js/city.js?v=58") !== -1 &&
   swTxt.indexOf("js/city-kendaraan.js?v=7") !== -1 && swTxt.indexOf("js/city-lalin.js?v=4") !== -1);
 
 // ---- pulihkan keadaan seksi Y ----
@@ -1233,8 +1237,8 @@ vm.runInContext("waktuGame = 12 * 60;", sandbox);
 
 // ---------------- Z: v26 Main Menu RISE OF MERANTI ----------------
 const menuCss = fs.readFileSync(ROOT + "/css/menu.css", "utf8");
-cek("Z1 VERSI_GAME v34 + index.html memuat css/menu.css?v=2 SETELAH city.css + city.js?v=56",
-  C.VERSI_GAME === "v34" && idxHtml.includes("css/menu.css?v=2") && idxHtml.includes("js/city.js?v=56") &&
+cek("Z1 VERSI_GAME v35 + index.html memuat css/menu.css?v=2 SETELAH city.css + city.js?v=58",
+  C.VERSI_GAME === "v35" && idxHtml.includes("css/menu.css?v=2") && idxHtml.includes("js/city.js?v=58") &&
   idxHtml.indexOf("css/city.css?v=20") < idxHtml.indexOf("css/menu.css?v=2"));
 cek("Z2 struktur DOM menu lengkap (header/logo/5 tombol/panel muat/promo/7 kategori/detail)",
   ["menuPillVersi", "btnMenuBantuan", "btnMenuProfil", "btnMenuPengaturan",
@@ -1292,8 +1296,8 @@ const logoInfo = infoPng(fs.readFileSync(ROOT + "/assets/menu/logo-rise-of-meran
 cek("Z4b logo RISE OF MERANTI RGBA 2172x724 (transparan, bukan JPEG latar putih)",
   !!logoInfo && logoInfo.lebar === 2172 && logoInfo.tinggi === 724 && logoInfo.tipeWarna === 6,
   JSON.stringify(logoInfo));
-cek("Z5 sw.js cache v34 + precache menu.css + 26 aset menu; arsip & pil palsu TIDAK di-precache",
-  swTxt.indexOf("rise-of-meranti-v34") !== -1 && swTxt.indexOf("css/menu.css?v=2") !== -1 &&
+cek("Z5 sw.js cache v35 + precache menu.css + 26 aset menu; arsip & pil palsu TIDAK di-precache",
+  swTxt.indexOf("rise-of-meranti-v35") !== -1 && swTxt.indexOf("css/menu.css?v=2") !== -1 &&
   ASET_MENU_DIPAKAI.every(f => swTxt.indexOf("./" + f) !== -1) &&
   ["menu-background.png", "menu-buttons.png", "category-icons.png", "category-cards.png",
    "header-icons.png", "google-save", "sinkron-cloud"].every(s => swTxt.indexOf(s) === -1));
@@ -1303,13 +1307,13 @@ cek("Z6 save key TIDAK berubah (merantiRisingWorldV1, VERSI_SAVE 1)",
 vm.runInContext('profilPemain = { nama: "Sukma", gender: "wanita", avatar: AVATAR_KARAKTER.wanita, tutorialSelesai: true, dibuat: "2026-11-11T00:00:00.000Z" }; simpanProfil();', sandbox);
 C.mulaiGame(true);
 C.kembaliKeMenuUtama();
-cek("Z7 menu: profil+save -> LANJUTKAN/MUAT/ikon tampil, MULAI sembunyi, pill versi v32",
+cek("Z7 menu: profil+save -> LANJUTKAN/MUAT/ikon tampil, MULAI sembunyi, pill versi v35",
   C.document.getElementById("btnLanjut").style.display === "inline-block" &&
   C.document.getElementById("btnMuat").style.display === "inline-block" &&
   C.document.getElementById("btnMenuProfil").style.display === "inline-block" &&
   C.document.getElementById("btnMenuPengaturan").style.display === "inline-block" &&
   C.document.getElementById("btnMulai").style.display === "none" &&
-  C.document.getElementById("menuPillVersi").textContent === "v34" &&
+  C.document.getElementById("menuPillVersi").textContent === "v35" &&
   C.document.getElementById("sambutanKembali").textContent.indexOf("Sukma") !== -1);
 cek("Z8 MUAT (ada save): panel tampil + detail simpanan nyata + tombol Muat aktif",
   (() => { C.document.getElementById("btnMuat").onclick(); return C.document.getElementById("menuPanelMuat").style.display === "block"; })() &&
@@ -1541,9 +1545,9 @@ cek("AA-g1 histeresis: varian SE dipertahankan saat sudutLayar 94° (<5° dari b
 cek("AA-g2 histeresis: ganti ke SW saat sudutLayar ~96° (>5° dari batas) + bungkus 0°: NE dipertahankan di 317°",
   (() => { const k = { _varianArah: "se" }; const a = C.pilihVarianArah(48 * Math.PI / 180, k); const k2 = { _varianArah: "ne" }; const b = C.pilihVarianArah(317 * Math.PI / 180, k2); return a === "sw" && k._varianArah === "sw" && b === "ne" && k2._varianArah === "ne"; })());
 // ---- (h) refs v28 ----
-cek("AA-h1 VERSI_GAME v34 + index.html city.js?v=56 + pill v34 + sw.js cache rise-of-meranti-v34",
-  C.VERSI_GAME === "v34" && idxHtml.includes("js/city.js?v=56") && idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v34<') &&
-  swTxt.indexOf("rise-of-meranti-v34") !== -1 && swTxt.indexOf("js/city.js?v=56") !== -1);
+cek("AA-h1 VERSI_GAME v35 + index.html city.js?v=58 + pill v35 + sw.js cache rise-of-meranti-v35",
+  C.VERSI_GAME === "v35" && idxHtml.includes("js/city.js?v=58") && idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v35<') &&
+  swTxt.indexOf("rise-of-meranti-v35") !== -1 && swTxt.indexOf("js/city.js?v=58") !== -1);
 cek("AA-h2 sw.js TIDAK mem-precache 36 varian (runtime-cache seperti audio) + TIDAK ada sisa pin v26",
   !swTxt.includes("mobil-sedan-sw.png") && !swTxt.includes("bus-nw.png") &&
   !swTxt.includes("meranti-rising-v26") && !idxHtml.includes("city.js?v=38") && !swTxt.includes("city.js?v=38"));
@@ -1878,10 +1882,10 @@ const srcDiagV28 = fs.readFileSync(ROOT + "/js/city-diagnostik.js", "utf8");
 const menuCssV28 = fs.readFileSync(ROOT + "/css/menu.css", "utf8");
 
 // ---- AD-a: versi + data katalog tidak berubah ----
-cek("AD-a1 VERSI_GAME v34 + refs v34 (css v=20, city.js v=56, bubble v=4, ui-v24 v=6, pill v34, cache v34)",
-  C.VERSI_GAME === "v34" && idxHtml.includes("css/city.css?v=20") && idxHtml.includes("js/city.js?v=56") &&
+cek("AD-a1 VERSI_GAME v35 + refs v35 (css v=20, city.js v=58, bubble v=4, ui-v24 v=6, pill v35, cache v35)",
+  C.VERSI_GAME === "v35" && idxHtml.includes("css/city.css?v=20") && idxHtml.includes("js/city.js?v=58") &&
   idxHtml.includes("js/city-bubble.js?v=4") && idxHtml.includes("js/city-ui-v24.js?v=6") &&
-  idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v34<') && swTxt.indexOf("rise-of-meranti-v34") !== -1);
+  idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v35<') && swTxt.indexOf("rise-of-meranti-v35") !== -1);
 const tabIdsAD = ctxEval("TAB_BANGUN.map(function(t){ return t.id; })");
 const dockUrutanAD = ctxEval("DOCK_URUTAN_V28");
 cek("AD-a2 TAB_BANGUN tetap 19 (data tidak diubah v28) + DOCK_URUTAN_V28 memuat ke-19 id tepat sekali",
@@ -4567,11 +4571,11 @@ cek("AN-e favicon.ico ada (header ICO, 3 entri 16/32/48) + ter-link di index.htm
   JSON.stringify(icoANUkuran) === JSON.stringify([16, 32, 48]) &&
   idxHtml.includes('href="assets/icons/favicon.ico"'),
   icoAN ? "len=" + icoAN.length + " ukuran=" + JSON.stringify(icoANUkuran) : "hilang");
-cek("AN-f SW cache rise-of-meranti-v34 + VERSI_SW diturunkan dari prefix baru + activate hapus KEDUA prefix cache lama",
-  swTxt.includes('"rise-of-meranti-v34"') &&
+cek("AN-f SW cache rise-of-meranti-v35 + VERSI_SW diturunkan dari prefix baru + activate hapus KEDUA prefix cache lama",
+  swTxt.includes('"rise-of-meranti-v35"') &&
   swTxt.includes('NAMA_CACHE.replace(/^rise-of-meranti-/') &&
   swTxt.includes('indexOf("meranti-rising-")') && swTxt.includes('indexOf("rise-of-meranti-")') &&
-  !swTxt.includes('"meranti-rising-v32.4"') && swTxt.includes("js/city.js?v=56"),
+  !swTxt.includes('"meranti-rising-v32.4"') && swTxt.includes("js/city.js?v=58"),
   "");
 cek("AN-g path ikon di manifest tetap sama (icon-192/512/maskable-512)",
   (manifestAN.icons || []).some(i => i.src === "assets/icons/icon-192.png" && i.sizes === "192x192" && i.purpose === "any") &&
@@ -4592,10 +4596,10 @@ cek("AN-g path ikon di manifest tetap sama (icon-192/512/maskable-512)",
 const srcMobileAO = fs.readFileSync(ROOT + "/js/city-mobile.js", "utf8");
 const cssMobileAO = fs.readFileSync(ROOT + "/css/mobile.css", "utf8");
 const MUI = C.window.MobileUI;
-cek("AO-a refs v34: index.html memuat css/mobile.css?v=2 SETELAH city.css + js/city-mobile.js?v=1 SETELAH city.js?v=56; sw.js precache keduanya",
-  idxHtml.indexOf("css/city.css?v=20") < idxHtml.indexOf("css/mobile.css?v=2") &&
-  idxHtml.indexOf("js/city.js?v=56") < idxHtml.indexOf("js/city-mobile.js?v=1") &&
-  swTxt.indexOf("css/mobile.css?v=2") !== -1 && swTxt.indexOf("js/city-mobile.js?v=1") !== -1,
+cek("AO-a refs v35: index.html memuat css/mobile.css?v=4 SETELAH city.css + js/city-mobile.js?v=1 SETELAH city.js?v=58; sw.js precache keduanya",
+  idxHtml.indexOf("css/city.css?v=20") < idxHtml.indexOf("css/mobile.css?v=4") &&
+  idxHtml.indexOf("js/city.js?v=58") < idxHtml.indexOf("js/city-mobile.js?v=1") &&
+  swTxt.indexOf("css/mobile.css?v=4") !== -1 && swTxt.indexOf("js/city-mobile.js?v=1") !== -1,
   "");
 cek("AO-b modul MobileUI termuat + desktop (lebar 1200) TIDAK membuat nav otomatis",
   !!MUI && typeof MUI.mobileAktif === "function" && MUI.mobileAktif() === false && MUI.navDibuat() === false,
@@ -4777,14 +4781,31 @@ cek("AO-q REGRESI label nav 2026-11-16: label .navLabel dipotong ellipsis + tomb
 // pertama kartu 153px tidak terlihat sama sekali). v34: tab 44px,
 // thumbnail landscape 60px, kartu horizontal compact 70-75px, sheet
 // half landscape 48dvh -> wrap 80px, baris pertama terlihat PENUH.
+// v35: anggaran v34 SALAH (kartu terburuk tanpa penjaga 104-136px,
+// bukan 70-75px; + chrome chip/pesan di sebagian tab). FASE v34.1/v35
+// yang DIBATALKAN (62dvh): sheet half landscape 62dvh + penjaga clamp
+// harga 2 baris / kunci 1 baris + pesan 1 baris, kartu terburuk
+// deterministik 88,4px, wrap minimal 99,8px (tab chip), sisa minimal
+// 11,4px. KEPUTUSAN USER 2026-11-17: "Pertahankan 48%, longgarkan
+// "Pertahankan 48%, longgarkan kriterianya" — sheet half KEMBALI
+// 48dvh, penjaga deterministik DIPERTAHANKAN, kriteria baru: baris
+// pertama PENUH wajib hanya di Permukiman (baseline live ?v=62 v34),
+// dan di HP landscape 844x390 "PENUH" itu didefinisikan SECARA VISUAL
+// (keputusan user 2026-11-17, opsi a: clip kotak <= 11px + teks semua
+// kartu terbaca — pixel-strict mustahil di 48dvh/390px tanpa perubahan
+// desain; detail + angka ukur di tests/v35-viewport.js);
+// kategori lain BOLEH terpotong di tepi sheet, asalkan sheet bisa
+// digulir rapi dan semua konten kartu tercapai lewat scroll. Detail
+// anggaran di css/mobile.css (blok landscape) + seksi AQ di bawah.
 // Cek perilaku hidup (tinggi tab/thumbnail, kolom grid per viewport,
-// baris pertama penuh, scroll terkungkung, ganti kategori, pilih
-// bangunan + radius) ada di tests/v34-viewport.js (Playwright).
-cek("AP-a refs v34: index.html mobile.css?v=2 SETELAH city.css + city.js?v=56; sw.js cache rise-of-meranti-v34 + precache keduanya",
-  idxHtml.indexOf("css/city.css?v=20") < idxHtml.indexOf("css/mobile.css?v=2") &&
-  idxHtml.includes("js/city.js?v=56") &&
-  swTxt.indexOf("rise-of-meranti-v34") !== -1 &&
-  swTxt.indexOf("css/mobile.css?v=2") !== -1 && swTxt.indexOf("js/city.js?v=56") !== -1,
+// baris pertama penuh Permukiman, scroll terkungkung, ganti
+// kategori, pilih bangunan + radius) ada di
+// tests/v35-viewport.js (Playwright).
+cek("AP-a refs v35: index.html mobile.css?v=4 SETELAH city.css + city.js?v=58; sw.js cache rise-of-meranti-v35 + precache keduanya",
+  idxHtml.indexOf("css/city.css?v=20") < idxHtml.indexOf("css/mobile.css?v=4") &&
+  idxHtml.includes("js/city.js?v=58") &&
+  swTxt.indexOf("rise-of-meranti-v35") !== -1 &&
+  swTxt.indexOf("css/mobile.css?v=4") !== -1 && swTxt.indexOf("js/city.js?v=58") !== -1,
   "");
 cek("AP-b tab kategori compact 42-50px (44px, ikon 18px, font 12px) + #katBangun align-items:center (perbaikan stretch v33: tab 55px)",
   cssMobileAO.indexOf(".katTab { height: 44px; min-height: 44px; padding: 6px 10px; font-size: 12px; }") !== -1 &&
@@ -4800,11 +4821,14 @@ cek("AP-d kartu landscape HORIZONTAL compact (flex, info kanan 1 baris/field) + 
   cssMobileAO.indexOf(".kartuDes { display: -webkit-box; min-height: 0; -webkit-line-clamp: 1; }") !== -1 &&
   cssMobileAO.indexOf(".kartuDes { display: -webkit-box; }") !== -1,
   "");
-cek("AP-e sheet half landscape 48dvh (target brief 40-48% viewport) + pegangan 18px + baris katalog compact (tombol 32px, label 10px)",
+cek("AP-e sheet half landscape 48dvh (keputusan user 2026-11-17: pertahankan 48%, kriteria dilonggarkan — revert dari 62dvh v34.1/v35) + pegangan 18px + baris katalog compact (tombol 32px, label 10px) + penjaga clamp harga 2 / kunci 1 + pesan 1 baris",
   cssMobileAO.indexOf("#menuBangun.sheet-half { max-height: 48dvh; }") !== -1 &&
   cssMobileAO.indexOf("#peganganSheet { height: 18px; }") !== -1 &&
   cssMobileAO.indexOf("#btnLipatKatalog, #btnTutupDrawer { width: 32px; height: 32px; }") !== -1 &&
-  cssMobileAO.indexOf(".labelKatalog { font-size: 10px; }") !== -1,
+  cssMobileAO.indexOf(".labelKatalog { font-size: 10px; }") !== -1 &&
+  cssMobileAO.indexOf(".kartuHarga { margin-top: 1px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }") !== -1 &&
+  cssMobileAO.indexOf(".kartuKunci { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }") !== -1 &&
+  cssMobileAO.indexOf(".pesanKatalog { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 4px 10px; margin-bottom: 4px; }") !== -1,
   "");
 cek("AP-f grid responsif: 2 kolom portrait, 3 kolom landscape, 4 kolom tablet portrait lebar (>=760px)",
   cssMobileAO.indexOf("grid-template-columns: repeat(2, minmax(0, 1fr))") !== -1 &&
@@ -4818,10 +4842,13 @@ cek("AP-g REGRESI v33: grid-auto-rows: max-content pada #itemBangun HARUS tetap 
 cek("AP-h scroll katalog TERKUNGKUNG di dalam panel (overscroll-behavior: contain + touch-action: pan-y) — gulir daftar tidak menggerakkan peta",
   cssMobileAO.indexOf("#itemBangunWrap { overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }") !== -1,
   "");
-cek("AP-i tidak ada sisa pin v33 aktif (city.js?v=55 / mobile.css?v=1 / cache v33 / pill v33)",
+cek("AP-i tidak ada sisa pin v33 aktif (city.js?v=55 / mobile.css?v=1 / cache v33 / pill v33) + tidak ada sisa pin v34 aktif (city.js?v=56 / mobile.css?v=2 / cache v34 / pill v34)",
   !idxHtml.includes("js/city.js?v=55") && !idxHtml.includes("css/mobile.css?v=1") &&
   !idxHtml.includes('menu-pill-versi">v33<') && !swTxt.includes("js/city.js?v=55") &&
-  !swTxt.includes("css/mobile.css?v=1") && !swTxt.includes("rise-of-meranti-v33"),
+  !swTxt.includes("css/mobile.css?v=1") && !swTxt.includes("rise-of-meranti-v33") &&
+  !idxHtml.includes("js/city.js?v=56") && !idxHtml.includes("css/mobile.css?v=2") &&
+  !idxHtml.includes('menu-pill-versi">v34<') && !swTxt.includes("js/city.js?v=56") &&
+  !swTxt.includes("css/mobile.css?v=2") && !swTxt.includes('rise-of-meranti-v34"'),
   "");
 cek("AP-j ganti kategori + renderMenuBangun -> sheet tetap half, kategori berubah (wrap tidak di-rebuild: scroll dipertahankan)",
   (function () {
@@ -4840,6 +4867,139 @@ cek("AP-k SEMUA aturan katalog v34 tetap di dalam @media (max-width: 900px) — 
       sebelumMedia.indexOf("#itemBangun") === -1 && sebelumMedia.indexOf("sheet-half") === -1;
   })(),
   "");
+
+// ---------------- AQ: v35-48pct — SHEET HALF 48dvh, KRITERIA DILONGGARKAN ----------------
+// Akar v34: anggaran kartu 70-75px salah — harga tanpa clamp 2-3 baris,
+// kunci 1-3 baris (level+tech). Tanpa penjaga, kartu baris-pertama
+// terburuk 104,2px (Liberation/Roboto) s.d. 136,4px (DejaVu/headless).
+// v34.1/v35 menaikkan sheet ke 62dvh + penjaga clamp agar baris
+// pertama PENUH di semua kategori — FASE INI DIBATALKAN oleh keputusan
+// user 2026-11-17 ("Pertahankan 48%, longgarkan kriterianya"), jadi
+// 62dvh BUKAN keadaan akhir. KEPUTUSAN USER 2026-11-17:
+// "Pertahankan 48%, longgarkan kriterianya" — sheet half KEMBALI
+// 48dvh, penjaga DIPERTAHANKAN, kriteria baru: baris pertama PENUH
+// wajib HANYA di Permukiman (baseline live ?v=62 v34), dan di HP
+// landscape 844x390 "PENUH" itu SECARA VISUAL (opsi a 2026-11-17:
+// clip kotak <= 11px + teks terbaca; pixel-strict mustahil di
+// 48dvh/390px — detail di tests/v35-viewport.js); kategori lain
+// BOLEH terpotong di tepi sheet, asalkan sheet bisa digulir rapi dan
+// semua konten kartu tercapai lewat scroll (dibuktikan live di
+// tests/v35-viewport.js) dan penjaga menahan kartu terburuk tetap
+// <= 88,4px deterministik (dibuktikan model di bawah + live).
+// Dihitung dari DATA katalog (hargaTeks + alasanKunci kasus terburuk)
+// dan isi mobile.css — harness vm ini tidak punya layout, jadi tinggi
+// dihitung dari model garis yang sama dengan css (nama 15 + des
+// 13,65 + harga margin 1 + harga 16,5/baris + kunci 15,75/baris +
+// padding 10, canvas 60); pembuktian piksel nyata ada di
+// tests/v35-viewport.js (Playwright). CATATAN: model TIDAK menghitung
+// border 1px kartu (city.css .kartuBangun border 1px) — tinggi live
+// sebenarnya 90,4px, bukan 88,4px (selisih 2px, sudah ada sejak
+// v34.1, bukan dari perubahan ini); cek live memakai batas <= 90px
+// (pembulatan) sehingga tetap konsisten. Jangan klaim 88,4px sebagai
+// tinggi piksel live.
+// Media query landscape muncul 2x (blok token --m-nav di baris ~40 +
+// blok katalog di bawah): ambil yang TERAKHIR (blok katalog) —
+// indexOf menemukan blok token dan ikut membawa aturan half 46dvh.
+const blokLandscapeAQ = cssMobileAO.slice(cssMobileAO.lastIndexOf("@media (max-width: 900px) and (max-height: 500px)"));
+const mHalfLandAQ = blokLandscapeAQ.match(/#menuBangun\.sheet-half \{ max-height: (\d+)dvh; \}/);
+const dvhHalfLandAQ = mHalfLandAQ ? +mHalfLandAQ[1] : null;
+cek("AQ-a sheet half landscape 48dvh (keputusan user 2026-11-17: pertahankan 48%, revert dari 62dvh) + portrait half tetap 46dvh (tidak diubah)",
+  dvhHalfLandAQ === 48 &&
+  cssMobileAO.indexOf("#menuBangun.sheet-half { max-height: 46dvh; }") !== -1,
+  "landscape=" + dvhHalfLandAQ);
+const mClampHargaAQ = blokLandscapeAQ.match(/\.kartuHarga \{[^}]*-webkit-line-clamp: (\d+);/);
+const mClampKunciAQ = blokLandscapeAQ.match(/\.kartuKunci \{[^}]*-webkit-line-clamp: (\d+);/);
+const clampHargaAQ = mClampHargaAQ ? +mClampHargaAQ[1] : null;
+const clampKunciAQ = mClampKunciAQ ? +mClampKunciAQ[1] : null;
+cek("AQ-b penjaga deterministik di blok landscape: harga clamp 2 (BUKAN 1 — biaya+material tetap terbaca), kunci clamp 1 + ellipsis, kunci TIDAK display:none; aturan hanya 1x (tidak bocor ke desktop/portrait)",
+  clampHargaAQ === 2 && clampKunciAQ === 1 &&
+  blokLandscapeAQ.indexOf(".kartuHarga { margin-top: 1px; display: -webkit-box; -webkit-line-clamp: 2;") !== -1 &&
+  blokLandscapeAQ.indexOf(".kartuKunci { display: -webkit-box; -webkit-line-clamp: 1;") !== -1 &&
+  !/\.kartuKunci \{[^}]*display\s*:\s*none/.test(blokLandscapeAQ) &&
+  cssMobileAO.split(".kartuHarga { margin-top: 1px; display: -webkit-box;").length - 1 === 1 &&
+  cssMobileAO.split(".kartuKunci { display: -webkit-box;").length - 1 === 1,
+  "harga=" + clampHargaAQ + " kunci=" + clampKunciAQ);
+const mPesanAQ = blokLandscapeAQ.match(/\.pesanKatalog \{([^}]*)\}/);
+const pesanRuleAQ = mPesanAQ ? mPesanAQ[1] : "";
+cek("AQ-b2 pesan landscape 1 baris deterministik 32px (nowrap + ellipsis, padding 4px, margin 4px; display TIDAK disentuh agar JS block/none tetap jalan)",
+  pesanRuleAQ.indexOf("white-space: nowrap") !== -1 &&
+  pesanRuleAQ.indexOf("text-overflow: ellipsis") !== -1 &&
+  pesanRuleAQ.indexOf("padding: 4px 10px") !== -1 &&
+  pesanRuleAQ.indexOf("margin-bottom: 4px") !== -1 &&
+  pesanRuleAQ.indexOf("display") === -1,
+  pesanRuleAQ);
+// Model tinggi kartu landscape (px): nama 15 (12px*1,25, clamp 1)
+// + des 13,65 (10,5px*1,3, clamp 1) + harga margin-top 1 + harga 16,5
+// per baris (11px, line-height warisan body 1,5) + kunci 15,75 per
+// baris (10,5px*1,5) + padding kartu 10; canvas 60px.
+// CPL konservatif (glif lebih lebar dari aslinya): harga 24 kar/baris,
+// kunci 26 kar/baris — garis tanpa clamp dihitung pesimistis, lalu
+// dipotong clamp dari CSS.
+function aqGaris(teks, cpl) { return Math.max(1, Math.ceil(teks.length / cpl)); }
+function aqTinggiKartu(hargaTeks_, kunciTeks, ch, ck) {
+  const bh = Math.min(aqGaris(hargaTeks_, 24), ch);
+  const bk = kunciTeks ? Math.min(aqGaris(kunciTeks, 26), ck) : 0;
+  const info = 15 + 13.65 + 1 + 16.5 * bh + 15.75 * bk;
+  return Math.round((10 + Math.max(60, info)) * 10) / 10;
+}
+const aqHasil = (function () {
+  const tabs = ctxEval("TAB_BANGUN");
+  const semua = ctxEval("BANGUNAN");
+  const jalan = ctxEval("JALAN");
+  const jembatan = ctxEval("JEMBATAN");
+  const tekMap = ctxEval("TEKNOLOGI_MAP");
+  const hargaTeksFn = ctxEval("hargaTeks");
+  const perKat = {};
+  let maksClamp = 0, maksTanpa = 0, katTerburuk = "";
+  for (const tab of tabs) {
+    let defs = [];
+    if (tab.jalan) {
+      for (const id of Object.keys(jalan)) defs.push({ id: id, nama: jalan[id].nama, harga: jalan[id].harga, level: jalan[id].level || 1, tech: id === "jalan-raya" ? "konstruksi-beton" : null });
+      for (const d of semua) if (d.kat === "jalan") defs.push(d);
+    } else if (tab.jembatan) {
+      for (const id of Object.keys(jembatan)) defs.push({ id: id, nama: jembatan[id].nama, harga: jembatan[id].harga, level: jembatan[id].level || 1, tech: jembatan[id].tech || null });
+    } else {
+      for (const d of semua) {
+        if (tab.dekorasi) { if (!d.dekorasi) continue; }
+        else if (tab.ids) { if (!tab.ids.includes(d.id)) continue; }
+        else if (tab.kat) { if (!tab.kat.includes(d.kat)) continue; }
+        else continue;
+        defs.push(d);
+      }
+    }
+    const tinggi = defs.map((d) => {
+      const hT = hargaTeksFn(d.harga);
+      const bag = [];
+      if ((d.level || 1) > 1) bag.push("Butuh peradaban level " + d.level);
+      if (d.tech) bag.push("Penelitian: " + (tekMap[d.tech] ? tekMap[d.tech].nama : d.tech));
+      const kT = bag.join(" + ");
+      return {
+        clamp: aqTinggiKartu(hT, kT, clampHargaAQ || 99, clampKunciAQ || 99),
+        tanpa: aqTinggiKartu(hT, kT, 99, 99),
+      };
+    });
+    const b1 = tinggi.slice(0, 3);
+    const maksB1 = b1.length ? Math.max.apply(null, b1.map((x) => x.clamp)) : 0;
+    const maksKatTanpa = tinggi.length ? Math.max.apply(null, tinggi.map((x) => x.tanpa)) : 0;
+    perKat[tab.id] = { jml: defs.length, maksBaris1: maksB1 };
+    if (maksB1 > maksClamp) { maksClamp = maksB1; katTerburuk = tab.id; }
+    if (maksKatTanpa > maksTanpa) maksTanpa = maksKatTanpa;
+  }
+  return { perKat: perKat, maksClamp: maksClamp, maksTanpa: maksTanpa, katTerburuk: katTerburuk };
+})();
+const aqSheetPx = dvhHalfLandAQ === null ? null : dvhHalfLandAQ / 100 * 390;
+const aqWrapBiasa = aqSheetPx === null ? null : Math.round((aqSheetPx - 106) * 10) / 10;
+const aqWrapChip = aqSheetPx === null ? null : Math.round((aqSheetPx - 142) * 10) / 10; // Air/Drainase: chip +36
+const aqWrapPesan = aqSheetPx === null ? null : Math.round((aqSheetPx - 138) * 10) / 10; // Keamanan/Hiburan Lv1: pesan +32
+cek("AQ-c anggaran half landscape 48dvh (844x390): sheet 187,2px -> wrap biasa 81,2 / chip 45,2 / pesan 49,2px (aritmetika 48dvh benar) + kartu terburuk dengan penjaga <= 88,4px (deterministik, penjaga dipertahankan)",
+  aqHasil.maksClamp <= 88.5 && aqWrapBiasa === 81.2 && aqWrapChip === 45.2 && aqWrapPesan === 49.2,
+  "kartuTerburuk=" + aqHasil.maksClamp + " (" + aqHasil.katTerburuk + ") wrapBiasa=" + aqWrapBiasa + " wrapChip=" + aqWrapChip + " wrapPesan=" + aqWrapPesan);
+cek("AQ-d SETIAP kategori (19 tab): baris pertama (3 kartu pertama) terburuk <= 88,4px (batas deterministik penjaga) — tidak ada kartu yang meluber tanpa batas, jadi semua konten tercapai lewat scroll; baris pertama PENUH di Permukiman adalah klaim LIVE (tests/v35-viewport.js), BUKAN model — model konservatif (88,4px) melebihi wrap biasa (81,2px) dan tidak mengklaim penuh",
+  Object.keys(aqHasil.perKat).every((id) => aqHasil.perKat[id].maksBaris1 <= 88.5),
+  JSON.stringify(aqHasil.perKat));
+cek("AQ-e penjaga TERBUKTI menahan: kartu terburuk dengan penjaga (" + aqHasil.maksClamp + "px) < tanpa penjaga (" + aqHasil.maksTanpa + "px) — cek gagal bila penjaga dihapus",
+  aqHasil.maksClamp < aqHasil.maksTanpa,
+  "dengan=" + aqHasil.maksClamp + " tanpa=" + aqHasil.maksTanpa + " wrapChip=" + aqWrapChip);
 
 // Pulihkan keadaan akhir bersih (profil + simpanan + menu sinematik).
 C.mulaiGame(true);

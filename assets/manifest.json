@@ -1,9 +1,9 @@
 {
  "game": "Saudagar Sagu Meranti",
- "version": 13,
- "note": "Aset v16: gambar pembuka sinematik MERANTI RISING (pembuka-meranti.webp, pulau alami saat fajar).",
- "total_files": 137,
- "total_bytes": 34393875,
+ "version": 19,
+ "note": "Aset v19: 63 bangunan baru (utilitas, drainase, lalin, rekreasi, hiburan, budaya, olahraga, pemerintahan, keamanan) + sprite bus; total 118 bangunan. Aset v16: gambar pembuka sinematik MERANTI RISING (pembuka-meranti.webp, pulau alami saat fajar). Aset v35: 3 logo splash screen (KEDAI MEDIA | MALAKA DIGITAL HUB, BUDAK AWAK, RISE OF MERANTI) di assets/ui/.",
+ "total_files": 204,
+ "total_bytes": 56203941,
  "assets": [
   {
    "path": "assets/animations/asap-cerobong-sheet.png",
@@ -33,11 +33,38 @@
    "corners_transparent": true
   },
   {
+   "path": "assets/buildings/building-apotek.png",
+   "category": "buildings",
+   "size_bytes": 197821,
+   "width": 487,
+   "height": 404,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-balai-adat.png",
+   "category": "buildings",
+   "size_bytes": 384540,
+   "width": 579,
+   "height": 516,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
    "path": "assets/buildings/building-bandara.png",
    "category": "buildings",
    "size_bytes": 259760,
    "width": 727,
    "height": 524,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-bank-sampah.png",
+   "category": "buildings",
+   "size_bytes": 239626,
+   "width": 484,
+   "height": 392,
    "mode": "RGBA",
    "corners_transparent": true
   },
@@ -51,11 +78,83 @@
    "corners_transparent": true
   },
   {
+   "path": "assets/buildings/building-bioskop.png",
+   "category": "buildings",
+   "size_bytes": 249295,
+   "width": 553,
+   "height": 425,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-bundaran.png",
+   "category": "buildings",
+   "size_bytes": 265969,
+   "width": 571,
+   "height": 360,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
    "path": "assets/buildings/building-dermaga.png",
    "category": "buildings",
    "size_bytes": 260273,
    "width": 625,
    "height": 432,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-gardu-distribusi.png",
+   "category": "buildings",
+   "size_bytes": 139643,
+   "width": 407,
+   "height": 266,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-gardu-induk.png",
+   "category": "buildings",
+   "size_bytes": 440950,
+   "width": 643,
+   "height": 510,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-gedung-dprd.png",
+   "category": "buildings",
+   "size_bytes": 308511,
+   "width": 589,
+   "height": 471,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-gedung-pertunjukan.png",
+   "category": "buildings",
+   "size_bytes": 283490,
+   "width": 470,
+   "height": 552,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-gedung-perusahaan.png",
+   "category": "buildings",
+   "size_bytes": 263570,
+   "width": 376,
+   "height": 625,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-gelanggang.png",
+   "category": "buildings",
+   "size_bytes": 257253,
+   "width": 570,
+   "height": 363,
    "mode": "RGBA",
    "corners_transparent": true
   },
@@ -69,11 +168,47 @@
    "corners_transparent": true
   },
   {
+   "path": "assets/buildings/building-halte.png",
+   "category": "buildings",
+   "size_bytes": 119585,
+   "width": 343,
+   "height": 310,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
    "path": "assets/buildings/building-industri-ekspor.png",
    "category": "buildings",
    "size_bytes": 301038,
    "width": 586,
    "height": 462,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-intake.png",
+   "category": "buildings",
+   "size_bytes": 143992,
+   "width": 529,
+   "height": 340,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-ipa.png",
+   "category": "buildings",
+   "size_bytes": 278756,
+   "width": 568,
+   "height": 377,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-ipal.png",
+   "category": "buildings",
+   "size_bytes": 339580,
+   "width": 646,
+   "height": 419,
    "mode": "RGBA",
    "corners_transparent": true
   },
@@ -87,6 +222,33 @@
    "corners_transparent": true
   },
   {
+   "path": "assets/buildings/building-jogging-track.png",
+   "category": "buildings",
+   "size_bytes": 338685,
+   "width": 580,
+   "height": 404,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-jpo.png",
+   "category": "buildings",
+   "size_bytes": 250204,
+   "width": 652,
+   "height": 383,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-kantor-bupati.png",
+   "category": "buildings",
+   "size_bytes": 292740,
+   "width": 548,
+   "height": 430,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
    "path": "assets/buildings/building-kantor-dagang.png",
    "category": "buildings",
    "size_bytes": 172255,
@@ -96,11 +258,65 @@
    "corners_transparent": true
   },
   {
+   "path": "assets/buildings/building-kantor-desa.png",
+   "category": "buildings",
+   "size_bytes": 263429,
+   "width": 498,
+   "height": 400,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-kantor-dinas.png",
+   "category": "buildings",
+   "size_bytes": 265750,
+   "width": 500,
+   "height": 445,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-kantor-kecamatan.png",
+   "category": "buildings",
+   "size_bytes": 272379,
+   "width": 572,
+   "height": 358,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
    "path": "assets/buildings/building-kantor-pemerintah.png",
    "category": "buildings",
    "size_bytes": 177710,
    "width": 464,
    "height": 351,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-kantor-polisi.png",
+   "category": "buildings",
+   "size_bytes": 286564,
+   "width": 619,
+   "height": 390,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-kantor-pos.png",
+   "category": "buildings",
+   "size_bytes": 183375,
+   "width": 440,
+   "height": 339,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-karaoke.png",
+   "category": "buildings",
+   "size_bytes": 331316,
+   "width": 472,
+   "height": 482,
    "mode": "RGBA",
    "corners_transparent": true
   },
@@ -177,11 +393,74 @@
    "corners_transparent": true
   },
   {
+   "path": "assets/buildings/building-kolam-renang.png",
+   "category": "buildings",
+   "size_bytes": 262100,
+   "width": 578,
+   "height": 395,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-kolam-retensi.png",
+   "category": "buildings",
+   "size_bytes": 355912,
+   "width": 643,
+   "height": 511,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-lapangan-badminton.png",
+   "category": "buildings",
+   "size_bytes": 172785,
+   "width": 590,
+   "height": 365,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-lapangan-basket.png",
+   "category": "buildings",
+   "size_bytes": 206580,
+   "width": 628,
+   "height": 389,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-lapangan-bola.png",
+   "category": "buildings",
+   "size_bytes": 183607,
+   "width": 626,
+   "height": 408,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
    "path": "assets/buildings/building-lapangan.png",
    "category": "buildings",
    "size_bytes": 234922,
    "width": 617,
    "height": 342,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-mal-pelayanan.png",
+   "category": "buildings",
+   "size_bytes": 264270,
+   "width": 637,
+   "height": 335,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-marina.png",
+   "category": "buildings",
+   "size_bytes": 310832,
+   "width": 543,
+   "height": 409,
    "mode": "RGBA",
    "corners_transparent": true
   },
@@ -195,11 +474,47 @@
    "corners_transparent": true
   },
   {
+   "path": "assets/buildings/building-menara-air.png",
+   "category": "buildings",
+   "size_bytes": 146958,
+   "width": 239,
+   "height": 510,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-museum-melayu.png",
+   "category": "buildings",
+   "size_bytes": 334340,
+   "width": 519,
+   "height": 539,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
    "path": "assets/buildings/building-museum.png",
    "category": "buildings",
    "size_bytes": 268799,
    "width": 565,
    "height": 398,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-outbound.png",
+   "category": "buildings",
+   "size_bytes": 335828,
+   "width": 568,
+   "height": 478,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-pabrik-daur-ulang.png",
+   "category": "buildings",
+   "size_bytes": 300354,
+   "width": 641,
+   "height": 389,
    "mode": "RGBA",
    "corners_transparent": true
   },
@@ -240,11 +555,29 @@
    "corners_transparent": true
   },
   {
+   "path": "assets/buildings/building-pantai-wisata.png",
+   "category": "buildings",
+   "size_bytes": 362262,
+   "width": 572,
+   "height": 448,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
    "path": "assets/buildings/building-pasar-budaya.png",
    "category": "buildings",
    "size_bytes": 571073,
    "width": 755,
    "height": 563,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-pasar-malam.png",
+   "category": "buildings",
+   "size_bytes": 331123,
+   "width": 585,
+   "height": 431,
    "mode": "RGBA",
    "corners_transparent": true
   },
@@ -276,6 +609,15 @@
    "corners_transparent": true
   },
   {
+   "path": "assets/buildings/building-pdam.png",
+   "category": "buildings",
+   "size_bytes": 208010,
+   "width": 438,
+   "height": 455,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
    "path": "assets/buildings/building-pelabuhan.png",
    "category": "buildings",
    "size_bytes": 556138,
@@ -294,11 +636,29 @@
    "corners_transparent": true
   },
   {
+   "path": "assets/buildings/building-pemadam-kebakaran.png",
+   "category": "buildings",
+   "size_bytes": 342505,
+   "width": 600,
+   "height": 442,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
    "path": "assets/buildings/building-perikanan.png",
    "category": "buildings",
    "size_bytes": 317730,
    "width": 657,
    "height": 397,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-perkantoran-swasta.png",
+   "category": "buildings",
+   "size_bytes": 323960,
+   "width": 413,
+   "height": 628,
    "mode": "RGBA",
    "corners_transparent": true
   },
@@ -339,11 +699,101 @@
    "corners_transparent": true
   },
   {
+   "path": "assets/buildings/building-plt-biomassa.png",
+   "category": "buildings",
+   "size_bytes": 324198,
+   "width": 604,
+   "height": 375,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-plt-surya.png",
+   "category": "buildings",
+   "size_bytes": 302873,
+   "width": 616,
+   "height": 365,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-pltd.png",
+   "category": "buildings",
+   "size_bytes": 286493,
+   "width": 617,
+   "height": 475,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-pompa-air.png",
+   "category": "buildings",
+   "size_bytes": 180849,
+   "width": 543,
+   "height": 323,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-pompa-banjir.png",
+   "category": "buildings",
+   "size_bytes": 288128,
+   "width": 535,
+   "height": 383,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-pos-pemadam.png",
+   "category": "buildings",
+   "size_bytes": 157954,
+   "width": 321,
+   "height": 435,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
    "path": "assets/buildings/building-posyandu.png",
    "category": "buildings",
    "size_bytes": 128640,
    "width": 381,
    "height": 307,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-pusat-budaya.png",
+   "category": "buildings",
+   "size_bytes": 303384,
+   "width": 631,
+   "height": 442,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-pusat-hiburan.png",
+   "category": "buildings",
+   "size_bytes": 357144,
+   "width": 544,
+   "height": 423,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-pusat-kebugaran.png",
+   "category": "buildings",
+   "size_bytes": 292057,
+   "width": 576,
+   "height": 408,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-pusat-kesenian.png",
+   "category": "buildings",
+   "size_bytes": 209308,
+   "width": 565,
+   "height": 383,
    "mode": "RGBA",
    "corners_transparent": true
   },
@@ -366,11 +816,38 @@
    "corners_transparent": true
   },
   {
+   "path": "assets/buildings/building-reservoir.png",
+   "category": "buildings",
+   "size_bytes": 140562,
+   "width": 425,
+   "height": 462,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-resort.png",
+   "category": "buildings",
+   "size_bytes": 504844,
+   "width": 618,
+   "height": 485,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
    "path": "assets/buildings/building-rsud.png",
    "category": "buildings",
    "size_bytes": 307273,
    "width": 519,
    "height": 453,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-ruang-seni.png",
+   "category": "buildings",
+   "size_bytes": 193729,
+   "width": 432,
+   "height": 350,
    "mode": "RGBA",
    "corners_transparent": true
   },
@@ -474,6 +951,24 @@
    "corners_transparent": true
   },
   {
+   "path": "assets/buildings/building-taksi-stand.png",
+   "category": "buildings",
+   "size_bytes": 143970,
+   "width": 420,
+   "height": 317,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-taman-bermain.png",
+   "category": "buildings",
+   "size_bytes": 181264,
+   "width": 504,
+   "height": 310,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
    "path": "assets/buildings/building-taman-wisata.png",
    "category": "buildings",
    "size_bytes": 439564,
@@ -492,11 +987,29 @@
    "corners_transparent": true
   },
   {
+   "path": "assets/buildings/building-terminal-bus.png",
+   "category": "buildings",
+   "size_bytes": 254853,
+   "width": 592,
+   "height": 387,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
    "path": "assets/buildings/building-terminal-feri.png",
    "category": "buildings",
    "size_bytes": 465805,
    "width": 710,
    "height": 555,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-tiang-listrik.png",
+   "category": "buildings",
+   "size_bytes": 175001,
+   "width": 487,
+   "height": 622,
    "mode": "RGBA",
    "corners_transparent": true
   },
@@ -510,11 +1023,65 @@
    "corners_transparent": true
   },
   {
+   "path": "assets/buildings/building-tpa.png",
+   "category": "buildings",
+   "size_bytes": 327745,
+   "width": 608,
+   "height": 398,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-tps-3r.png",
+   "category": "buildings",
+   "size_bytes": 221213,
+   "width": 456,
+   "height": 388,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-tps.png",
+   "category": "buildings",
+   "size_bytes": 162061,
+   "width": 510,
+   "height": 322,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-traffic-light.png",
+   "category": "buildings",
+   "size_bytes": 180378,
+   "width": 515,
+   "height": 399,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
    "path": "assets/buildings/building-universitas.png",
    "category": "buildings",
    "size_bytes": 294136,
    "width": 582,
    "height": 478,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-waterfront.png",
+   "category": "buildings",
+   "size_bytes": 1072913,
+   "width": 1286,
+   "height": 780,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/buildings/building-waterpark.png",
+   "category": "buildings",
+   "size_bytes": 494372,
+   "width": 618,
+   "height": 506,
    "mode": "RGBA",
    "corners_transparent": true
   },
@@ -1167,6 +1734,15 @@
    "corners_transparent": false
   },
   {
+   "path": "assets/vehicles/bus.png",
+   "category": "vehicles",
+   "size_bytes": 884694,
+   "width": 1335,
+   "height": 828,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
    "path": "assets/vehicles/crane.png",
    "category": "vehicles",
    "size_bytes": 270508,
@@ -1235,6 +1811,33 @@
    "size_bytes": 244091,
    "width": 508,
    "height": 452,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/ui/splash-kedai-malaka.png",
+   "category": "ui",
+   "size_bytes": 842210,
+   "width": 2172,
+   "height": 724,
+   "mode": "RGBA",
+   "corners_transparent": true
+  },
+  {
+   "path": "assets/ui/splash-budak-awak.png",
+   "category": "ui",
+   "size_bytes": 995877,
+   "width": 1672,
+   "height": 941,
+   "mode": "RGB",
+   "corners_transparent": false
+  },
+  {
+   "path": "assets/ui/splash-rise-of-meranti.png",
+   "category": "ui",
+   "size_bytes": 1493543,
+   "width": 2172,
+   "height": 724,
    "mode": "RGBA",
    "corners_transparent": true
   }
