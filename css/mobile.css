@@ -1,5 +1,9 @@
 /* =====================================================================
    v33 — MOBILE FIRST (RISE OF MERANTI)
+   v34 — UI FIX: COMPACT MOBILE BUILDING CATALOG (lihat §G + blok
+   landscape di bawah): tab kategori 44px, thumbnail landscape 60px,
+   kartu landscape horizontal compact, sheet half landscape 48dvh —
+   baris pertama kartu terlihat PENUH di half. Desktop TIDAK disentuh.
    Layout khusus smartphone; desktop TIDAK disentuh: SEMUA aturan di
    file ini berada dalam @media (max-width: 900px). File ini dimuat
    SETELAH city.css, jadi aturannya menang atas aturan lama di lebar
@@ -183,12 +187,27 @@
     background: rgba(255, 255, 255, .35);
   }
   #peganganSheet:active { cursor: grabbing; }
-  /* Kategori: horizontal scroll, target >= 44px. */
-  #katBangun { margin-bottom: 6px; }
-  .katTab { min-height: 44px; padding: 8px 12px; font-size: 12.5px; }
+  /* v34: tab kategori COMPACT — tinggi tetap 44px (bukan 55px hasil
+     stretch flex di v33: #katBangun align-items default stretch
+     menarik tab setinggi wadah), ikon 18px, font 12px, gap rapat.
+     Rentang brief 42–50px; 44px dipilih supaya ambang sentuh v33
+     (>=44px) tetap lolos. */
+  #katBangun { margin-bottom: 6px; align-items: center; }
+  .katTab { height: 44px; min-height: 44px; padding: 6px 10px; font-size: 12px; }
+  .katTab svg { width: 18px; height: 18px; }
   /* Katalog: grid 2 kolom (3 kolom bila lebar >= 600px), gulir vertikal.
      Tombol geser kiri/kanan tidak bermakna di grid — disembunyikan. */
-  #itemBangunWrap { overflow-y: auto; }
+  /* v34: gulir katalog TERKUNGKUNG di dalam panel (overscroll-behavior:
+     contain + touch-action: pan-y) — menggulir daftar kartu TIDAK boleh
+     menggerakkan peta / halaman di belakang sheet. */
+  #itemBangunWrap { overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
+  /* v34: baris meta kartu (pekerja + waktu) DITAMPILKAN lagi di mobile —
+     city.css menyembunyikannya di <=1100px (keputusan v28, saat drawer
+     desktop 30vh: des 2-baris membuat harga terpotong). Di bottom sheet
+     mobile (46dvh) ada ruang: kartu portrait 153 -> ~179px, wrap
+     249px, baris pertama tetap penuh. Di landscape, aturan di bawah
+     mengetatkan jadi 1 baris (min-height 0, clamp 1). */
+  .kartuDes { display: -webkit-box; }
   .geser { display: none; }
   #itemBangun {
     display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -352,11 +371,53 @@
   #navBawahMobile button .navIkon { font-size: 22px; }
   /* Grid katalog 3 kolom di landscape (lebar cukup). */
   #itemBangun { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  /* ============ v34 — KATALOG COMPACT LANDSCAPE ============
+     Baseline v33 (844x390, half): sheet 179px, chrome 149px
+     (pegangan 28 + tab 55 + baris katalog 44 + padding), wrap HANYA
+     30px — baris pertama kartu (153px) tidak terlihat sama sekali.
+     Anggaran baru (sheet half 48dvh = 187px): pegangan 18 + tab 44
+     (+margin 4) + baris katalog 32 (+margin 2) + padding bawah 4 =
+     106px chrome -> wrap 81px. Kartu horizontal 70px (canvas 60px
+     + padding 5px) -> baris pertama terlihat PENUH (sisa 11px). */
+  #menuBangun.sheet-half { max-height: 48dvh; }
+  #menuBangun { padding-bottom: 4px; }
+  #peganganSheet { height: 18px; }
+  #katBangun { margin-bottom: 4px; }
+  /* Judul katalog lebih kecil; tombol lipat/tutup tetap mudah
+     dijangkau (32px — kontrol sekunder, preseden tombol overflow
+     32px di bar atas landscape v33). */
+  #barisKatalog { margin-bottom: 2px; }
+  .labelKatalog { font-size: 10px; }
+  #btnLipatKatalog, #btnTutupDrawer { width: 32px; height: 32px; }
+  /* Kartu HORIZONTAL compact: thumbnail kiri 96x60px (gambar tidak
+     dipotong — object-fit: contain, rasio dipertahankan, thumbnail
+     TIDAK memenuhi kartu), info kanan 1 baris per field (nama,
+     pekerja/waktu, harga+material). Tinggi kartu 70px. */
+  .kartuBangun {
+    display: flex; align-items: center; gap: 6px;
+    text-align: left; padding: 5px 6px;
+  }
+  .kartuBangun canvas { flex: none; width: 96px; height: 60px; object-fit: contain; }
+  .kartuInfo { flex: 1 1 auto; min-width: 0; margin-top: 0; }
+  .kartuNama { min-height: 0; -webkit-line-clamp: 1; font-size: 12px; }
+  /* v34: baris meta (pekerja + waktu) DITAMPILKAN lagi di landscape —
+     city.css menyembunyikannya di layar pendek (keputusan v28, saat
+     kartu vertikal: des 2-baris membuat harga terpotong). Di kartu
+     horizontal v34 ada ruang: info 3 baris 1-baris (~43px) < canvas
+     60px, kartu tetap 70px. */
+  .kartuDes { display: -webkit-box; min-height: 0; -webkit-line-clamp: 1; }
+  .kartuHarga { margin-top: 1px; }
 }
 
 /* Portrait lebar (>= 600px, mis. tablet portrait): grid 3 kolom. */
 @media (max-width: 900px) and (min-width: 600px) and (min-height: 501px) {
   #itemBangun { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* v34: tablet portrait lebar (>= 760px, mis. 820px): grid 4 kolom —
+   kartu ~195px masih muat (nama 1-2 baris, canvas 64px). */
+@media (max-width: 900px) and (min-width: 760px) and (min-height: 501px) {
+  #itemBangun { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 /* Layar sangat sempit (<= 480px): label nav 9px supaya "Pemerintahan"
