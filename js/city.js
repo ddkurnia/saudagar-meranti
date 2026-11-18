@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v37"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v37.1"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -697,10 +697,11 @@ function stateBaru(petaBaru) {
   }
   // Rumah pertama: petak di samping jalan (atau dekat landing).
   // Utamakan pesisir/permukiman, hindari rawa/gambut & pantai.
-  // v36: rumah-sederhana kini 2x2 — calon anchor HARUS lolos untuk
-  // KEEMPAT petak footprint (terrain + tanpa bangunan/jalan), bukan
-  // hanya petak anchor; kalau tidak, rumah baru bisa menimpa jalan
-  // atau dermaga di sampingnya. Skor = skor TERBURUK keempat petak.
+  // v37.1: rumah-sederhana kembali 1x1 (koreksi user 2026-11-18 atas
+  // 2x2 v36) — calon anchor HARUS lolos untuk SELURUH petak footprint
+  // (terrain + tanpa bangunan/jalan), bukan hanya petak anchor; kalau
+  // tidak, rumah baru bisa menimpa jalan atau dermaga di sampingnya.
+  // Skor = skor TERBURUK petak footprint (dulu KEEMPAT petak saat 2x2).
   const kRumah = (typeof BANGUNAN_MAP !== "undefined" && BANGUNAN_MAP["rumah-sederhana"]) ? BANGUNAN_MAP["rumah-sederhana"].kaki : { w: 2, h: 2 };
   const skorRumah = (t) => (t === "pesisir" || t === "permukiman") ? 0 : (t === "rawa" || t === "gambut") ? 2 : 1;
   const calonRumah = [];

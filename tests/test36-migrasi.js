@@ -14,6 +14,12 @@
 // hutan -> permukiman tanpa bonus kayu, terrainIzin tambang, id tak
 // dikenal di-skip, override kakiBangunan/petakBangunan/ukuranGambar,
 // determinisme, dan penjaga statis (hook mulaiGame, Diagnostik, panel).
+// v37.1 (koreksi user 2026-11-18): replay migrasi v35->v36 di sini
+// memakai KATALOG SAAT INI — rumah-sederhana kini 1x1 (bukan 2x2 v36),
+// jadi MG2/MG3/MG7/MG8/MG27 berubah jujur (25 berubah, total petak
+// 1250, rumah Hari 1 TETAP (239,214) 1x1, rotasi 1x1 tetap 1x1).
+// KAKI_V36_BARU di bawah tetap mencatat target v36 ASLI (26) sebagai
+// sejarah; MG1/MG6 membuktikan FOOTPRINT_V36_LAMA masih cocok.
 // =====================================================================
 const fs = require("fs");
 const path = require("path");
@@ -133,13 +139,13 @@ for (const b of BANGUNAN) {
   if (lama.uang !== b.harga.uang || lama.upkeep !== (b.upkeep || 0)) ekonomiBerubah.push(b.id);
   if (lama.tinggiDunia !== b.tinggiDunia) tinggiBerubah.push(b.id);
 }
-cek("MG2 katalog: tepat 26 kaki berubah dari v35, masing-masing = nilai §3a",
-  berubah.length === 26 && berubah.every((id) => sama(BANGUNAN_MAP[id].kaki, KAKI_V36_BARU[id])) &&
-  Object.keys(KAKI_V36_BARU).every((id) => berubah.indexOf(id) >= 0),
+cek("MG2 katalog: tepat 25 kaki berubah dari v35 (v37.1: rumah-sederhana dikoreksi kembali 1x1, jadi bukan bagian dari 26), masing-masing = nilai §3a",
+  berubah.length === 25 && berubah.every((id) => id !== "rumah-sederhana" && sama(BANGUNAN_MAP[id].kaki, KAKI_V36_BARU[id])) &&
+  Object.keys(KAKI_V36_BARU).filter((id) => id !== "rumah-sederhana").every((id) => berubah.indexOf(id) >= 0),
   "berubah: " + berubah.join(","));
-cek("MG3 katalog: 97 bangunan lain kaki-nya TETAP v35 + total petak 1253 (dulu 402)",
+cek("MG3 katalog: 98 bangunan lain kaki-nya TETAP v35 + total petak 1250 (v36: 1253; v37.1: -3 petak rumah-sederhana 2x2->1x1)",
   BANGUNAN.length === 123 && Object.keys(BASELINE_V35).length === 123 &&
-  BANGUNAN.reduce((a, b) => a + b.kaki.w * b.kaki.h, 0) === 1253,
+  BANGUNAN.reduce((a, b) => a + b.kaki.w * b.kaki.h, 0) === 1250,
   "total=" + BANGUNAN.reduce((a, b) => a + b.kaki.w * b.kaki.h, 0));
 cek("MG4 ekonomi TAK berubah: harga uang + upkeep 123/123 sama dengan v35 (Q6)",
   ekonomiBerubah.length === 0, ekonomiBerubah.join(","));
@@ -167,11 +173,11 @@ const eko1 = { uang: S1.uang, kayu: S1.kayu, batu: S1.batu, besi: S1.besi, xp: S
 const r1 = jalankanMigrasi(S1, petaHari1);
 const rumah1 = S1.bangunan.find((b) => b.id === "rumah-sederhana");
 const dermaga1 = S1.bangunan.find((b) => b.id === "dermaga");
-cek("MG7 save Hari 1: migrasi penuh, 1 membesar, 1 digeser, 0 butuh lahan, tidak batal",
-  r1 && r1.mode === "penuh" && r1.total === 1 && r1.membesar === 1 && r1.digeser === 1 && r1.butuhLahan === 0 && r1.batal === false,
+cek("MG7 save Hari 1: migrasi penuh, 1 target, 0 digeser, 0 butuh lahan, tidak batal (v37.1: rumah-sederhana kini 1x1 = kaki lama v35, jadi rencana diterapkan di anchor lama tanpa geser; counter membesar tetap 1 karena menghitung rencana yang diterapkan)",
+  r1 && r1.mode === "penuh" && r1.total === 1 && r1.membesar === 1 && r1.digeser === 0 && r1.butuhLahan === 0 && r1.batal === false,
   JSON.stringify(r1));
-cek("MG8 save Hari 1: rumah pindah ke (238,213) 2x2 — sama seperti TEMUAN §3.4B (anchor pusat, geser 0,71 petak)",
-  rumah1 && rumah1.x === 238 && rumah1.y === 213 && sama(kakiEfektif(rumah1), { w: 2, h: 2 }),
+cek("MG8 save Hari 1: rumah TETAP (239,214) 1x1 — v37.1: TIDAK lagi pindah ke (238,213) 2x2 seperti TEMUAN §3.4B v36; kaki baru = kaki lama",
+  rumah1 && rumah1.x === 239 && rumah1.y === 214 && sama(kakiEfektif(rumah1), { w: 1, h: 1 }),
   rumah1 ? JSON.stringify(rumah1) : "hilang");
 cek("MG9 save Hari 1: dermaga TETAP (240,215) 2x1; 0 bangunan hilang; 0 overlap",
   dermaga1 && dermaga1.x === 240 && dermaga1.y === 215 && S1.bangunan.length === 2 && adaOverlap(S1.bangunan) === null,
@@ -308,8 +314,8 @@ cek("MG26 id tak dikenal di-skip (tidak crash, tetap di array, migrasi jalan unt
   err5 === null && r5 && r5.total === 1 && r5.membesar === 1 && S5.bangunan.length === 2 && S5.bangunan[0].id === "tidak-ada-di-katalog",
   (err5 && err5.message) || JSON.stringify(r5));
 const rumahRot = S5.bangunan[1];
-cek("MG27 rotasi ganjil: rumah 1x1 rot=1 -> 2x2 (bujur sangkar, rotasi tidak berdampak pada ukuran)",
-  sama(kakiEfektif(rumahRot), { w: 2, h: 2 }), JSON.stringify(rumahRot));
+cek("MG27 rotasi ganjil: rumah 1x1 rot=1 -> 1x1 (v37.1: bujur sangkar 1x1, rotasi tidak berdampak pada ukuran)",
+  sama(kakiEfektif(rumahRot), { w: 1, h: 1 }), JSON.stringify(rumahRot));
 const defMasjid = BANGUNAN_MAP["masjid"];
 const kOver = vm.runInContext("kakiBangunan(" + JSON.stringify(defMasjid) + ",0," + JSON.stringify({ kakiOverride: { w: 2, h: 2 }, rot: 0 }) + ")", ctx);
 const kOverRot = vm.runInContext("kakiBangunan(" + JSON.stringify(defMasjid) + ",1," + JSON.stringify({ kakiOverride: { w: 2, h: 1 }, rot: 1 }) + ")", ctx);
@@ -338,12 +344,12 @@ cek("MG31 mulaiGame memanggil migrasiFootprintV36 + stateBaru menandai permainan
 cek("MG32 Diagnostik punya kode butuh-lahan + panel bangunan menampilkan catatan Butuh lahan",
   srcDiag.includes('"butuh-lahan"') && srcCity.includes("Butuh lahan: bangunan ini tetap"),
   "diag=" + srcDiag.includes('"butuh-lahan"'));
-cek("MG33 pin v37: VERSI_GAME v37, city.js?v=59, city-data.js?v=15, city-skala.js?v=2, cache rise-of-meranti-v37, pill v37",
-  srcCity.includes('const VERSI_GAME = "v37"') && idxHtml.includes("js/city.js?v=60") &&
-  idxHtml.includes("js/city-data.js?v=16") && idxHtml.includes("js/city-skala.js?v=3") &&
-  idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v37<') &&
-  swTxt.includes('"rise-of-meranti-v37"') && swTxt.includes("js/city.js?v=60") &&
-  swTxt.includes("js/city-data.js?v=16") && swTxt.includes("js/city-skala.js?v=3"));
+cek("MG33 pin v37.1: VERSI_GAME v37.1, city.js?v=61, city-data.js?v=17, city-skala.js?v=3, cache rise-of-meranti-v37.1, pill v37.1",
+  srcCity.includes('const VERSI_GAME = "v37.1"') && idxHtml.includes("js/city.js?v=61") &&
+  idxHtml.includes("js/city-data.js?v=17") && idxHtml.includes("js/city-skala.js?v=3") &&
+  idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v37.1<') &&
+  swTxt.includes('"rise-of-meranti-v37.1"') && swTxt.includes("js/city.js?v=61") &&
+  swTxt.includes("js/city-data.js?v=17") && swTxt.includes("js/city-skala.js?v=3"));
 
 console.log("HASIL MIGRASI v36: lulus " + lulus + ", gagal " + gagal + " dari " + (lulus + gagal));
 console.log(gagal === 0 ? "TEST_MIGRASI_V36_OK" : "TEST_MIGRASI_V36_GAGAL:" + gagal + " dari " + (lulus + gagal));

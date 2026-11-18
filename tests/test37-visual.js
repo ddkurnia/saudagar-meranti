@@ -8,7 +8,7 @@
 // memakai zlib bawaan node — tanpa dependensi).
 // Yang diuji: daftar isiTanah (25), fillW, tinggi tegak, masjid
 // tertinggi, kebun-kelapa satu jalur render, PNG baru (dimensi target,
-// transparan, sudut transparan), pin v37.
+// transparan, sudut transparan), pin v37.1.
 // Yang TIDAK bisa dibuktikan headless (dicatat, bukan diklaim):
 // tampilan live di browser/tablet (lihat tests/v37-viewport.js) dan
 // ketajaman di zoom maks 2,6 (butuh mata).
@@ -142,9 +142,11 @@ cek("V7 kebun-kelapa: gambar baru building-kebun-kelapa.png, tanpa field lapanga
   defKelapa.gambar === "assets/buildings/building-kebun-kelapa.png" && !("lapangan" in defKelapa) && defKelapa.isiTanah === true &&
   !BANGUNAN.some(b => "lapangan" in b),
   "gambar=" + defKelapa.gambar);
-cek("V8 rumah-sederhana TIDAK diubah (tanpa isiTanah, 39% — pertanyaan terbuka ke user)",
+cek("V8 rumah-sederhana TIDAK ditandai isiTanah, gambar sama (kaki 2x2 v36 -> 1x1 DIKOREKSI v37.1, bukan bagian v37; 39% — pertanyaan terbuka ke user)",
   BANGUNAN.find(b => b.id === "rumah-sederhana").isiTanah !== true &&
-  BANGUNAN.find(b => b.id === "rumah-sederhana").gambar === "assets/buildings/building-rumah-sederhana.png");
+  BANGUNAN.find(b => b.id === "rumah-sederhana").gambar === "assets/buildings/building-rumah-sederhana.png" &&
+  BANGUNAN.find(b => b.id === "rumah-sederhana").kaki.w === 1 &&
+  BANGUNAN.find(b => b.id === "rumah-sederhana").kaki.h === 1);
 
 // ---- 5. PNG baru: dimensi target + RGBA + sudut transparan ----
 const TARGET_DIM = {
@@ -183,20 +185,23 @@ cek("V10 zoom 2,6: fillW tetap 100% + tegak <= 364 px (= 140 x 2,6) untuk semua 
 const idxHtml = fs.readFileSync(ROOT + "/index.html", "utf8");
 const swTxt = fs.readFileSync(ROOT + "/sw.js", "utf8");
 const srcCity = fs.readFileSync(ROOT + "/js/city.js", "utf8");
-cek("V11 pin v37: VERSI_GAME v37, city.js?v=60, city-data.js?v=16, city-skala.js?v=3, cache rise-of-meranti-v37, pill v37",
-  srcCity.includes('const VERSI_GAME = "v37"') && idxHtml.includes("js/city.js?v=60") &&
-  idxHtml.includes("js/city-data.js?v=16") && idxHtml.includes("js/city-skala.js?v=3") &&
-  idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v37<') &&
-  swTxt.includes('"rise-of-meranti-v37"') && swTxt.includes("js/city.js?v=60") &&
-  swTxt.includes("js/city-data.js?v=16") && swTxt.includes("js/city-skala.js?v=3"));
+cek("V11 pin v37.1: VERSI_GAME v37.1, city.js?v=61, city-data.js?v=17, city-skala.js?v=3, cache rise-of-meranti-v37.1, pill v37.1",
+  srcCity.includes('const VERSI_GAME = "v37.1"') && idxHtml.includes("js/city.js?v=61") &&
+  idxHtml.includes("js/city-data.js?v=17") && idxHtml.includes("js/city-skala.js?v=3") &&
+  idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v37.1<') &&
+  swTxt.includes('"rise-of-meranti-v37.1"') && swTxt.includes("js/city.js?v=61") &&
+  swTxt.includes("js/city-data.js?v=17") && swTxt.includes("js/city-skala.js?v=3"));
 
 // ---- 8. Footprint/harga/upkeep 26 bangunan v36 TIDAK berubah ----
 // Baseline v36 (dari docs/MIGRASI-FOOTPRINT-v36.md + city-data.js v36):
 // kaki + harga.uang + upkeep tiap 26 bangunan — disalin dari tree v36
 // SEBELUM v37 (bukan dari data sekarang) supaya tes ini menangkap
 // perubahan diam-diam.
+// v37.1 (koreksi user 2026-11-18): SATU pengecualian jujur —
+// rumah-sederhana kaki 2x2 (v36) -> 1x1; harga/upkeep-nya TETAP.
+// Bila ada bangunan lain yang berubah, tes ini tetap gagal.
 const BASELINE_V36_26 = {
-  "rumah-sederhana": { kaki: [2, 2], uang: 20000, upkeep: 300 },
+  "rumah-sederhana": { kaki: [1, 1], uang: 20000, upkeep: 300 }, // v37.1: dulu [2, 2] (v36)
   "masjid": { kaki: [5, 5], uang: 150000, upkeep: 1200 },
   "puskesmas": { kaki: [4, 4], uang: 100000, upkeep: 2800 },
   "kantor-pemerintah": { kaki: [5, 5], uang: 500000, upkeep: 7000 },
@@ -231,9 +236,9 @@ for (const [id, base] of Object.entries(BASELINE_V36_26)) {
     beda.push(id + " (kaki " + (b && b.kaki.w) + "x" + (b && b.kaki.h) + " uang " + (b && b.harga.uang) + " upkeep " + (b && b.upkeep) + ")");
   }
 }
-cek("V12 footprint + harga.uang + upkeep 26 bangunan v36 IDENTIK sebelum-sesudah v37",
+cek("V12 footprint + harga.uang + upkeep 26 bangunan v36 IDENTIK sebelum-sesudah v37 (kecuali rumah-sederhana: kaki 2x2 -> 1x1 dikoreksi v37.1, harga/upkeep tetap)",
   beda.length === 0, beda.join("; "));
 
-console.log("HASIL v37 visual: lulus " + lulus + ", gagal " + gagal + " dari " + (lulus + gagal));
+console.log("HASIL v37.1 visual: lulus " + lulus + ", gagal " + gagal + " dari " + (lulus + gagal));
 console.log(gagal === 0 ? "TEST37_OK" : "TEST37_GAGAL:" + gagal + " dari " + (lulus + gagal));
 process.exit(gagal === 0 ? 0 : 1);

@@ -1,4 +1,4 @@
-# STANDAR SKALA GLOBAL — Rise of Meranti (v35, footprint v36, isiTanah v37)
+# STANDAR SKALA GLOBAL — Rise of Meranti (v35, footprint v36, isiTanah v37, koreksi rumah 1×1 v37.1)
 
 Satu sumber kebenaran ukuran visual dunia 2D isometric. Implementasi:
 `js/city-skala.js` (konstanta + fungsi hitung murni) dan field `tinggiDunia`
@@ -237,3 +237,29 @@ urutan aman: **upload PNG dulu, baru push code** (bila code v37
 ter-push sebelum PNG baru ter-upload, Grup B akan ter-render
 lebar-driven dari PNG gedung lama dan melanggar hierarki masjid).
 PNG lama tersimpan di `~/workspace/v37-implementer/png-lama/`.
+
+## 9. v37.1 (2026-11-18): koreksi rumah-sederhana kembali 1×1
+
+Koreksi user 2026-11-18 16:23 WIB: Rumah Sederhana lahannya 2×2 (4
+petak) — seharusnya 1 petak saja, sama seperti rumah-permanen dan
+rumah-pekerja. Asal 2×2: tabel acuan v36 (§6 di atas menulis
+`rumah-sederhana | 1×1 | 2×2`) — tabel acuan TETAP ditulis apa adanya
+(sejarah), tetapi yang berlaku kini adalah koreksi ini.
+
+Perubahan: SATU entri katalog — `js/city-data.js:484`,
+`rumah-sederhana kaki {w:2,h:2} -> {w:1,h:1}`. TIDAK ada yang lain
+berubah: harga Rp20.000, kayu 4, upkeep Rp300, `rumah: 4`,
+`tinggiDunia` 4,5 m, gambar, ekonomi, mekanisme, footprint 122
+bangunan lainnya. Total petak footprint katalog: 1253 -> 1250.
+
+Migrasi: TIDAK perlu migrasi baru. 1×1 muat di dalam anchor 2×2 lama;
+bangunan yang sudah bermigrasi v36 (tanpa `kakiOverride`) membaca
+`kaki` katalog saat load sehingga otomatis menyusut ke anchor-nya;
+yang ber-flag fallback F1 sudah 1×1 lewat override. Mengecilkan
+footprint tidak bisa menimbulkan overlap (petak yang dibebaskan hanya
+jadi kosong). Dibuktikan tes `tests/test37-1.js` (save Hari 1 nyata +
+save sintetis era-v36: 0 hilang, 0 overlap, uang/progres utuh).
+
+Pin: `VERSI_GAME "v37.1"`, `city.js?v=61`, `city-data.js?v=17`,
+cache SW `rise-of-meranti-v37.1`; `city-skala.js` tidak berubah
+(tetap `?v=3`).
