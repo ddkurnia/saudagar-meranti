@@ -155,6 +155,40 @@ function tinggiTegakBangunan(def, natW, natH, z, b) {
   return ukuranGambarBangunan(def, natW, natH, z, b).h - tinggiDiamond;
 }
 
+// v37.2 — Ukuran render kapal (px, zoom 1). SATU sumber kebenaran
+// untuk kedua jalur render kapal (ambient di js/city.js:4551 dan
+// maritim di js/city-maritim.js:426), yang sebelumnya menggambar kapal
+// yang sama dengan dua ukuran berbeda (70 px vs 80 px; perahu 40 vs 48).
+// Lebar diturunkan dari panjangPetak × 40 px/petak (skala standar
+// kendaraan: bus 1,6 petak = 64 px) — BUKAN angka bebas. Yang berubah
+// hanya kapal-kargo (70/80 → 200 px = 5 petak = 40 m); semua ukuran
+// lain dipertahankan persis dari nilai lamanya (penyatuan, bukan
+// perubahan): feri/kapal-penumpang 90 px (= gambarFeri), kapal-nelayan
+// 48 px (= nilai lama jalur B), perahu 40 px (= nilai lama jalur A;
+// efek samping penyatuan: perahu jalur B 48 → 40 px).
+// Kapal TIDAK masuk TIPE_KENDARAAN/ukuranGambarKendaraan: kapal bukan
+// kendaraan jalan, dan jepit tinggi 22–42 px itu akan mengecilkan
+// lebar kapal mengikuti aspek — mekanisme yang salah untuk kapal yang
+// lebarnya adalah ukuran penentunya (DESAIN.md §2.4).
+const UKURAN_KAPAL_PX = {
+  "kapal-kargo":     { panjangPetak: 5.0, lebarPx: 200 },
+  "kapal-penumpang": { panjangPetak: 2.25, lebarPx: 90 },
+  "feri":            { panjangPetak: 2.25, lebarPx: 90 },
+  "kapal-nelayan":   { panjangPetak: 1.2, lebarPx: 48 },
+  "perahu":          { panjangPetak: 1.0, lebarPx: 40 },
+};
+// Ukuran gambar kapal (px, zoom z) dari tabel di atas. tipe: salah satu
+// kunci UKURAN_KAPAL_PX ("kapal" jalur ambient = "kapal-kargo").
+// Tipe tak dikenal -> kapal-kargo (fallback aman, bukan crash).
+// Mengembalikan {w, h} dengan aspek kanvas dipertahankan.
+function ukuranGambarKapal(tipe, natW, natH, z) {
+  const zz = z || 1;
+  const t = UKURAN_KAPAL_PX[tipe] || UKURAN_KAPAL_PX["kapal-kargo"];
+  const w = t.lebarPx * zz;
+  if (!natW || !natH) return { w: w, h: w * 0.78 };
+  return { w: w, h: w * (natH / natW) };
+}
+
 // Ukuran gambar kendaraan (px, zoom z) dari standar dunia.
 // lebarMaks: lebar dari panjangPetak (64*z*(panjangPetak/1.6)).
 // tinggiTarget: TINGGI_KENDARAAN_PX[tipe] (default 26 = sedan).

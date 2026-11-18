@@ -125,6 +125,9 @@ const KAKI_V36_BARU = {
   "kilang-sagu": { w: 6, h: 6 },
   "toko": { w: 3, h: 3 }, "toko-material": { w: 3, h: 3 },
 };
+const KAKI_V37_2_BARU = {
+  "pelabuhan": { w: 8, h: 8 }, "dermaga": { w: 4, h: 2 },
+};
 const FOOTPRINT_LAMA = vm.runInContext("FOOTPRINT_V36_LAMA", ctx);
 cek("MG1 FOOTPRINT_V36_LAMA tepat 26 entri, kunci = daftar keputusan §3a",
   Object.keys(FOOTPRINT_LAMA).length === 26 &&
@@ -139,18 +142,29 @@ for (const b of BANGUNAN) {
   if (lama.uang !== b.harga.uang || lama.upkeep !== (b.upkeep || 0)) ekonomiBerubah.push(b.id);
   if (lama.tinggiDunia !== b.tinggiDunia) tinggiBerubah.push(b.id);
 }
-cek("MG2 katalog: tepat 25 kaki berubah dari v35 (v37.1: rumah-sederhana dikoreksi kembali 1x1, jadi bukan bagian dari 26), masing-masing = nilai §3a",
-  berubah.length === 25 && berubah.every((id) => id !== "rumah-sederhana" && sama(BANGUNAN_MAP[id].kaki, KAKI_V36_BARU[id])) &&
-  Object.keys(KAKI_V36_BARU).filter((id) => id !== "rumah-sederhana").every((id) => berubah.indexOf(id) >= 0),
+// v37.2 (2026-11-18): 2 bangunan lagi berubah kaki dari v35 —
+// pelabuhan 2x2 -> 8x8, dermaga 2x1 -> 4x2 — jadi 27 berubah, 96 tetap,
+// total petak 1316. Nilai yang diharapkan = §3a v36 + §v37.2.
+cek("MG2 katalog: tepat 27 kaki berubah dari v35 (25 v36+v37.1 + pelabuhan + dermaga v37.2), masing-masing = nilai §3a / §v37.2",
+  berubah.length === 27 && berubah.every((id) => id !== "rumah-sederhana" &&
+    (sama(BANGUNAN_MAP[id].kaki, KAKI_V36_BARU[id]) || sama(BANGUNAN_MAP[id].kaki, KAKI_V37_2_BARU[id]))) &&
+  Object.keys(KAKI_V36_BARU).filter((id) => id !== "rumah-sederhana").every((id) => berubah.indexOf(id) >= 0) &&
+  Object.keys(KAKI_V37_2_BARU).every((id) => berubah.indexOf(id) >= 0),
   "berubah: " + berubah.join(","));
-cek("MG3 katalog: 98 bangunan lain kaki-nya TETAP v35 + total petak 1250 (v36: 1253; v37.1: -3 petak rumah-sederhana 2x2->1x1)",
+cek("MG3 katalog: 96 bangunan lain kaki-nya TETAP v35 + total petak 1316 (v36: 1253; v37.1: -3 petak rumah-sederhana 2x2->1x1; v37.2: +60 pelabuhan +6 dermaga)",
   BANGUNAN.length === 123 && Object.keys(BASELINE_V35).length === 123 &&
-  BANGUNAN.reduce((a, b) => a + b.kaki.w * b.kaki.h, 0) === 1250,
+  BANGUNAN.reduce((a, b) => a + b.kaki.w * b.kaki.h, 0) === 1316,
   "total=" + BANGUNAN.reduce((a, b) => a + b.kaki.w * b.kaki.h, 0));
 cek("MG4 ekonomi TAK berubah: harga uang + upkeep 123/123 sama dengan v35 (Q6)",
   ekonomiBerubah.length === 0, ekonomiBerubah.join(","));
-cek("MG5 tinggiDunia TAK berubah: 123/123 sama dengan v35 (masjid tetap 28 m tertinggi)",
-  tinggiBerubah.length === 0 && BANGUNAN_MAP["masjid"].tinggiDunia === 28,
+// v37.2: tinggiDunia berubah HANYA untuk 2 bangunan yang membesar —
+// pelabuhan 10 -> 15, dermaga 4 -> 5 (DESAIN.md §3/§5.1, metadata +
+// fallback render; ekonomi/mekanisme tidak memakai tinggiDunia).
+// Masjid tetap 28 m tertinggi.
+cek("MG5 tinggiDunia TAK berubah kecuali 2 v37.2 (pelabuhan 10->15, dermaga 4->5; masjid tetap 28 m tertinggi)",
+  tinggiBerubah.length === 2 && tinggiBerubah.indexOf("pelabuhan") >= 0 && tinggiBerubah.indexOf("dermaga") >= 0 &&
+  BANGUNAN_MAP["pelabuhan"].tinggiDunia === 15 && BANGUNAN_MAP["dermaga"].tinggiDunia === 5 &&
+  BANGUNAN_MAP["masjid"].tinggiDunia === 28,
   tinggiBerubah.join(","));
 cek("MG6 FOOTPRINT_V36_LAMA cocok dengan kaki v35 untuk ke-26 bangunan",
   Object.keys(FOOTPRINT_LAMA).every((id) => sama(FOOTPRINT_LAMA[id], BASELINE_V35[id].kaki)),
@@ -344,12 +358,14 @@ cek("MG31 mulaiGame memanggil migrasiFootprintV36 + stateBaru menandai permainan
 cek("MG32 Diagnostik punya kode butuh-lahan + panel bangunan menampilkan catatan Butuh lahan",
   srcDiag.includes('"butuh-lahan"') && srcCity.includes("Butuh lahan: bangunan ini tetap"),
   "diag=" + srcDiag.includes('"butuh-lahan"'));
-cek("MG33 pin v37.1: VERSI_GAME v37.1, city.js?v=61, city-data.js?v=17, city-skala.js?v=3, cache rise-of-meranti-v37.1, pill v37.1",
-  srcCity.includes('const VERSI_GAME = "v37.1"') && idxHtml.includes("js/city.js?v=61") &&
-  idxHtml.includes("js/city-data.js?v=17") && idxHtml.includes("js/city-skala.js?v=3") &&
-  idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v37.1<') &&
-  swTxt.includes('"rise-of-meranti-v37.1"') && swTxt.includes("js/city.js?v=61") &&
-  swTxt.includes("js/city-data.js?v=17") && swTxt.includes("js/city-skala.js?v=3"));
+cek("MG33 pin v37.2: VERSI_GAME v37.2, city.js?v=62, city-data.js?v=18, city-skala.js?v=4, city-maritim.js?v=5, cache rise-of-meranti-v37.2, pill v37.2",
+  srcCity.includes('const VERSI_GAME = "v37.2"') && idxHtml.includes("js/city.js?v=62") &&
+  idxHtml.includes("js/city-data.js?v=18") && idxHtml.includes("js/city-skala.js?v=4") &&
+  idxHtml.includes("js/city-maritim.js?v=5") &&
+  idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v37.2<') &&
+  swTxt.includes('"rise-of-meranti-v37.2"') && swTxt.includes("js/city.js?v=62") &&
+  swTxt.includes("js/city-data.js?v=18") && swTxt.includes("js/city-skala.js?v=4") &&
+  swTxt.includes("js/city-maritim.js?v=5"));
 
 console.log("HASIL MIGRASI v36: lulus " + lulus + ", gagal " + gagal + " dari " + (lulus + gagal));
 console.log(gagal === 0 ? "TEST_MIGRASI_V36_OK" : "TEST_MIGRASI_V36_GAGAL:" + gagal + " dari " + (lulus + gagal));

@@ -92,11 +92,11 @@ function cek(nama, kond, info) {
   else { gagal++; console.log("GAGAL", nama, info !== undefined ? "(" + info + ")" : ""); }
 }
 
-// ---- 1. Daftar isiTanah: tepat 25, sesuai desain ----
-const ISI_TANAH_V37 = ["taman", "lapangan", "kebun-sagu", "kebun-kopi", "kebun-karet", "kebun-pinang", "tambang-batu", "tambang-pasir", "toko-material", "lapangan-bola", "pabrik-tepung", "pabrik-makanan", "pabrik-kelapa", "pabrik-laut", "pabrik-bahan-bangunan", "pabrik-daur-ulang", "kilang-sagu", "sd", "smp", "sma", "smk", "puskesmas", "kantor-pemerintah", "toko", "kebun-kelapa"];
+// ---- 1. Daftar isiTanah: tepat 27 (25 v37 + pelabuhan + dermaga v37.2) ----
+const ISI_TANAH_V37 = ["taman", "lapangan", "kebun-sagu", "kebun-kopi", "kebun-karet", "kebun-pinang", "tambang-batu", "tambang-pasir", "toko-material", "lapangan-bola", "pabrik-tepung", "pabrik-makanan", "pabrik-kelapa", "pabrik-laut", "pabrik-bahan-bangunan", "pabrik-daur-ulang", "kilang-sagu", "sd", "smp", "sma", "smk", "puskesmas", "kantor-pemerintah", "toko", "kebun-kelapa", "pelabuhan", "dermaga"];
 const aktual = BANGUNAN.filter(b => b.isiTanah === true).map(b => b.id).sort();
-cek("V1 daftar isiTanah tepat 25 (desain §3a+§3b+§3c+§7)",
-  aktual.length === 25 && JSON.stringify(aktual) === JSON.stringify(ISI_TANAH_V37.slice().sort()),
+cek("V1 daftar isiTanah tepat 27 (25 v37 + pelabuhan + dermaga v37.2)",
+  aktual.length === 27 && JSON.stringify(aktual) === JSON.stringify(ISI_TANAH_V37.slice().sort()),
   aktual.join(","));
 
 // ---- 2. fillW + tegak tiap isiTanah (zoom 1) ----
@@ -126,13 +126,14 @@ cek("V5 masjid 252 px tetap tertinggi — diukur dengan benar: total h untuk ban
   rincian.every(r => r.tegak <= 140),
   "masjid=" + H["masjid"].toFixed(1) + " maks-non-isiTanah=" + Math.max(...Object.keys(H).filter(id => !ISI_TANAH_V37.includes(id)).map(id => H[id])).toFixed(1));
 const render = (id) => rincian.find(r => r.id === id).render;
-cek("V6 ukuran render kunci v37 (taman 384x237, lapangan 448x248, kebun 512x263-320, tambang 512x256-341, pabrik 384x240, sekolah 256x160, kantor 320x200, toko 192x192)",
+cek("V6 ukuran render kunci v37 (taman 384x237, lapangan 448x248, kebun 512x263-320, tambang 512x256-341, pabrik 384x240, sekolah 256x160, kantor 320x200, toko 192x192) + v37.2 pelabuhan 512x320, dermaga 192x133",
   render("taman") === "384x237" && render("lapangan") === "448x248" &&
   render("kebun-sagu") === "512x319" && render("kebun-kopi") === "512x263" &&
   render("tambang-batu") === "512x341" && render("tambang-pasir") === "512x256" &&
   render("pabrik-tepung") === "384x240" && render("kilang-sagu") === "384x240" &&
   render("sd") === "256x160" && render("puskesmas") === "256x160" &&
   render("kantor-pemerintah") === "320x200" && render("toko") === "192x192" &&
+  render("pelabuhan") === "512x320" && render("dermaga") === "192x133" &&
   render("kebun-kelapa") === "512x320" && render("lapangan-bola") === "160x104",
   JSON.stringify(rincian.map(r => r.id + "=" + r.render)));
 
@@ -185,12 +186,12 @@ cek("V10 zoom 2,6: fillW tetap 100% + tegak <= 364 px (= 140 x 2,6) untuk semua 
 const idxHtml = fs.readFileSync(ROOT + "/index.html", "utf8");
 const swTxt = fs.readFileSync(ROOT + "/sw.js", "utf8");
 const srcCity = fs.readFileSync(ROOT + "/js/city.js", "utf8");
-cek("V11 pin v37.1: VERSI_GAME v37.1, city.js?v=61, city-data.js?v=17, city-skala.js?v=3, cache rise-of-meranti-v37.1, pill v37.1",
-  srcCity.includes('const VERSI_GAME = "v37.1"') && idxHtml.includes("js/city.js?v=61") &&
-  idxHtml.includes("js/city-data.js?v=17") && idxHtml.includes("js/city-skala.js?v=3") &&
-  idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v37.1<') &&
-  swTxt.includes('"rise-of-meranti-v37.1"') && swTxt.includes("js/city.js?v=61") &&
-  swTxt.includes("js/city-data.js?v=17") && swTxt.includes("js/city-skala.js?v=3"));
+cek("V11 pin v37.2: VERSI_GAME v37.2, city.js?v=62, city-data.js?v=18, city-skala.js?v=4, city-maritim.js?v=5, cache rise-of-meranti-v37.2, pill v37.2",
+  srcCity.includes('const VERSI_GAME = "v37.2"') && idxHtml.includes("js/city.js?v=62") &&
+  idxHtml.includes("js/city-data.js?v=18") && idxHtml.includes("js/city-skala.js?v=4") && idxHtml.includes("js/city-maritim.js?v=5") &&
+  idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v37.2<') &&
+  swTxt.includes('"rise-of-meranti-v37.2"') && swTxt.includes("js/city.js?v=62") &&
+  swTxt.includes("js/city-data.js?v=18") && swTxt.includes("js/city-skala.js?v=4"));
 
 // ---- 8. Footprint/harga/upkeep 26 bangunan v36 TIDAK berubah ----
 // Baseline v36 (dari docs/MIGRASI-FOOTPRINT-v36.md + city-data.js v36):

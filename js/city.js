@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v37.1"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v37.2"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -593,6 +593,7 @@ function stateBaru(petaBaru) {
   const st = {
     versi: CITY.VERSI_SAVE, seed: CITY.SEED, hari: 1, cuaca: "Cerah",
     migrasiFootprintV36: true, // v36: permainan baru lahir dengan footprint v36 — tidak perlu migrasi saat load.
+    migrasiFootprintV372: true, // v37.2: permainan baru lahir dengan footprint v37.2 (pelabuhan 8x8, dermaga 4x2) — tidak perlu migrasi saat load.
     uang: cfgEco("modalAwal.uang", 10000000), kayu: cfgEco("modalAwal.kayu", 300), batu: cfgEco("modalAwal.batu", 200), pasir: cfgEco("modalAwal.pasir", 150), semen: cfgEco("modalAwal.semen", 50), besi: cfgEco("modalAwal.besi", 30), xp: 0, level: 1, akumulasi: 0, // v30: SEMUA modal awal dibaca dari economyConfig.modalAwal (sebelumnya kayu/batu/besi hardcode 60/40/10)
     waktuGame: 360, kecepatan: 1, // v18-A: waktu mulai 06:00 hari ke-0; akumulasi = cermin lama
     komoditas: {}, bangunan: [], jalan: [], jembatan: [],
@@ -1183,6 +1184,12 @@ const FOOTPRINT_V36_LAMA = {
   "kilang-sagu": { w: 2, h: 2 },
   "toko": { w: 1, h: 1 }, "toko-material": { w: 1, h: 1 },
 };
+// v37.2 — tabel footprint LAMA era-v37.1 untuk 2 bangunan yang membesar
+// di v37.2: pelabuhan 2x2 -> 8x8, dermaga 2x1 -> 4x2 (DESAIN.md §4.3).
+// Semua bangunan lain TIDAK masuk tabel ini (footprint-nya tetap).
+const FOOTPRINT_V37_LAMA = {
+  "pelabuhan": { w: 2, h: 2 }, "dermaga": { w: 2, h: 1 },
+};
 // Zona yang dicat -> terrain izin yang dipetakan (sama seperti cekBangun).
 const ZONA_KE_TERRAIN_V36 = { industrial: "industri" };
 // Apakah satu petak boleh ditempati bangunan `def` saat migrasi?
@@ -1216,22 +1223,31 @@ function petakBisaUntukMigrasi(def, x, y) {
 // "retry" (hanya bangunan ber-flag butuhLahan). Bila validasi akhir
 // menemukan overlap, mengembalikan {batal:true} dan TIDAK mengubah
 // apa pun (flag tidak diset — migrasi dicoba lagi di load berikut).
-function migrasiFootprintV36() {
+// v37.2: fungsi migrasi DIGENERALISASI (dulu migrasiFootprintV36()
+// self-contained 190 baris). Satu algoritma bersama dipakai dua kali:
+//   migrasiFootprintV36()  -> flag "migrasiFootprintV36", tabel V36 (26)
+//   migrasiFootprintV372() -> flag "migrasiFootprintV372", tabel V37 (2)
+// JANGAN copy-paste blok ini menjadi fungsi kedua — duplikasi algoritma
+// migrasi adalah sumber bug (dua tempat yang harus diubah saat ada
+// perbaikan). Urutan di mulaiGame: v36 dulu, lalu v37.2 (dimKini v37.2
+// harus membaca hasil akhir v36). F4 (kakiOverride + butuhLahan +
+// lencana "L" + Diagnostik + retry tiap load) dipakai ulang apa adanya.
+function migrasiFootprint(flag, tabelLama) {
   if (typeof S === "undefined" || !S || !Array.isArray(S.bangunan)) return null;
   if (typeof peta === "undefined" || !peta) return null;
   if (!Array.isArray(S.bersih)) S.bersih = [];
   if (!Array.isArray(S.jalan)) S.jalan = [];
   if (!Array.isArray(S.jembatan)) S.jembatan = [];
-  const sudah = !!S.migrasiFootprintV36;
+  const sudah = !!S[flag];
   const mode = sudah ? "retry" : "penuh";
   const target = [];
   S.bangunan.forEach((b, idx) => {
     if (!b || !b.id || !BANGUNAN_MAP[b.id]) return; // id tak dikenal: skip
-    if (sudah) { if (b.butuhLahan) target.push(idx); return; }
-    if (FOOTPRINT_V36_LAMA[b.id]) target.push(idx);
+    if (sudah) { if (b.butuhLahan && tabelLama[b.id]) target.push(idx); return; }
+    if (tabelLama[b.id]) target.push(idx);
   });
   if (target.length === 0) {
-    if (!sudah) S.migrasiFootprintV36 = true;
+    if (!sudah) S[flag] = true;
     return { mode: mode, total: 0, membesar: 0, digeser: 0, butuhLahan: 0, batal: false };
   }
   const kunci = (x, y) => x + "," + y;
@@ -1247,7 +1263,7 @@ function migrasiFootprintV36() {
     if (!b || !b.id || !BANGUNAN_MAP[b.id]) return null;
     if (b.kakiOverride) return putar(b.kakiOverride, b.rot);
     if (sudah) return putar(BANGUNAN_MAP[b.id].kaki, b.rot);
-    const lama = FOOTPRINT_V36_LAMA[b.id];
+    const lama = tabelLama[b.id];
     return putar(lama || BANGUNAN_MAP[b.id].kaki, b.rot);
   });
   const dimBaru = S.bangunan.map((b) => {
@@ -1393,15 +1409,28 @@ function migrasiFootprintV36() {
   let butuhLahan = 0;
   for (const idx of masihGagal) {
     const b = S.bangunan[idx];
-    const lama = FOOTPRINT_V36_LAMA[b.id];
+    const lama = tabelLama[b.id];
     if (lama) {
       b.kakiOverride = { w: lama.w, h: lama.h };
       b.butuhLahan = true;
       butuhLahan++;
     }
   }
-  if (!sudah) S.migrasiFootprintV36 = true;
+  if (!sudah) S[flag] = true;
   return { mode: mode, total: target.length, membesar: membesar, digeser: digeser, butuhLahan: butuhLahan, batal: false };
+}
+
+// Pembungkus per versi (nama lama dipertahankan — mulaiGame + tes
+// memanggil migrasiFootprintV36()).
+function migrasiFootprintV36() {
+  return migrasiFootprint("migrasiFootprintV36", FOOTPRINT_V36_LAMA);
+}
+// v37.2: pelabuhan 2x2 -> 8x8 + dermaga 2x1 -> 4x2. Dipanggil di
+// mulaiGame SETELAH migrasi v36. Perilaku F4 untuk pelabuhan lama di
+// dekat spawn: hampir pasti jatuh F4 (pantai 8x8 terdekat 24,6 petak
+// > radius R=10) — lihat docs/MIGRASI-FOOTPRINT-v37.2.md §3.
+function migrasiFootprintV372() {
+  return migrasiFootprint("migrasiFootprintV372", FOOTPRINT_V37_LAMA);
 }
 // ===== MIGRASI FOOTPRINT v36 — AKHIR =====
 
@@ -1442,6 +1471,18 @@ function biayaTambahanLahan(x, y, rot, def) {
   let uang = 0; const desList = [];
   for (const t of Object.keys(kena)) { uang += kena[t].uang; desList.push(kena[t].des); }
   return { uang: uang, des: desList.join(" + ") };
+}
+// v37.2 — hitung petak "pantai" dalam footprint bangunan pantai:true
+// di (x,y,rot). Dipakai pindahBangunanSelesai agar pemindahan memakai
+// aturan pantai 25% yang sama dengan cekBangun (ghost memakai cekBangun
+// langsung, jadi otomatis konsisten). Mengembalikan {pantai, total}.
+function hitungPetakPantai(def, x, y, rot) {
+  const k = kakiBangunan(def, rot);
+  let pantai = 0;
+  for (let j = 0; j < k.h; j++) for (let i = 0; i < k.w; i++) {
+    if (terrainDi(peta, x + i, y + j) === "pantai") pantai++;
+  }
+  return { pantai: pantai, total: k.w * k.h };
 }
 function cekBangun(def, x, y, rot) {
   if ((def.level || 1) > S.level) return { ok: false, alasan: "Butuh peradaban level " + def.level + " (saat ini level " + S.level + ")." };
@@ -1495,12 +1536,15 @@ function cekBangun(def, x, y, rot) {
       if (adaBangunanDi(S, tx, ty)) return { ok: false, alasan: "Sudah ada bangunan di sini." };
       if (adaJalanDi(S, tx, ty)) return { ok: false, alasan: "Sudah ada jalan di sini." };
     }
-  } else for (let j = 0; j < k.h; j++) for (let i = 0; i < k.w; i++) {
+  } else { // v37.2: hitung petak pantai untuk aturan 25% (di bawah).
+    let jmlPantai = 0;
+    for (let j = 0; j < k.h; j++) for (let i = 0; i < k.w; i++) {
     const tx = x + i, ty = y + j;
     if (tx < 0 || ty < 0 || tx >= peta.W || ty >= peta.H) return { ok: false, alasan: "Di luar pulau." };
     const t = terrainDi(peta, tx, ty);
     if (def.pantai) {
       if (t !== "pantai" && t !== "laut" && t !== "pesisir") return { ok: false, alasan: def.nama + " harus dibangun di pesisir (pantai/laut)." };
+      if (t === "pantai") jmlPantai++;
     } else {
       // Dasar penolakan v17: TERRAIN[t].bisaBangun — mangrove/sungai/
       // kanal/laut tidak bisa dibangun (terrain lama sudah tidak ada).
@@ -1510,6 +1554,25 @@ function cekBangun(def, x, y, rot) {
     }
     if (adaBangunanDi(S, tx, ty)) return { ok: false, alasan: "Sudah ada bangunan di sini." };
     if (adaJalanDi(S, tx, ty)) return { ok: false, alasan: "Sudah ada jalan di sini." };
+    }
+    // v37.2 — ATURAN PANTAI (opsi B DESAIN.md §1.5, keputusan koordinator):
+    // bangunan pantai:true harus berdiri di atas pasir sungguhan, bukan
+    // mengapung di laut terbuka: minimal 25% petak footprint adalah
+    // pantai (pelabuhan 8x8 -> >=16 petak; dermaga 4x2 -> >=2 petak;
+    // terminal-feri 2x2 -> >=1 petak). Tanpa ini cekBangun literal
+    // mengizinkan pelabuhan 8x8 64/64 laut, 7,5 petak dari spawn
+    // (temuan DESAIN.md §1.4). Ghost memakai cekBangun yang sama, jadi
+    // pratinjau otomatis konsisten; pindahBangunanSelesai memakai
+    // aturan yang sama lewat hitungPetakPantai() di bawah.
+    // PENGECUALIAN: intake (1x1) TIDAK kena aturan ini — penempatannya
+    // diatur pemeriksaan khusus di bawah (boleh di darat kering di
+    // samping sungai/kanal, 0 petak pantai); aturan 25% akan mematahkan
+    // perilaku itu dan mengubah alasan penolakannya (temuan test13
+    // v19-util, 2026-11-18).
+    if (def.pantai && def.id !== "intake") {
+      const minPantai = Math.ceil(k.w * k.h * 0.25);
+      if (jmlPantai < minPantai) return { ok: false, alasan: def.nama + " butuh pantai sungguhan — minimal " + minPantai + " dari " + (k.w * k.h) + " petak harus pasir pantai (baru " + jmlPantai + "). Geser ke garis pantai, jangan ke laut terbuka." };
+    }
   }
   // v19 Worker 3: validasi zoning — bila footprint menyentuh petak
   // berzona, kat bangunan harus diizinkan zona itu (protected &
@@ -1853,11 +1916,22 @@ function pindahBangunanSelesai(x, y) {
     const tx = x + i, ty = y + j;
     if (tx < 0 || ty < 0 || tx >= peta.W || ty >= peta.H) { toast("Di luar pulau.", "gagal"); return; }
     const t = terrainDi(peta, tx, ty);
-    if (def.pantai) { if (t !== "pantai" && t !== "laut") { toast("Harus di pesisir.", "gagal"); return; } }
+    // v37.2: samakan dengan cekBangun — pesisir diizinkan (dulu hanya
+    // pantai/laut, padahal cekBangun mengizinkan pesisir; ghost yang
+    // memakai cekBangun jadi menolak lokasi yang sebenarnya valid).
+    if (def.pantai) { if (t !== "pantai" && t !== "laut" && t !== "pesisir") { toast("Harus di pesisir.", "gagal"); return; } }
     else if (!terrainBisaBangun(t)) { toast("Tidak bisa dipindah ke " + namaTerrain(t) + ".", "gagal"); return; }
     const lain = adaBangunanDi(S, tx, ty);
     if (lain && lain !== b) { toast("Sudah ada bangunan di sini.", "gagal"); return; }
     if (adaJalanDi(S, tx, ty)) { toast("Sudah ada jalan di sini.", "gagal"); return; }
+  }
+  // v37.2: pemindahan bangunan pantai memakai aturan 25% yang sama
+  // dengan cekBangun (pelabuhan 8x8 tidak boleh dipindah mengapung
+  // 64/64 di laut terbuka). Intake dikecualikan, sama seperti cekBangun.
+  if (def.pantai && def.id !== "intake") {
+    const hp = hitungPetakPantai(def, x, y, b.rot);
+    const minPantai = Math.ceil(hp.total * 0.25);
+    if (hp.pantai < minPantai) { toast(def.nama + " butuh pantai sungguhan — minimal " + minPantai + " dari " + hp.total + " petak harus pasir pantai (baru " + hp.pantai + ").", "gagal"); return; }
   }
   b.x = x; b.y = y;
   b.kecamatan = kecamatanDiPeta(peta, x, y);
@@ -4546,16 +4620,22 @@ function gambarSatuKendaraan(k, lebar, tinggi) {
     const t = tileTengahDunia(k.x, k.y + Math.sin(frame / 30) * 0.15);
     const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
     const img = gambarAset["assets/vehicles/kapal-kargo.png"];
-    bayangan(s.x, s.y, 36 * z, 10 * z, 0.18);
+    // v37.2: lebar dari standar skala (ukuranGambarKapal: kapal-kargo
+    // 200 px = 5 petak = 40 m; dulu hardcode 70 px — hanya 6 px lebih
+    // lebar dari bus). Bayangan + elips fallback ikut diskalakan dari w.
+    const uKapal = (typeof ukuranGambarKapal === "function" && img && img.complete && img.naturalWidth)
+      ? ukuranGambarKapal("kapal-kargo", img.naturalWidth, img.naturalHeight, z)
+      : { w: 200 * z, h: 200 * 0.782 * z };
+    bayangan(s.x, s.y, uKapal.w * 0.5, uKapal.w * 0.14, 0.18);
     if (img && img.complete && img.naturalWidth) {
-      const w = 70 * z, h = w * (img.naturalHeight / img.naturalWidth);
+      const w = uKapal.w, h = uKapal.h;
       ctx.drawImage(img, s.x - w / 2, s.y - h * 0.6, w, h);
     } else {
       // v22.4: fallback vektor bila sprite kapal belum termuat.
       ctx.fillStyle = "#ffffff";
-      ctx.beginPath(); ctx.ellipse(s.x, s.y, 34 * z, 10 * z, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(s.x, s.y, uKapal.w * 0.32, uKapal.w * 0.11, 0, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = "#0984e3";
-      ctx.fillRect(s.x - 30 * z, s.y - 14 * z, 60 * z, 8 * z);
+      ctx.fillRect(s.x - uKapal.w * 0.43, s.y - uKapal.w * 0.2, uKapal.w * 0.86, uKapal.w * 0.11);
       ctx.fillStyle = "#ffffff";
       ctx.font = "bold " + Math.max(8, 10 * z) + "px sans-serif"; ctx.textAlign = "center";
       ctx.fillText("KAPAL", s.x, s.y - 5 * z);
@@ -4564,14 +4644,19 @@ function gambarSatuKendaraan(k, lebar, tinggi) {
     const t = tileTengahDunia(k.x, k.y + Math.sin(frame / 40 + 2) * 0.2);
     const s = duniaKeLayar(t.x, t.y, lebar, tinggi);
     const img = gambarAset["assets/vehicles/perahu-kecil.png"];
-    bayangan(s.x, s.y, 22 * z, 7 * z, 0.18);
+    // v37.2: perahu ikut standar skala (40 px, sama seperti nilai lama
+    // jalur A; menyatukan dengan jalur B yang dulu 48 px).
+    const uPerahu = (typeof ukuranGambarKapal === "function" && img && img.complete && img.naturalWidth)
+      ? ukuranGambarKapal("perahu", img.naturalWidth, img.naturalHeight, z)
+      : { w: 40 * z, h: 40 * 0.678 * z };
+    bayangan(s.x, s.y, uPerahu.w * 0.55, uPerahu.w * 0.175, 0.18);
     if (img && img.complete && img.naturalWidth) {
-      const w = 40 * z, h = w * (img.naturalHeight / img.naturalWidth);
+      const w = uPerahu.w, h = uPerahu.h;
       ctx.drawImage(img, s.x - w / 2, s.y - h * 0.5, w, h);
     } else {
       // v22.4: fallback vektor bila sprite perahu belum termuat.
       ctx.fillStyle = "#8a6d3b";
-      ctx.beginPath(); ctx.ellipse(s.x, s.y, 20 * z, 6 * z, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(s.x, s.y, uPerahu.w * 0.5, uPerahu.w * 0.15, 0, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = "#ffffff";
       ctx.font = "bold " + Math.max(8, 9 * z) + "px sans-serif"; ctx.textAlign = "center";
       ctx.fillText("PERAHU", s.x, s.y - 2 * z);
@@ -5148,7 +5233,11 @@ function initKendaraan() {
     if (typeof sinkronTrukSampah === "function") { try { sinkronTrukSampah(); } catch (e) {} }
   }
   const L = peta.landing;
-  kendaraanVisual.push({ tipe: "kapal", x: L.x + 1, y: L.y + 2 });
+  // v37.2: kapal ambient dipindah dari (L.x+1, L.y+2) = mangrove ke
+  // (L.x+1, L.y+4) = laut terbuka — kapal 200 px di atas mangrove
+  // akan tampak salah (DESAIN.md §2.4 poin 5). Perahu tetap di
+  // (L.x-2, L.y+1) = pantai (terdampar di pasir masih wajar).
+  kendaraanVisual.push({ tipe: "kapal", x: L.x + 1, y: L.y + 4 });
   kendaraanVisual.push({ tipe: "perahu", x: L.x - 2, y: L.y + 1 });
 }
 function perbaruiKendaraan(dt) {
@@ -8097,6 +8186,28 @@ function mulaiGame(baru) {
       // tidak diset).
       try { if (typeof console !== "undefined" && console.error) console.error("[migrasi v36] gagal:", e && e.message); } catch (e2) {}
       S.log.unshift("Migrasi footprint v36 GAGAL (error: " + (e && e.message) + ") — kota tetap di footprint v35, migrasi dicoba lagi di load berikut.");
+    }
+    // v37.2: migrasi footprint pelabuhan 2x2 -> 8x8 + dermaga 2x1 -> 4x2
+    // (flag S.migrasiFootprintV372). Dijalankan SETELAH v36 supaya
+    // dimKini membaca hasil akhir v36. Ekspektasi jujur (DESAIN.md
+    // §4.4, docs/MIGRASI-FOOTPRINT-v37.2.md §3): pelabuhan lama di
+    // dekat spawn hampir pasti jatuh F4 (tetap 2x2 + butuh lahan, lencana
+    // "L") karena pantai 8x8 terdekat 24,6 petak > radius R=10; dermaga
+    // di save Hari 1 membesar di tempat (anchor 239,215, geser 0,5).
+    try {
+      if (typeof migrasiFootprintV372 === "function") {
+        const hasMig2 = migrasiFootprintV372();
+        if (hasMig2 && !hasMig2.batal && (hasMig2.total > 0 || hasMig2.butuhLahan > 0)) {
+          S.log.unshift("Migrasi footprint v37.2 (" + hasMig2.mode + "): " + hasMig2.membesar + " bangunan membesar, " + hasMig2.digeser + " digeser, " + hasMig2.butuhLahan + " butuh lahan.");
+          if (hasMig2.butuhLahan > 0) toast(hasMig2.butuhLahan + " bangunan v37.2 belum muat membesar (butuh lahan) — ditandai L kuning di peta & di Diagnostik. Pelabuhan butuh pantai lebar 8x8; kosongkan lahan di sekitarnya atau bangun pelabuhan baru di pantai timur, migrasi dicoba lagi tiap load.", "info");
+          if (typeof invalidasiCoverage === "function") { try { invalidasiCoverage(); } catch (e) {} }
+        } else if (hasMig2 && hasMig2.batal) {
+          S.log.unshift("Migrasi footprint v37.2 DIBATALKAN (validasi akhir menemukan overlap) — kota tetap di footprint v37.1, migrasi dicoba lagi di load berikut.");
+        }
+      }
+    } catch (e) {
+      try { if (typeof console !== "undefined" && console.error) console.error("[migrasi v37.2] gagal:", e && e.message); } catch (e2) {}
+      S.log.unshift("Migrasi footprint v37.2 GAGAL (error: " + (e && e.message) + ") — kota tetap di footprint v37.1, migrasi dicoba lagi di load berikut.");
     }
     // ada bangunan yang hanya menyentuh jalan secara diagonal (kini
     // ditandai tanpa-jalan oleh Diagnostik; aturan baru = 4-arah).

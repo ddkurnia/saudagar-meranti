@@ -418,17 +418,23 @@ function gambarKapal(lebar, tinggi) {
     const w = tileTengahDunia(pos.x, pos.y);
     const s = duniaKeLayar(w.x, w.y, lebar, tinggi);
     const bob = Math.sin(frame / 30 + (k.jarakTempuh || 0)) * 2 * z;
-    const besar = k.tipe === "kapal-kargo" || k.tipe === "kapal-penumpang" || k.tipe === "feri";
     const img = (typeof gambarAset !== "undefined") ? gambarAset[sprite[k.tipe]] : null;
     const hadapKiri = Math.cos(pos.arah || 0) < 0;
+    // v37.2: lebar dari standar skala (ukuranGambarKapal, js/city-skala.js)
+    // — SATU sumber kebenaran dengan jalur ambient (city.js). Dulu
+    // hardcode 80/48 px per ukuran; kapal-kargo kini 200 px.
+    const uKapal = (typeof ukuranGambarKapal === "function")
+      ? ukuranGambarKapal(k.tipe, img && img.naturalWidth ? img.naturalWidth : 0, img && img.naturalHeight ? img.naturalHeight : 0, z)
+      : { w: (k.tipe === "kapal-kargo" ? 200 : 48) * z, h: 40 * z };
     ctx.save();
     if (img && img.complete && img.naturalWidth) {
-      const wImg = (besar ? 80 : 48) * z, hImg = wImg * (img.naturalHeight / img.naturalWidth);
+      const wImg = uKapal.w, hImg = uKapal.h;
       if (hadapKiri) { ctx.translate(s.x, 0); ctx.scale(-1, 1); ctx.drawImage(img, -wImg / 2, s.y - hImg + bob, wImg, hImg); }
       else ctx.drawImage(img, s.x - wImg / 2, s.y - hImg + bob, wImg, hImg);
     } else {
+      // v37.2: elips fallback ikut diskalakan dari w (≈ w×0,32 / w×0,11).
       ctx.fillStyle = "#ffffff";
-      ctx.beginPath(); ctx.ellipse(s.x, s.y + bob, (besar ? 26 : 16) * z, (besar ? 9 : 6) * z, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(s.x, s.y + bob, uKapal.w * 0.32, uKapal.w * 0.11, 0, 0, Math.PI * 2); ctx.fill();
     }
     ctx.restore();
   }

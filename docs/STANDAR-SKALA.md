@@ -1,4 +1,4 @@
-# STANDAR SKALA GLOBAL — Rise of Meranti (v35, footprint v36, isiTanah v37, koreksi rumah 1×1 v37.1)
+# STANDAR SKALA GLOBAL — Rise of Meranti (v35, footprint v36, isiTanah v37, koreksi rumah 1×1 v37.1, pelabuhan 8×8 + kapal 200 px v37.2)
 
 Satu sumber kebenaran ukuran visual dunia 2D isometric. Implementasi:
 `js/city-skala.js` (konstanta + fungsi hitung murni) dan field `tinggiDunia`
@@ -48,8 +48,10 @@ tinggi = lebar × aspek kanvas — tinggi bangunan arbitrer dari kanvas sumber.
 | Mobil pemadam | 9 m | lebar maks 60 px, **tinggi 34 px** | |
 | Truk / truk sampah | 7 m | lebar maks 56 px, **tinggi 36 px** | |
 | Bus | 12 m | lebar maks 64 px, **tinggi maks 42 px (aktual 39,7 px — aspek sprite di bawah cap)** | |
-| Kapal kargo / feri | 30 m+ | lebar 70 px (tetap) | **Skala laut terkompresi by design**: kapal realistis (30 m ≈ 240 px) akan menutup selat; 70 px adalah kompromi keterbacaan yang dipertahankan v35. |
-| Perahu | | lebar 40 px (tetap) | Sama — skala laut terkompresi. |
+| Kapal kargo | 40 m (5 petak) | **lebar 200 px** (v37.2) | Satu sumber kebenaran `UKURAN_KAPAL_PX` + `ukuranGambarKapal()` di `js/city-skala.js` — menggantikan DUA hardcode (70 px jalur ambient, 80 px jalur maritim). 200 px = 3,1× bus, 5,0× perahu, 39% lebar pelabuhan 8×8. Fallback konservatif 160 px bila live check menunjukkan 200 px mendominasi layar (keputusan dari bukti visual, belum terjadi). |
+| Feri / kapal-penumpang | | lebar 90 px (tetap) | = lebar `gambarFeri` pulau besar; tidak berubah v37.2. |
+| Kapal nelayan | | lebar 48 px (tetap) | = nilai lama jalur B; tidak berubah. |
+| Perahu | | lebar 40 px (tetap) | = nilai lama jalur A; penyatuan jalur B 48 → 40 px (satu-satunya efek samping penyatuan). |
 
 Jalan: 1 petak = 8 m lebar; bus 64 px ≈ lebar lajur penuh, sedan 31–44 px
 ≈ setengah–dua pertiga lajur — proporsional.
@@ -263,3 +265,64 @@ save sintetis era-v36: 0 hilang, 0 overlap, uang/progres utuh).
 Pin: `VERSI_GAME "v37.1"`, `city.js?v=61`, `city-data.js?v=17`,
 cache SW `rise-of-meranti-v37.1`; `city-skala.js` tidak berubah
 (tetap `?v=3`).
+
+## 10. v37.2 (2026-11-18): pelabuhan 8×8, dermaga 4×2, kapal kargo 200 px
+
+Keputusan user 2026-11-18: pelabuhan kapal kargo diperbesar 2×2 → 8×8,
+"berskala kawasan"; dermaga + kapal kargo ikut masuk scope (koreksi
+18:07 WIB). Terminal-feri TETAP 2×2 (fungsi penumpang; risiko rute feri
+belum terukur — DESAIN.md §5.2).
+
+| Bangunan | kaki v37.1 | kaki v37.2 | `tinggiDunia` | Render (zoom 1) | Tegak |
+|---|---|---|---|---|---|
+| pelabuhan | 2×2 | **8×8** | 10 → **15** | **512×320 px** (PNG baru 1200×750) | 64 px |
+| dermaga | 2×1 | **4×2** | 4 → **5** | **192×132,7 px** (sprite lama 625×432) | 36,7 px |
+| terminal-feri | 2×2 | 2×2 (tetap) | 9 (tetap) | 103,6×81 px | 17 px |
+
+Keduanya `isiTanah: true` (total isiTanah 25 → 27). Hierarki tegak:
+masjid 92 > pelabuhan 64 > dermaga 36,7 — masjid tetap tertinggi
+(tegak; total sprite ground-cover 8×8 pasti >252 px masjid, itu BUKAN
+pelanggaran — §8). Total petak footprint katalog: 1250 → **1316**.
+**Ekonomi TIDAK berubah** (preseden v36): pelabuhan tetap Rp300.000 +
+batu 30 + besi 10 + pasir 10 + semen 5, upkeep Rp12.000, pekerja 10,
+level 3, waktu 96; dermaga tetap Rp20.000 + 8 kayu, upkeep Rp1.000,
+wisata Rp1.200/hari, level 2.
+
+**Aturan pantai 25% (baru, `cekBangun`):** bangunan `pantai: true`
+wajib minimal 25% petak footprint berupa pantai (pelabuhan ≥16 petak,
+dermaga ≥2, terminal-feri ≥1). Tanpa ini `cekBangun` literal
+mengizinkan pelabuhan 8×8 64/64 di laut terbuka, 7,5 petak dari spawn
+(temuan DESAIN.md §1.4). Ghost memakai `cekBangun` yang sama (otomatis
+konsisten); `pindahBangunanSelesai` disamakan (pesisir diizinkan +
+aturan 25% lewat `hitungPetakPantai()`). Lokasi terdekat yang lolos:
+pelabuhan (261,213) — 27 pantai + 37 pesisir, 24,6 petak dari spawn;
+dermaga (239,215) — 8/8 pantai, di tempat pemain berdiri.
+
+**Kapal kargo 200 px:** `UKURAN_KAPAL_PX` + `ukuranGambarKapal()` di
+`js/city-skala.js` (satu sumber kebenaran; kapal TIDAK masuk
+`TIPE_KENDARAAN`/`ukuranGambarKendaraan`). Spawn ambient pindah
+(241,217) mangrove → (241,219) laut terbuka. Bayangan + elips fallback
+ikut diskalakan dari `w`.
+
+**Sprite pelabuhan DIREGENERASI** jadi site-art 8×8 (prompt teks saja,
+tanpa reference image — pelajaran v30/v37): diamond beton + lapangan
+kontainer tepi-ke-tepi, 2 crane gantry kuning, 2 gudang atap biru,
+strip pantai + air turquoise di tepi depan-kiri, TANPA kapal di dalam
+gambar. Generator menghasilkan kanvas persegi 1600×1600 tanpa alpha +
+diamond ~0,91 (bukan iso 2:1) — diproses: flood-fill transparan dari
+tepi (detail putih dalam diamond aman) + resize ke 1200×750 (aspek
+0,625, sama seperti PNG site-art v37) sehingga diamond ≈0,57.
+Hasil diverifikasi look-first: diamond menutup kanvas, tidak ada
+bangunan asing/teks/watermark/kapal, sudut transparan, opaque 46,2%.
+PNG lama tersimpan di `~/workspace/v37-2-implementer/backup/
+building-pelabuhan-v37.1.png`. PNG baru TINGGAL LOKAL — upload via web
+UI GitHub di fase push (urutan aman v37). **Sprite dermaga PAKAI YANG
+LAMA DULU** (dek sudah membentang selebar kanvas; celah transparan di
+bawah dek adalah benar — dek di atas tiang); regenerasi hanya bila live
+check gagal (DESAIN.md §6.4).
+
+**Ekspektasi migrasi F4 (umumkan ke user sebelum push):** pelabuhan
+lama di dekat spawn hampir pasti jatuh F4 — tetap 2×2 + lencana "L" +
+entri Diagnostik, dicoba ulang tiap load — karena pantai 8×8 terdekat
+24,6 petak > radius migrasi R=10. Bukan bug; "tidak ada yang hilang".
+Lihat `docs/MIGRASI-FOOTPRINT-v37.2.md`.

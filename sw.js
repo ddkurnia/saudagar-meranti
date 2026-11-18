@@ -23,7 +23,7 @@
 //    aplikasi lain di origin yang sama (mis. repo lain di
 //    GitHub Pages) TIDAK dihapus.
 // =====================================================================
-const NAMA_CACHE = "rise-of-meranti-v37.1";
+const NAMA_CACHE = "rise-of-meranti-v37.2";
 // Versi game yang dibawa SW ini (dipakai postMessage ke halaman).
 const VERSI_SW = NAMA_CACHE.replace(/^rise-of-meranti-/, "");
 // Shell game yang di-precache. Nilai ?v= mengikuti index.html saat
@@ -47,8 +47,8 @@ const DAFTAR_CACHE = [
   "./css/city.css?v=20",
   "./css/menu.css?v=2", // v26: stylesheet menu utama RISE OF MERANTI; v27 menu-fix: bump ?v=2
   "./css/mobile.css?v=4", // v35-48pct: katalog compact mobile (tab 44px, kartu horizontal landscape, sheet half KEMBALI 48dvh per keputusan user 2026-11-17 + penjaga harga/kunci dipertahankan)
-  "./js/city-data.js?v=17",
-  "./js/city-skala.js?v=3", // v35: standar skala global (satu sumber kebenaran ukuran visual)
+  "./js/city-data.js?v=18",
+  "./js/city-skala.js?v=4", // v35: standar skala global (satu sumber kebenaran ukuran visual)
   "./js/city-map.js?v=4",
   "./js/city-utilitas.js?v=3",
   "./js/city-bahagia.js?v=2",
@@ -56,8 +56,8 @@ const DAFTAR_CACHE = [
   "./js/city-jalan.js?v=2",
   "./js/city-kendaraan.js?v=7",
   "./js/city-persimpangan.js?v=1",
-  "./js/city-maritim.js?v=4",
-  "./js/city.js?v=61",
+  "./js/city-maritim.js?v=5",
+  "./js/city.js?v=62",
   "./js/city-splash.js?v=1", // v35: splash screen 3 layar + loading (js baru; city.js TIDAK diedit)
   "./js/city-mobile.js?v=1", // v33: bottom nav + bottom sheet + overflow menu (mobile)
   "./js/city-suara.js?v=1",
