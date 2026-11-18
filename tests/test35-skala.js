@@ -4,6 +4,12 @@
 // membesar dari baseline v34.1, 97 tetap (SK11); masjid kini 252 px
 // (dulu 215,1 px — jepit lebar 2,2x footprint 5x5, bukan 2x2);
 // grid renggang SK12 naik 4 -> 9 petak (footprint maks 8x8).
+// v37 (2026-11-18): mode "isi footprint" (def.isiTanah, SK21-SK23) —
+//   25 entri render selebar footprint; aturan hierarki SK3 "taman>
+//   lapangan" (tinggi total) DICABUT karena untuk ground-cover yang
+//   bermakna adalah tinggi TEGAK (SK22: tegak taman > tegak lapangan);
+//   total h lapangan (248 px) kini > taman (237 px) — BUKAN pelanggaran
+//   (belah-ketupat tanah 7x7 memang lebih tinggi dari 6x6).
 // Jalankan:  node tests/test35-skala.js
 // Baris akhir: TEST_SKALA_V35_OK  (atau TEST_SKALA_V35_GAGAL:N dari M)
 // Memuat HANYA city-data.js + city-skala.js (murni data + hitung, tanpa
@@ -96,7 +102,8 @@ function periksaHierarki(hMap, manusiaPx) {
   t("rumah-sederhana>manusia", hMap["rumah-sederhana"] > manusiaPx, hMap["rumah-sederhana"] + " vs " + manusiaPx);
   t("menara-air<masjid", hMap["menara-air"] < hMap["masjid"], hMap["menara-air"] + " vs " + hMap["masjid"]);
   t("toko-material>manusia", hMap["toko-material"] > manusiaPx, hMap["toko-material"] + " vs " + manusiaPx);
-  t("taman>lapangan", hMap["taman"] > hMap["lapangan"], hMap["taman"] + " vs " + hMap["lapangan"]);
+  // v37: aturan "taman>lapangan" (tinggi TOTAL) dicabut — untuk
+  // ground-cover isiTanah yang bermakna adalah tinggi tegak (SK22).
   t("bundaran<=20px (datar)", hMap["bundaran"] <= 20, hMap["bundaran"]);
   t("kolam-retensi<=20px (datar)", hMap["kolam-retensi"] <= 20, hMap["kolam-retensi"]);
   t("masjid tertinggi (252 px)", Math.abs(hMap["masjid"] - 252) < 1, hMap["masjid"]); // v36: 28 m x 9 = 252 px penuh — dulu 215,1 px karena dijepit lebar 2,2x footprint 2x2; kini footprint 5x5, jepit 704 px, tidak lagi menjepit. tinggiDunia TETAP 28 m.
@@ -104,7 +111,7 @@ function periksaHierarki(hMap, manusiaPx) {
   return f;
 }
 const gagalHierarki = periksaHierarki(H, MANUSIA);
-cek("SK3 hierarki bangunan 15 aturan (masjid tertinggi s.d. dataran)",
+cek("SK3 hierarki bangunan 14 aturan (masjid tertinggi s.d. dataran)",
   gagalHierarki.length === 0, gagalHierarki.join("; "));
 
 // ---- 3. Jepit lebar: tidak ada bangunan yang menelan tetangga ----
@@ -209,12 +216,12 @@ cek("SK13 simulasi: pola padat v34.1 kini bertabrakan (diharapkan — ditangani 
 const idxHtml = fs.readFileSync(ROOT + "/index.html", "utf8");
 const swTxt = fs.readFileSync(ROOT + "/sw.js", "utf8");
 const srcCity = fs.readFileSync(ROOT + "/js/city.js", "utf8");
-cek("SK14 pin v36: VERSI_GAME v36, city.js?v=59, city-data.js?v=15, city-skala.js?v=2, cache rise-of-meranti-v36",
-  srcCity.includes('const VERSI_GAME = "v36"') && idxHtml.includes("js/city.js?v=59") &&
-  idxHtml.includes("js/city-data.js?v=15") && idxHtml.includes("js/city-skala.js?v=2") &&
-  idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v36<') &&
-  swTxt.includes('"rise-of-meranti-v36"') && swTxt.includes("js/city.js?v=59") &&
-  swTxt.includes("js/city-data.js?v=15") && swTxt.includes("js/city-skala.js?v=2"));
+cek("SK14 pin v37: VERSI_GAME v37, city.js?v=60, city-data.js?v=16, city-skala.js?v=3, cache rise-of-meranti-v37",
+  srcCity.includes('const VERSI_GAME = "v37"') && idxHtml.includes("js/city.js?v=60") &&
+  idxHtml.includes("js/city-data.js?v=16") && idxHtml.includes("js/city-skala.js?v=3") &&
+  idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v37<') &&
+  swTxt.includes('"rise-of-meranti-v37"') && swTxt.includes("js/city.js?v=60") &&
+  swTxt.includes("js/city-data.js?v=16") && swTxt.includes("js/city-skala.js?v=3"));
 cek("SK15 mobile.css berubah v35-48pct (keputusan user 2026-11-17: sheet half KEMBALI 48dvh, kriteria dilonggarkan, penjaga v34.1 dipertahankan — pin naik ?v=3 -> ?v=4)",
   idxHtml.includes("css/mobile.css?v=4") && swTxt.includes("css/mobile.css?v=4") &&
   !idxHtml.includes("css/mobile.css?v=3") && !swTxt.includes("css/mobile.css?v=3"));
@@ -338,6 +345,39 @@ cek("SK20 v35.1 kotakSpriteBangunan() di city.js memanggil ukuranGambarBangunan(
   Math.abs((kotMasjid2.x1 - kotMasjid2.x0) - uMasjid2.w * 0.88) < 1 &&
   Math.abs((kotMasjid2.y1 - kotMasjid2.y0) - uMasjid2.h * 0.88) < 1,
   "zoom2 masjid hit " + (kotMasjid2.x1 - kotMasjid2.x0).toFixed(1) + "x" + (kotMasjid2.y1 - kotMasjid2.y0).toFixed(1) + " vs render88 " + (uMasjid2.w * 0.88).toFixed(1) + "x" + (uMasjid2.h * 0.88).toFixed(1));
+
+// ---- 11. v37: mode "isi footprint" (docs/STANDAR-SKALA.md §8) ----
+// 25 entri isiTanah: 10 Grup A + lapangan-bola (tanpa regen) + 14
+// Grup B + kebun-kelapa (PNG diregenerasi jadi site-art).
+const ISI_TANAH_V37 = ["taman","lapangan","kebun-sagu","kebun-kopi","kebun-karet","kebun-pinang","tambang-batu","tambang-pasir","toko-material","lapangan-bola","pabrik-tepung","pabrik-makanan","pabrik-kelapa","pabrik-laut","pabrik-bahan-bangunan","pabrik-daur-ulang","kilang-sagu","sd","smp","sma","smk","puskesmas","kantor-pemerintah","toko","kebun-kelapa"];
+const isiTanahAktual = BANGUNAN.filter(b => b.isiTanah === true).map(b => b.id).sort();
+cek("SK21 v37: TEPAT 25 entri isiTanah (10 Grup A + lapangan-bola + 14 Grup B + kebun-kelapa), bukan yang lain",
+  isiTanahAktual.length === 25 && JSON.stringify(isiTanahAktual) === JSON.stringify(ISI_TANAH_V37.slice().sort()),
+  "aktual: " + isiTanahAktual.join(","));
+const tinggiTegak = (def) => {
+  const d = pngDim(path.join(ROOT, def.gambar));
+  return vm.runInContext("tinggiTegakBangunan(" + JSON.stringify(def) + "," + d[0] + "," + d[1] + ",1)", ctx);
+};
+const rincianIsi = [];
+for (const id of ISI_TANAH_V37) {
+  const def = BANGUNAN.find(b => b.id === id);
+  const d = pngDim(path.join(ROOT, def.gambar));
+  const u = ukuranBangunan(def, d[0], d[1], 1);
+  const fpW = (def.kaki.w + def.kaki.h) * 32;
+  rincianIsi.push({ id: id, fillW: u.w / fpW, tegak: tinggiTegak(def), render: u.w.toFixed(0) + "x" + u.h.toFixed(0) });
+}
+cek("SK22 v37: semua isiTanah fillW >= 90% (aktual 100%) + tinggi tegak <= 140 px + tegak taman > tegak lapangan + masjid 252 px tetap tertinggi (total h non-isiTanah; total h ground-cover >252 bukan pelanggaran — desain §2)",
+  rincianIsi.every(r => r.fillW >= 0.9 && r.tegak <= 140) &&
+  tinggiTegak(BANGUNAN.find(b => b.id === "taman")) > tinggiTegak(BANGUNAN.find(b => b.id === "lapangan")) &&
+  Math.abs(H["masjid"] - 252) < 1 &&
+  Object.keys(H).filter(id => ISI_TANAH_V37.indexOf(id) === -1).every(id => H[id] <= H["masjid"] + 0.01),
+  JSON.stringify(rincianIsi));
+const defKelapa = BANGUNAN.find(b => b.id === "kebun-kelapa");
+cek("SK23 v37: kebun-kelapa memakai PNG perkebunan baru (bukan pohon-kelapa.png), field lapangan DIHAPUS; rumah-sederhana TIDAK ditandai isiTanah (keputusan terbuka)",
+  defKelapa.gambar === "assets/buildings/building-kebun-kelapa.png" && !("lapangan" in defKelapa) &&
+  BANGUNAN.find(b => b.id === "rumah-sederhana").isiTanah !== true &&
+  !BANGUNAN.some(b => "lapangan" in b),
+  "gambar=" + defKelapa.gambar + " lapangan=" + ("lapangan" in defKelapa));
 
 console.log("HASIL SKALA v35: lulus " + lulus + ", gagal " + gagal + " dari " + (lulus + gagal));
 console.log(gagal === 0 ? "TEST_SKALA_V35_OK" : "TEST_SKALA_V35_GAGAL:" + gagal + " dari " + (lulus + gagal));

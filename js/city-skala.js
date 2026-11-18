@@ -54,6 +54,12 @@ const SKALA_DUNIA = {
   FAKTOR_POHON_TERRAIN: 0.45,
   // Pohon lapangan (def.lapangan, mis. kebun-kelapa): 0,65x standar.
   FAKTOR_POHON_LAPANGAN: 0.65,
+  // --- v37: mode "isi footprint" (def.isiTanah) ---
+  // Tinggi tegak maksimum (px, zoom 1) untuk sprite isiTanah: tinggi
+  // sprite DI ATAS belah-ketupat tanahnya. 140 px ~ 15,5 m — di atas
+  // pohon tertinggi rumbia (14 m), jauh di bawah menara masjid (252 px).
+  // Jaring pengaman hierarki v35: masjid tetap tertinggi.
+  TEGAK_MAKS_ISI_TANAH_PX: 140,
 };
 
 // Tinggi layar target kendaraan (px, zoom 1) — BUKAN dari aspek kanvas.
@@ -96,6 +102,29 @@ function ukuranGambarBangunan(def, natW, natH, z, b) {
   const tinggiDunia = (typeof def.tinggiDunia === "number" && def.tinggiDunia > 0)
     ? def.tinggiDunia : null;
   if (!natW || !natH) return { w: lebarFootprintPx, h: lebarFootprintPx * 0.7 };
+  if (def.isiTanah) {
+    // v37: mode "isi footprint" — HANYA untuk entri bertanda isiTanah
+    // (PNG ground-cover/site-art yang tanahnya memang mengisi kanvas:
+    // taman, lapangan, kebun, tambang, toko-material, lapangan-bola,
+    // dan Grup B SETELAH PNG-nya diregenerasi jadi site-art).
+    // Lebar footprint PENUH sebagai pendorong (faktor 1,0 — bukan 1,6 —
+    // supaya belah-ketupat tanah sprite tepat menutup belah-ketupat
+    // footprint); tinggi ikut aspek kanvas. DILARANG untuk PNG gedung
+    // saja: gedung 6x6 selebar footprint akan lebih tinggi dari masjid.
+    // Pengaman 1 (hierarki): tinggi tegak (h - tinggi belah-ketupat
+    // tanah) dijepit ke TEGAK_MAKS_ISI_TANAH_PX (140 px, zoom 1).
+    // Pengaman 2: LEBAR_MAKS_FAKTOR 1,6 tetap batas atas absolut.
+    let w = lebarFootprintPx;
+    let h = w * (natH / natW);
+    const tinggiDiamond = (k.w + k.h) * 16 * (z || 1);
+    const tegakMaks = SKALA_DUNIA.TEGAK_MAKS_ISI_TANAH_PX * (z || 1);
+    if (h - tinggiDiamond > tegakMaks) {
+      h = tinggiDiamond + tegakMaks;
+      w = h * (natW / natH);
+    }
+    if (w > lebarMaks) { w = lebarMaks; h = w * (natH / natW); }
+    return { w: w, h: h };
+  }
   if (tinggiDunia === null) {
     // Fallback v34.1 (hanya untuk entri tanpa tinggiDunia).
     const w = lebarFootprintPx * 1.12;
@@ -111,6 +140,19 @@ function ukuranGambarBangunan(def, natW, natH, z, b) {
 // Tinggi render bangunan (px, zoom 1) — dipakai tes skala (tanpa DOM).
 function tinggiRenderBangunanPx(def, natW, natH) {
   return ukuranGambarBangunan(def, natW, natH, 1).h;
+}
+
+// v37: tinggi TEGAK sprite (px, zoom z) = tinggi total render DI ATAS
+// belah-ketupat tanah footprint. Ukuran hierarki yang benar untuk
+// sprite isiTanah: belah-ketupat tanah 8x8 saja sudah 256 px, jadi
+// total sprite ground-cover pasti >252 px masjid — itu BUKAN
+// pelanggaran; pelanggaran hanya bila struktur tegaknya melampaui
+// TEGAK_MAKS_ISI_TANAH_PX (140 px).
+function tinggiTegakBangunan(def, natW, natH, z, b) {
+  const kk = (b && b.kakiOverride) ? b.kakiOverride : (def.kaki || { w: 1, h: 1 });
+  const k = (b && (b.rot % 2 === 1)) ? { w: kk.h, h: kk.w } : kk;
+  const tinggiDiamond = (k.w + k.h) * 16 * (z || 1);
+  return ukuranGambarBangunan(def, natW, natH, z, b).h - tinggiDiamond;
 }
 
 // Ukuran gambar kendaraan (px, zoom z) dari standar dunia.

@@ -1,4 +1,4 @@
-# STANDAR SKALA GLOBAL — Rise of Meranti (v35, footprint v36)
+# STANDAR SKALA GLOBAL — Rise of Meranti (v35, footprint v36, isiTanah v37)
 
 Satu sumber kebenaran ukuran visual dunia 2D isometric. Implementasi:
 `js/city-skala.js` (konstanta + fungsi hitung murni) dan field `tinggiDunia`
@@ -20,6 +20,17 @@ lebar maksimum, skala diturunkan sampai lebar pas (tinggi ikut mengecil —
 v35: masjid 28 m → 215 px, bukan 252 px, karena dijepit lebar 2,2×
 footprint 2×2. v36: footprint masjid 5×5 → jepit 704 px, tidak lagi
 menjepit → masjid 252 px penuh; lihat §6).
+
+**v37 — mode "isi footprint" (`isiTanah: true`):** untuk 25 entri yang
+PNG-nya berupa ground-cover/site-art (tanah mengisi kanvas), lebar
+footprint PENUH menjadi pendorong (faktor 1,0): `w = lebarFootprintPx`,
+`h = w × (natH/natW)`. Tinggi tegak (h − tinggi belah-ketupat tanah)
+dijepit ke **140 px** (`TEGAK_MAKS_ISI_TANAH_PX`) — jaring pengaman
+hierarki: masjid 252 px tetap tertinggi. `tinggiDunia` tetap tercatat
+tapi tidak menentukan ukuran untuk entri `isiTanah`. DILARANG untuk
+PNG gedung saja (gedung 6×6 selebar footprint akan lebih tinggi dari
+masjid) — Grup B v37 diregenerasi dulu jadi site-art baru ditandai.
+Lihat §8.
 
 Rumus lama (v34.1, sudah diganti): lebar = `(k.w+k.h)×32×1,12`,
 tinggi = lebar × aspek kanvas — tinggi bangunan arbitrer dari kanvas sumber.
@@ -185,3 +196,44 @@ yang langsung"). Total petak footprint: 402 → 1253.
   Lampu jalan 188×396 (aspek 0,47) sendiri sudah proporsional sebagai
   tiang; memasang lampu di tepi jalan adalah fitur baru, bukan perbaikan
   skala, dan butuh keputusan terpisah.
+
+## 8. v37 (2026-11-18): sprite mengisi footprint
+
+Pemicu: Taman Kota 6×6 tampil kecil di tablet user (30,4% lebar
+footprint) — rumus v35 mendorong dari tinggi, bukan lebar, sehingga
+bangunan datar mengecil di petak yang v36-besarkan.
+
+| Kelompok | Bangunan (25) | Pendekatan |
+|---|---|---|
+| Grup A (9) | taman, lapangan, kebun-sagu, kebun-kopi, kebun-karet, kebun-pinang, tambang-batu, tambang-pasir, toko-material | `isiTanah: true`, TANPA regenerasi (PNG sudah ground-cover) |
+| Grup B (14) | 6 pabrik, kilang-sagu, sd, smp, sma, smk, puskesmas, kantor-pemerintah, toko | PNG diregenerasi jadi site-art (gedung + halaman/pagar mengisi kanvas), lalu `isiTanah: true` |
+| Kasus khusus (1) | kebun-kelapa | PNG baru `building-kebun-kelapa.png` (perkebunan kelapa), field `lapangan` DIHAPUS, `isiTanah: true` |
+| Di luar 26 (1) | lapangan-bola | `isiTanah: true`, tanpa regen (ground-cover) |
+
+Hasil (zoom 1): SEMUA 25 render tepat selebar footprint (fillW 100%),
+tinggi tegak maks 96 px (toko) ≤ 140 px — pengaman tidak terpicu satu
+pun. Masjid tetap 252 px, tertinggi. Ukuran render: taman 384×237,
+lapangan 448×248, kebun 512×264–320, tambang 512×256–341, pabrik/
+kilang 384×240, sekolah/puskesmas 256×160, kantor 320×200, toko
+192×192, lapangan-bola 160×104.
+
+**Tidak diubah v37:** footprint, harga, upkeep, ekonomi, mekanisme,
+save game, hierarki v35. Rumah-sederhana TIDAK diubah (39% dinilai
+wajar untuk rumah + halaman 16×16 m — pertanyaan terbuka ke user).
+Status "Kritis — Tidak ada air bersih" pada taman adalah perilaku
+BENAR (taman butuh air 30 L; belum terhubung jaringan) — bukan bug,
+tidak diubah. Backlog v37.1 (9 bangunan: kolam-retensi, bundaran, tpa,
+kolam-renang, pantai-wisata, reservoir, pertanian, marina,
+kedai-liberika) — belum diklasifikasi visual, JANGAN dikerjakan di v37.
+
+**Regenerasi PNG (pelajaran v30):** prompt teks saja, TANPA reference
+image; 2.5D isometrik, PNG transparan (latar putih hasil generator
+dikonversi flood-fill dari tepi + trim + fit ke kanvas target:
+1200×750 pabrik/kilang/kebun-kelapa, 800×500 sekolah/puskesmas,
+1000×625 kantor, 600×600 toko); tiap hasil DILIHAT visual sebelum
+diterima (isometrik, tanpa gedung asing/teks/watermark). File PNG baru
+masuk repo HANYA via upload web UI GitHub (bukan via push code) —
+urutan aman: **upload PNG dulu, baru push code** (bila code v37
+ter-push sebelum PNG baru ter-upload, Grup B akan ter-render
+lebar-driven dari PNG gedung lama dan melanggar hierarki masjid).
+PNG lama tersimpan di `~/workspace/v37-implementer/png-lama/`.

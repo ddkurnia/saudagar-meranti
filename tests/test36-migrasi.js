@@ -338,12 +338,12 @@ cek("MG31 mulaiGame memanggil migrasiFootprintV36 + stateBaru menandai permainan
 cek("MG32 Diagnostik punya kode butuh-lahan + panel bangunan menampilkan catatan Butuh lahan",
   srcDiag.includes('"butuh-lahan"') && srcCity.includes("Butuh lahan: bangunan ini tetap"),
   "diag=" + srcDiag.includes('"butuh-lahan"'));
-cek("MG33 pin v36: VERSI_GAME v36, city.js?v=59, city-data.js?v=15, city-skala.js?v=2, cache rise-of-meranti-v36, pill v36",
-  srcCity.includes('const VERSI_GAME = "v36"') && idxHtml.includes("js/city.js?v=59") &&
-  idxHtml.includes("js/city-data.js?v=15") && idxHtml.includes("js/city-skala.js?v=2") &&
-  idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v36<') &&
-  swTxt.includes('"rise-of-meranti-v36"') && swTxt.includes("js/city.js?v=59") &&
-  swTxt.includes("js/city-data.js?v=15") && swTxt.includes("js/city-skala.js?v=2"));
+cek("MG33 pin v37: VERSI_GAME v37, city.js?v=59, city-data.js?v=15, city-skala.js?v=2, cache rise-of-meranti-v37, pill v37",
+  srcCity.includes('const VERSI_GAME = "v37"') && idxHtml.includes("js/city.js?v=60") &&
+  idxHtml.includes("js/city-data.js?v=16") && idxHtml.includes("js/city-skala.js?v=3") &&
+  idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v37<') &&
+  swTxt.includes('"rise-of-meranti-v37"') && swTxt.includes("js/city.js?v=60") &&
+  swTxt.includes("js/city-data.js?v=16") && swTxt.includes("js/city-skala.js?v=3"));
 
 console.log("HASIL MIGRASI v36: lulus " + lulus + ", gagal " + gagal + " dari " + (lulus + gagal));
 console.log(gagal === 0 ? "TEST_MIGRASI_V36_OK" : "TEST_MIGRASI_V36_GAGAL:" + gagal + " dari " + (lulus + gagal));
