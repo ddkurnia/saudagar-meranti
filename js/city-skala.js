@@ -82,10 +82,14 @@ const TINGGI_DUNIA_DEFAULT_M = 6;
 //   opsional lebarMaksFaktor). natW/natH: dimensi piksel PNG.
 //   Bila tinggiDunia tidak ada: fallback rumus lama v34.1 (lebar dari
 //   footprint x aspek kanvas) agar sprite lama tetap tergambar.
+//   b (opsional, v36): instans bangunan — bila b.kakiOverride ada
+//   (fallback migrasi footprint F1: bangunan tetap di footprint LAMA),
+//   lebar maksimum dihitung dari footprint override, bukan katalog.
 // Mengembalikan {w, h} dengan aspek kanvas dipertahankan (skala
 // seragam) dan lebar dijepit ke lebar layar footprint x faktor.
-function ukuranGambarBangunan(def, natW, natH, z) {
-  const k = def.kaki || { w: 1, h: 1 };
+function ukuranGambarBangunan(def, natW, natH, z, b) {
+  const kk = (b && b.kakiOverride) ? b.kakiOverride : (def.kaki || { w: 1, h: 1 });
+  const k = (b && (b.rot % 2 === 1)) ? { w: kk.h, h: kk.w } : kk;
   const lebarFootprintPx = (k.w + k.h) * 32 * (z || 1);
   const faktor = def.lebarMaksFaktor || SKALA_DUNIA.LEBAR_MAKS_FAKTOR;
   const lebarMaks = lebarFootprintPx * faktor;

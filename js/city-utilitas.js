@@ -119,7 +119,7 @@ function pastikanUtilitas() {
 function petakBangunan(b) {
   const def = BANGUNAN_MAP[b.id];
   if (!def) return [];
-  const k = kakiBangunan(def, b.rot || 0);
+  const k = kakiBangunan(def, b.rot || 0, b);
   const out = [];
   for (let j = 0; j < k.h; j++) for (let i = 0; i < k.w; i++) out.push({ x: b.x + i, y: b.y + j });
   return out;
@@ -127,7 +127,7 @@ function petakBangunan(b) {
 function pusatBangunan(b) {
   const def = BANGUNAN_MAP[b.id];
   if (!def) return { x: b.x, y: b.y };
-  const k = kakiBangunan(def, b.rot || 0);
+  const k = kakiBangunan(def, b.rot || 0, b);
   return { x: b.x + (k.w - 1) / 2, y: b.y + (k.h - 1) / 2 };
 }
 

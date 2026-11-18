@@ -312,6 +312,15 @@
   // ---------------- Masalah umum (semua kategori) ----------------
   // Mengisi `out` (masalah terdeteksi) dan `tak` (kode tak terdeteksi).
   function _masalahUmum(b, def, kat, out, tak) {
+    // v36 (fallback migrasi footprint F1): bangunan tetap di footprint
+    // LAMA karena tidak muat membesar — pemain harus tahu (lencana L
+    // kuning di peta + catatan panel bangunan). Bukan kerusakan: fungsi
+    // bangunan tetap berjalan penuh di footprint lamanya.
+    if (b.butuhLahan) {
+      const kLama = b.kakiOverride ? (b.kakiOverride.w + "×" + b.kakiOverride.h) : "lama";
+      const kBaru = def.kaki.w + "×" + def.kaki.h;
+      out.push({ kode: "butuh-lahan", teks: "Butuh lahan: tetap " + kLama + " petak (katalog v36: " + kBaru + ") — tidak muat membesar.", dampak: 0.4, penyebab: "Tidak ada lahan kosong di sekitar bangunan saat migrasi footprint v36. Kosongkan lahan di sekelilingnya; migrasi dicoba lagi tiap kali permainan dimuat.", kategori: kat });
+    }
     // Banjir: bangunan tidak beroperasi sama sekali (offline).
     if (b.kebanjiran) {
       out.push({ kode: "banjir", teks: "Bangunan kebanjiran — tidak beroperasi selama hujan.", dampak: 1, penyebab: "Petak bangunan berada di zona banjir (rawa/gambut/pantai atau dekat air) tanpa perlindungan drainase.", kategori: kat });
@@ -771,8 +780,21 @@
     for (var i = 0; i < d.masalah.length; i++) penyebab.push(d.masalah[i].teks);
     // Skor per aspek (0..100; null = tidak berlaku untuk bangunan ini).
     var skor = { listrik: null, air: null, pekerja: null, bahan: null };
-    if (def && (def.listrik || 0) > 0) skor.listrik = _cariMasalah(d, "tanpa-listrik") ? 0 : 100;
-    if (def && (def.air || 0) > 0) skor.air = _cariMasalah(d, "tanpa-air") ? 0 : 100;
+    // v32.4: skor listrik/air = FLAG AKTUAL (b.berlistrik/b.berair),
+    // konsisten dengan baris "Listrik/Air" panel utama (city.js, yang
+    // menulis "Padam"/"Tidak berair" bila flag === false — termasuk
+    // bangunan dalam konstruksi, yang hitungUtilitas set false).
+    // Fallback lama (ada kode tanpa-listrik/tanpa-air -> 0, bila tidak
+    // ada -> 100) MENULIS "100%" untuk bangunan konstruksi yang padam:
+    // diagnosa() mengembalikan bangunan konstruksi lebih awal HANYA
+    // dengan masalah "dalam-konstruksi", jadi kode utilitas tidak pernah
+    // ada (temuan ?v=59: Diagnostik "Listrik 100% / Air 100%" padahal
+    // panel utama "Listrik Padam / Air Tidak berair"). Keluarga yang
+    // sama dengan perbaikan pekerja v32.3 (staf 0 -> 0%, bukan 100%).
+    // Flag undefined (utilitas belum pernah dihitung) = jangan tuduh
+    // padam (seperti _masalahUmum) -> fallback kode masalah.
+    if (def && (def.listrik || 0) > 0) skor.listrik = (b.berlistrik === false) ? 0 : (b.berlistrik === true ? 100 : (_cariMasalah(d, "tanpa-listrik") ? 0 : 100));
+    if (def && (def.air || 0) > 0) skor.air = (b.berair === false) ? 0 : (b.berair === true ? 100 : (_cariMasalah(d, "tanpa-air") ? 0 : 100));
     if (def && (def.pekerja || 0) > 0) {
       // v32.3: skor pekerja = rasio STAF (staf/kebutuhan), konsisten
       // dengan baris "Pekerja" panel utama (city.js, pctStaf). Bangunan

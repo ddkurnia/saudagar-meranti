@@ -1,5 +1,9 @@
 // =====================================================================
 // v35 — Tes standar skala global (docs/STANDAR-SKALA.md).
+// v36 (2026-11-17): tes ini kini mengunci FOOTPRINT v36 — 26 bangunan
+// membesar dari baseline v34.1, 97 tetap (SK11); masjid kini 252 px
+// (dulu 215,1 px — jepit lebar 2,2x footprint 5x5, bukan 2x2);
+// grid renggang SK12 naik 4 -> 9 petak (footprint maks 8x8).
 // Jalankan:  node tests/test35-skala.js
 // Baris akhir: TEST_SKALA_V35_OK  (atau TEST_SKALA_V35_GAGAL:N dari M)
 // Memuat HANYA city-data.js + city-skala.js (murni data + hitung, tanpa
@@ -50,6 +54,11 @@ while ((mk = reKend.exec(srcKend)) !== null) PANJANG_PETAK[mk[1]] = parseFloat(m
 // 1x3x1, 9x3x2, 4x3x3).
 const KAKI_BASELINE_V34_1 = {"rumah-sederhana":{"w":1,"h":1},"rumah-permanen":{"w":1,"h":1},"perumahan":{"w":2,"h":2},"rumah-susun":{"w":2,"h":2},"apartemen":{"w":2,"h":2},"rumah-pekerja":{"w":1,"h":1},"kantor-pemerintah":{"w":2,"h":2},"dermaga":{"w":2,"h":1},"pelabuhan":{"w":2,"h":2},"bandara":{"w":3,"h":3},"paud":{"w":1,"h":1},"sd":{"w":2,"h":1},"smp":{"w":2,"h":2},"sma":{"w":2,"h":2},"smk":{"w":2,"h":2},"universitas":{"w":3,"h":2},"perpustakaan":{"w":1,"h":1},"pelatihan":{"w":2,"h":1},"posyandu":{"w":1,"h":1},"puskesmas":{"w":2,"h":1},"klinik":{"w":1,"h":1},"rumah-sakit":{"w":2,"h":2},"rsud":{"w":3,"h":2},"pasar-tradisional":{"w":2,"h":2},"pasar-modern":{"w":2,"h":2},"toko":{"w":1,"h":1},"toko-material":{"w":1,"h":1},"supermarket":{"w":2,"h":2},"bank":{"w":1,"h":1},"kantor-dagang":{"w":2,"h":1},"kawasan-industri":{"w":3,"h":2},"pusat-logistik":{"w":2,"h":2},"terminal-feri":{"w":2,"h":2},"kedai-liberika":{"w":2,"h":2},"kebun-sagu":{"w":2,"h":2},"kebun-kelapa":{"w":2,"h":2},"kebun-pinang":{"w":2,"h":2},"kebun-karet":{"w":2,"h":2},"kebun-kopi":{"w":2,"h":2},"pertanian":{"w":2,"h":2},"peternakan":{"w":2,"h":2},"kehutanan-produksi":{"w":2,"h":2},"perikanan":{"w":2,"h":1},"kilang-sagu":{"w":2,"h":2},"pabrik-tepung":{"w":2,"h":2},"pabrik-kelapa":{"w":2,"h":2},"pabrik-laut":{"w":2,"h":2},"gudang":{"w":2,"h":1},"tambang-batu":{"w":2,"h":2},"tambang-pasir":{"w":2,"h":2},"pabrik-bahan-bangunan":{"w":2,"h":2},"pabrik-makanan":{"w":2,"h":2},"industri-ekspor":{"w":3,"h":2},"masjid":{"w":2,"h":2},"taman":{"w":1,"h":1},"lapangan":{"w":2,"h":1},"stadion":{"w":3,"h":2},"museum":{"w":2,"h":2},"taman-wisata":{"w":2,"h":2},"pasar-budaya":{"w":2,"h":1},"pltd":{"w":3,"h":3},"plt-biomassa":{"w":2,"h":2},"plt-surya":{"w":2,"h":2},"gardu-induk":{"w":2,"h":2},"gardu-distribusi":{"w":1,"h":1},"tiang-listrik":{"w":1,"h":1},"ipa":{"w":2,"h":2},"intake":{"w":1,"h":1},"reservoir":{"w":2,"h":2},"menara-air":{"w":1,"h":1},"pompa-air":{"w":1,"h":1},"pdam":{"w":2,"h":1},"kolam-retensi":{"w":2,"h":2},"pompa-banjir":{"w":1,"h":1},"ipal":{"w":2,"h":2},"tps":{"w":1,"h":1},"tps-3r":{"w":1,"h":1},"bank-sampah":{"w":1,"h":1},"tpa":{"w":3,"h":3},"pabrik-daur-ulang":{"w":2,"h":2},"traffic-light":{"w":1,"h":1},"bundaran":{"w":2,"h":2},"jpo":{"w":1,"h":2},"terminal-bus":{"w":2,"h":2},"halte":{"w":1,"h":1},"taksi-stand":{"w":1,"h":1},"taman-bermain":{"w":1,"h":1},"pasar-malam":{"w":2,"h":1},"outbound":{"w":2,"h":2},"kolam-renang":{"w":2,"h":2},"waterpark":{"w":3,"h":3},"waterfront":{"w":3,"h":1},"pantai-wisata":{"w":2,"h":2},"resort":{"w":3,"h":2},"marina":{"w":2,"h":2},"bioskop":{"w":2,"h":2},"pusat-hiburan":{"w":2,"h":2},"gedung-pertunjukan":{"w":2,"h":2},"pusat-kesenian":{"w":2,"h":2},"karaoke":{"w":1,"h":1},"museum-melayu":{"w":2,"h":2},"balai-adat":{"w":2,"h":2},"pusat-budaya":{"w":2,"h":2},"ruang-seni":{"w":1,"h":1},"lapangan-bola":{"w":3,"h":2},"lapangan-basket":{"w":2,"h":1},"lapangan-badminton":{"w":1,"h":1},"jogging-track":{"w":2,"h":1},"pusat-kebugaran":{"w":2,"h":1},"gelanggang":{"w":3,"h":2},"kantor-bupati":{"w":3,"h":2},"kantor-kecamatan":{"w":2,"h":2},"kantor-desa":{"w":1,"h":1},"gedung-dprd":{"w":2,"h":2},"kantor-dinas":{"w":2,"h":1},"mal-pelayanan":{"w":2,"h":2},"kantor-pos":{"w":1,"h":1},"perkantoran-swasta":{"w":2,"h":2},"gedung-perusahaan":{"w":2,"h":2},"kantor-polisi":{"w":2,"h":1},"pos-pemadam":{"w":1,"h":1},"pemadam-kebakaran":{"w":2,"h":2},"apotek":{"w":1,"h":1}};
 
+// KAKI_BASELINE_V36: footprint 123 bangunan pada v36 (keputusan user
+// 2026-11-17: HANYA 26 LANGSUNG dari PEMETAAN.md §3a yang berubah;
+// 97 lainnya sama dengan baseline v34.1 — dibuktikan SK11).
+const KAKI_BASELINE_V36 = {"rumah-sederhana":{"w":2,"h":2},"rumah-permanen":{"w":1,"h":1},"perumahan":{"w":2,"h":2},"rumah-susun":{"w":2,"h":2},"apartemen":{"w":2,"h":2},"rumah-pekerja":{"w":1,"h":1},"kantor-pemerintah":{"w":5,"h":5},"dermaga":{"w":2,"h":1},"pelabuhan":{"w":2,"h":2},"bandara":{"w":3,"h":3},"paud":{"w":1,"h":1},"sd":{"w":4,"h":4},"smp":{"w":4,"h":4},"sma":{"w":4,"h":4},"smk":{"w":4,"h":4},"universitas":{"w":3,"h":2},"perpustakaan":{"w":1,"h":1},"pelatihan":{"w":2,"h":1},"posyandu":{"w":1,"h":1},"puskesmas":{"w":4,"h":4},"klinik":{"w":1,"h":1},"rumah-sakit":{"w":2,"h":2},"rsud":{"w":3,"h":2},"pasar-tradisional":{"w":2,"h":2},"pasar-modern":{"w":2,"h":2},"toko":{"w":3,"h":3},"toko-material":{"w":3,"h":3},"supermarket":{"w":2,"h":2},"bank":{"w":1,"h":1},"kantor-dagang":{"w":2,"h":1},"kawasan-industri":{"w":3,"h":2},"pusat-logistik":{"w":2,"h":2},"terminal-feri":{"w":2,"h":2},"kedai-liberika":{"w":2,"h":2},"kebun-sagu":{"w":8,"h":8},"kebun-kelapa":{"w":8,"h":8},"kebun-pinang":{"w":8,"h":8},"kebun-karet":{"w":8,"h":8},"kebun-kopi":{"w":8,"h":8},"pertanian":{"w":2,"h":2},"peternakan":{"w":2,"h":2},"kehutanan-produksi":{"w":2,"h":2},"perikanan":{"w":2,"h":1},"kilang-sagu":{"w":6,"h":6},"pabrik-tepung":{"w":6,"h":6},"pabrik-kelapa":{"w":6,"h":6},"pabrik-laut":{"w":6,"h":6},"gudang":{"w":2,"h":1},"tambang-batu":{"w":8,"h":8},"tambang-pasir":{"w":8,"h":8},"pabrik-bahan-bangunan":{"w":6,"h":6},"pabrik-makanan":{"w":6,"h":6},"industri-ekspor":{"w":3,"h":2},"masjid":{"w":5,"h":5},"taman":{"w":6,"h":6},"lapangan":{"w":7,"h":7},"stadion":{"w":3,"h":2},"museum":{"w":2,"h":2},"taman-wisata":{"w":2,"h":2},"pasar-budaya":{"w":2,"h":1},"pltd":{"w":3,"h":3},"plt-biomassa":{"w":2,"h":2},"plt-surya":{"w":2,"h":2},"gardu-induk":{"w":2,"h":2},"gardu-distribusi":{"w":1,"h":1},"tiang-listrik":{"w":1,"h":1},"ipa":{"w":2,"h":2},"intake":{"w":1,"h":1},"reservoir":{"w":2,"h":2},"menara-air":{"w":1,"h":1},"pompa-air":{"w":1,"h":1},"pdam":{"w":2,"h":1},"kolam-retensi":{"w":2,"h":2},"pompa-banjir":{"w":1,"h":1},"ipal":{"w":2,"h":2},"tps":{"w":1,"h":1},"tps-3r":{"w":1,"h":1},"bank-sampah":{"w":1,"h":1},"tpa":{"w":3,"h":3},"pabrik-daur-ulang":{"w":6,"h":6},"traffic-light":{"w":1,"h":1},"bundaran":{"w":2,"h":2},"jpo":{"w":1,"h":2},"terminal-bus":{"w":2,"h":2},"halte":{"w":1,"h":1},"taksi-stand":{"w":1,"h":1},"taman-bermain":{"w":1,"h":1},"pasar-malam":{"w":2,"h":1},"outbound":{"w":2,"h":2},"kolam-renang":{"w":2,"h":2},"waterpark":{"w":3,"h":3},"waterfront":{"w":3,"h":1},"pantai-wisata":{"w":2,"h":2},"resort":{"w":3,"h":2},"marina":{"w":2,"h":2},"bioskop":{"w":2,"h":2},"pusat-hiburan":{"w":2,"h":2},"gedung-pertunjukan":{"w":2,"h":2},"pusat-kesenian":{"w":2,"h":2},"karaoke":{"w":1,"h":1},"museum-melayu":{"w":2,"h":2},"balai-adat":{"w":2,"h":2},"pusat-budaya":{"w":2,"h":2},"ruang-seni":{"w":1,"h":1},"lapangan-bola":{"w":3,"h":2},"lapangan-basket":{"w":2,"h":1},"lapangan-badminton":{"w":1,"h":1},"jogging-track":{"w":2,"h":1},"pusat-kebugaran":{"w":2,"h":1},"gelanggang":{"w":3,"h":2},"kantor-bupati":{"w":3,"h":2},"kantor-kecamatan":{"w":2,"h":2},"kantor-desa":{"w":1,"h":1},"gedung-dprd":{"w":2,"h":2},"kantor-dinas":{"w":2,"h":1},"mal-pelayanan":{"w":2,"h":2},"kantor-pos":{"w":1,"h":1},"perkantoran-swasta":{"w":2,"h":2},"gedung-perusahaan":{"w":2,"h":2},"kantor-polisi":{"w":2,"h":1},"pos-pemadam":{"w":1,"h":1},"pemadam-kebakaran":{"w":2,"h":2},"apotek":{"w":1,"h":1}};
+
 let lulus = 0, gagal = 0;
 function cek(nama, kond, info) {
   if (kond) { lulus++; console.log("OK  ", nama); }
@@ -90,7 +99,7 @@ function periksaHierarki(hMap, manusiaPx) {
   t("taman>lapangan", hMap["taman"] > hMap["lapangan"], hMap["taman"] + " vs " + hMap["lapangan"]);
   t("bundaran<=20px (datar)", hMap["bundaran"] <= 20, hMap["bundaran"]);
   t("kolam-retensi<=20px (datar)", hMap["kolam-retensi"] <= 20, hMap["kolam-retensi"]);
-  t("masjid tertinggi (215,1 px)", Math.abs(hMap["masjid"] - 215.1) < 1, hMap["masjid"]);
+  t("masjid tertinggi (252 px)", Math.abs(hMap["masjid"] - 252) < 1, hMap["masjid"]); // v36: 28 m x 9 = 252 px penuh — dulu 215,1 px karena dijepit lebar 2,2x footprint 2x2; kini footprint 5x5, jepit 704 px, tidak lagi menjepit. tinggiDunia TETAP 28 m.
   t("rumah-sederhana 40,5 px", Math.abs(hMap["rumah-sederhana"] - 40.5) < 1, hMap["rumah-sederhana"]);
   return f;
 }
@@ -141,14 +150,23 @@ cek("SK10 pohon lapangan 70,2 px > pohon terrain kelapa",
   Math.abs(phKelapaLapangan.h - 70.2) < 0.01 && phKelapaLapangan.h > phKelapaTerrain.h,
   "lapangan=" + phKelapaLapangan.h);
 
-// ---- 6. Footprint TIDAK berubah (keamanan save lama) ----
+// ---- 6. Footprint v36: TEPAT 26 berubah dari baseline v34.1, 97 tetap ----
+// (v35: footprint tidak boleh berubah sama sekali. v36 mengubah HANYA
+// 26 LANGSUNG — daftar eksplisit di bawah; bila ada bangunan ke-27 yang
+// berubah, tes ini gagal — itulah penjaganya.)
+const KAKI_V36_BERUBAH = ["rumah-sederhana","masjid","puskesmas","kantor-pemerintah","taman","lapangan","tambang-batu","tambang-pasir","sd","smp","sma","smk","kebun-sagu","kebun-kelapa","kebun-kopi","kebun-karet","kebun-pinang","pabrik-tepung","pabrik-makanan","pabrik-kelapa","pabrik-laut","pabrik-bahan-bangunan","pabrik-daur-ulang","kilang-sagu","toko","toko-material"];
 const kakiBerbeda = BANGUNAN.filter(b => {
   const base = KAKI_BASELINE_V34_1[b.id];
   return !base || base.w !== b.kaki.w || base.h !== b.kaki.h;
 });
-cek("SK11 footprint 123/123 sama dengan baseline v34.1 (tidak ada yang berubah)",
-  kakiBerbeda.length === 0 && Object.keys(KAKI_BASELINE_V34_1).length === 123,
-  kakiBerbeda.map(b => b.id).join(","));
+const kakiBerbedaId = kakiBerbeda.map(b => b.id).sort();
+const kakiSesuaiV36 = BANGUNAN.every(b => {
+  const base = KAKI_BASELINE_V36[b.id];
+  return base && base.w === b.kaki.w && base.h === b.kaki.h;
+});
+cek("SK11 footprint v36: tepat 26 berubah dari baseline v34.1 (97 tetap) + cocok baseline v36",
+  kakiBerbeda.length === 26 && JSON.stringify(kakiBerbedaId) === JSON.stringify(KAKI_V36_BERUBAH.slice().sort()) && kakiSesuaiV36 && Object.keys(KAKI_BASELINE_V36).length === 123,
+  "berubah: " + kakiBerbedaId.join(","));
 
 // ---- 7. Simulasi save lama: 0 overlap dengan footprint baru (= lama) ----
 function adaOverlap(penempatan) {
@@ -159,9 +177,10 @@ function adaOverlap(penempatan) {
   }
   return null;
 }
-// (a) Semua 123 bangunan di grid renggang (jarak 4 petak) — tidak boleh overlap.
-const grid = BANGUNAN.map((b, i) => ({ id: b.id, x: (i % 12) * 4, y: Math.floor(i / 12) * 4, w: b.kaki.w, h: b.kaki.h }));
-cek("SK12 simulasi: 123 bangunan di grid renggang, 0 overlap",
+// (a) Semua 123 bangunan di grid renggang (jarak 9 petak — v36: footprint
+// maks 8x8, jarak 4 petak v35 kini bertabrakan) — tidak boleh overlap.
+const grid = BANGUNAN.map((b, i) => ({ id: b.id, x: (i % 12) * 9, y: Math.floor(i / 12) * 9, w: b.kaki.w, h: b.kaki.h }));
+cek("SK12 simulasi: 123 bangunan di grid renggang (9 petak), 0 overlap",
   adaOverlap(grid) === null);
 // (b) Save representatif "kota lama": 24 bangunan menempel (jarak 1 petak),
 //     termasuk masjid 2x2, tambang 2x2, rumah 1x1 — pola kota v34.1 yang padat.
@@ -179,19 +198,23 @@ const kotaLama = [
   return { id: id, x: x, y: y, w: b.kaki.w, h: b.kaki.h };
 });
 const tabrakan = adaOverlap(kotaLama);
-cek("SK13 simulasi: save representatif 24 bangunan padat, 0 overlap setelah v35",
-  tabrakan === null, tabrakan ? JSON.stringify(tabrakan) : "");
+// v36: pola padat v34.1 yang sama (24 bangunan menempel, jarak 1 petak)
+// KINI bertabrakan — itulah yang ditangani migrasi v36 (bukan bug tes).
+// Penyeimbang: bangunan yang sama di grid renggang 9 petak = 0 overlap.
+const kotaRenggang = kotaLama.map((p, i) => ({ id: p.id, x: (i % 6) * 9, y: Math.floor(i / 6) * 9, w: p.w, h: p.h }));
+cek("SK13 simulasi: pola padat v34.1 kini bertabrakan (diharapkan — ditangani migrasi v36) + grid renggang 9 petak 0 overlap",
+  tabrakan !== null && adaOverlap(kotaRenggang) === null, tabrakan ? JSON.stringify(tabrakan) : "");
 
 // ---- 8. Pin versi v35 + mobile.css ?v=4 (v35-48pct: revert sheet half ke 48dvh) ----
 const idxHtml = fs.readFileSync(ROOT + "/index.html", "utf8");
 const swTxt = fs.readFileSync(ROOT + "/sw.js", "utf8");
 const srcCity = fs.readFileSync(ROOT + "/js/city.js", "utf8");
-cek("SK14 pin v35: VERSI_GAME v35, city.js?v=58, city-data.js?v=14, city-skala.js?v=1, cache rise-of-meranti-v35",
-  srcCity.includes('const VERSI_GAME = "v35"') && idxHtml.includes("js/city.js?v=58") &&
-  idxHtml.includes("js/city-data.js?v=14") && idxHtml.includes("js/city-skala.js?v=1") &&
-  idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v35<') &&
-  swTxt.includes('"rise-of-meranti-v35"') && swTxt.includes("js/city.js?v=58") &&
-  swTxt.includes("js/city-data.js?v=14") && swTxt.includes("js/city-skala.js?v=1"));
+cek("SK14 pin v36: VERSI_GAME v36, city.js?v=59, city-data.js?v=15, city-skala.js?v=2, cache rise-of-meranti-v36",
+  srcCity.includes('const VERSI_GAME = "v36"') && idxHtml.includes("js/city.js?v=59") &&
+  idxHtml.includes("js/city-data.js?v=15") && idxHtml.includes("js/city-skala.js?v=2") &&
+  idxHtml.includes('id="menuPillVersi" class="menu-pill-versi">v36<') &&
+  swTxt.includes('"rise-of-meranti-v36"') && swTxt.includes("js/city.js?v=59") &&
+  swTxt.includes("js/city-data.js?v=15") && swTxt.includes("js/city-skala.js?v=2"));
 cek("SK15 mobile.css berubah v35-48pct (keputusan user 2026-11-17: sheet half KEMBALI 48dvh, kriteria dilonggarkan, penjaga v34.1 dipertahankan — pin naik ?v=3 -> ?v=4)",
   idxHtml.includes("css/mobile.css?v=4") && swTxt.includes("css/mobile.css?v=4") &&
   !idxHtml.includes("css/mobile.css?v=3") && !swTxt.includes("css/mobile.css?v=3"));

@@ -274,7 +274,7 @@ function generatePetaDunia(seed) {
     const berbatasanLaut =
       (x > 0 && terrain[y][x - 1] === "laut") || (x < W - 1 && terrain[y][x + 1] === "laut") ||
       (y > 0 && terrain[y - 1][x] === "laut") || (y < H - 1 && terrain[y + 1][x] === "laut");
-    if (berbatasanLaut && nMangrove(x / W, y / H) > 0.58) terrain[y][x] = "mangrove";
+    if (berbatasanLaut && nMangrove(x / W, y / H) > 0.52) terrain[y][x] = "mangrove";
   }
 
   // Helper: hanya timpa petak daratan pedalaman (bukan laut/pantai/air).

@@ -103,7 +103,7 @@ function _jangkarBangunan(b) {
   try {
     const def = _defB(b);
     if (def && typeof kakiBangunan === "function") {
-      const k = kakiBangunan(def, b.rot || 0);
+      const k = kakiBangunan(def, b.rot || 0, b);
       if (k) { w = k.w || 1; h = k.h || 1; }
     }
   } catch (e) {}

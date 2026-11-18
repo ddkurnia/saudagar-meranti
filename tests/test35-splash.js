@@ -7,8 +7,8 @@
 //   index.html benar (urutan 3 layar, latar hitam, tap-to-skip),
 //   TIDAK ADA lagi jejak splash/loading lama di jalur live
 //   (logo-meranti-rising.png keluar dari precache + index.html),
-//   pin v35 TIDAK berubah (VERSI_GAME v35, city.js?v=58,
-//   cache rise-of-meranti-v35).
+//   pin v36 (VERSI_GAME v36, city.js?v=59,
+//   cache rise-of-meranti-v36) — file splash/PNG v35 TIDAK disentuh.
 // Bagian B (perilaku, vm + DOM/timer stub): urutan 3x5 detik, tap
 //   lewati, progres dibaca dari gambarAset, bila loading belum
 //   selesai setelah layar ke-3 tetap di state loading dengan progres
@@ -80,7 +80,7 @@ cek("index.html: latar hitam tiap layar", /\.splash-layar\{[^}]*background:#000/
 cek("index.html: bar + teks progres", html.includes('id="splashBar"') && html.includes('id="splashTeks"'));
 cek("index.html: petunjuk ketuk", html.includes("Ketuk layar untuk lanjut"));
 cek("index.html: script city-splash.js?v=1", html.includes('src="js/city-splash.js?v=1"'));
-cek("index.html: splash dimuat SEBELUM city.js", html.indexOf("js/city-splash.js?v=1") < html.indexOf("js/city.js?v=58") && html.indexOf("js/city-splash.js?v=1") > 0);
+cek("index.html: splash dimuat SEBELUM city.js", html.indexOf("js/city-splash.js?v=1") < html.indexOf("js/city.js?v=59") && html.indexOf("js/city-splash.js?v=1") > 0);
 for (const s of SPLASH) cek("index.html: preload " + s.file, html.includes('<link rel="preload" as="image" href="' + s.file + '">'));
 cek("index.html: BUDAK AWAK cover hanya di layar lebar (logo tak terpotong di portrait)",
   /\.splash-gambar-cover\{[^}]*object-fit:contain/.test(html) && /@media \(min-aspect-ratio:16\/9\)\{\.splash-gambar-cover\{object-fit:cover\}\}/.test(html));
@@ -92,10 +92,10 @@ cek("sw.js: tanpa logo-meranti-rising.png di precache", !sw.includes("logo-meran
 for (const s of SPLASH) cek("sw.js: precache " + s.file, sw.includes('"./' + s.file + '"'));
 cek("sw.js: precache city-splash.js", sw.includes('"./js/city-splash.js?v=1"'));
 
-// Pin v35 TIDAK berubah.
-cek("pin: VERSI_GAME v35", fs.readFileSync(ROOT + "/js/city.js", "utf8").includes('VERSI_GAME = "v35"'));
-cek("pin: city.js?v=58 di index.html", html.includes("js/city.js?v=58"));
-cek("pin: cache rise-of-meranti-v35 di sw.js", sw.includes('NAMA_CACHE = "rise-of-meranti-v35"'));
+// Pin v36 (splash v35 tidak berubah isinya; pin versi naik).
+cek("pin: VERSI_GAME v36", fs.readFileSync(ROOT + "/js/city.js", "utf8").includes('VERSI_GAME = "v36"'));
+cek("pin: city.js?v=59 di index.html", html.includes("js/city.js?v=59"));
+cek("pin: cache rise-of-meranti-v36 di sw.js", sw.includes('NAMA_CACHE = "rise-of-meranti-v36"'));
 
 // Konstanta + logika di sumber splash.
 cek("splash: DURASI 5000 ms", /SPLASH_DURASI_MS = 5000/.test(srcSplash));

@@ -5,7 +5,7 @@
 // (Render & UI ada di bagian akhir file ini.)
 // =====================================================================
 
-const VERSI_GAME = "v35"; // tampil di layar mulai (bantu cek live)
+const VERSI_GAME = "v36"; // tampil di layar mulai (bantu cek live)
 const $ = (id) => document.getElementById(id);
 function rp(n) { return "Rp" + Math.round(n).toLocaleString("id-ID"); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -485,7 +485,7 @@ function gambarLampuMalam(lebar, tinggi, gelap) {
   for (const b of S.bangunan) {
     if (!b.selesai) continue;
     const def = BANGUNAN_MAP[b.id]; if (!def) continue;
-    const k = kakiBangunan(def, b.rot);
+    const k = kakiBangunan(def, b.rot, b);
     const cx = b.x + (k.w - 1) / 2, cy = b.y + (k.h - 1) / 2;
     const tengah = tileTengahDunia(cx, cy);
     const s = duniaKeLayar(tengah.x, tengah.y, lebar, tinggi);
@@ -592,6 +592,7 @@ function rincianKosong() {
 function stateBaru(petaBaru) {
   const st = {
     versi: CITY.VERSI_SAVE, seed: CITY.SEED, hari: 1, cuaca: "Cerah",
+    migrasiFootprintV36: true, // v36: permainan baru lahir dengan footprint v36 — tidak perlu migrasi saat load.
     uang: cfgEco("modalAwal.uang", 10000000), kayu: cfgEco("modalAwal.kayu", 300), batu: cfgEco("modalAwal.batu", 200), pasir: cfgEco("modalAwal.pasir", 150), semen: cfgEco("modalAwal.semen", 50), besi: cfgEco("modalAwal.besi", 30), xp: 0, level: 1, akumulasi: 0, // v30: SEMUA modal awal dibaca dari economyConfig.modalAwal (sebelumnya kayu/batu/besi hardcode 60/40/10)
     waktuGame: 360, kecepatan: 1, // v18-A: waktu mulai 06:00 hari ke-0; akumulasi = cermin lama
     komoditas: {}, bangunan: [], jalan: [], jembatan: [],
@@ -696,22 +697,32 @@ function stateBaru(petaBaru) {
   }
   // Rumah pertama: petak di samping jalan (atau dekat landing).
   // Utamakan pesisir/permukiman, hindari rawa/gambut & pantai.
+  // v36: rumah-sederhana kini 2x2 — calon anchor HARUS lolos untuk
+  // KEEMPAT petak footprint (terrain + tanpa bangunan/jalan), bukan
+  // hanya petak anchor; kalau tidak, rumah baru bisa menimpa jalan
+  // atau dermaga di sampingnya. Skor = skor TERBURUK keempat petak.
+  const kRumah = (typeof BANGUNAN_MAP !== "undefined" && BANGUNAN_MAP["rumah-sederhana"]) ? BANGUNAN_MAP["rumah-sederhana"].kaki : { w: 2, h: 2 };
   const skorRumah = (t) => (t === "pesisir" || t === "permukiman") ? 0 : (t === "rawa" || t === "gambut") ? 2 : 1;
   const calonRumah = [];
   for (const j of st.jalan) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) calonRumah.push([j.x + dx, j.y + dy]);
   for (let d = 1; d <= 4; d++) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) calonRumah.push([L.x + dx * d, L.y + dy * d]);
   let rumahTerbaik = null, skorTerbaik = 99;
   for (const [tx, ty] of calonRumah) {
-    if (tx < 0 || ty < 0 || tx >= petaBaru.W || ty >= petaBaru.H) continue;
-    const t = terrainDi(petaBaru, tx, ty);
-    if (!terrainBisaBangun(t) || t === "pantai") continue;
-    if (adaBangunanDi(st, tx, ty) || st.jalan.some(j => j.x === tx && j.y === ty)) continue;
-    const s = skorRumah(t);
-    if (s < skorTerbaik) { skorTerbaik = s; rumahTerbaik = { x: tx, y: ty }; }
-    if (s === 0) break;
+    let skor = 0, valid = true;
+    for (let j = 0; j < kRumah.h && valid; j++) for (let i = 0; i < kRumah.w && valid; i++) {
+      const px = tx + i, py = ty + j;
+      if (px < 0 || py < 0 || px >= petaBaru.W || py >= petaBaru.H) { valid = false; break; }
+      const t = terrainDi(petaBaru, px, py);
+      if (!terrainBisaBangun(t) || t === "pantai") { valid = false; break; }
+      if (adaBangunanDi(st, px, py) || st.jalan.some(jj => jj.x === px && jj.y === py)) { valid = false; break; }
+      skor = Math.max(skor, skorRumah(t));
+    }
+    if (!valid) continue;
+    if (skor < skorTerbaik) { skorTerbaik = skor; rumahTerbaik = { x: tx, y: ty }; }
+    if (skor === 0) break;
   }
   if (rumahTerbaik) {
-    bersihHutan(rumahTerbaik.x, rumahTerbaik.y);
+    for (let j = 0; j < kRumah.h; j++) for (let i = 0; i < kRumah.w; i++) bersihHutan(rumahTerbaik.x + i, rumahTerbaik.y + j);
     // v31: 4 penduduk awal tinggal di rumah pertama ini (kapasitas 4).
     st.bangunan.push({ id: "rumah-sederhana", x: rumahTerbaik.x, y: rumahTerbaik.y, rot: 0, selesai: true, progres: 1, kecamatan: kecDi(rumahTerbaik.x, rumahTerbaik.y), penghuni: 4 });
   }
@@ -730,8 +741,10 @@ function pulauStateBaru() {
 function adaBangunanDi(st, x, y) {
   for (const b of st.bangunan) {
     const def = BANGUNAN_MAP[b.id]; if (!def) continue;
-    const fw = (b.rot % 2 === 1) ? def.kaki.h : def.kaki.w;
-    const fh = (b.rot % 2 === 1) ? def.kaki.w : def.kaki.h;
+    // v36: kakiBangunan(def, rot, b) menghormati b.kakiOverride
+    // (fallback migrasi F1 — bangunan tetap di footprint lama).
+    const k = kakiBangunan(def, b.rot || 0, b);
+    const fw = k.w, fh = k.h;
     if (x >= b.x && x < b.x + fw && y >= b.y && y < b.y + fh) return b;
   }
   return null;
@@ -1135,10 +1148,280 @@ function kembalikanBiaya(harga, faktor) {
   if (harga.besi) S.besi += Math.floor((harga.besi || 0) * faktor);
 }
 
+// ===== MIGRASI FOOTPRINT v36 — AWAL =====
+// Migrasi save lama ke footprint v36 (docs/MIGRASI-FOOTPRINT-v36.md).
+// Cakupan (keputusan user 2026-11-17): HANYA 26 bangunan LANGSUNG
+// (PEMETAAN.md §3a). 97 bangunan lain TETAP di footprint v35.
+// Aturan: anchor pusat-tetap + cari anchor terdekat (tie-break
+// deterministik); urutan footprint baru terbesar dulu; dua pass
+// (R=4, lalu R=10); fallback F4 (geser ≤2 petak → tetap footprint
+// lama + b.kakiOverride + b.butuhLahan, dicoba lagi tiap load);
+// validasi akhir 0 overlap atau seluruh migrasi dibatalkan.
+// CATATAN JUJUR (konflik desain, lihat MIGRASI-FOOTPRINT-v36.md §6):
+// pass 2 (R=10) mengizinkan geser pusat sampai 10 petak — itu
+// bertentangan dengan prinsip "tidak dipindah >2 petak" (§1.4).
+// Implementasi mengikuti perintah tugas (R=4 lalu R=10) apa adanya;
+// keputusan membatasi ke 2 petak diserahkan ke koordinator.
+// Blok ini sengaja self-contained (hanya memakai global S, peta,
+// BANGUNAN_MAP, TERRAIN, CITY + helper terrainDi/terrainBisaBangun/
+// zonaDi/kecamatanDiPeta) supaya bisa diuji headless dengan mengekstrak
+// teks blok ini — lihat tests/test36-migrasi.js.
+const FOOTPRINT_V36_LAMA = {
+  "rumah-sederhana": { w: 1, h: 1 }, "masjid": { w: 2, h: 2 },
+  "puskesmas": { w: 2, h: 1 }, "kantor-pemerintah": { w: 2, h: 2 },
+  "taman": { w: 1, h: 1 }, "lapangan": { w: 2, h: 1 },
+  "tambang-batu": { w: 2, h: 2 }, "tambang-pasir": { w: 2, h: 2 },
+  "sd": { w: 2, h: 1 }, "smp": { w: 2, h: 2 }, "sma": { w: 2, h: 2 },
+  "smk": { w: 2, h: 2 },
+  "kebun-sagu": { w: 2, h: 2 }, "kebun-kelapa": { w: 2, h: 2 },
+  "kebun-kopi": { w: 2, h: 2 }, "kebun-karet": { w: 2, h: 2 },
+  "kebun-pinang": { w: 2, h: 2 },
+  "pabrik-tepung": { w: 2, h: 2 }, "pabrik-makanan": { w: 2, h: 2 },
+  "pabrik-kelapa": { w: 2, h: 2 }, "pabrik-laut": { w: 2, h: 2 },
+  "pabrik-bahan-bangunan": { w: 2, h: 2 }, "pabrik-daur-ulang": { w: 2, h: 2 },
+  "kilang-sagu": { w: 2, h: 2 },
+  "toko": { w: 1, h: 1 }, "toko-material": { w: 1, h: 1 },
+};
+// Zona yang dicat -> terrain izin yang dipetakan (sama seperti cekBangun).
+const ZONA_KE_TERRAIN_V36 = { industrial: "industri" };
+// Apakah satu petak boleh ditempati bangunan `def` saat migrasi?
+// = bagian terrain cekBangun SAJA (tanpa biaya, zona yang dicat,
+// akses jalan, atau level). Zona yang dicat TIDAK dihitung sebagai
+// tabrakan; terrainIzin tetap berlaku (termasuk zona yang dicat
+// sebagai pemenuh izin, seperti cekBangun). Mengembalikan
+// {ok, hutan} — hutan=true berarti petak hutan yang harus diubah jadi
+// permukiman + dicatat S.bersih (tanpa bonus kayu).
+function petakBisaUntukMigrasi(def, x, y) {
+  const W = (typeof peta !== "undefined" && peta && peta.W) || CITY.GRID_W;
+  const H = (typeof peta !== "undefined" && peta && peta.H) || CITY.GRID_H;
+  if (x < 0 || y < 0 || x >= W || y >= H) return { ok: false, hutan: false };
+  const t = terrainDi(peta, x, y);
+  if (!terrainBisaBangun(t)) return { ok: false, hutan: false };
+  if (def.terrainIzin) {
+    if (t === "pantai" && def.terrainIzin.indexOf("pantai") === -1) return { ok: false, hutan: false };
+    const zid = (typeof zonaDi === "function") ? zonaDi(x, y) : null;
+    const tZona = (zid && ZONA_KE_TERRAIN_V36[zid]) || null;
+    if (def.terrainIzin.indexOf(t) === -1 && !(tZona && def.terrainIzin.indexOf(tZona) !== -1)) return { ok: false, hutan: false };
+  } else if (def.pantai) {
+    if (t !== "pantai" && t !== "laut" && t !== "pesisir") return { ok: false, hutan: false };
+  } else {
+    if (t === "pantai") return { ok: false, hutan: false };
+  }
+  return { ok: true, hutan: t === "hutan" };
+}
+// Migrasi footprint v36 saat load. Mengembalikan statistik
+// {mode, total, membesar, digeser, butuhLahan, batal} atau null bila
+// tidak ada state/peta. `mode`: "penuh" (sekali, flag belum ada) atau
+// "retry" (hanya bangunan ber-flag butuhLahan). Bila validasi akhir
+// menemukan overlap, mengembalikan {batal:true} dan TIDAK mengubah
+// apa pun (flag tidak diset — migrasi dicoba lagi di load berikut).
+function migrasiFootprintV36() {
+  if (typeof S === "undefined" || !S || !Array.isArray(S.bangunan)) return null;
+  if (typeof peta === "undefined" || !peta) return null;
+  if (!Array.isArray(S.bersih)) S.bersih = [];
+  if (!Array.isArray(S.jalan)) S.jalan = [];
+  if (!Array.isArray(S.jembatan)) S.jembatan = [];
+  const sudah = !!S.migrasiFootprintV36;
+  const mode = sudah ? "retry" : "penuh";
+  const target = [];
+  S.bangunan.forEach((b, idx) => {
+    if (!b || !b.id || !BANGUNAN_MAP[b.id]) return; // id tak dikenal: skip
+    if (sudah) { if (b.butuhLahan) target.push(idx); return; }
+    if (FOOTPRINT_V36_LAMA[b.id]) target.push(idx);
+  });
+  if (target.length === 0) {
+    if (!sudah) S.migrasiFootprintV36 = true;
+    return { mode: mode, total: 0, membesar: 0, digeser: 0, butuhLahan: 0, batal: false };
+  }
+  const kunci = (x, y) => x + "," + y;
+  const putar = (d, rot) => {
+    const r = (rot || 0) % 2 === 1;
+    return { w: r ? d.h : d.w, h: r ? d.w : d.h };
+  };
+  // Dimensi SAAT INI (okupansi): override F1 bila ada; bila migrasi
+  // penuh: footprint LAMA v35 untuk 26 bangunan, katalog untuk sisanya;
+  // bila retry: katalog (bangunan yang sudah bermigrasi menempati
+  // footprint baru; yang ber-flag menempati override-nya).
+  const dimKini = S.bangunan.map((b) => {
+    if (!b || !b.id || !BANGUNAN_MAP[b.id]) return null;
+    if (b.kakiOverride) return putar(b.kakiOverride, b.rot);
+    if (sudah) return putar(BANGUNAN_MAP[b.id].kaki, b.rot);
+    const lama = FOOTPRINT_V36_LAMA[b.id];
+    return putar(lama || BANGUNAN_MAP[b.id].kaki, b.rot);
+  });
+  const dimBaru = S.bangunan.map((b) => {
+    if (!b || !b.id || !BANGUNAN_MAP[b.id]) return null;
+    return putar(BANGUNAN_MAP[b.id].kaki, b.rot);
+  });
+  // Peta okupansi dari footprint SAAT INI + set petak jalan/jembatan.
+  const okp = new Map();
+  S.bangunan.forEach((b, idx) => {
+    const d = dimKini[idx];
+    if (!d) return;
+    for (let j = 0; j < d.h; j++) for (let i = 0; i < d.w; i++) okp.set(kunci(b.x + i, b.y + j), idx);
+  });
+  const jalanSet = new Set();
+  for (const j of S.jalan) jalanSet.add(kunci(j.x, j.y));
+  for (const j of S.jembatan) jalanSet.add(kunci(j.x, j.y));
+  // Apakah anchor (ax,ay) dengan footprint baru muat untuk bangunan idx?
+  // Petak lama bangunan itu sendiri selalu boleh (sudah ditempati).
+  // Mengembalikan daftar petak hutan di area ekspansi, atau null.
+  function muat(ax, ay, idx) {
+    const b = S.bangunan[idx];
+    const def = BANGUNAN_MAP[b.id];
+    const nb = dimBaru[idx], lk = dimKini[idx];
+    const hutanTiles = [];
+    for (let j = 0; j < nb.h; j++) for (let i = 0; i < nb.w; i++) {
+      const tx = ax + i, ty = ay + j;
+      if (tx >= b.x && tx < b.x + lk.w && ty >= b.y && ty < b.y + lk.h) continue;
+      const W = (peta && peta.W) || CITY.GRID_W, H = (peta && peta.H) || CITY.GRID_H;
+      if (tx < 0 || ty < 0 || tx >= W || ty >= H) return null;
+      const occ = okp.get(kunci(tx, ty));
+      if (occ !== undefined && occ !== idx) return null;
+      if (jalanSet.has(kunci(tx, ty))) return null;
+      const cek = petakBisaUntukMigrasi(def, tx, ty);
+      if (!cek.ok) return null;
+      if (cek.hutan) hutanTiles.push({ x: tx, y: ty });
+    }
+    return hutanTiles;
+  }
+  // Cari anchor terbaik dengan geser pusat ≤ R. Urutan deterministik:
+  // geser pusat terkecil (Euclid) → anchor x terkecil → y terkecil.
+  // (v36-fix NB3c: tie-break "overlap maksimum dengan petak lama" yang
+  // lama dihapus — kode mati: hanya dibandingkan bila x DAN y sama,
+  // yaitu anchor yang sama, sehingga tidak pernah mengubah hasil.)
+  function cariAnchor(idx, R) {
+    const b = S.bangunan[idx];
+    const nb = dimBaru[idx], lk = dimKini[idx];
+    const pcx = b.x + (lk.w - 1) / 2, pcy = b.y + (lk.h - 1) / 2;
+    const ax0 = Math.floor(pcx - (nb.w - 1) / 2 - R), ax1 = Math.ceil(pcx - (nb.w - 1) / 2 + R);
+    const ay0 = Math.floor(pcy - (nb.h - 1) / 2 - R), ay1 = Math.ceil(pcy - (nb.h - 1) / 2 + R);
+    let terbaik = null;
+    for (let ay = ay0; ay <= ay1; ay++) for (let ax = ax0; ax <= ax1; ax++) {
+      const ncx = ax + (nb.w - 1) / 2, ncy = ay + (nb.h - 1) / 2;
+      const geser = Math.hypot(ncx - pcx, ncy - pcy);
+      if (geser > R + 1e-9) continue;
+      const hutanTiles = muat(ax, ay, idx);
+      if (!hutanTiles) continue;
+      const cand = { x: ax, y: ay, geser: geser, hutan: hutanTiles };
+      if (!terbaik || cand.geser < terbaik.geser - 1e-9 ||
+        (Math.abs(cand.geser - terbaik.geser) <= 1e-9 && (cand.x < terbaik.x ||
+          (cand.x === terbaik.x && cand.y < terbaik.y)))) terbaik = cand;
+    }
+    return terbaik;
+  }
+  // Urutan proses: footprint baru TERBESAR dulu (luas desc),
+  // tie-break stabil = indeks array S.bangunan.
+  const urut = target.slice().sort((a, b) =>
+    (dimBaru[b].w * dimBaru[b].h - dimBaru[a].w * dimBaru[a].h) || (a - b));
+  const rencana = new Map(); // idx -> {x, y, hutan}
+  function terapkanRencana(idx, r) {
+    const b = S.bangunan[idx];
+    const lk = dimKini[idx], nb = dimBaru[idx];
+    for (let j = 0; j < lk.h; j++) for (let i = 0; i < lk.w; i++) {
+      if (okp.get(kunci(b.x + i, b.y + j)) === idx) okp.delete(kunci(b.x + i, b.y + j));
+    }
+    for (let j = 0; j < nb.h; j++) for (let i = 0; i < nb.w; i++) okp.set(kunci(r.x + i, r.y + j), idx);
+    rencana.set(idx, r);
+  }
+  let gagal = [];
+  for (const idx of urut) {
+    const r = cariAnchor(idx, 4);
+    if (r) terapkanRencana(idx, r); else gagal.push(idx);
+  }
+  for (const idx of gagal.slice()) {
+    const r = cariAnchor(idx, 10);
+    if (r) { terapkanRencana(idx, r); gagal.splice(gagal.indexOf(idx), 1); }
+  }
+  // F4 — F2: geser ≤2 petak. Dalam migrasi awal langkah ini tersubsumsi
+  // pass 1 (R=4 ⊇ 2); dipertahankan eksplisit sebagai jaring pengaman
+  // dan menjadi radius utama pada percobaan ulang tiap load.
+  const masihGagal = [];
+  for (const idx of gagal) {
+    const r = cariAnchor(idx, 2);
+    if (r) terapkanRencana(idx, r); else masihGagal.push(idx);
+  }
+  // Validasi akhir di atas rencana (sebelum satu pun b.x ditulis):
+  // 0 petak ganda atas footprint akhir, atau seluruh migrasi batal.
+  const akhir = new Map();
+  for (let idx = 0; idx < S.bangunan.length; idx++) {
+    const b = S.bangunan[idx];
+    if (!b || !BANGUNAN_MAP[b.id]) continue;
+    const r = rencana.get(idx);
+    const d = r ? dimBaru[idx] : dimKini[idx];
+    const ox = r ? r.x : b.x, oy = r ? r.y : b.y;
+    for (let j = 0; j < d.h; j++) for (let i = 0; i < d.w; i++) {
+      const kk = kunci(ox + i, oy + j);
+      if (akhir.has(kk)) {
+        return { mode: mode, total: target.length, membesar: 0, digeser: 0, butuhLahan: 0, batal: true };
+      }
+      akhir.set(kk, idx);
+    }
+  }
+  // Terapkan rencana sekaligus.
+  let membesar = 0, digeser = 0;
+  for (const [idx, r] of rencana) {
+    const b = S.bangunan[idx];
+    const xLama = b.x, yLama = b.y;
+    if (b.x !== r.x || b.y !== r.y) digeser++;
+    b.x = r.x; b.y = r.y;
+    if (b.kakiOverride) delete b.kakiOverride;
+    if (b.butuhLahan) delete b.butuhLahan;
+    membesar++;
+    // Petak hutan → permukiman + S.bersih TANPA bonus kayu (WAJIB:
+    // kalau tidak, mulaiGame mengembalikannya jadi hutan saat load
+    // berikut — city.js:7761 — dan bangunan berdiri di hutan).
+    // Mencakup petak ekspansi (r.hutan) DAN petak di bawah footprint
+    // LAMA (kasus tepi: bangunan yang entah bagaimana berdiri di atas
+    // hutan — normalnya tidak terjadi karena bangunDi menebang saat
+    // membangun, tapi migrasi tidak boleh berasumsi).
+    const ubahHutan = (tx, ty) => {
+      if (peta.terrain[ty] && peta.terrain[ty][tx] === "hutan") {
+        peta.terrain[ty][tx] = "permukiman";
+        if (!S.bersih.some((c) => c.x === tx && c.y === ty)) S.bersih.push({ x: tx, y: ty });
+      }
+    };
+    for (const t of r.hutan) ubahHutan(t.x, t.y);
+    const lk = dimKini[idx];
+    for (let j = 0; j < lk.h; j++) for (let i = 0; i < lk.w; i++) ubahHutan(xLama + i, yLama + j);
+    if (typeof kecamatanDiPeta === "function") {
+      try { b.kecamatan = kecamatanDiPeta(peta, b.x, b.y); } catch (e) {}
+    }
+  }
+  // Fallback F1: tetap di footprint lama + flag + penanda.
+  let butuhLahan = 0;
+  for (const idx of masihGagal) {
+    const b = S.bangunan[idx];
+    const lama = FOOTPRINT_V36_LAMA[b.id];
+    if (lama) {
+      b.kakiOverride = { w: lama.w, h: lama.h };
+      b.butuhLahan = true;
+      butuhLahan++;
+    }
+  }
+  if (!sudah) S.migrasiFootprintV36 = true;
+  return { mode: mode, total: target.length, membesar: membesar, digeser: digeser, butuhLahan: butuhLahan, batal: false };
+}
+// ===== MIGRASI FOOTPRINT v36 — AKHIR =====
+
 // ---------------- Validasi penempatan ----------------
-function kakiBangunan(def, rot) {
-  const r = rot % 2 === 1;
-  return { w: r ? def.kaki.h : def.kaki.w, h: r ? def.kaki.w : def.kaki.h };
+// v36: parameter ke-3 opsional `b` (instans bangunan). Bila b.kakiOverride
+// ada (fallback migrasi footprint F1 — bangunan tetap di footprint LAMA
+// karena tidak muat membesar), dimensi override yang dipakai, bukan
+// katalog. Pemanggil tanpa instans (cekBangun/bangunDi/ghost = bangunan
+// BARU) memakai katalog seperti biasa.
+function kakiBangunan(def, rot, b) {
+  const kk = (b && b.kakiOverride) ? b.kakiOverride : def.kaki;
+  const r = (rot || 0) % 2 === 1;
+  return { w: r ? kk.h : kk.w, h: r ? kk.w : kk.h };
+}
+// Footprint EFEKTIF sebuah instans bangunan (katalog atau override F1).
+// Dipakai migrasi v36 + validasi akhir (satu tempat, bukan inline di
+// mana-mana). Mengembalikan null bila id tak dikenal (bangunan "hantu").
+function kakiEfektifBangunan(b) {
+  const def = BANGUNAN_MAP[b.id];
+  if (!def) return null;
+  return kakiBangunan(def, b.rot || 0, b);
 }
 // Biaya tambahan lahan (v17): terrain dengan TERRAIN[t].butuhBuka
 // (rawa {uang:10000} drainase, gambut {uang:15000} pengelolaan air)
@@ -1293,7 +1576,7 @@ function hitungBangunanAksesDiagonalSaja() {
     if (!b || !b.selesai) continue;
     const d = BANGUNAN_MAP[b.id];
     if (!d || d.pantai) continue;
-    const k = kakiBangunan(d, b.rot || 0);
+    const k = kakiBangunan(d, b.rot || 0, b);
     let orto = false, cincin = false;
     for (let j = -1; j <= k.h && (!orto || !cincin); j++) for (let i = -1; i <= k.w && (!orto || !cincin); i++) {
       const diDalam = i >= 0 && i < k.w && j >= 0 && j < k.h;
@@ -1541,7 +1824,7 @@ function putarBangunan(idx) {
   if (!b) return;
   const def = BANGUNAN_MAP[b.id];
   const rotBaru = (b.rot + 1) % 4;
-  const k = kakiBangunan(def, rotBaru);
+  const k = kakiBangunan(def, rotBaru, b);
   for (let j = 0; j < k.h; j++) for (let i = 0; i < k.w; i++) {
     const lain = adaBangunanDi(S, b.x + i, b.y + j);
     if (lain && lain !== b) { toast("Tidak cukup ruang untuk memutar.", "gagal"); bunyiGagal(); return; }
@@ -1564,7 +1847,7 @@ function pindahBangunanSelesai(x, y) {
   if (!b) return;
   const def = BANGUNAN_MAP[b.id];
   // Validasi tanpa biaya & tanpa syarat level/teknologi (sudah dimiliki)
-  const k = kakiBangunan(def, b.rot);
+  const k = kakiBangunan(def, b.rot, b);
   for (let j = 0; j < k.h; j++) for (let i = 0; i < k.w; i++) {
     const tx = x + i, ty = y + j;
     if (tx < 0 || ty < 0 || tx >= peta.W || ty >= peta.H) { toast("Di luar pulau.", "gagal"); return; }
@@ -3843,7 +4126,7 @@ function gambarPrisma(px, py, halfW, halfH, H, dinding, atap, jenisAtap, lantai,
 }
 function gambarBangunanVektor(def, px, py, s, rot, b, gelap) {
   const v = def.vektor;
-  const k = kakiBangunan(def, b ? b.rot : 0);
+  const k = kakiBangunan(def, b ? b.rot : 0, b);
   const halfW = (k.w + k.h) * 16 * s, halfH = (k.w + k.h) * 8 * s;
   const lantai = v.lantai || 1;
   // v35: tinggi vektor dari standar dunia (tinggiDunia meter x 9 px/m),
@@ -3915,11 +4198,11 @@ function gambarBangunanVektor(def, px, py, s, rot, b, gelap) {
 // v35: tinggi render bangunan dari standar dunia — tinggiGambarBangunan
 // mengembalikan tinggi gambar (px) pada zoom z, dipakai penanda "!"
 // dan label ghost agar duduk DI ATAS bangunan, bukan di tengah sprite.
-function tinggiSpriteBangunan(def, z) {
+function tinggiSpriteBangunan(def, z, b) {
   const zz = z || 1;
   const img = (def.gambar && typeof gambarAset !== "undefined") ? gambarAset[def.gambar] : null;
   if (img && img.complete && img.naturalWidth && typeof ukuranGambarBangunan === "function") {
-    return ukuranGambarBangunan(def, img.naturalWidth, img.naturalHeight, zz).h;
+    return ukuranGambarBangunan(def, img.naturalWidth, img.naturalHeight, zz, b).h;
   }
   if (typeof def.tinggiDunia === "number" && def.tinggiDunia > 0 && typeof SKALA_DUNIA !== "undefined") {
     return def.tinggiDunia * SKALA_DUNIA.PX_PER_METER * zz;
@@ -3928,7 +4211,7 @@ function tinggiSpriteBangunan(def, z) {
 }
 function gambarSpriteBangunan(def, px, py, s, b) {
   const img = gambarAset[def.gambar];
-  const k = kakiBangunan(def, b ? b.rot : 0);
+  const k = kakiBangunan(def, b ? b.rot : 0, b);
   const halfW = (k.w + k.h) * 16 * s, halfH = (k.w + k.h) * 8 * s;
   if (!img || !img.complete || !img.naturalWidth) {
     gambarPrisma(px, py, halfW, halfH, 20 * s, "#b2bec3", "#636e72", "pelana", 1, null, 0);
@@ -3939,7 +4222,7 @@ function gambarSpriteBangunan(def, px, py, s, b) {
   // hanya bila modul skala belum termuat (pengaman harness lama).
   let w, h;
   if (typeof ukuranGambarBangunan === "function") {
-    const u = ukuranGambarBangunan(def, img.naturalWidth, img.naturalHeight, s);
+    const u = ukuranGambarBangunan(def, img.naturalWidth, img.naturalHeight, s, b);
     w = u.w; h = u.h;
   } else {
     w = (k.w + k.h) * 32 * s * 1.12;
@@ -3955,7 +4238,7 @@ function gambarSpriteBangunan(def, px, py, s, b) {
 // Gambar satu bangunan (dipakai lapisan gabungan agar urutan kedalaman benar)
 function gambarSatuBangunan(b, lebar, tinggi, gelap) {
   const def = BANGUNAN_MAP[b.id]; if (!def) return;
-  const k = kakiBangunan(def, b.rot);
+  const k = kakiBangunan(def, b.rot, b);
   const cx = b.x + (k.w - 1) / 2, cy = b.y + (k.h - 1) / 2;
   const tengah = tileTengahDunia(cx, cy);
   const s = duniaKeLayar(tengah.x, tengah.y, lebar, tinggi);
@@ -4019,12 +4302,26 @@ function gambarSatuBangunan(b, lebar, tinggi, gelap) {
   if (b.selesai && b.kurangBahan) {
     // v35: penanda "!" duduk di atas ATAP (tinggi render sebenarnya),
     // bukan pada offset footprint tetap yang tenggelam di sprite tinggi.
-    const atasB = py + (k.w + k.h) * 8 * z - tinggiSpriteBangunan(def, z) - 12 * z;
+    const atasB = py + (k.w + k.h) * 8 * z - tinggiSpriteBangunan(def, z, b) - 12 * z;
     ctx.fillStyle = "#e74c3c";
     ctx.beginPath(); ctx.arc(px, atasB, 9 * z, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "#ffffff"; ctx.font = "bold " + Math.max(10, 12 * z) + "px sans-serif";
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText("!", px, atasB);
+  }
+  if (b.butuhLahan) {
+    // v36 (fallback migrasi F1): bangunan tetap di footprint LAMA
+    // karena tidak muat membesar — lencana kuning "L" di atas atap
+    // (geser ke kanan bila penanda "!" juga tampil) + entri Diagnostik
+    // (kode "butuh-lahan") + catatan panel bangunan. Bangunan dicoba
+    // ulang tiap load sampai ada lahan kosong di sekitarnya.
+    const atasL = py + (k.w + k.h) * 8 * z - tinggiSpriteBangunan(def, z, b) - 12 * z;
+    const pxL = px + (b.kurangBahan ? 22 * z : 0);
+    ctx.fillStyle = "#f39c12";
+    ctx.beginPath(); ctx.arc(pxL, atasL, 9 * z, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#ffffff"; ctx.font = "bold " + Math.max(10, 12 * z) + "px sans-serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("L", pxL, atasL);
   }
 }
 // Gambar satu warga (dipakai lapisan gabungan)
@@ -4605,7 +4902,7 @@ function gambarPeta() {
     const b = S.bangunan[terpilih.idx];
     if (b) {
       const def = BANGUNAN_MAP[b.id];
-      const k = kakiBangunan(def, b.rot);
+      const k = kakiBangunan(def, b.rot, b);
       ctx.strokeStyle = "#f1c40f"; ctx.lineWidth = 2.5;
       for (let j = 0; j < k.h; j++) for (let i = 0; i < k.w; i++) {
         const w = tileKeDunia(b.x + i, b.y + j);
@@ -4759,7 +5056,7 @@ function gambarGhost(lebar, tinggi) {
     const b = S.bangunan[sedangPindah];
     if (b) {
       const def = BANGUNAN_MAP[b.id];
-      const k = kakiBangunan(def, b.rot);
+      const k = kakiBangunan(def, b.rot, b);
       footprint = [];
       for (let j = 0; j < k.h; j++) for (let i = 0; i < k.w; i++) footprint.push([h.x + i, h.y + j]);
       ok = true;
@@ -6823,6 +7120,15 @@ function renderPanelKanan() {
   html += "<div class='barisStat'><span>Listrik</span><span class='" + (b.berlistrik === false ? "merah" : b.berlistrik ? "hijau" : "") + "'>" + (b.berlistrik === false ? "⚡ Padam" : b.berlistrik ? "⚡ Menyala" : "—") + "</span></div>";
   html += "<div class='barisStat'><span>Air</span><span class='" + (b.berair === false ? "merah" : b.berair ? "hijau" : "") + "'>" + (b.berair === false ? "💧 Tidak berair" : b.berair ? "💧 Berair" : "—") + "</span></div>";
   if (b.kebanjiran) html += "<div class='barisStat'><span>Banjir</span><b class='merah'>🌊 Kebanjiran — tidak beroperasi</b></div>";
+  // v36 (fallback migrasi F1): bangunan tetap di footprint LAMA karena
+  // tidak muat membesar — beri tahu pemain kenapa ukurannya lebih kecil
+  // dari katalog + apa yang harus dilakukan (juga di Diagnostik, kode
+  // "butuh-lahan", + lencana L kuning di peta).
+  if (b.butuhLahan) {
+    const kLama = b.kakiOverride ? (b.kakiOverride.w + "×" + b.kakiOverride.h) : "lama";
+    const kBaru = def.kaki.w + "×" + def.kaki.h;
+    html += "<div class='catatan merah'>⚠️ Butuh lahan: bangunan ini tetap " + kLama + " petak (katalog v36: " + kBaru + ") karena tidak ada lahan kosong di sekitarnya saat migrasi. Kosongkan lahan di sekelilingnya — migrasi dicoba lagi tiap kali permainan dimuat.</div>";
+  }
   if (typeof zonaDi === "function") { const zid = zonaDi(b.x, b.y); if (zid) { const zd = (typeof zonaDef === "function") ? zonaDef(zid) : null; html += "<div class='barisStat'><span>Zona</span><span>" + (zd ? zd.nama : zid) + "</span></div>"; } }
   if (typeof b.pengunjung === "number" && b.pengunjung > 0) html += "<div class='barisStat'><span>Pengunjung</span><span>" + b.pengunjung + " /jam</span></div>";
   if (!b.selesai) {
@@ -7064,7 +7370,7 @@ function tanganiKetuk(t, tombol, sentuh, layar) {
 // bukan hanya pada petak alasnya — sprite isometrik menjorok ke petak tetangga)
 function kotakSpriteBangunan(b) {
   const def = BANGUNAN_MAP[b.id]; if (!def) return null;
-  const k = kakiBangunan(def, b.rot);
+  const k = kakiBangunan(def, b.rot, b);
   const cx = b.x + (k.w - 1) / 2, cy = b.y + (k.h - 1) / 2;
   const tengah = tileTengahDunia(cx, cy);
   const s = duniaKeLayar(tengah.x, tengah.y, kanvas.clientWidth, kanvas.clientHeight);
@@ -7079,7 +7385,7 @@ function kotakSpriteBangunan(b) {
     // merespons) dan toko 177% (ketuk udara kosong malah memilih toko).
     // Fallback rumus lama hanya bila modul skala belum termuat.
     if (typeof ukuranGambarBangunan === "function") {
-      const u = ukuranGambarBangunan(def, img.naturalWidth, img.naturalHeight, z);
+      const u = ukuranGambarBangunan(def, img.naturalWidth, img.naturalHeight, z, b);
       w = u.w; h = u.h;
     } else {
       w = (k.w + k.h) * 32 * z * 1.12;
@@ -7764,7 +8070,33 @@ function mulaiGame(baru) {
     for (const j of S.jalan) if (j.kecamatan == null) j.kecamatan = kecamatanDiPeta(peta, j.x, j.y);
     for (const j of S.jembatan) if (j.kecamatan == null) j.kecamatan = kecamatanDiPeta(peta, j.x, j.y);
     S.log.unshift("Permainan dilanjutkan — Hari " + S.hari + ".");
-    // v24.2 (4f): migrasi aturan akses jalan — beri tahu SATU KALI bila
+    // v36: migrasi footprint — SEKALI saat load (flag S.migrasiFootprintV36);
+    // bangunan ber-flag butuhLahan dicoba ulang tiap load. Berjalan di
+    // sini (peta sudah dibuat + S.bersih sudah diterapkan ulang) dan
+    // sebelum hitungUtilitas/hitungKebahagiaan di bawah, supaya angka
+    // layanan dihitung dari footprint baru; hasil tersimpan via simpan()
+    // di akhir mulaiGame. Validasi akhir di dalam migrasi: bila gagal,
+    // TIDAK ada yang diubah (flag tidak diset).
+    try {
+      if (typeof migrasiFootprintV36 === "function") {
+        const hasMig = migrasiFootprintV36();
+        if (hasMig && !hasMig.batal && (hasMig.total > 0 || hasMig.butuhLahan > 0)) {
+          S.log.unshift("Migrasi footprint v36 (" + hasMig.mode + "): " + hasMig.membesar + " bangunan membesar, " + hasMig.digeser + " digeser, " + hasMig.butuhLahan + " butuh lahan.");
+          if (hasMig.butuhLahan > 0) toast(hasMig.butuhLahan + " bangunan belum muat membesar (butuh lahan) — ditandai L kuning di peta & di Diagnostik. Kosongkan lahan di sekitarnya, migrasi dicoba lagi tiap load.", "info");
+          if (typeof invalidasiCoverage === "function") { try { invalidasiCoverage(); } catch (e) {} }
+        } else if (hasMig && hasMig.batal) {
+          S.log.unshift("Migrasi footprint v36 DIBATALKAN (validasi akhir menemukan overlap) — kota tetap di footprint v35, migrasi dicoba lagi di load berikut.");
+        }
+      }
+    } catch (e) {
+      // v36-fix (NB3b): JANGAN telan error migrasi diam-diam — bila
+      // exception terjadi di tengah loop terapkan, sebagian bangunan sudah
+      // pindah sementara flag belum diset; catat agar terlihat di konsol
+      // dan di log game (migrasi dicoba lagi di load berikut karena flag
+      // tidak diset).
+      try { if (typeof console !== "undefined" && console.error) console.error("[migrasi v36] gagal:", e && e.message); } catch (e2) {}
+      S.log.unshift("Migrasi footprint v36 GAGAL (error: " + (e && e.message) + ") — kota tetap di footprint v35, migrasi dicoba lagi di load berikut.");
+    }
     // ada bangunan yang hanya menyentuh jalan secara diagonal (kini
     // ditandai tanpa-jalan oleh Diagnostik; aturan baru = 4-arah).
     // Flag S.migrasiAksesJalanV242 di save supaya tidak berulang.

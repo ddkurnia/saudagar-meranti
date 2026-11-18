@@ -1,4 +1,4 @@
-# STANDAR SKALA GLOBAL — Rise of Meranti (v35)
+# STANDAR SKALA GLOBAL — Rise of Meranti (v35, footprint v36)
 
 Satu sumber kebenaran ukuran visual dunia 2D isometric. Implementasi:
 `js/city-skala.js` (konstanta + fungsi hitung murni) dan field `tinggiDunia`
@@ -17,7 +17,9 @@ Satu sumber kebenaran ukuran visual dunia 2D isometric. Implementasi:
 Rumus render bangunan (v35): tinggi target = `tinggiDunia × 9` px; skala
 seragam dari aspek kanvas PNG (tanpa distorsi); bila lebar hasil melebihi
 lebar maksimum, skala diturunkan sampai lebar pas (tinggi ikut mengecil —
-masjid 28 m → 215 px, bukan 252 px, karena dijepit lebar 2,2× footprint).
+v35: masjid 28 m → 215 px, bukan 252 px, karena dijepit lebar 2,2×
+footprint 2×2. v36: footprint masjid 5×5 → jepit 704 px, tidak lagi
+menjepit → masjid 252 px penuh; lihat §6).
 
 Rumus lama (v34.1, sudah diganti): lebar = `(k.w+k.h)×32×1,12`,
 tinggi = lebar × aspek kanvas — tinggi bangunan arbitrer dari kanvas sumber.
@@ -86,9 +88,9 @@ dominan di layar) dan `FAKTOR_POHON_LAPANGAN` (0,65) di `js/city-skala.js`
 - Perspektif isometric: tinggi tegak TIDAK diproyeksikan (tegak lurus
   layar), lebar mengikuti diagonal petak — konsisten dengan render lama.
 
-## 6. Footprint vs ukuran visual (keputusan v35)
+## 6. Footprint vs ukuran visual (keputusan v35 — diubah sebagian v36)
 
-**Footprint gameplay (`kaki`) TIDAK BERUBAH untuk satu pun dari 123
+**v35: Footprint gameplay (`kaki`) TIDAK BERUBAH untuk satu pun dari 123
 bangunan.** Alasan: save menyimpan `{id, x, y, rot}` dan footprint
 diturunkan dari katalog — mengubah luas petak akan membuat bangunan di
 save "Laksamana Sagu" dan save lain bertabrakan/keluar lahan. Hierarki
@@ -121,6 +123,54 @@ pada v35. Penyimpangan ini disengaja dan didokumentasikan:
 Bila di masa depan footprint besar diinginkan, jalurnya adalah:
 bangunan **baru** (id baru) dengan footprint besar + grandfathering
 untuk id lama — bukan mengubah `kaki` id yang sudah ada di save.
+
+### v36 (2026-11-17): deviasi v35 terselesaikan untuk 26 bangunan
+
+Keputusan user 2026-11-17 20:39 WIB: cakupan v36 HANYA 26 bangunan
+LANGSUNG (PEMETAAN.md §3a — nama/kategori cocok 1:1 dengan tabel acuan).
+**97 bangunan lainnya TETAP di footprint v35** — ditulis jujur di sini,
+bukan disembunyikan: hierarki antar kategori tetap timpang (mis.
+rumah-sakit tetap 2×2 sementara puskesmas 4×4; universitas tetap 3×2
+sementara sd 4×4). Itu konsekuensi keputusan cakupan, bukan kelalaian.
+
+| Bangunan (26) | kaki v35 | kaki v36 |
+|---|---|---|
+| rumah-sederhana | 1×1 | 2×2 |
+| masjid | 2×2 | 5×5 |
+| puskesmas | 2×1 | 4×4 |
+| kantor-pemerintah | 2×2 | 5×5 |
+| taman | 1×1 | 6×6 |
+| lapangan | 2×1 | 7×7 |
+| tambang-batu, tambang-pasir | 2×2 | 8×8 |
+| sd, smp, sma, smk | 2×1 / 2×2 | 4×4 |
+| kebun-sagu, kebun-kelapa, kebun-kopi, kebun-karet, kebun-pinang | 2×2 | 8×8 |
+| pabrik-tepung, pabrik-makanan, pabrik-kelapa, pabrik-laut, pabrik-bahan-bangunan, pabrik-daur-ulang, kilang-sagu | 2×2 | 6×6 |
+| toko, toko-material | 1×1 | 3×3 |
+
+Catatan: puskesmas, sd, dan lapangan saat ini PERSEGI PANJANG (2×1)
+dan menjadi BUJUR SANGKAR — itu keputusan user (bagian dari "hanya 26
+yang langsung"). Total petak footprint: 402 → 1253.
+
+**Dampak visual yang jujur (bukan bug):**
+- **Lebar maksimum sprite mengikuti kaki** (`lebarFootprintPx × faktor`
+  di `ukuranGambarBangunan`): masjid kini 252 px (dulu 215,1 px —
+  dulu dijepit lebar 2,2× footprint 2×2; kini 2,2× footprint 5×5 =
+  704 px, tidak lagi menjepit; tinggi penuh 28 m × 9 = 252 px).
+  `tinggiDunia` TIDAK berubah untuk satu pun dari 123 bangunan;
+  hierarki masjid tertinggi TETAP (252 > gedung-perusahaan 180 >
+  apartemen/rsud 162). Tes skala SK3 diperbarui 215,1 → 252 px.
+- **Sprite tidak membesar sebanding kaki**: tambang 8×8 merender
+  108×72 px, kebun-sagu 8×8 merender 86,6×54 px — tampak kecil di
+  tengah petak besar tanpa art lapangan/tanaman pengisi (hanya
+  kebun-kelapa yang punya `lapangan`). Bayangan MENGIKUTI kaki
+  (membesar). Urutan kedalaman di-sort by anchor `x+y` — bisa salah
+  untuk footprint besar. Minimap tetap 1 titik per bangunan.
+- **Bangunan fallback F1** (tidak muat membesar — lihat
+  MIGRASI-FOOTPRINT-v36.md) memakai `kakiOverride` = footprint lama
+  di KETIGA titik sentuh (`kakiBangunan`, `petakBangunan`/
+  `adaBangunanDi`, `ukuranGambarBangunan`): sprite masjid F1 tetap
+  215,1 px seperti v35, bukan 252 px.
+- **Harga/upkeep TIDAK berubah** (Q6): masjid 5×5 tetap semurah dulu.
 
 ## 7. Yang TIDAK diubah v35
 
